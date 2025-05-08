@@ -110,7 +110,7 @@ const LoginScreen: React.FC = () => {
           },
         ]}
       >
-        <Text style={styles.title}>Welcome Capo User</Text>
+        <Text style={styles.title}>Welcome Back</Text>
 
         <Animated.View
           style={{
