@@ -111,10 +111,19 @@ import GeneralLedger from './component/Drawer/Reports/GeneralLedger';
 import DayBook from './component/Drawer/Reports/DayBook';
 import Stockmovement from './component/Drawer/Reports/Stockmovement';
 
-
 //Attendance
 import AllEmployeeAttendance from './component/Drawer/Attendance/AllEmployeeAttendance';
 import AllEmployeeAttendanceList from './component/Drawer/Attendance/AllEmployeeAttendanceList';
+
+//System Users
+import User from './component/Drawer/SystemUsers/User';
+import Roles from './component/Drawer/SystemUsers/Roles';
+
+//Configuration
+import CustomerType from './component/Drawer/Configuration/CustomerType';
+import CustomerArea from './component/Drawer/Configuration/CustomerArea';
+import PrintBarCode from './component/Drawer/Configuration/PrintBarCode';
+import PasswordReset from './component/Drawer/Configuration/PasswordReset';
 
 import {DrawerProvider} from './component/DrawerContext';
 import DrawerModal from './component/DrawModal';
@@ -286,12 +295,20 @@ function App(): React.JSX.Element {
             component={SaleSaleReturnReport}
           />
           <Stack.Screen name="Sale Order Reports" component={SaleOrderReport} />
-          <Stack.Screen name="Daily Sales Reports" component={DailySalesReport} />
-          <Stack.Screen name="Single User Daily Sales" component={SingleUserDailySales} />
-      
-      
+          <Stack.Screen
+            name="Daily Sales Reports"
+            component={DailySalesReport}
+          />
+          <Stack.Screen
+            name="Single User Daily Sales"
+            component={SingleUserDailySales}
+          />
+
           <Stack.Screen name="Cheque List" component={ChequeList} />
-          <Stack.Screen name="Profit Loss Report" component={ProfitLossReport} />
+          <Stack.Screen
+            name="Profit Loss Report"
+            component={ProfitLossReport}
+          />
           <Stack.Screen name="Expense Report" component={ExpenseReport} />
           <Stack.Screen name="Business Capital" component={BusinessCapital} />
           <Stack.Screen name="Trades" component={Trading} />
@@ -301,13 +318,28 @@ function App(): React.JSX.Element {
           <Stack.Screen name="General Ledger" component={GeneralLedger} />
           <Stack.Screen name="Day Book" component={DayBook} />
           <Stack.Screen name="Stock Movement" component={Stockmovement} />
-      
 
+          {/*Attendance*/}
+          <Stack.Screen
+            name="All Employees Attendance"
+            component={AllEmployeeAttendance}
+          />
+          <Stack.Screen
+            name="All Employees Attendance List"
+            component={AllEmployeeAttendanceList}
+          />
 
-{/*Attendance*/}
-<Stack.Screen name="All Employees Attendance" component={AllEmployeeAttendance} />
-    
+          {/*System User*/}
+          <Stack.Screen name="Users" component={User} />
+          <Stack.Screen name="Roles" component={Roles} />
+
+          {/*Configuration*/}
+          <Stack.Screen name="Customer Type" component={CustomerType} />
+          <Stack.Screen name="Areas" component={CustomerArea} />
+          <Stack.Screen name="Print Barcode" component={PrintBarCode} />
+          <Stack.Screen name="Password Reset" component={PasswordReset} />
         </Stack.Navigator>
+
 
         <DrawerModal />
       </NavigationContainer>

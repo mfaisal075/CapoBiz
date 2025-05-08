@@ -8,70 +8,41 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
+  TextInput,
 } from 'react-native';
 import React, {useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import Modal from 'react-native-modal';
 import DropDownPicker from 'react-native-dropdown-picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 
-
-export default function AllEmployeeAttendanceList() {
-
+export default function User() {
   const {openDrawer} = useDrawer();
 
   const Info = [
     {
-      Name: 'Naeem',
-      Clockin: '10:09PM',
-      Clockout: '2:0AM',
-      Date: '5-0-9',
-      Status: 'Present',
+      Name: 'Admin',
+      Contact: '123',
+      CNIC: '13',
+      Email: '@gmail.com',
+      Role: 'admin',
     },
     {
-      Name: 'Asim',
-      Clockin: '10:09PM',
-      Clockout: '2:0AM',
-      Date: '5-0-9',
-      Status: 'Present',
+      Name: 'Manager',
+      Contact: '123',
+      CNIC: '13',
+      Email: '@gmail.com',
+      Role: 'admin',
     },
     {
       Name: 'Ali',
-      Clockin: '10:09PM',
-      Clockout: '2:0AM',
-      Date: '5-0-9',
-      Status: 'Present',
+      Contact: '123',
+      CNIC: '13',
+      Email: '@gmail.com',
+      Role: 'admin',
     },
   ];
-const [startDate, setStartDate] = useState(new Date());
+  const [startDate, setStartDate] = useState(new Date());
 
-  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-
-  const onStartDateChange = (
-    event: DateTimePickerEvent,
-    selectedDate?: Date,
-  ) => {
-    const currentDate = selectedDate || startDate;
-    setShowStartDatePicker(false);
-    setStartDate(currentDate);
-  };
-
-
-  const [editDate, seteditDate] = useState(new Date());
-
-  const [showeditDatePicker, setShoweditDatePicker] = useState(false);
-
- 
-
-  const oneditDateChange = (
-    event: DateTimePickerEvent,
-    selectedDate?: Date,
-  ) => {
-    const currentDate = selectedDate || editDate;
-    setShoweditDatePicker(false);
-    seteditDate(currentDate);
-  };
   {
     /*customer*/
   }
@@ -81,25 +52,16 @@ const [startDate, setStartDate] = useState(new Date());
     setcustomer(!customer);
   };
 
-  const [customerType, setcustomerType] = useState(false);
-  const [currentcustomer, setCurrentcustomer] = useState<string | null>('');
-  const customerItem = [
-    {label: 'Ali', value: 'Ali'},
-    {label: 'Asim', value: 'Asim'},
-    {label: 'Naeem', value: 'Naeem'},
-  ];
-
-  
   const [customerArea, setcustomerArea] = useState(false);
   const [currentcustomerarea, setCurrentcustomerarea] = useState<string | null>(
     '',
   );
   const customerAreaItem = [
-    {label: 'Present', value: 'Present'},
-    {label: 'Leave', value: 'Leave'},
-    {label: 'Absent', value: 'Absent'},
+    {label: 'Admin', value: 'Admin'},
+    {label: 'Manager', value: 'Manager'},
+    {label: 'Accountant', value: 'Accountant'},
   ];
-  
+
   const [btncustomerarea, setbtncustomerarea] = useState(false);
 
   const togglebtncustomerarea = () => {
@@ -120,31 +82,22 @@ const [startDate, setStartDate] = useState(new Date());
     setedit(!edit);
   };
 
-  const [editType, seteditType] = useState(false);
-  const [currentedit, setCurrentedit] = useState<string | null>('');
-  const editItem = [
-    {label: 'Ali', value: 'Ali'},
-    {label: 'Asim', value: 'Asim'},
-    {label: 'Naeem', value: 'Naeem'},
-  ];
-
   const [customereditArea, setcustomereditArea] = useState(false);
   const [currentcustomereditarea, setCurrentcustomereditarea] = useState<
     string | null
   >('');
   const customerAreaeditItem = [
-    {label: 'Present', value: 'Present'},
-    {label: 'Absent', value: 'Absent'},
-    {label: 'Leave', value: 'Leave'},
+    {label: 'Admin', value: 'Admin'},
+    {label: 'Manager', value: 'Manager'},
+    {label: 'Accountant', value: 'Accountant'},
   ];
- 
 
   const [btncustomeraditarea, setbtncustomereditarea] = useState(false);
 
   const togglebtncustomereditarea = () => {
     setbtncustomereditarea(!btncustomeraditarea);
   };
-  
+
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -176,7 +129,7 @@ const [startDate, setStartDate] = useState(new Date());
                 fontSize: 22,
                 fontWeight: 'bold',
               }}>
-              Attendance List
+              Users
             </Text>
           </View>
           <TouchableOpacity onPress={togglecustomer}>
@@ -270,24 +223,24 @@ const [startDate, setStartDate] = useState(new Date());
                           flexDirection: 'row',
                           justifyContent: 'space-between',
                         }}>
-                        <Text style={styles.text}>Clock In:</Text>
-                        <Text style={styles.text}>{item.Clockin}</Text>
+                        <Text style={styles.text}>Contact:</Text>
+                        <Text style={styles.text}>{item.Contact}</Text>
                       </View>
                       <View
                         style={{
                           flexDirection: 'row',
                           justifyContent: 'space-between',
                         }}>
-                        <Text style={styles.text}>Clock Out:</Text>
-                        <Text style={styles.text}>{item.Clockout}</Text>
+                        <Text style={styles.text}>CNIC:</Text>
+                        <Text style={styles.text}>{item.CNIC}</Text>
                       </View>
                       <View
                         style={{
                           flexDirection: 'row',
                           justifyContent: 'space-between',
                         }}>
-                        <Text style={styles.text}>Date:</Text>
-                        <Text style={styles.text}>{item.Date}</Text>
+                        <Text style={styles.text}>Email:</Text>
+                        <Text style={styles.text}>{item.Email}</Text>
                       </View>
                       <View
                         style={{
@@ -295,10 +248,10 @@ const [startDate, setStartDate] = useState(new Date());
                           justifyContent: 'space-between',
                         }}>
                         <Text style={[styles.value, {marginBottom: 5}]}>
-                          Status:
+                          Role:
                         </Text>
                         <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.Status}
+                          {item.Role}
                         </Text>
                       </View>
                     </View>
@@ -335,7 +288,7 @@ const [startDate, setStartDate] = useState(new Date());
                   fontWeight: 'bold',
                   fontSize: 16,
                 }}>
-                Add New Attendance
+                Add New User
               </Text>
               <TouchableOpacity onPress={() => setcustomer(!customer)}>
                 <Image
@@ -348,33 +301,43 @@ const [startDate, setStartDate] = useState(new Date());
               </TouchableOpacity>
             </View>
 
-            <DropDownPicker
-              items={customerItem}
-              open={customerType}
-              setOpen={setcustomerType}
-              value={currentcustomer}
-              setValue={setCurrentcustomer}
-              placeholder="Select Employee Nane"
-              placeholderStyle={{color: '#144272'}}
-              textStyle={{color: '#144272'}}
-              arrowIconStyle={{tintColor: '#144272'}}
-              style={[
-                styles.dropdown,
-                {
-                  borderColor: '#144272',
-                  width: 295,
-                  marginLeft: 10,
-                },
-              ]}
-              dropDownContainerStyle={{
-                backgroundColor: 'white',
-                borderColor: '#144272',
-                width: 295,
-                marginLeft: 10,
-              }}
-              labelStyle={{color: '#144272'}}
-              listItemLabelStyle={{color: '#144272'}}
-            />
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Name"
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact"
+              />
+            </View>
+
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="CNIC"
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Email"
+              />
+            </View>
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Password"
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Confirm Password"
+              />
+            </View>
 
             <DropDownPicker
               items={customerAreaItem}
@@ -382,7 +345,7 @@ const [startDate, setStartDate] = useState(new Date());
               setOpen={setcustomerArea}
               value={currentcustomerarea}
               setValue={setCurrentcustomerarea}
-              placeholder="Select Status"
+              placeholder="Select Role"
               placeholderStyle={{color: '#144272'}}
               textStyle={{color: '#144272'}}
               arrowIconStyle={{tintColor: '#144272'}}
@@ -403,81 +366,28 @@ const [startDate, setStartDate] = useState(new Date());
               labelStyle={{color: '#144272'}}
               listItemLabelStyle={{color: '#144272'}}
             />
-            <View style={styles.row}>
+
+            <TouchableOpacity>
               <View
                 style={[
-                  styles.productinput,
+                  styles.row,
                   {
-                    marginLeft: 10,
-                    marginRight: 10,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
+                    marginLeft: 13,
+                    backgroundColor: '#144272',
+                    borderRadius: 10,
+                    width: 295,
                   },
                 ]}>
-                <Text style={{color: '#144272'}}>Clock In:</Text>
-                <Text style={{color: '#144272'}}>9:00pm</Text>
+                <Text
+                  style={[
+                    styles.productinput,
+                    {color: 'white', textAlign: 'center'},
+                  ]}>
+                  Choose Image
+                </Text>
               </View>
-            </View>
+            </TouchableOpacity>
 
-            <View style={styles.row}>
-              <View
-                style={[
-                  {
-                    marginLeft: 10,
-                    marginRight: 10,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    height: 35,
-                    borderWidth: 1,
-                    marginTop: 6,
-                    flex: 1,
-                    borderColor: '#144272',
-                    borderRadius: 6,
-                    padding: 8,
-                  },
-                ]}>
-                <Text style={{color: '#144272'}}>Clock Out:</Text>
-                <Text style={{color: '#144272'}}>9:00pm</Text>
-              </View>
-            </View>
-
-            <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: '#144272',
-            borderRadius: 5,
-            padding: 5,
-            alignSelf: 'center',
-            width: 295,marginLeft:10,marginRight:10,marginTop:12
-          }}>
-          <Text style={{marginLeft: 8, color: '#144272'}}>
-            {`${startDate.toLocaleDateString()}`}
-          </Text>
-          <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-            <Image
-              style={{
-                height: 20,
-                width: 20,
-                marginLeft: 190,
-                tintColor: '#144272',
-              }}
-              source={require('../../../assets/calendar.png')}
-            />
-          </TouchableOpacity>
-          {showStartDatePicker && (
-            <DateTimePicker
-              testID="startDatePicker"
-              value={startDate}
-              mode="date"
-              is24Hour={true}
-              display="default"
-              onChange={onStartDateChange}
-            />
-          )}
-        </View>
-      
             <TouchableOpacity onPress={togglebtncustomerarea}>
               <View
                 style={{
@@ -494,7 +404,7 @@ const [startDate, setStartDate] = useState(new Date());
                     color: 'white',
                     textAlign: 'center',
                   }}>
-                  Add Attendance
+                  Add User
                 </Text>
               </View>
             </TouchableOpacity>
@@ -540,7 +450,7 @@ const [startDate, setStartDate] = useState(new Date());
                 color: '#144272',
                 textAlign: 'center',
               }}>
-              Attendance has been added successfully
+              User has been added successfully
             </Text>
             <View
               style={{
@@ -667,7 +577,7 @@ const [startDate, setStartDate] = useState(new Date());
               flex: 1,
               backgroundColor: 'white',
               width: '98%',
-              maxHeight: 335,
+              maxHeight: 240,
               borderRadius: 10,
               borderWidth: 1,
               borderColor: '#144272',
@@ -686,7 +596,7 @@ const [startDate, setStartDate] = useState(new Date());
                   fontWeight: 'bold',
                   fontSize: 16,
                 }}>
-                Edit Attendance
+                Edit User
               </Text>
               <TouchableOpacity onPress={() => setedit(!edit)}>
                 <Image
@@ -699,141 +609,65 @@ const [startDate, setStartDate] = useState(new Date());
               </TouchableOpacity>
             </View>
 
-       
-           
-              <DropDownPicker
-                items={editItem}
-                open={editType}
-                setOpen={seteditType}
-                value={currentedit}
-                setValue={setCurrentedit}
-                placeholder="Select Employee"
-                placeholderStyle={{color: '#144272'}}
-                textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
-                style={[
-                  styles.dropdown,
-                  {
-                    borderColor: '#144272',
-                    width: 295,marginLeft:10
-                  },
-                ]}
-                dropDownContainerStyle={{
-                  backgroundColor: 'white',
+            <DropDownPicker
+              items={customerAreaeditItem}
+              open={customereditArea}
+              setOpen={setcustomereditArea}
+              value={currentcustomereditarea}
+              setValue={setCurrentcustomereditarea}
+              placeholder="Select Role"
+              placeholderStyle={{color: '#144272'}}
+              textStyle={{color: '#144272'}}
+              arrowIconStyle={{tintColor: '#144272'}}
+              style={[
+                styles.dropdown,
+                {
                   borderColor: '#144272',
-                  width: 295,marginLeft:10
-                }}
-                labelStyle={{color: '#144272'}}
-                listItemLabelStyle={{color: '#144272'}}
-              />
-           
-       
-              <DropDownPicker
-                items={customerAreaeditItem}
-                open={customereditArea}
-                setOpen={setcustomereditArea}
-                value={currentcustomereditarea}
-                setValue={setCurrentcustomereditarea}
-                placeholder="Select Status"
-                placeholderStyle={{color: '#144272'}}
-                textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
-                style={[
-                  styles.dropdown,
-                  {
-                    borderColor: '#144272',
-                    width: 295,marginLeft:10
-                  },
-                ]}
-                dropDownContainerStyle={{
-                  backgroundColor: 'white',
-                  borderColor: '#144272',
-                  width: 295,marginLeft:10
-                }}
-                labelStyle={{color: '#144272'}}
-                listItemLabelStyle={{color: '#144272'}}
-              />
-              <View style={styles.row}>
-              <View
-                style={[
-                  styles.productinput,
-                  {
-                    marginLeft: 10,
-                    marginRight: 10,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                  },
-                ]}>
-                <Text style={{color: '#144272'}}>Clock In:</Text>
-                <Text style={{color: '#144272'}}>9:00pm</Text>
-              </View>
-            </View>
-
-            <View style={styles.row}>
-              <View
-                style={[
-                  {
-                    marginLeft: 10,
-                    marginRight: 10,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    height: 35,
-                    borderWidth: 1,
-                    marginTop: 6,
-                    flex: 1,
-                    borderColor: '#144272',
-                    borderRadius: 6,
-                    padding: 8,
-                  },
-                ]}>
-                <Text style={{color: '#144272'}}>Clock Out:</Text>
-                <Text style={{color: '#144272'}}>9:00pm</Text>
-              </View>
-            </View>
-
-            <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            borderWidth: 1,
-            borderColor: '#144272',
-            borderRadius: 5,
-            padding: 5,
-            alignSelf: 'center',
-            width: 295,marginLeft:10,marginRight:10,marginTop:12
-          }}>
-          <Text style={{marginLeft: 8, color: '#144272'}}>
-            {`${editDate.toLocaleDateString()}`}
-          </Text>
-          <TouchableOpacity onPress={() => setShoweditDatePicker(true)}>
-            <Image
-              style={{
-                height: 20,
-                width: 20,
-                marginLeft: 190,
-                tintColor: '#144272',
+                  width: 295,
+                  marginLeft: 10,
+                },
+              ]}
+              dropDownContainerStyle={{
+                backgroundColor: 'white',
+                borderColor: '#144272',
+                width: 295,
+                marginLeft: 10,
               }}
-              source={require('../../../assets/calendar.png')}
+              labelStyle={{color: '#144272'}}
+              listItemLabelStyle={{color: '#144272'}}
             />
-          </TouchableOpacity>
-          {showeditDatePicker && (
-            <DateTimePicker
-              testID="startDatePicker"
-              value={startDate}
-              mode="date"
-              is24Hour={true}
-              display="default"
-              onChange={oneditDateChange}
-            />
-          )}
-        </View>
-     
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Name"
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact"
+              />
+            </View>
+
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="CNIC"
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Email"
+              />
+            </View>
+
             <TouchableOpacity onPress={togglebtncustomereditarea}>
               <View
                 style={{
                   backgroundColor: '#144272',
                   height: 30,
-                  width: 140,
+                  width: 100,
                   margin: 10,
                   borderRadius: 10,
                   justifyContent: 'center',
@@ -844,7 +678,7 @@ const [startDate, setStartDate] = useState(new Date());
                     color: 'white',
                     textAlign: 'center',
                   }}>
-                  Update Attendance
+                  Update User
                 </Text>
               </View>
             </TouchableOpacity>
@@ -890,7 +724,7 @@ const [startDate, setStartDate] = useState(new Date());
                 color: '#144272',
                 textAlign: 'center',
               }}>
-              Attendance has been updated successfully
+              User has been updated successfully
             </Text>
             <View
               style={{
@@ -921,7 +755,6 @@ const [startDate, setStartDate] = useState(new Date());
             </View>
           </View>
         </Modal>
-        
       </ImageBackground>
     </SafeAreaView>
   );
