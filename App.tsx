@@ -124,6 +124,9 @@ import CustomerType from './component/Drawer/Configuration/CustomerType';
 import CustomerArea from './component/Drawer/Configuration/CustomerArea';
 import PrintBarCode from './component/Drawer/Configuration/PrintBarCode';
 import PasswordReset from './component/Drawer/Configuration/PasswordReset';
+import BusinessVariables from './component/Drawer/Configuration/BusinessVariables';
+import AccessControl from './component/Drawer/Configuration/AccessControl';
+import SaleInvoice from './component/Drawer/Configuration/SaleInvoice';
 
 import {DrawerProvider} from './component/DrawerContext';
 import DrawerModal from './component/DrawModal';
@@ -338,7 +341,11 @@ function App(): React.JSX.Element {
           <Stack.Screen name="Areas" component={CustomerArea} />
           <Stack.Screen name="Print Barcode" component={PrintBarCode} />
           <Stack.Screen name="Password Reset" component={PasswordReset} />
-        </Stack.Navigator>
+          <Stack.Screen name="Business Variables" component={BusinessVariables} />
+          <Stack.Screen name="Access Control" component={AccessControl} />
+          <Stack.Screen name="Sale Invoice" component={SaleInvoice} />
+ 
+          </Stack.Navigator>
 
 
         <DrawerModal />
