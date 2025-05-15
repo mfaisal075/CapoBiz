@@ -1,16 +1,19 @@
-import React, { useEffect, useRef,useState } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   View,
   Text,
   TextInput,
   StyleSheet,
   Animated,
-  TouchableOpacity,Image,ImageBackground
+  TouchableOpacity,
+  Image,
+  ImageBackground,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import {useNavigation} from '@react-navigation/native';
+import axios from 'axios';
+import BASE_URL from './BASE_URL';
 
 const LoginScreen: React.FC = () => {
-
   const navigation = useNavigation();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -20,20 +23,36 @@ const LoginScreen: React.FC = () => {
     setHidePassword(!hidePassword);
   };
 
-
   const formOpacity = useRef(new Animated.Value(0)).current;
   const formTranslateY = useRef(new Animated.Value(40)).current;
-
   const emailOpacity = useRef(new Animated.Value(0)).current;
   const passwordOpacity = useRef(new Animated.Value(0)).current;
   const buttonOpacity = useRef(new Animated.Value(0)).current;
-
   const emailTranslate = useRef(new Animated.Value(20)).current;
   const passwordTranslate = useRef(new Animated.Value(20)).current;
   const buttonTranslate = useRef(new Animated.Value(20)).current;
 
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post(
+        `${BASE_URL}/login`,
+        {
+          user_name: username,
+          password,
+        },
+        {
+          withCredentials: true,
+        },
+      );
+
+      const data = response.data;
+      console.log('Response:', data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
-    
     Animated.parallel([
       Animated.timing(formOpacity, {
         toValue: 1,
@@ -46,7 +65,6 @@ const LoginScreen: React.FC = () => {
         useNativeDriver: true,
       }),
     ]).start();
-
 
     setTimeout(() => {
       Animated.parallel([
@@ -96,103 +114,108 @@ const LoginScreen: React.FC = () => {
 
   return (
     <View style={styles.container}>
-       <ImageBackground 
-              source={require('../assets/screen.jpg')}
-              resizeMode='cover'
-              style={styles.background}
-            >
-      <Animated.View
-        style={[
-          styles.formContainer,
-          {
-            opacity: formOpacity,
-            transform: [{ translateY: formTranslateY }],
-          },
-        ]}
-      >
-        <Text style={styles.title}>Welcome Back</Text>
-
+      <ImageBackground
+        source={require('../assets/screen.jpg')}
+        resizeMode="cover"
+        style={styles.background}>
         <Animated.View
-          style={{
-            opacity: emailOpacity,
-            transform: [{ translateY: emailTranslate }],
-          }}
-        >
-        <View style={styles.input}>
-          <Image
-          style={{
-            width:20,height:20,tintColor:'#144272',alignSelf:'center'
-          }}
-           source={require('../assets/user.png')}/>
-          <TextInput
-            style={{ flex: 1, color: '#144272' }}
-            placeholder="Username"
-            placeholderTextColor="#144272"
-            onChangeText={(text) => setUsername(text.toUpperCase())}
-            value={username}
-            autoCapitalize="characters"
+          style={[
+            styles.formContainer,
+            {
+              opacity: formOpacity,
+              transform: [{translateY: formTranslateY}],
+            },
+          ]}>
+          <Text style={styles.title}>Welcome Back</Text>
 
-          />
-           
- </View>
+          <Animated.View
+            style={{
+              opacity: emailOpacity,
+              transform: [{translateY: emailTranslate}],
+            }}>
+            <View style={styles.input}>
+              <Image
+                style={{
+                  width: 20,
+                  height: 20,
+                  tintColor: '#144272',
+                  alignSelf: 'center',
+                }}
+                source={require('../assets/user.png')}
+              />
+              <TextInput
+                style={{flex: 1, color: '#144272'}}
+                placeholder="Username"
+                placeholderTextColor="#144272"
+                onChangeText={text => setUsername(text.toUpperCase())}
+                value={username}
+                autoCapitalize="characters"
+              />
+            </View>
+          </Animated.View>
+
+          <Animated.View
+            style={{
+              opacity: passwordOpacity,
+              transform: [{translateY: passwordTranslate}],
+            }}>
+            <View
+              style={[
+                styles.input,
+                {flexDirection: 'row', alignItems: 'center'},
+              ]}>
+              <Image
+                style={{
+                  width: 20,
+                  height: 20,
+                  tintColor: '#144272',
+                  marginRight: 10,
+                }}
+                source={require('../assets/padlock.png')}
+              />
+
+              <TextInput
+                style={{flex: 1, color: '#144272'}}
+                placeholder="Password"
+                placeholderTextColor="#144272"
+                secureTextEntry={hidePassword}
+                onChangeText={setPassword}
+                value={password}
+              />
+
+              <TouchableOpacity onPress={managePasswordVisibility}>
+                <Image
+                  style={{
+                    width: 20,
+                    height: 20,
+                    tintColor: '#144272',
+                  }}
+                  source={
+                    hidePassword
+                      ? require('../assets/hide.png')
+                      : require('../assets/show.png')
+                  }
+                />
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+
+          <Animated.View
+            style={{
+              opacity: buttonOpacity,
+              transform: [{translateY: buttonTranslate}],
+            }}>
+            <TouchableOpacity
+              onPress={() => {
+                // navigation.navigate('Dashboard' as never);
+                handleLogin();
+              }}
+              style={styles.loginButton}>
+              <Text style={styles.loginButtonText}>Login</Text>
+            </TouchableOpacity>
+          </Animated.View>
         </Animated.View>
-
-        <Animated.View
-          style={{
-            opacity: passwordOpacity,
-            transform: [{ translateY: passwordTranslate }],
-          }}
-        >
-         <View style={[styles.input, { flexDirection: 'row', alignItems: 'center' }]}>
-  <Image
-    style={{
-      width: 20,
-      height: 20,
-      tintColor: '#144272',
-      marginRight: 10,
-    }}
-    source={require('../assets/padlock.png')}
-  />
-  
-  <TextInput
-    style={{ flex: 1, color: '#144272' }}
-    placeholder="Password"
-    placeholderTextColor="#144272"
-    secureTextEntry={hidePassword}
-    onChangeText={setPassword}
-    value={password}
-  />
-  
-  <TouchableOpacity onPress={managePasswordVisibility}>
-    <Image
-      style={{
-        width: 20,
-        height: 20,
-        tintColor: '#144272',
-      }}
-      source={
-        hidePassword
-          ? require('../assets/hide.png')
-          : require('../assets/show.png')
-      }
-    />
-  </TouchableOpacity>
-</View>
-
-        </Animated.View>
-
-        <Animated.View
-          style={{
-            opacity: buttonOpacity,
-            transform: [{ translateY: buttonTranslate }],
-          }}
-        >
-          <TouchableOpacity onPress={() => navigation.navigate('Dashboard' as never)}
-          style={styles.loginButton}>
-            <Text style={styles.loginButtonText}>Login</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </Animated.View></ImageBackground>
+      </ImageBackground>
     </View>
   );
 };
@@ -201,7 +224,6 @@ export default LoginScreen;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-
   },
   formContainer: {
     width: '80%',
@@ -226,7 +248,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontSize: 16,
     color: '#000',
-    flexDirection:'row'
+    flexDirection: 'row',
   },
   loginButton: {
     backgroundColor: '#144272',
@@ -239,9 +261,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  background: { 
-    flex: 1, 
-    justifyContent: 'center', 
+  background: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
   },
 });
