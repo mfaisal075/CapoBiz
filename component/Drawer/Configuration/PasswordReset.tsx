@@ -7,20 +7,90 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
- 
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import React, {useState} from 'react';
 import Modal from 'react-native-modal';
-import { TextInput } from 'react-native-gesture-handler';
+import {TextInput} from 'react-native-gesture-handler';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import Toast from 'react-native-toast-message';
+import {useNavigation} from '@react-navigation/native';
+
+interface ResetPassword {
+  oldPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+const initialResetPassword: ResetPassword = {
+  oldPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+};
 
 export default function PasswordReset() {
-
+  const navigation = useNavigation();
   const {openDrawer} = useDrawer();
   const [btnproduct, setbtnproduct] = useState(false);
+  const [from, setForm] = useState<ResetPassword>(initialResetPassword);
+
+  const onChange = (field: keyof ResetPassword, value: string) => {
+    setForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   const togglebtnproduct = () => {
     setbtnproduct(!btnproduct);
+  };
+
+  const handleResetPassword = async () => {
+    if (!from.oldPassword || !from.newPassword || !from.confirmPassword) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Fields',
+        text2: 'All fields are required!',
+        visibilityTime: 2500,
+      });
+      return;
+    }
+
+    if (from.newPassword !== from.confirmPassword) {
+      Toast.show({
+        type: 'error',
+        text1: 'Password Mismatch',
+        text2: 'New password and confirm password do not match!',
+        visibilityTime: 2500,
+      });
+      return;
+    }
+    try {
+      const response = await axios.post(`${BASE_URL}/updatepassword`, {
+        password: from.newPassword,
+      });
+
+      const data = response.data;
+
+      console.log('Response: ', data);
+
+      if (response.status == 200 && data.status) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Password has been Updated successfully!',
+        });
+
+        setForm(initialResetPassword);
+
+        setTimeout(() => {
+          navigation.navigate('Login' as never);
+        }, 1500);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
   return (
     <SafeAreaView style={styles.container}>
@@ -59,26 +129,29 @@ export default function PasswordReset() {
 
           <View style={styles.section}>
             <TextInput
-                            style={styles.input}
-                            placeholderTextColor={'white'}
-                            placeholder="Old Password"
-                          
-                          />
-                          <TextInput
-                                          style={styles.input}
-                                          placeholderTextColor={'white'}
-                                          placeholder="New Password"
-                                          
-                                        />
-            
+              style={styles.input}
+              placeholderTextColor={'white'}
+              placeholder="Old Password"
+              value={from.oldPassword}
+              onChangeText={text => onChange('oldPassword', text)}
+            />
             <TextInput
-                            style={styles.input}
-                            placeholderTextColor={'white'}
-                            placeholder="Confirm Password"
-                       
-                          />
+              style={styles.input}
+              placeholderTextColor={'white'}
+              placeholder="New Password"
+              value={from.newPassword}
+              onChangeText={text => onChange('newPassword', text)}
+            />
 
-            <TouchableOpacity onPress={togglebtnproduct}>
+            <TextInput
+              style={styles.input}
+              placeholderTextColor={'white'}
+              placeholder="Confirm Password"
+              value={from.confirmPassword}
+              onChangeText={text => onChange('confirmPassword', text)}
+            />
+
+            <TouchableOpacity onPress={handleResetPassword}>
               <View
                 style={{
                   width: 340,
@@ -131,14 +204,14 @@ export default function PasswordReset() {
                 marginTop: 10,
                 color: '#144272',
               }}>
-           Updated
+              Updated
             </Text>
             <Text
               style={{
                 color: '#144272',
                 textAlign: 'center',
               }}>
-             Password has been updated successfully
+              Password has been updated successfully
             </Text>
             <View
               style={{
@@ -193,8 +266,7 @@ const styles = StyleSheet.create({
     elevation: 15,
     padding: 10,
     justifyContent: 'center',
-    alignSelf:'center',
-   
+    alignSelf: 'center',
   },
   row: {
     flexDirection: 'row',

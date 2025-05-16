@@ -1,5 +1,5 @@
-import React, {useEffect} from 'react';
-import {StyleSheet, AppState} from 'react-native';
+import React from 'react';
+import {StyleSheet} from 'react-native';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
 import SplashScreen from './component/SplashScreen';
@@ -9,6 +9,7 @@ import LoginScreen from './component/LoginScreen';
 import './gesture-handler';
 import OrderTablePOS from './component/OrderTablePOS';
 import ClosePosBtn from './component/ClosePosBtn';
+import Toast from 'react-native-toast-message';
 
 //Drawer
 import POS from './component/Drawer/POS';
@@ -130,227 +131,242 @@ import SaleInvoice from './component/Drawer/Configuration/SaleInvoice';
 
 import {DrawerProvider} from './component/DrawerContext';
 import DrawerModal from './component/DrawModal';
+import {UserProvider} from './component/CTX/UserContext';
 
 const Stack = createStackNavigator();
 export const navigationRef = createNavigationContainerRef();
 
 function App(): React.JSX.Element {
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      if (nextAppState === 'active') {
-        if (navigationRef.isReady()) {
-          navigationRef.reset({
-            index: 0,
-            routes: [{name: 'Splash'}],
-          });
-        }
-      }
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
-
   return (
-    <DrawerProvider>
-      <NavigationContainer ref={navigationRef}>
-        <Stack.Navigator
-          initialRouteName="Splash"
-          screenOptions={{
-            headerShown: false,
-          }}>
-          <Stack.Screen name="Splash" component={SplashScreen} />
-          <Stack.Screen name="Dashboard" component={Dashboard} />
-          <Stack.Screen name="Login" component={LoginScreen} />
+    <UserProvider>
+      <DrawerProvider>
+        <NavigationContainer ref={navigationRef}>
+          <Stack.Navigator
+            initialRouteName="Splash"
+            screenOptions={{
+              headerShown: false,
+            }}>
+            <Stack.Screen name="Splash" component={SplashScreen} />
+            <Stack.Screen name="Dashboard" component={Dashboard} />
+            <Stack.Screen name="Login" component={LoginScreen} />
 
-          <Stack.Screen name="Point of Sale" component={POS} />
-          <Stack.Screen name="Table" component={OrderTablePOS} />
-          <Stack.Screen name="Close" component={ClosePosBtn} />
+            <Stack.Screen name="Point of Sale" component={POS} />
+            <Stack.Screen name="Table" component={OrderTablePOS} />
+            <Stack.Screen name="Close" component={ClosePosBtn} />
 
-          {/*People*/}
-          <Stack.Screen name="Customer" component={CustomerPeople} />
-          <Stack.Screen name="Suppliers" component={SupplierPeople} />
-          <Stack.Screen name="Employees" component={EmployeesPeople} />
-          <Stack.Screen name="Transporter" component={TransporterPeople} />
-          <Stack.Screen name="Labour" component={LabourPeople} />
-          <Stack.Screen name="Order Booker" component={OrderBookerPeople} />
-          <Stack.Screen name="Fixed Account" component={FixedAccountsPeople} />
+            {/*People*/}
+            <Stack.Screen name="Customer" component={CustomerPeople} />
+            <Stack.Screen name="Suppliers" component={SupplierPeople} />
+            <Stack.Screen name="Employees" component={EmployeesPeople} />
+            <Stack.Screen name="Transporter" component={TransporterPeople} />
+            <Stack.Screen name="Labour" component={LabourPeople} />
+            <Stack.Screen name="Order Booker" component={OrderBookerPeople} />
+            <Stack.Screen
+              name="Fixed Account"
+              component={FixedAccountsPeople}
+            />
 
-          {/*Products*/}
-          <Stack.Screen name="Products" component={ProductsProducts} />
-          <Stack.Screen name="Category" component={CategoryProducts} />
-          <Stack.Screen name="UOMs" component={UOMProducts} />
-          <Stack.Screen name="Deleted Products" component={DeletedProducts} />
+            {/*Products*/}
+            <Stack.Screen name="Products" component={ProductsProducts} />
+            <Stack.Screen name="Category" component={CategoryProducts} />
+            <Stack.Screen name="UOMs" component={UOMProducts} />
+            <Stack.Screen name="Deleted Products" component={DeletedProducts} />
 
-          {/*Stock*/}
-          <Stack.Screen name="Current Stock" component={CurrentStock} />
-          <Stack.Screen
-            name="Reorder Products"
-            component={ReOrderProductStock}
-          />
-          <Stack.Screen
-            name="Expire Products"
-            component={ExpiredProductStock}
-          />
+            {/*Stock*/}
+            <Stack.Screen name="Current Stock" component={CurrentStock} />
+            <Stack.Screen
+              name="Reorder Products"
+              component={ReOrderProductStock}
+            />
+            <Stack.Screen
+              name="Expire Products"
+              component={ExpiredProductStock}
+            />
 
-          {/*Purchase*/}
-          <Stack.Screen name="Purchase Order" component={PurchaseOrder} />
-          <Stack.Screen
-            name="Purchase Order List"
-            component={PurchaseOrderList}
-          />
-          <Stack.Screen
-            name="Purchase /Add Stock"
-            component={PurchaseAddStock}
-          />
-          <Stack.Screen name="Purchase List" component={PurchaseList} />
-          <Stack.Screen name="Purchase Return" component={PurchaseReturn} />
-          <Stack.Screen
-            name="Purchase Return List"
-            component={PurchaseReturnList}
-          />
-          <Stack.Screen name="Purchase Table" component={PurchaseOrderTable} />
-          <Stack.Screen name="Stock" component={PurchaseAddStockDetails} />
+            {/*Purchase*/}
+            <Stack.Screen name="Purchase Order" component={PurchaseOrder} />
+            <Stack.Screen
+              name="Purchase Order List"
+              component={PurchaseOrderList}
+            />
+            <Stack.Screen
+              name="Purchase /Add Stock"
+              component={PurchaseAddStock}
+            />
+            <Stack.Screen name="Purchase List" component={PurchaseList} />
+            <Stack.Screen name="Purchase Return" component={PurchaseReturn} />
+            <Stack.Screen
+              name="Purchase Return List"
+              component={PurchaseReturnList}
+            />
+            <Stack.Screen
+              name="Purchase Table"
+              component={PurchaseOrderTable}
+            />
+            <Stack.Screen name="Stock" component={PurchaseAddStockDetails} />
 
-          {/*Sale*/}
-          <Stack.Screen name="Sale Order" component={SaleOrder} />
-          <Stack.Screen name="Order List" component={SalesOrderList} />
-          <Stack.Screen name="Invoice List" component={SaleInvoiceList} />
-          <Stack.Screen name="Dispatch List" component={SaleDispatchList} />
-          <Stack.Screen name="Sale Return" component={SaleReturn} />
-          <Stack.Screen name="Sale Return List" component={SalesReturnList} />
-          <Stack.Screen name="Cash Close" component={SaleCashClose} />
+            {/*Sale*/}
+            <Stack.Screen name="Sale Order" component={SaleOrder} />
+            <Stack.Screen name="Order List" component={SalesOrderList} />
+            <Stack.Screen name="Invoice List" component={SaleInvoiceList} />
+            <Stack.Screen name="Dispatch List" component={SaleDispatchList} />
+            <Stack.Screen name="Sale Return" component={SaleReturn} />
+            <Stack.Screen name="Sale Return List" component={SalesReturnList} />
+            <Stack.Screen name="Cash Close" component={SaleCashClose} />
 
-          {/*Trading*/}
-          <Stack.Screen name="Trade" component={Trade} />
-          <Stack.Screen name="Trading List" component={TradingList} />
+            {/*Trading*/}
+            <Stack.Screen name="Trade" component={Trade} />
+            <Stack.Screen name="Trading List" component={TradingList} />
 
-          {/*Expenses*/}
-          <Stack.Screen
-            name="Expense Categories"
-            component={ExpenseCategories}
-          />
-          <Stack.Screen name="Manage Expenses" component={ManageExpenses} />
-          {/*Accounts*/}
-          <Stack.Screen name="Customer Account" component={CustomerAccount} />
-          <Stack.Screen name="Supplier Account" component={SupplierAccount} />
-          <Stack.Screen
-            name="Transporter Account"
-            component={TransporterAccount}
-          />
-          <Stack.Screen name="Labour Account" component={LabourAccount} />
-          <Stack.Screen name="Employee Account" component={EmployeeAccount} />
-          <Stack.Screen name="Fixed Accounts" component={FixedAccounts} />
+            {/*Expenses*/}
+            <Stack.Screen
+              name="Expense Categories"
+              component={ExpenseCategories}
+            />
+            <Stack.Screen name="Manage Expenses" component={ManageExpenses} />
+            {/*Accounts*/}
+            <Stack.Screen name="Customer Account" component={CustomerAccount} />
+            <Stack.Screen name="Supplier Account" component={SupplierAccount} />
+            <Stack.Screen
+              name="Transporter Account"
+              component={TransporterAccount}
+            />
+            <Stack.Screen name="Labour Account" component={LabourAccount} />
+            <Stack.Screen name="Employee Account" component={EmployeeAccount} />
+            <Stack.Screen name="Fixed Accounts" component={FixedAccounts} />
 
-          {/*Reports*/}
+            {/*Reports*/}
 
-          {/*People*/}
-          <Stack.Screen name="Customer List" component={CustomerList} />
-          <Stack.Screen name="Supplier List" component={SupplierList} />
-          <Stack.Screen name="Employee List" component={EmployeeList} />
-          <Stack.Screen
-            name="Area Wise Customer"
-            component={AreaWiseCustomer}
-          />
-          <Stack.Screen
-            name="Type Wise Customer"
-            component={TypeWiseCustomer}
-          />
-          <Stack.Screen name="Inactive Customer" component={InactiveCustomer} />
+            {/*People*/}
+            <Stack.Screen name="Customer List" component={CustomerList} />
+            <Stack.Screen name="Supplier List" component={SupplierList} />
+            <Stack.Screen name="Employee List" component={EmployeeList} />
+            <Stack.Screen
+              name="Area Wise Customer"
+              component={AreaWiseCustomer}
+            />
+            <Stack.Screen
+              name="Type Wise Customer"
+              component={TypeWiseCustomer}
+            />
+            <Stack.Screen
+              name="Inactive Customer"
+              component={InactiveCustomer}
+            />
 
-          {/*Product*/}
-          <Stack.Screen name="List Of Items" component={ListofItems} />
-          <Stack.Screen
-            name="Below Reorder Products"
-            component={BelowReorderProducts}
-          />
-          <Stack.Screen name="Expire Product" component={ExpireProducts} />
-          <Stack.Screen
-            name="Purchase/Return Stock"
-            component={PurchaseReturnStock}
-          />
-          <Stack.Screen
-            name="Purchase Order Stock"
-            component={PurchaseOrderStock}
-          />
+            {/*Product*/}
+            <Stack.Screen name="List Of Items" component={ListofItems} />
+            <Stack.Screen
+              name="Below Reorder Products"
+              component={BelowReorderProducts}
+            />
+            <Stack.Screen name="Expire Product" component={ExpireProducts} />
+            <Stack.Screen
+              name="Purchase/Return Stock"
+              component={PurchaseReturnStock}
+            />
+            <Stack.Screen
+              name="Purchase Order Stock"
+              component={PurchaseOrderStock}
+            />
 
-          {/*Account*/}
-          <Stack.Screen name="Customer Accounts" component={CustomerAccounts} />
-          <Stack.Screen name="Supplier Accounts" component={SupplierAccounts} />
-          <Stack.Screen
-            name="Transporter Accounts"
-            component={TransporterAccounts}
-          />
-          <Stack.Screen name="Labour Accounts" component={LabourAccounts} />
-          <Stack.Screen name="Employee Accounts" component={EmployeeAccounts} />
-          <Stack.Screen name="Fix Accounts" component={FixAccounts} />
+            {/*Account*/}
+            <Stack.Screen
+              name="Customer Accounts"
+              component={CustomerAccounts}
+            />
+            <Stack.Screen
+              name="Supplier Accounts"
+              component={SupplierAccounts}
+            />
+            <Stack.Screen
+              name="Transporter Accounts"
+              component={TransporterAccounts}
+            />
+            <Stack.Screen name="Labour Accounts" component={LabourAccounts} />
+            <Stack.Screen
+              name="Employee Accounts"
+              component={EmployeeAccounts}
+            />
+            <Stack.Screen name="Fix Accounts" component={FixAccounts} />
 
-          {/*Sale Report*/}
-          <Stack.Screen name="All User Sales" component={AllUserSale} />
-          <Stack.Screen name="Single User Sales" component={SingleUserSale} />
-          <Stack.Screen
-            name="Sale Return Report"
-            component={SaleReturnReport}
-          />
-          <Stack.Screen
-            name="Sale & Sale Return Report"
-            component={SaleSaleReturnReport}
-          />
-          <Stack.Screen name="Sale Order Reports" component={SaleOrderReport} />
-          <Stack.Screen
-            name="Daily Sales Reports"
-            component={DailySalesReport}
-          />
-          <Stack.Screen
-            name="Single User Daily Sales"
-            component={SingleUserDailySales}
-          />
+            {/*Sale Report*/}
+            <Stack.Screen name="All User Sales" component={AllUserSale} />
+            <Stack.Screen name="Single User Sales" component={SingleUserSale} />
+            <Stack.Screen
+              name="Sale Return Report"
+              component={SaleReturnReport}
+            />
+            <Stack.Screen
+              name="Sale & Sale Return Report"
+              component={SaleSaleReturnReport}
+            />
+            <Stack.Screen
+              name="Sale Order Reports"
+              component={SaleOrderReport}
+            />
+            <Stack.Screen
+              name="Daily Sales Reports"
+              component={DailySalesReport}
+            />
+            <Stack.Screen
+              name="Single User Daily Sales"
+              component={SingleUserDailySales}
+            />
 
-          <Stack.Screen name="Cheque List" component={ChequeList} />
-          <Stack.Screen
-            name="Profit Loss Report"
-            component={ProfitLossReport}
-          />
-          <Stack.Screen name="Expense Report" component={ExpenseReport} />
-          <Stack.Screen name="Business Capital" component={BusinessCapital} />
-          <Stack.Screen name="Trades" component={Trading} />
-          <Stack.Screen name="Customer Balances" component={CustomerBalances} />
-          <Stack.Screen name="Supplier Balances" component={Supplierbalances} />
-          <Stack.Screen name="Cash Register" component={CashRegister} />
-          <Stack.Screen name="General Ledger" component={GeneralLedger} />
-          <Stack.Screen name="Day Book" component={DayBook} />
-          <Stack.Screen name="Stock Movement" component={Stockmovement} />
+            <Stack.Screen name="Cheque List" component={ChequeList} />
+            <Stack.Screen
+              name="Profit Loss Report"
+              component={ProfitLossReport}
+            />
+            <Stack.Screen name="Expense Report" component={ExpenseReport} />
+            <Stack.Screen name="Business Capital" component={BusinessCapital} />
+            <Stack.Screen name="Trades" component={Trading} />
+            <Stack.Screen
+              name="Customer Balances"
+              component={CustomerBalances}
+            />
+            <Stack.Screen
+              name="Supplier Balances"
+              component={Supplierbalances}
+            />
+            <Stack.Screen name="Cash Register" component={CashRegister} />
+            <Stack.Screen name="General Ledger" component={GeneralLedger} />
+            <Stack.Screen name="Day Book" component={DayBook} />
+            <Stack.Screen name="Stock Movement" component={Stockmovement} />
 
-          {/*Attendance*/}
-          <Stack.Screen
-            name="All Employees Attendance"
-            component={AllEmployeeAttendance}
-          />
-          <Stack.Screen
-            name="All Employees Attendance List"
-            component={AllEmployeeAttendanceList}
-          />
+            {/*Attendance*/}
+            <Stack.Screen
+              name="All Employees Attendance"
+              component={AllEmployeeAttendance}
+            />
+            <Stack.Screen
+              name="All Employees Attendance List"
+              component={AllEmployeeAttendanceList}
+            />
 
-          {/*System User*/}
-          <Stack.Screen name="Users" component={User} />
-          <Stack.Screen name="Roles" component={Roles} />
+            {/*System User*/}
+            <Stack.Screen name="Users" component={User} />
+            <Stack.Screen name="Roles" component={Roles} />
 
-          {/*Configuration*/}
-          <Stack.Screen name="Customer Type" component={CustomerType} />
-          <Stack.Screen name="Areas" component={CustomerArea} />
-          <Stack.Screen name="Print Barcode" component={PrintBarCode} />
-          <Stack.Screen name="Password Reset" component={PasswordReset} />
-          <Stack.Screen name="Business Variables" component={BusinessVariables} />
-          <Stack.Screen name="Access Control" component={AccessControl} />
-          <Stack.Screen name="Sale Invoice" component={SaleInvoice} />
- 
+            {/*Configuration*/}
+            <Stack.Screen name="Customer Type" component={CustomerType} />
+            <Stack.Screen name="Areas" component={CustomerArea} />
+            <Stack.Screen name="Print Barcode" component={PrintBarCode} />
+            <Stack.Screen name="Password Reset" component={PasswordReset} />
+            <Stack.Screen
+              name="Business Variables"
+              component={BusinessVariables}
+            />
+            <Stack.Screen name="Access Control" component={AccessControl} />
+            <Stack.Screen name="Sale Invoice" component={SaleInvoice} />
           </Stack.Navigator>
 
-
-        <DrawerModal />
-      </NavigationContainer>
-    </DrawerProvider>
+          <DrawerModal />
+        </NavigationContainer>
+        <Toast />
+      </DrawerProvider>
+    </UserProvider>
   );
 }
 

@@ -13,7 +13,7 @@ import {useNavigation} from '@react-navigation/native';
 
 const icons: {[key: string]: any} = {
   Dashboard: require('../assets/dashboard.png'),
- 'Point of Sale': require('../assets/pos.png'),
+  'Point of Sale': require('../assets/pos.png'),
   People: require('../assets/customer.png'),
   Products: require('../assets/product.png'),
   Stock: require('../assets/stocks.png'),
@@ -30,7 +30,7 @@ const icons: {[key: string]: any} = {
 
 const menuData: {[key: string]: string[]} = {
   Dashboard: [],
-  'Point of Sale':[],
+  'Point of Sale': [],
 
   People: [
     'Customer',
@@ -93,16 +93,13 @@ const menuData: {[key: string]: string[]} = {
   Configuration: [
     'Customer Type',
     'Areas',
-    'Print Barcode',
     'Password Reset',
     'Business Variables',
-    'Access Control',
     'Sale Invoice',
   ],
 };
 
 const DrawerModal = () => {
-  
   const {menuVisible, closeDrawer} = useDrawer();
   const navigation = useNavigation();
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
@@ -185,14 +182,17 @@ const DrawerModal = () => {
                 <TouchableOpacity
                   key={subIndex}
                   onPress={() => handleSubPress(subItem)}>
-                <View style={{
-                          flexDirection:'row',marginHorizontal:60
-                        }}>
-                      
-                          <Image
-                        style={{width:10,height:10,marginTop:10}} source={require('../assets/handarrow.png')}/>
-                  <Text style={styles.subMenuItem}>{subItem}</Text>
-               </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      marginHorizontal: 60,
+                    }}>
+                    <Image
+                      style={{width: 10, height: 10, marginTop: 10}}
+                      source={require('../assets/handarrow.png')}
+                    />
+                    <Text style={styles.subMenuItem}>{subItem}</Text>
+                  </View>
                 </TouchableOpacity>
               ))}
 
@@ -203,13 +203,17 @@ const DrawerModal = () => {
                     <View key={idx}>
                       <TouchableOpacity
                         onPress={() => handleReportSubmenuPress(sub)}>
-                           <View style={{
-                          flexDirection:'row',marginHorizontal:60
-                        }}>
-                      
+                        <View
+                          style={{
+                            flexDirection: 'row',
+                            marginHorizontal: 60,
+                          }}>
                           <Image
-                        style={{width:10,height:10,marginTop:10}} source={require('../assets/handarrow.png')}/>
-                        <Text style={styles.subMenuItem}>{sub}</Text></View>
+                            style={{width: 10, height: 10, marginTop: 10}}
+                            source={require('../assets/handarrow.png')}
+                          />
+                          <Text style={styles.subMenuItem}>{sub}</Text>
+                        </View>
                       </TouchableOpacity>
                       {expandedReportSubmenu === sub && (
                         <View style={styles.subSubMenu}>
@@ -218,7 +222,7 @@ const DrawerModal = () => {
                               key={sIdx}
                               onPress={() => handleSubPress(screen)}>
                               <Text style={styles.subSubMenuItem}>
-                              > {screen}
+                                {'>'} {screen}
                               </Text>
                             </TouchableOpacity>
                           ))}
@@ -244,13 +248,17 @@ const DrawerModal = () => {
                   <TouchableOpacity
                     key={i}
                     onPress={() => handleSubPress(item)}>
-                        <View style={{
-                          flexDirection:'row',marginHorizontal:60
-                        }}>
-                      
-                          <Image
-                        style={{width:10,height:10,marginTop:10}} source={require('../assets/handarrow.png')}/>
-                    <Text style={styles.subMenuItem}>{item}</Text></View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        marginHorizontal: 60,
+                      }}>
+                      <Image
+                        style={{width: 10, height: 10, marginTop: 10}}
+                        source={require('../assets/handarrow.png')}
+                      />
+                      <Text style={styles.subMenuItem}>{item}</Text>
+                    </View>
                   </TouchableOpacity>
                 ))}
               </View>

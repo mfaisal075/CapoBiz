@@ -71,171 +71,169 @@ export default function Dashboard() {
             </TouchableOpacity>
           </View>
           {/*cards*/}
-         
-            <View style={styles.card}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginTop:15
-                }}>
-                <Image
-                  style={{
-                    width: 50,
-                    height: 50,
-                    tintColor: 'white',
-                    alignSelf: 'center',
-                    marginRight: 10,
-                    marginLeft: 10,
-                  }}
-                  source={require('../assets/customer.png')}
-                />
-                <View>
-                  <Text
-                    style={{
-                      marginRight: 40,
-                      color: 'white',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                    }}>
-                    Customers
-                  </Text>
-                  <Text
-                    style={{
-                      marginRight: 40,
-                      color: 'white',
-                      fontSize: 14,
-                      fontWeight: 'bold',
-                    }}>
-                    12
-                  </Text>
-                </View>
-              </View>
-            </View>
-            <View style={styles.card}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginTop: 15,
-                }}>
-                <Image
-                  style={{
-                    width: 50,
-                    height: 50,
-                    tintColor: 'white',
-                    alignSelf: 'center',
-                    marginRight: 10,
-                    marginLeft: 10,
-                  }}
-                  source={require('../assets/product.png')}
-                />
-                <View>
-                  <Text
-                    style={{
-                      marginRight: 40,
-                      color: 'white',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                    }}>
-                    Products
-                  </Text>
-                  <Text
-                    style={{
-                      marginRight: 40,
-                      color: 'white',
-                      fontSize: 14,
-                      fontWeight: 'bold',
-                    }}>
-                    20
-                  </Text>
-                </View>
-              </View>
-            </View>
-        
-         
-            <View style={styles.card}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginTop: 15,
-                }}>
-                <Image
-                  style={{
-                    width: 50,
-                    height: 50,
-                    tintColor: 'white',
-                    alignSelf: 'center',
-                    marginRight: 5,
-                    marginLeft: 5,
-                  }}
-                  source={require('../assets/sale.png')}
-                />
-                <View>
-                  <Text
-                    style={{
-                      marginRight: 40,
-                      color: 'white',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                    }}>
-                    Sale Invoices
-                  </Text>
-                  <Text
-                    style={{
-                      marginRight: 40,
-                      color: 'white',
-                      fontSize: 14,
-                      fontWeight: 'bold',
-                    }}>
-                    40
-                  </Text>
-                </View>
-              </View>
-            </View>
 
-            <View style={styles.card}>
-              <View
+          <View style={styles.card}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginTop: 15,
+              }}>
+              <Image
                 style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  marginTop: 15,
-                }}>
-                <Image
+                  width: 50,
+                  height: 50,
+                  tintColor: 'white',
+                  alignSelf: 'center',
+                  marginRight: 10,
+                  marginLeft: 10,
+                }}
+                source={require('../assets/customer.png')}
+              />
+              <View>
+                <Text
                   style={{
-                    width: 50,
-                    height: 50,
-                    tintColor: 'white',
-                    alignSelf: 'center',
-                    marginRight: 10,
-                    marginLeft: 10,
-                  }}
-                  source={require('../assets/purchase.png')}
-                />
-                <View>
-                  <Text
-                    style={{
-                      marginRight: 40,
-                      color: 'white',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                    }}>
-                    Purchases
-                  </Text>
-                  <Text
-                    style={{
-                      marginRight: 40,
-                      color: 'white',
-                      fontSize: 14,
-                      fontWeight: 'bold',
-                    }}>
-                    70
-                  </Text>
-                </View>
+                    marginRight: 40,
+                    color: 'white',
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                  }}>
+                  Customers
+                </Text>
+                <Text
+                  style={{
+                    marginRight: 40,
+                    color: 'white',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                  }}>
+                  12
+                </Text>
               </View>
             </View>
-          
+          </View>
+          <View style={styles.card}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginTop: 15,
+              }}>
+              <Image
+                style={{
+                  width: 50,
+                  height: 50,
+                  tintColor: 'white',
+                  alignSelf: 'center',
+                  marginRight: 10,
+                  marginLeft: 10,
+                }}
+                source={require('../assets/product.png')}
+              />
+              <View>
+                <Text
+                  style={{
+                    marginRight: 40,
+                    color: 'white',
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                  }}>
+                  Products
+                </Text>
+                <Text
+                  style={{
+                    marginRight: 40,
+                    color: 'white',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                  }}>
+                  20
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.card}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginTop: 15,
+              }}>
+              <Image
+                style={{
+                  width: 50,
+                  height: 50,
+                  tintColor: 'white',
+                  alignSelf: 'center',
+                  marginRight: 5,
+                  marginLeft: 5,
+                }}
+                source={require('../assets/sale.png')}
+              />
+              <View>
+                <Text
+                  style={{
+                    marginRight: 40,
+                    color: 'white',
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                  }}>
+                  Sale Invoices
+                </Text>
+                <Text
+                  style={{
+                    marginRight: 40,
+                    color: 'white',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                  }}>
+                  40
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          <View style={styles.card}>
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginTop: 15,
+              }}>
+              <Image
+                style={{
+                  width: 50,
+                  height: 50,
+                  tintColor: 'white',
+                  alignSelf: 'center',
+                  marginRight: 10,
+                  marginLeft: 10,
+                }}
+                source={require('../assets/purchase.png')}
+              />
+              <View>
+                <Text
+                  style={{
+                    marginRight: 40,
+                    color: 'white',
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                  }}>
+                  Purchases
+                </Text>
+                <Text
+                  style={{
+                    marginRight: 40,
+                    color: 'white',
+                    fontSize: 14,
+                    fontWeight: 'bold',
+                  }}>
+                  70
+                </Text>
+              </View>
+            </View>
+          </View>
 
           {/*graphs*/}
           <View style={styles.graph}>
@@ -289,7 +287,7 @@ export default function Dashboard() {
         backdropOpacity={0.3}
         animationIn="fadeIn"
         animationOut="fadeOut"
-        style={{margin: 0, position: 'absolute', top: ('8%'), right: 10}}>
+        style={{margin: 0, position: 'absolute', top: '8%', right: 10}}>
         <View
           style={{
             backgroundColor: 'white',
@@ -334,7 +332,7 @@ export default function Dashboard() {
                   color: '#144272',
                 }}>
                 pos@technicmentors.com
-              </Text>{' '}
+              </Text>
             </View>
           </View>
 
@@ -378,21 +376,20 @@ const styles = StyleSheet.create({
   card: {
     width: '93%',
     height: 80,
-   borderWidth:1,
-   borderColor:'white',
+    borderWidth: 1,
+    borderColor: 'white',
     borderRadius: 10,
     alignSelf: 'center',
-    marginTop:5
+    marginTop: 5,
   },
   graph: {
- 
     width: '93%',
     height: 250,
     alignSelf: 'center',
     marginTop: 5,
     borderRadius: 10,
-    borderWidth:1,
-   borderColor:'white'
+    borderWidth: 1,
+    borderColor: 'white',
   },
   menuItem: {
     fontSize: 16,

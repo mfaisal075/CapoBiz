@@ -12,6 +12,7 @@ import {
 import {useNavigation} from '@react-navigation/native';
 import axios from 'axios';
 import BASE_URL from './BASE_URL';
+import Toast from 'react-native-toast-message';
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -33,11 +34,22 @@ const LoginScreen: React.FC = () => {
   const buttonTranslate = useRef(new Animated.Value(20)).current;
 
   const handleLogin = async () => {
+    if (!username || !password) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Fields',
+        text2: 'Please enter both username and password.',
+        autoHide: true,
+        visibilityTime: 2500,
+      });
+      return;
+    }
+
     try {
       const response = await axios.post(
-        `${BASE_URL}/login`,
+        `${BASE_URL}/userlogin`,
         {
-          user_name: username,
+          email: username,
           password,
         },
         {
@@ -46,9 +58,51 @@ const LoginScreen: React.FC = () => {
       );
 
       const data = response.data;
-      console.log('Response:', data);
+
+      // Get CSRF token from response headers
+      const xsrfToken = response.headers['set-cookie']
+        ?.find(cookie => cookie.includes('XSRF-TOKEN'))
+        ?.split('=')[1]
+        ?.split(';')[0];
+
+      if (xsrfToken) {
+        axios.defaults.headers.common['X-XSRF-TOKEN'] = xsrfToken;
+      } else {
+        console.log('XSRF Token not found');
+      }
+
+      if (response.status === 200 && data.status === 200) {
+        navigation.navigate('Dashboard' as never);
+        Toast.show({
+          type: 'success',
+          text1: 'Login Successful',
+          text2: 'You have logged in successfully!',
+          autoHide: true,
+          visibilityTime: 2500,
+        });
+      } else if (data.status === 202) {
+        Toast.show({
+          type: 'error',
+          text1: 'Login failed',
+          text2: 'Invalid username or password',
+          autoHide: true,
+          visibilityTime: 2500,
+        });
+        console.log('Login failed:', data);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Unexpected response',
+          text2: 'Unexpected response from the server',
+          autoHide: true,
+          visibilityTime: 2500,
+        });
+        console.log('Unexpected response:', data);
+      }
+
+      console.log('Reponse: ', data);
     } catch (error) {
-      console.log(error);
+      console.log('Error: ', error);
     }
   };
 
@@ -147,9 +201,8 @@ const LoginScreen: React.FC = () => {
                 style={{flex: 1, color: '#144272'}}
                 placeholder="Username"
                 placeholderTextColor="#144272"
-                onChangeText={text => setUsername(text.toUpperCase())}
+                onChangeText={text => setUsername(text)}
                 value={username}
-                autoCapitalize="characters"
               />
             </View>
           </Animated.View>
