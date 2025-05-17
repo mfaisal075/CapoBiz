@@ -10,32 +10,28 @@ import {
   FlatList,
   TextInput,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import Modal from 'react-native-modal';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
+import {useUser} from '../../CTX/UserContext';
+
+interface Types {
+  id: number;
+  custtyp_name: string;
+  custtyp_status: string;
+}
 
 export default function CustomerType() {
   const {openDrawer} = useDrawer();
   const [type, setType] = useState('');
+  const {token} = useUser();
+  const [types, setTypes] = useState<Types[] | []>([]);
+  const [selectedType, setSelectedType] = useState<number | null>(null);
+  const [editType, setEditType] = useState<string | ''>('');
 
-  const Info = [
-    {
-      Name: 'standard',
-    },
-    {
-      Name: 'blue',
-    },
-    {
-      Name: 'new',
-    },
-  ];
-
-  {
-    /*customer*/
-  }
   const [customer, setcustomer] = useState(false);
 
   const togglecustomer = () => {
@@ -44,12 +40,9 @@ export default function CustomerType() {
 
   const [btncustomerarea, setbtncustomerarea] = useState(false);
 
-  const togglebtncustomerarea = () => {
-    setbtncustomerarea(!btncustomerarea);
-  };
-
   const [isModalV, setModalV] = useState(false);
-  const tglModal = () => {
+  const tglModal = (id: number) => {
+    setSelectedType(id);
     setModalV(!isModalV);
   };
 
@@ -58,14 +51,71 @@ export default function CustomerType() {
   }
   const [edit, setedit] = useState(false);
 
-  const toggleedit = () => {
-    setedit(!edit);
+  const toggleedit = async (id: number) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/edittype?id=${id}&_token=${token}`,
+      );
+
+      setSelectedType(id);
+      setEditType(res.data.custtyp_name);
+      setedit(!edit);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const [btncustomeraditarea, setbtncustomereditarea] = useState(false);
+  // Delete Type
+  const handleDeleteType = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/typedelete`, {
+        id: selectedType,
+      });
 
-  const togglebtncustomereditarea = () => {
-    setbtncustomereditarea(!btncustomeraditarea);
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Deleted!',
+          text2: 'Type has been Deleted successfully!',
+          visibilityTime: 1500,
+        });
+
+        setModalV(false);
+        setSelectedType(null);
+        handleGetTypes();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Update Type
+  const handleUpdateType = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/updatetype`, {
+        type_id: selectedType,
+        custtyp_name: editType,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Updated!',
+          text2: 'Type has been Updated successfully!',
+          visibilityTime: 1500,
+        });
+        setedit(!edit);
+        setEditType('');
+        setSelectedType(null);
+        handleGetTypes();
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   //Add Type function
@@ -98,11 +148,31 @@ export default function CustomerType() {
         });
         setcustomer(false);
         setType('');
+        handleGetTypes();
       }
     } catch (error) {
       console.log(error);
     }
   };
+
+  // Fetch Types Data
+  const handleGetTypes = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchtypes`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setTypes(res.data.type);
+    } catch (error) {
+      console.log('Error: ', error);
+    }
+  };
+
+  useEffect(() => {
+    handleGetTypes();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -169,7 +239,7 @@ export default function CustomerType() {
 
         <View>
           <FlatList
-            data={Info}
+            data={types}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <ScrollView
@@ -185,7 +255,7 @@ export default function CustomerType() {
                         marginLeft: 5,
                         marginTop: 5,
                       }}>
-                      {item.Name}
+                      {item.custtyp_name}
                     </Text>
 
                     <View
@@ -193,7 +263,7 @@ export default function CustomerType() {
                         flexDirection: 'row',
                         justifyContent: 'center',
                       }}>
-                      <TouchableOpacity onPress={toggleedit}>
+                      <TouchableOpacity onPress={() => toggleedit(item.id)}>
                         <Image
                           style={{
                             tintColor: 'white',
@@ -206,7 +276,7 @@ export default function CustomerType() {
                         />
                       </TouchableOpacity>
 
-                      <TouchableOpacity onPress={tglModal}>
+                      <TouchableOpacity onPress={() => tglModal(item.id)}>
                         <Image
                           style={{
                             tintColor: 'white',
@@ -424,7 +494,7 @@ export default function CustomerType() {
                 marginTop: 10,
                 justifyContent: 'center',
               }}>
-              <TouchableOpacity onPress={() => setModalV(!isModalV)}>
+              <TouchableOpacity onPress={() => setModalV(false)}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -444,7 +514,7 @@ export default function CustomerType() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDeleteType()}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -510,10 +580,12 @@ export default function CustomerType() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Type"
+                value={editType}
+                onChangeText={text => setEditType(text)}
               />
             </View>
 
-            <TouchableOpacity onPress={togglebtncustomereditarea}>
+            <TouchableOpacity onPress={handleUpdateType}>
               <View
                 style={{
                   backgroundColor: '#144272',
@@ -536,76 +608,6 @@ export default function CustomerType() {
           </ScrollView>
         </Modal>
 
-        {/*btn customer*/}
-        <Modal isVisible={btncustomeraditarea}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 230,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Updated
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Type has been updated successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomereditarea(!btncustomeraditarea)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
         <Toast />
       </ImageBackground>
     </SafeAreaView>

@@ -9,36 +9,51 @@ import {
 } from 'react-native';
 import React, {useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import {RadioButton} from 'react-native-paper';
-import Modal from 'react-native-modal';
+import {RadioButton, Checkbox} from 'react-native-paper';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import Toast from 'react-native-toast-message';
 
 export default function SaleInvoice() {
   const {openDrawer} = useDrawer();
-
-  const [Type, setType] = React.useState<'English' | 'string'>('English');
-
-  const [Urdu, setUrdu] = React.useState<'Urdu' | 'Urdu'>('Urdu');
-
-  const [Quantity, setQuantity] = React.useState<'Quantity' | 'Quantity'>(
-    'Quantity',
+  const [selectedLang, setSelectedLang] = useState<'English' | 'Urdu'>(
+    'English',
   );
+  const [invoiceSize, setInvoiceSize] = useState<'A4' | 'A5' | 'receipt'>('A4');
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [showBuilty, setShowBuilty] = useState<'Y' | 'N'>('N');
 
-  const [UnitPrice, setUnitPrice] = React.useState<'UnitPrice' | 'UnitPrice'>(
-    'UnitPrice',
-  );
+  const handleAddInvoice = async () => {
+    const payload = {
+      inv_language: selectedLang,
+      size: invoiceSize,
+      builtysection: showBuilty,
+      ...(selectedOptions.includes('qty_pos') && {qty_pos: 'qty_pos'}),
+      ...(selectedOptions.includes('price_pos') && {price_pos: 'price_pos'}),
+    };
 
-  const [ReceiptSize, setReceiptSize] = React.useState<
-    'ReceiptSize' | 'ReceiptSize'
-  >('ReceiptSize');
+    try {
+      const res = await axios.post(`${BASE_URL}/addinvoicematerial`, payload);
 
-  const [A4, setA4] = React.useState<'A4' | 'A4'>('A4');
+      const data = res.data;
+      console.log('Response: ', data);
 
-  const [A5, setA5] = React.useState<'A5' | 'A5'>('A5');
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success!',
+          text2: 'Configuration has been saved successfully',
+          visibilityTime: 1500,
+        });
 
-  const [btncustomeraditarea, setbtncustomereditarea] = useState(false);
-
-  const togglebtncustomereditarea = () => {
-    setbtncustomereditarea(!btncustomeraditarea);
+        setSelectedOptions([]);
+        setShowBuilty('N');
+        setInvoiceSize('A4');
+        setSelectedLang('English');
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
@@ -88,37 +103,39 @@ export default function SaleInvoice() {
           Invoice Language
         </Text>
         <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-          <RadioButton
-            value="English"
-            status={Type === 'English' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
-            onPress={() => setType('English')}
-          />
-          <Text
-            style={{
-              color: 'white',
-              marginTop: 7,
-              marginLeft: -10,
-            }}>
-            English
-          </Text>
-
-          <RadioButton
-            value="Urdu"
-            status={Urdu === 'Urdu' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
-            onPress={() => setUrdu('Urdu')}
-          />
-          <Text
-            style={{
-              color: 'white',
-              marginTop: 7,
-              marginLeft: -10,
-            }}>
-            Urdu
-          </Text>
+          <RadioButton.Group
+            onValueChange={value => {
+              setSelectedLang(value as 'English' | 'Urdu');
+            }}
+            value={selectedLang}>
+            <View style={{flexDirection: 'row'}}>
+              <TouchableOpacity
+                onPress={() => setSelectedLang('English')}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginRight: 20,
+                }}
+                activeOpacity={0.7}>
+                <RadioButton.Android
+                  value="English"
+                  color="#D0F4DE"
+                  uncheckedColor="white"
+                />
+                <Text style={{color: 'white', marginLeft: 8}}>English</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setSelectedLang('Urdu')}
+                style={{flexDirection: 'row', alignItems: 'center'}}>
+                <RadioButton.Android
+                  value="Urdu"
+                  color="#D0F4DE"
+                  uncheckedColor="white"
+                />
+                <Text style={{color: 'white', marginLeft: 8}}>Urdu</Text>
+              </TouchableOpacity>
+            </View>
+          </RadioButton.Group>
         </View>
 
         <Text
@@ -131,38 +148,48 @@ export default function SaleInvoice() {
           }}>
           Make Fields Editable
         </Text>
-        <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-          <RadioButton
-            value="Quantity"
-            status={Quantity === 'Quantity' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
-            onPress={() => setQuantity('Quantity')}
-          />
-          <Text
-            style={{
-              color: 'white',
-              marginTop: 7,
-              marginLeft: -10,
+        <View
+          style={[
+            styles.row,
+            {marginLeft: 7, marginRight: 10, justifyContent: 'flex-start'},
+          ]}>
+          <TouchableOpacity
+            style={{flexDirection: 'row', alignItems: 'center'}}
+            activeOpacity={0.7}
+            onPress={() => {
+              const newOptions = selectedOptions.includes('qty_pos')
+                ? selectedOptions.filter(opt => opt !== 'qty_pos')
+                : [...selectedOptions, 'qty_pos'];
+              setSelectedOptions(newOptions);
             }}>
-            Quantity
-          </Text>
+            <Checkbox.Android
+              status={
+                selectedOptions.includes('qty_pos') ? 'checked' : 'unchecked'
+              }
+              color="#D0F4DE"
+              uncheckedColor="white"
+            />
+            <Text style={{color: 'white', marginLeft: 8}}>Quantity</Text>
+          </TouchableOpacity>
 
-          <RadioButton
-            value="UnitPrice"
-            status={UnitPrice === 'UnitPrice' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
-            onPress={() => setUnitPrice('UnitPrice')}
-          />
-          <Text
-            style={{
-              color: 'white',
-              marginTop: 7,
-              marginLeft: -10,
+          <TouchableOpacity
+            style={{flexDirection: 'row', alignItems: 'center', marginLeft: 20}}
+            activeOpacity={0.7}
+            onPress={() => {
+              const newOptions = selectedOptions.includes('price_pos')
+                ? selectedOptions.filter(opt => opt !== 'price_pos')
+                : [...selectedOptions, 'price_pos'];
+              setSelectedOptions(newOptions);
             }}>
-            Unit Price
-          </Text>
+            <Checkbox.Android
+              status={
+                selectedOptions.includes('price_pos') ? 'checked' : 'unchecked'
+              }
+              color="#D0F4DE"
+              uncheckedColor="white"
+            />
+            <Text style={{color: 'white', marginLeft: 8}}>Unit Price</Text>
+          </TouchableOpacity>
         </View>
 
         <Text
@@ -176,53 +203,58 @@ export default function SaleInvoice() {
           Invoice Size
         </Text>
         <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-          <RadioButton
-            value="A4"
-            status={A4 === 'A4' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
-            onPress={() => setA4('A4')}
-          />
-          <Text
-            style={{
-              color: 'white',
-              marginTop: 7,
-              marginLeft: -10,
-            }}>
-            A4
-          </Text>
-
-          <RadioButton
-            value="A5"
-            status={A5 === 'A5' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
-            onPress={() => setA5('A5')}
-          />
-          <Text
-            style={{
-              color: 'white',
-              marginTop: 7,
-              marginLeft: -10,
-            }}>
-            A5
-          </Text>
-
-          <RadioButton
-            value="ReceiptSize"
-            status={ReceiptSize === 'ReceiptSize' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
-            onPress={() => setReceiptSize('ReceiptSize')}
-          />
-          <Text
-            style={{
-              color: 'white',
-              marginTop: 7,
-              marginLeft: -10,
-            }}>
-            Receipt Size
-          </Text>
+          <RadioButton.Group
+            onValueChange={value => {
+              setInvoiceSize(value as 'A4' | 'A5' | 'receipt');
+            }}
+            value={invoiceSize}>
+            <View style={{flexDirection: 'row'}}>
+              <TouchableOpacity
+                onPress={() => setInvoiceSize('A4')}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginRight: 20,
+                }}>
+                <RadioButton.Android
+                  value="A4"
+                  color="#D0F4DE"
+                  uncheckedColor="white"
+                />
+                <Text style={{color: 'white', marginLeft: 8}}>A4</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setInvoiceSize('A5')}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginRight: 20,
+                }}>
+                <RadioButton.Android
+                  value="A5"
+                  color="#D0F4DE"
+                  uncheckedColor="white"
+                />
+                <Text style={{color: 'white', marginLeft: 8}}>A5</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setInvoiceSize('receipt')}
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  marginRight: 20,
+                }}>
+                <RadioButton.Android
+                  value="receipt"
+                  color="#D0F4DE"
+                  uncheckedColor="white"
+                />
+                <Text style={{color: 'white', marginLeft: 8}}>
+                  Receipt Size
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </RadioButton.Group>
         </View>
 
         <Text
@@ -234,29 +266,44 @@ export default function SaleInvoice() {
             marginTop: 10,
             marginLeft: 15,
           }}>
-          Invoice Logo
+          Show Builty Section
         </Text>
-        <TouchableOpacity>
-          <View
-            style={[
-              styles.row,
-              {
-                marginLeft: 11,
-                backgroundColor: 'white',
-                borderRadius: 10,
-                width: 110,
-              },
-            ]}>
-            <Text
-              style={[
-                styles.productinput,
-                {color: '#144272', textAlign: 'center'},
-              ]}>
-              Choose Logo
-            </Text>
+        <RadioButton.Group
+          onValueChange={value => setShowBuilty(value as 'Y' | 'N')}
+          value={showBuilty}>
+          <View style={{marginLeft: 7, flexDirection: 'row'}}>
+            <TouchableOpacity
+              onPress={() => setShowBuilty('Y')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginRight: 20,
+              }}>
+              <RadioButton.Android
+                value="Y"
+                color="#D0F4DE"
+                uncheckedColor="white"
+              />
+              <Text style={{color: 'white', marginLeft: 8}}>Yes</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowBuilty('N')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                marginRight: 20,
+              }}>
+              <RadioButton.Android
+                value="N"
+                color="#D0F4DE"
+                uncheckedColor="white"
+              />
+              <Text style={{color: 'white', marginLeft: 8}}>No</Text>
+            </TouchableOpacity>
           </View>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={togglebtncustomereditarea}>
+        </RadioButton.Group>
+
+        <TouchableOpacity onPress={() => handleAddInvoice()}>
           <View
             style={{
               backgroundColor: 'white',
@@ -265,87 +312,19 @@ export default function SaleInvoice() {
               marginTop: 10,
               borderRadius: 10,
               marginLeft: 15,
-              justifyContent: 'center',alignSelf:'center'
+              justifyContent: 'center',
+              alignSelf: 'center',
             }}>
             <Text
               style={{
                 color: '#144272',
                 textAlign: 'center',
+                fontWeight: 'bold',
               }}>
               Save
             </Text>
           </View>
         </TouchableOpacity>
-        {/*btn*/}
-        <Modal isVisible={btncustomeraditarea}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 230,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Configuration has been saved successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomereditarea(!btncustomeraditarea)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
       </ImageBackground>
     </SafeAreaView>
   );

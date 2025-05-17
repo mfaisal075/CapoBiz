@@ -10,28 +10,27 @@ import {
   FlatList,
   TextInput,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import Modal from 'react-native-modal';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
+import {useUser} from '../../CTX/UserContext';
+
+interface Areas {
+  id: number;
+  area_name: string;
+  area_status: string;
+}
 
 export default function CustomerArea() {
   const {openDrawer} = useDrawer();
   const [area, setArea] = useState('');
-
-  const Info = [
-    {
-      Name: 'gujranwala',
-    },
-    {
-      Name: 'lahore',
-    },
-    {
-      Name: 'karachi',
-    },
-  ];
+  const {token} = useUser();
+  const [areas, setAreas] = useState<Areas[] | []>([]);
+  const [selectedArea, setSelectedArea] = useState<number | null>(null);
+  const [editArea, setEditArea] = useState<string | ''>('');
 
   {
     /*customer*/
@@ -42,28 +41,100 @@ export default function CustomerArea() {
     setcustomer(!customer);
   };
 
-  const [btncustomerarea, setbtncustomerarea] = useState(false);
-
   const [isModalV, setModalV] = useState(false);
-  const tglModal = () => {
+  const tglModal = async (id: number) => {
+    setSelectedArea(id);
     setModalV(!isModalV);
   };
-
-  {
-    /*edit*/
-  }
   const [edit, setedit] = useState(false);
 
-  const toggleedit = () => {
-    setedit(!edit);
+  const toggleedit = async (id: number) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/editarea?id=${id}&_token=${token}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      setedit(!edit);
+      setEditArea(res.data.area_name);
+      setSelectedArea(id);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const [btncustomeraditarea, setbtncustomereditarea] = useState(false);
+  // Delete Area
+  const handleDeleteArea = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/areadelete`, {
+        id: selectedArea,
+      });
 
-  const togglebtncustomereditarea = () => {
-    setbtncustomereditarea(!btncustomeraditarea);
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Deleted!',
+          text2: 'Area has been Deleted successfully!',
+          visibilityTime: 1500,
+        });
+        setSelectedArea(null);
+        handleFetchAreas();
+        setModalV(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
+  // Update Area
+  const handleUpdateArea = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/updatearea`, {
+        area_id: selectedArea,
+        area_name: editArea.trim(),
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Updated!',
+          text2: 'Area has been Updated successfully!',
+          visibilityTime: 1500,
+        });
+
+        setSelectedArea(null);
+        setEditArea('');
+        setedit(!edit);
+        handleFetchAreas();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Get Areas
+  const handleFetchAreas = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchareas`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setAreas(res.data.area);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Add Area
   const handleAddArea = async () => {
     if (!area) {
       Toast.show({
@@ -71,7 +142,7 @@ export default function CustomerArea() {
         text1: 'Missing Field',
         text2: 'Area field can not empty.',
         autoHide: true,
-        visibilityTime: 2500,
+        visibilityTime: 1500,
       });
       return;
     }
@@ -90,12 +161,18 @@ export default function CustomerArea() {
           type: 'success',
           text1: 'Added',
           text2: 'Area has been added successfully!',
+          visibilityTime: 1500,
         });
+        handleFetchAreas();
       }
     } catch (error) {
       console.log(error);
     }
   };
+
+  useEffect(() => {
+    handleFetchAreas();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -162,7 +239,7 @@ export default function CustomerArea() {
 
         <View>
           <FlatList
-            data={Info}
+            data={areas}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <ScrollView
@@ -178,7 +255,7 @@ export default function CustomerArea() {
                         marginLeft: 5,
                         marginTop: 5,
                       }}>
-                      {item.Name}
+                      {item.area_name}
                     </Text>
 
                     <View
@@ -186,7 +263,7 @@ export default function CustomerArea() {
                         flexDirection: 'row',
                         justifyContent: 'center',
                       }}>
-                      <TouchableOpacity onPress={toggleedit}>
+                      <TouchableOpacity onPress={() => toggleedit(item.id)}>
                         <Image
                           style={{
                             tintColor: 'white',
@@ -199,7 +276,7 @@ export default function CustomerArea() {
                         />
                       </TouchableOpacity>
 
-                      <TouchableOpacity onPress={tglModal}>
+                      <TouchableOpacity onPress={() => tglModal(item.id)}>
                         <Image
                           style={{
                             tintColor: 'white',
@@ -219,8 +296,6 @@ export default function CustomerArea() {
             )}
           />
         </View>
-
-        {/*attendance*/}
 
         <Modal isVisible={customer}>
           <ScrollView
@@ -366,7 +441,7 @@ export default function CustomerArea() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity>
+              <TouchableOpacity onPress={() => handleDeleteArea()}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -432,10 +507,12 @@ export default function CustomerArea() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Area"
+                value={editArea}
+                onChangeText={text => setEditArea(text)}
               />
             </View>
 
-            <TouchableOpacity onPress={togglebtncustomereditarea}>
+            <TouchableOpacity onPress={() => handleUpdateArea()}>
               <View
                 style={{
                   backgroundColor: '#144272',
@@ -458,76 +535,7 @@ export default function CustomerArea() {
           </ScrollView>
         </Modal>
 
-        {/*btn customer*/}
-        <Modal isVisible={btncustomeraditarea}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 230,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Updated
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Area has been updated successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomereditarea(!btncustomeraditarea)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+        <Toast />
       </ImageBackground>
     </SafeAreaView>
   );
