@@ -6,97 +6,297 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
   TextInput,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import Modal from 'react-native-modal';
 import DropDownPicker from 'react-native-dropdown-picker';
+import {useUser} from '../../CTX/UserContext';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import Toast from 'react-native-toast-message';
+
+interface SystemUser {
+  id: number;
+  name: string;
+  email: string;
+  contact: string;
+  cnic: string;
+  role: string;
+}
+
+interface EditUser {
+  user_id: number;
+  name: string;
+  contact: string;
+  cnic: string;
+  email: string;
+  role: number;
+}
+
+const initialEditUser: EditUser = {
+  user_id: 0,
+  name: '',
+  contact: '',
+  cnic: '',
+  email: '',
+  role: 0,
+};
+
+interface RolesDropDown {
+  id: number;
+  role_name: string;
+}
+
+interface UserForm {
+  name: string;
+  contact: string;
+  cnic: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+  role: any;
+}
+
+const initialUserForm: UserForm = {
+  name: '',
+  contact: '',
+  cnic: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  role: '',
+};
 
 export default function User() {
   const {openDrawer} = useDrawer();
-
-  const Info = [
-    {
-      Name: 'Admin',
-      Contact: '123',
-      CNIC: '13',
-      Email: '@gmail.com',
-      Role: 'admin',
-    },
-    {
-      Name: 'Manager',
-      Contact: '123',
-      CNIC: '13',
-      Email: '@gmail.com',
-      Role: 'admin',
-    },
-    {
-      Name: 'Ali',
-      Contact: '123',
-      CNIC: '13',
-      Email: '@gmail.com',
-      Role: 'admin',
-    },
-  ];
-  const [startDate, setStartDate] = useState(new Date());
-
-  {
-    /*customer*/
-  }
+  const {token} = useUser();
+  const [systemUser, setSystemUser] = useState<SystemUser[] | []>([]);
   const [customer, setcustomer] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<number | null>(null);
+  const [editForm, setEditForm] = useState<EditUser>(initialEditUser);
+  const [roleDropDown, setRoleDropDown] = useState<RolesDropDown[]>([]);
+  const [roleValue, setRoleValue] = useState<string | null>(null);
+  const [roleOpen, setRoleOpen] = useState(false);
+  const [userForm, setUserForm] = useState<UserForm>(initialUserForm);
+
+  const transformedRoleDropDown = roleDropDown.map(item => ({
+    label: item.role_name,
+    value: item.id.toString(),
+  }));
 
   const togglecustomer = () => {
     setcustomer(!customer);
   };
 
-  const [customerArea, setcustomerArea] = useState(false);
-  const [currentcustomerarea, setCurrentcustomerarea] = useState<string | null>(
-    '',
-  );
-  const customerAreaItem = [
-    {label: 'Admin', value: 'Admin'},
-    {label: 'Manager', value: 'Manager'},
-    {label: 'Accountant', value: 'Accountant'},
-  ];
+  const handleEditInputChange = (field: keyof EditUser, value: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
-  const [btncustomerarea, setbtncustomerarea] = useState(false);
-
-  const togglebtncustomerarea = () => {
-    setbtncustomerarea(!btncustomerarea);
+  const handleUserIputChange = (field: keyof UserForm, value: string) => {
+    setUserForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const [isModalV, setModalV] = useState(false);
-  const tglModal = () => {
+  const tglModal = (id: number) => {
+    setSelectedUser(id);
     setModalV(!isModalV);
   };
 
-  {
-    /*edit*/
-  }
+  // Edit Modal
   const [edit, setedit] = useState(false);
-
-  const toggleedit = () => {
-    setedit(!edit);
+  const toggleedit = async (id: number) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/editusers?id=${id}&_token=${token}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      setEditForm(res.data);
+      setSelectedUser(id);
+      setedit(!edit);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const [customereditArea, setcustomereditArea] = useState(false);
-  const [currentcustomereditarea, setCurrentcustomereditarea] = useState<
-    string | null
-  >('');
-  const customerAreaeditItem = [
-    {label: 'Admin', value: 'Admin'},
-    {label: 'Manager', value: 'Manager'},
-    {label: 'Accountant', value: 'Accountant'},
-  ];
+  // Add User
+  const handleAddUser = async () => {
+    if (
+      !userForm.name ||
+      !userForm.contact ||
+      !userForm.cnic ||
+      !userForm.email ||
+      !userForm.password ||
+      !userForm.confirmPassword ||
+      roleValue === null
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Fields',
+        text2: 'Please fill all fields and select a role before updating.',
+        visibilityTime: 1500,
+      });
+      return;
+    }
 
-  const [btncustomeraditarea, setbtncustomereditarea] = useState(false);
+    if (userForm.password !== userForm.confirmPassword) {
+      Toast.show({
+        type: 'error',
+        text1: 'Password Mismatch',
+        text2: 'Password and Confirm Password do not match.',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(`${BASE_URL}/adduser`, {
+        name: userForm.name,
+        contact: userForm.contact,
+        cnic: userForm.cnic,
+        email: userForm.email,
+        password: userForm.password,
+        role: roleValue,
+      });
 
-  const togglebtncustomereditarea = () => {
-    setbtncustomereditarea(!btncustomeraditarea);
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Added',
+          text2: 'User has been Added successfully',
+          visibilityTime: 1500,
+        });
+        setUserForm(initialUserForm);
+        setRoleValue(null);
+        setcustomer(false);
+        handleFetchData();
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  // Delete User
+  const handleDeleteUser = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/userdelete`, {
+        id: selectedUser,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Deleted',
+          text2: 'User has been Deleted successfully',
+          visibilityTime: 1500,
+        });
+
+        setSelectedUser(null);
+        setModalV(false);
+        handleFetchData();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Update User
+  const handleUpdateUser = async () => {
+    if (
+      !editForm.name ||
+      !editForm.email ||
+      !editForm.contact ||
+      !editForm.cnic ||
+      roleValue === null
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Fields',
+        text2: 'Please fill all fields and select a role before updating.',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    try {
+      const res = await axios.put(`${BASE_URL}/updateusers`, {
+        user_id: selectedUser,
+        name: editForm.name.trim(),
+        contact: editForm.contact.trim(),
+        cnic: editForm.cnic.trim(),
+        email: editForm.email.trim(),
+        role: roleValue,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Updated!',
+          text2: 'User has been Updated successfully',
+          visibilityTime: 1500,
+        });
+
+        setEditForm(initialEditUser);
+        setedit(!edit);
+        setSelectedUser(null);
+        handleFetchData();
+        setRoleValue(null);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Role DropDown
+  const fetchRoleDropDown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchrolesdropdown`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setRoleDropDown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Data
+  const handleFetchData = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchusers`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setSystemUser(res.data.user);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    handleFetchData();
+    fetchRoleDropDown();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -161,115 +361,114 @@ export default function User() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={Info}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.Name}
-                      </Text>
+        <View>
+          <FlatList
+            data={systemUser}
+            style={{marginBottom: 100}}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View
+                style={{
+                  padding: 5,
+                }}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.name}
+                    </Text>
 
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}>
-                        <TouchableOpacity onPress={toggleedit}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginTop: 8,
-                            }}
-                            source={require('../../../assets/edit.png')}
-                          />
-                        </TouchableOpacity>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                      }}>
+                      <TouchableOpacity onPress={() => toggleedit(item.id)}>
+                        <Image
+                          style={{
+                            tintColor: '#144272',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginTop: 8,
+                          }}
+                          source={require('../../../assets/edit.png')}
+                        />
+                      </TouchableOpacity>
 
-                        <TouchableOpacity onPress={tglModal}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 8,
-                            }}
-                            source={require('../../../assets/delete.png')}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Contact:</Text>
-                        <Text style={styles.text}>{item.Contact}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>CNIC:</Text>
-                        <Text style={styles.text}>{item.CNIC}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Email:</Text>
-                        <Text style={styles.text}>{item.Email}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Role:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.Role}
-                        </Text>
-                      </View>
+                      <TouchableOpacity onPress={() => tglModal(item.id)}>
+                        <Image
+                          style={{
+                            tintColor: '#144272',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginRight: 5,
+                            marginTop: 8,
+                          }}
+                          source={require('../../../assets/delete.png')}
+                        />
+                      </TouchableOpacity>
                     </View>
                   </View>
-                </ScrollView>
-              )}
-            />
-          </View>
-        </ScrollView>
+
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Contact:</Text>
+                      <Text style={styles.text}>{item.contact}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>CNIC:</Text>
+                      <Text style={styles.text}>{item.cnic}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Email:</Text>
+                      <Text style={styles.text}>{item.email}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        Role:
+                      </Text>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        {item.role}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
+          />
+        </View>
 
         {/*attendance*/}
         <Modal isVisible={customer}>
-          <ScrollView
+          <View
             style={{
               flex: 1,
               backgroundColor: 'white',
               width: '98%',
-              maxHeight: 335,
+              maxHeight: '80%',
               borderRadius: 10,
               borderWidth: 1,
               borderColor: '#144272',
@@ -290,7 +489,12 @@ export default function User() {
                 }}>
                 Add New User
               </Text>
-              <TouchableOpacity onPress={() => setcustomer(!customer)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setcustomer(!customer);
+                  setUserForm(initialUserForm);
+                  setRoleValue(null);
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -301,16 +505,58 @@ export default function User() {
               </TouchableOpacity>
             </View>
 
+            <DropDownPicker
+              items={transformedRoleDropDown}
+              open={roleOpen}
+              setOpen={setRoleOpen}
+              value={roleValue}
+              setValue={setRoleValue}
+              placeholder="Select Role"
+              placeholderStyle={{color: '#144272'}}
+              textStyle={{color: '#144272'}}
+              ArrowUpIconComponent={() => (
+                <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+              )}
+              ArrowDownIconComponent={() => (
+                <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+              )}
+              style={[
+                styles.dropdown,
+                {
+                  borderColor: '#144272',
+                  width: '94%',
+                  marginLeft: 10,
+                },
+              ]}
+              dropDownContainerStyle={{
+                backgroundColor: 'white',
+                borderColor: '#144272',
+                width: '94%',
+                marginLeft: 10,
+                marginTop: 8,
+              }}
+              labelStyle={{color: '#144272'}}
+              listItemLabelStyle={{color: '#144272'}}
+            />
+
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Name"
+                value={userForm.name}
+                onChangeText={text => handleUserIputChange('name', text)}
               />
+            </View>
+
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Contact"
+                keyboardType="number-pad"
+                value={userForm.contact}
+                onChangeText={text => handleUserIputChange('contact', text)}
               />
             </View>
 
@@ -319,162 +565,61 @@ export default function User() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="CNIC"
+                keyboardType="number-pad"
+                value={userForm.cnic}
+                onChangeText={text => handleUserIputChange('cnic', text)}
               />
+            </View>
+
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Email"
+                value={userForm.email}
+                onChangeText={text => handleUserIputChange('email', text)}
+              />
+            </View>
+
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Password"
+                value={userForm.password}
+                onChangeText={text => handleUserIputChange('password', text)}
               />
             </View>
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
-                placeholder="Password"
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
                 placeholder="Confirm Password"
+                value={userForm.confirmPassword}
+                onChangeText={text =>
+                  handleUserIputChange('confirmPassword', text)
+                }
               />
             </View>
 
-            <DropDownPicker
-              items={customerAreaItem}
-              open={customerArea}
-              setOpen={setcustomerArea}
-              value={currentcustomerarea}
-              setValue={setCurrentcustomerarea}
-              placeholder="Select Role"
-              placeholderStyle={{color: '#144272'}}
-              textStyle={{color: '#144272'}}
-              arrowIconStyle={{tintColor: '#144272'}}
-              style={[
-                styles.dropdown,
-                {
-                  borderColor: '#144272',
-                  width: 295,
-                  marginLeft: 10,
-                },
-              ]}
-              dropDownContainerStyle={{
-                backgroundColor: 'white',
-                borderColor: '#144272',
-                width: 295,
-                marginLeft: 10,
-              }}
-              labelStyle={{color: '#144272'}}
-              listItemLabelStyle={{color: '#144272'}}
-            />
-
-            <TouchableOpacity>
-              <View
-                style={[
-                  styles.row,
-                  {
-                    marginLeft: 13,
-                    backgroundColor: '#144272',
-                    borderRadius: 10,
-                    width: 295,
-                  },
-                ]}>
-                <Text
-                  style={[
-                    styles.productinput,
-                    {color: 'white', textAlign: 'center'},
-                  ]}>
-                  Choose Image
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={togglebtncustomerarea}>
-              <View
-                style={{
-                  backgroundColor: '#144272',
-                  height: 30,
-                  width: 120,
-                  margin: 10,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignSelf: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Add User
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </Modal>
-
-        {/*btn */}
-        <Modal isVisible={btncustomerarea}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              User has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomerarea(!btncustomerarea)}>
+            <View style={{flex: 1, justifyContent: 'flex-end'}}>
+              <TouchableOpacity onPress={handleAddUser}>
                 <View
                   style={{
                     backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
                     height: 30,
-                    padding: 5,
-                    marginRight: 5,
+                    width: 120,
+                    margin: 10,
+                    borderRadius: 10,
+                    justifyContent: 'center',
+                    alignSelf: 'center',
                   }}>
                   <Text
                     style={{
                       color: 'white',
                       textAlign: 'center',
                     }}>
-                    OK
+                    Add User
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -528,7 +673,11 @@ export default function User() {
                 marginTop: 10,
                 justifyContent: 'center',
               }}>
-              <TouchableOpacity onPress={() => setModalV(!isModalV)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalV(!isModalV);
+                  setSelectedUser(null);
+                }}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -548,7 +697,7 @@ export default function User() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity>
+              <TouchableOpacity onPress={handleDeleteUser}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -572,12 +721,12 @@ export default function User() {
 
         {/*edit*/}
         <Modal isVisible={edit}>
-          <ScrollView
+          <View
             style={{
               flex: 1,
               backgroundColor: 'white',
               width: '98%',
-              maxHeight: 240,
+              maxHeight: '55%',
               borderRadius: 10,
               borderWidth: 1,
               borderColor: '#144272',
@@ -598,7 +747,13 @@ export default function User() {
                 }}>
                 Edit User
               </Text>
-              <TouchableOpacity onPress={() => setedit(!edit)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setedit(!edit);
+                  setEditForm(initialEditUser);
+                  setSelectedUser(null);
+                  setRoleValue(null);
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -610,28 +765,34 @@ export default function User() {
             </View>
 
             <DropDownPicker
-              items={customerAreaeditItem}
-              open={customereditArea}
-              setOpen={setcustomereditArea}
-              value={currentcustomereditarea}
-              setValue={setCurrentcustomereditarea}
+              items={transformedRoleDropDown}
+              open={roleOpen}
+              setOpen={setRoleOpen}
+              value={roleValue}
+              setValue={setRoleValue}
               placeholder="Select Role"
               placeholderStyle={{color: '#144272'}}
               textStyle={{color: '#144272'}}
-              arrowIconStyle={{tintColor: '#144272'}}
+              ArrowUpIconComponent={() => (
+                <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+              )}
+              ArrowDownIconComponent={() => (
+                <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+              )}
               style={[
                 styles.dropdown,
                 {
                   borderColor: '#144272',
-                  width: 295,
+                  width: '94%',
                   marginLeft: 10,
                 },
               ]}
               dropDownContainerStyle={{
                 backgroundColor: 'white',
                 borderColor: '#144272',
-                width: 295,
+                width: '94%',
                 marginLeft: 10,
+                marginTop: 8,
               }}
               labelStyle={{color: '#144272'}}
               listItemLabelStyle={{color: '#144272'}}
@@ -641,11 +802,15 @@ export default function User() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Name"
+                value={editForm.name}
+                onChangeText={text => handleEditInputChange('name', text)}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Contact"
+                value={editForm.contact}
+                onChangeText={text => handleEditInputChange('contact', text)}
               />
             </View>
 
@@ -654,101 +819,39 @@ export default function User() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="CNIC"
+                value={editForm.cnic}
+                onChangeText={text => handleEditInputChange('cnic', text)}
               />
+            </View>
+
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Email"
+                value={editForm.email}
+                onChangeText={text => handleEditInputChange('email', text)}
               />
             </View>
 
-            <TouchableOpacity onPress={togglebtncustomereditarea}>
-              <View
-                style={{
-                  backgroundColor: '#144272',
-                  height: 30,
-                  width: 100,
-                  margin: 10,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignSelf: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Update User
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </Modal>
-
-        {/*btn customer*/}
-        <Modal isVisible={btncustomeraditarea}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 230,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Updated
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              User has been updated successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomereditarea(!btncustomeraditarea)}>
+            <View style={{flex: 1, justifyContent: 'flex-end'}}>
+              <TouchableOpacity onPress={handleUpdateUser}>
                 <View
                   style={{
                     backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
                     height: 30,
-                    padding: 5,
-                    marginRight: 5,
+                    width: 100,
+                    margin: 10,
+                    borderRadius: 10,
+                    justifyContent: 'center',
+                    alignSelf: 'center',
                   }}>
                   <Text
                     style={{
                       color: 'white',
                       textAlign: 'center',
                     }}>
-                    OK
+                    Update User
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -890,6 +993,7 @@ const styles = StyleSheet.create({
     borderColor: '#144272',
     borderRadius: 6,
     padding: 8,
+    height: 40,
   },
   cardContainer: {
     margin: 20,

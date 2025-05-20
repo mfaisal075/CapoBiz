@@ -10,59 +10,125 @@ import {
   FlatList,
   TextInput,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
 import Modal from 'react-native-modal';
-import {RadioButton} from 'react-native-paper';
+import {Checkbox} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import axios from 'axios';
+import BASE_URL from '../BASE_URL';
+import {useUser} from '../CTX/UserContext';
+import Toast from 'react-native-toast-message';
+
+interface Transporter {
+  id: number;
+  trans_name: string;
+  trans_cnic: string;
+  trans_address: string;
+  trans_contact: string;
+  trans_email: string;
+}
+
+interface ViewTransporter {
+  trans_name: string;
+  trans_cnic: string;
+  trans_address: string;
+  trans_contact: string;
+  trans_email: string;
+  trans_contact_person_one: string;
+  trans_contact_person_two: string;
+  trans_sec_contact: string;
+  trans_third_contact: string;
+  trans_image: string;
+  trans_opening_balance: string;
+  trans_payment_type: string;
+  trans_transaction_type: string;
+}
+
+interface EditForm {
+  trans_name: string;
+  trans_email: string;
+  trans_address: string;
+  trans_contact: string;
+  trans_contact_person_one: string;
+  trans_contact_person_two: string;
+  trans_cnic: string;
+  trans_sec_contact: string;
+  trans_third_contact: string;
+}
+
+const initialEditForm: EditForm = {
+  trans_name: '',
+  trans_email: '',
+  trans_address: '',
+  trans_contact: '',
+  trans_contact_person_one: '',
+  trans_contact_person_two: '',
+  trans_cnic: '',
+  trans_sec_contact: '',
+  trans_third_contact: '',
+};
+
+interface AddForm {
+  trans_name: string;
+  cnic: string;
+  contact: string;
+  email: string;
+  contact_person_one: string;
+  sec_contact: string;
+  contact_person_two: string;
+  third_contact: string;
+  address: string;
+  opening_balancechechboc: string;
+  opening_balance: string;
+  transfer_type: string;
+  transaction_type: string;
+}
+
+const initialAddForm: AddForm = {
+  trans_name: '',
+  cnic: '',
+  contact: '',
+  email: '',
+  contact_person_one: '',
+  sec_contact: '',
+  contact_person_two: '',
+  third_contact: '',
+  address: '',
+  opening_balancechechboc: '',
+  opening_balance: '',
+  transfer_type: '',
+  transaction_type: '',
+};
 
 export default function TransporterPeople() {
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const Info = [
-    {
-      CustomerName: 'Naeem',
-      Contact: '03001234567',
-      Cnic: '13',
-      Email: '@',
-    },
-    {
-      CustomerName: 'Asim',
-      Contact: '03001234567',
-      Cnic: '13',
-      Email: '@',
-    },
-    {
-      CustomerName: 'Ali',
-      Contact: '03001234567',
-      Cnic: '13',
-      Email: '@',
-    },
-  ];
+  const [transporters, setTransporters] = useState<Transporter[]>([]);
+  const [selectedTransporter, setSelectedTransporter] = useState<number | null>(
+    null,
+  );
+  const [viewTransporters, setViewTransporters] = useState<ViewTransporter[]>(
+    [],
+  );
+  const [editForm, setEditForm] = useState<EditForm>(initialEditForm);
+  const [addForm, setAddForm] = useState<AddForm>(initialAddForm);
+  const [enableBal, setEnableBal] = useState<string[]>([]);
 
-  {
-    /*view modal*/
-  }
-  const ViewModal = [
-    {
-      CustomerName: 'Naeem',
-      FatherName: null,
-      Email: 'naeem@gmail.com',
-      CustomerContact: '0322-2222222',
-      Contact: '03001234567',
-      ContactPersonOne: null,
-      ContactNumberOne: null,
-      ContactPersonTwo: null,
-      ContactNumberTwo: null,
-      CNIC: '11111-1111111-8',
-      Address: 'Gujranwala',
-      CustomerArea: 'gujranwala',
-      CustomerType: 'Type',
-      OpeningBalance: null,
-      PaymentType: null,
-      TransactionType: null,
-      CustomerPicture: '',
-    },
-  ];
+  const handleEditInputChange = (field: keyof EditForm, value: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const handleAddInputChange = (field: keyof AddForm, value: string) => {
+    setAddForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   {
     /*customer*/
@@ -73,63 +139,18 @@ export default function TransporterPeople() {
     setcustomer(!customer);
   };
 
-  const [customerType, setcustomerType] = useState(false);
-  const [currentcustomer, setCurrentcustomer] = useState<string | null>('');
-  const customerItem = [
-    {label: 'New', value: 'New'},
-    {label: 'Blue', value: 'Blue'},
-    {label: 'Standard', value: 'Standard'},
-  ];
-
-  const [addcustomer, setaddcustomer] = useState(false);
-
-  const toggleaddcustomer = () => {
-    setaddcustomer(!addcustomer);
-  };
-
-  const [btncustomer, setbtncustomer] = useState(false);
-
-  const togglebtncustomer = () => {
-    setbtncustomer(!btncustomer);
-  };
-
-  const [area, setarea] = useState(false);
-
-  const togglearea = () => {
-    setarea(!area);
-  };
-  const [customerArea, setcustomerArea] = useState(false);
-  const [currentcustomerarea, setCurrentcustomerarea] = useState<string | null>(
-    '',
-  );
-  const customerAreaItem = [
-    {label: 'Gujranwala', value: 'Gujranwala'},
-    {label: 'Lahore', value: 'Lahore'},
-  ];
-  const [areabtn, setareabtn] = useState(false);
-
-  const toggleareabtn = () => {
-    setareabtn(!areabtn);
-  };
-
-  const [btncustomerarea, setbtncustomerarea] = useState(false);
-
-  const togglebtncustomerarea = () => {
-    setbtncustomerarea(!btncustomerarea);
-  };
-  const [Type, setType] = React.useState<'EnableOpeningBalance' | 'number'>(
-    'EnableOpeningBalance',
-  );
-
   const [paymentType, setpaymentType] = useState(false);
   const [current, setcurrentpaymentType] = useState<string | null>('');
   const paymentTypeItem = [
-    {label: 'Payable', value: 'Payable'},
-    {label: 'Recievable', value: 'Recievable'},
+    {label: 'Payable', value: 'payable'},
+    {label: 'Recievable', value: 'recievable'},
   ];
 
   const [isModalV, setModalV] = useState(false);
-  const tglModal = () => {
+
+  // Delete Modal
+  const tglModal = async (id: number) => {
+    setSelectedTransporter(id);
     setModalV(!isModalV);
   };
 
@@ -138,70 +159,205 @@ export default function TransporterPeople() {
   }
   const [edit, setedit] = useState(false);
 
-  const toggleedit = () => {
-    setedit(!edit);
+  // Edit Modal
+  const toggleedit = async (id: number) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/editTransporter?id=${id}&_token=${token}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      setedit(!edit);
+      setEditForm(res.data);
+      setSelectedTransporter(id);
+    } catch (error) {
+      console.log(error);
+    }
   };
-
-  const [editType, seteditType] = useState(false);
-  const [currentedit, setCurrentedit] = useState<string | null>('');
-  const editItem = [
-    {label: 'New', value: 'New'},
-    {label: 'Blue', value: 'Blue'},
-    {label: 'Standard', value: 'Standard'},
-  ];
-
-  const [editcustomer, seteditcustomer] = useState(false);
-
-  const toggleeditcustomer = () => {
-    seteditcustomer(!editcustomer);
-  };
-
-  const [btnedit, setbtnedit] = useState(false);
-
-  const togglebtnedit = () => {
-    setbtnedit(!btnedit);
-  };
-
-  const [editarea, seteditarea] = useState(false);
-
-  const toggleeditarea = () => {
-    seteditarea(!editarea);
-  };
-  const [customereditArea, setcustomereditArea] = useState(false);
-  const [currentcustomereditarea, setCurrentcustomereditarea] = useState<
-    string | null
-  >('');
-  const customerAreaeditItem = [
-    {label: 'Gujranwala', value: 'Gujranwala'},
-    {label: 'Lahore', value: 'Lahore'},
-  ];
-  const [areaeditbtn, setareaeditbtn] = useState(false);
-
-  const toggleareaeditbtn = () => {
-    setareaeditbtn(!areabtn);
-  };
-
-  const [btncustomeraditarea, setbtncustomereditarea] = useState(false);
-
-  const togglebtncustomereditarea = () => {
-    setbtncustomereditarea(!btncustomeraditarea);
-  };
-  const [radioeditType, setradioeditType] = React.useState<
-    'EnableOpeningBalance' | 'number'
-  >('EnableOpeningBalance');
-
-  const [editpaymentType, seteditpaymentType] = useState(false);
-  const [editcurrent, seteditcurrentpaymentType] = useState<string | null>('');
-  const editpaymentTypeItem = [
-    {label: 'Payable', value: 'Payable'},
-    {label: 'Recievable', value: 'Recievable'},
-  ];
 
   const [view, setview] = useState(false);
 
-  const toggleview = () => {
-    setview(!view);
+  // View Modal
+  const toggleview = async (id: number) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/showTransporter?id=${id}&_token=${token}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const data = Array.isArray(res.data) ? res.data : [res.data];
+      setViewTransporters(data);
+      setview(!view);
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  // Add Transporter
+  const handleAddTrans = async () => {
+    if (
+      !addForm.address ||
+      !addForm.trans_name ||
+      !addForm.cnic ||
+      !addForm.contact
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Fields',
+        text2: 'Please fill all fields and select a role before updating.',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(`${BASE_URL}/addTransporter`, {
+        trans_name: addForm.trans_name.trim(),
+        cnic: addForm.cnic,
+        contact: addForm.contact,
+        email: addForm.email,
+        contact_person_one: addForm.contact_person_one,
+        sec_contact: addForm.sec_contact,
+        contact_person_two: addForm.contact_person_one,
+        third_contact: addForm.third_contact,
+        address: addForm.address.trim(),
+        ...(enableBal.includes('on') && {opening_balancechechboc: 'on'}),
+        ...(enableBal.includes('on') && {
+          opening_balance: addForm.opening_balance,
+        }),
+        ...(enableBal.includes('on') && {transfer_type: current}),
+        ...(enableBal.includes('on') && {
+          transaction_type:
+            current === 'payable'
+              ? 'Credit Amount'
+              : current === 'recievable'
+              ? 'Debit Amount'
+              : '',
+        }),
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Added!',
+          text2: 'Transporter has been Added successfully',
+          visibilityTime: 1500,
+        });
+
+        setAddForm(initialAddForm);
+        setcurrentpaymentType('');
+        setEnableBal([]);
+        handleFetchData();
+        setcustomer(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Delete Transporter
+  const handleDeleteTrans = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/Transporterdelete`, {
+        id: selectedTransporter,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Deleted!',
+          text2: 'Transporter has been Deleted successfully!',
+          visibilityTime: 1500,
+        });
+
+        setSelectedTransporter(null);
+        handleFetchData();
+        setModalV(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Update Transporter
+  const handleEditTrans = async () => {
+    if (
+      !editForm.trans_name ||
+      !editForm.trans_cnic ||
+      !editForm.trans_contact ||
+      !editForm.trans_address
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Fields',
+        text2: 'Please fill all fields and select a role before updating.',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(`${BASE_URL}/updateTransporter`, {
+        transporter_id: selectedTransporter,
+        trans_name: editForm.trans_name.trim(),
+        cnic: editForm.trans_cnic,
+        contact: editForm.trans_contact,
+        email: editForm.trans_email,
+        contact_person_one: editForm.trans_contact_person_one,
+        sec_contact: editForm.trans_sec_contact,
+        contact_person_two: editForm.trans_contact_person_two,
+        third_contact: editForm.trans_third_contact,
+        address: editForm.trans_address.trim(),
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Updated!',
+          text2: 'Transporter has been Updated successfully!',
+          visibilityTime: 1500,
+        });
+
+        setEditForm(initialEditForm);
+        setSelectedTransporter(null);
+        handleFetchData();
+        setedit(false);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Data
+  const handleFetchData = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchTransportersdata`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setTransporters(res.data.transporter);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    handleFetchData();
+  }, []);
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -265,93 +421,95 @@ export default function TransporterPeople() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={Info}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.CustomerName}
+        <View>
+          <FlatList
+            data={transporters}
+            style={{marginBottom: 100}}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <ScrollView
+                style={{
+                  padding: 5,
+                }}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.trans_name}
+                    </Text>
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                      }}>
+                      <TouchableOpacity onPress={() => toggleview(item.id)}>
+                        <Image
+                          style={{
+                            tintColor: '#144272',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginRight: 5,
+                            marginTop: 9,
+                          }}
+                          source={require('../../assets/show.png')}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => toggleedit(item.id)}>
+                        <Image
+                          style={{
+                            tintColor: '#144272',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginTop: 8,
+                          }}
+                          source={require('../../assets/edit.png')}
+                        />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity onPress={() => tglModal(item.id)}>
+                        <Image
+                          style={{
+                            tintColor: '#144272',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginRight: 5,
+                            marginTop: 8,
+                          }}
+                          source={require('../../assets/delete.png')}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Contact:</Text>
+                      <Text style={styles.text}>
+                        {item.trans_contact ?? '--'}
                       </Text>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}>
-                        <TouchableOpacity onPress={toggleview}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 9,
-                            }}
-                            source={require('../../assets/show.png')}
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={toggleedit}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginTop: 8,
-                            }}
-                            source={require('../../assets/edit.png')}
-                          />
-                        </TouchableOpacity>
-
-                        <TouchableOpacity onPress={tglModal}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 8,
-                            }}
-                            source={require('../../assets/delete.png')}
-                          />
-                        </TouchableOpacity>
-                      </View>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>CNIC:</Text>
+                      <Text style={styles.text}>{item.trans_cnic ?? '--'}</Text>
                     </View>
 
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Contact:</Text>
-                        <Text style={styles.text}>{item.Contact}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                      <Text style={styles.text}>CNIC:</Text>
-                      <Text style={styles.text}>{item.Cnic}</Text>
-                      </View>
-                  
                     <View
                       style={{
                         flexDirection: 'row',
@@ -362,25 +520,24 @@ export default function TransporterPeople() {
                       </Text>
 
                       <Text style={[styles.value, {marginBottom: 5}]}>
-                        {item.Email}
+                        {item.trans_email ?? '--'}
                       </Text>
                     </View>
-                    </View>
                   </View>
-                </ScrollView>
-              )}
-            />
-          </View>
-        </ScrollView>
+                </View>
+              </ScrollView>
+            )}
+          />
+        </View>
 
         {/*transporter*/}
         <Modal isVisible={customer}>
-          <ScrollView
+          <View
             style={{
               flex: 1,
               backgroundColor: 'white',
               width: '98%',
-              maxHeight: 505,
+              maxHeight: '70%',
               borderRadius: 10,
               borderWidth: 1,
               borderColor: '#144272',
@@ -401,7 +558,11 @@ export default function TransporterPeople() {
                 }}>
                 Add New Transporter
               </Text>
-              <TouchableOpacity onPress={() => setcustomer(!customer)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setcustomer(!customer);
+                  setAddForm(initialAddForm);
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -417,122 +578,149 @@ export default function TransporterPeople() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Transporter Name"
-              />
-            </View>
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Email"
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Address"
+                value={addForm.trans_name}
+                onChangeText={t => handleAddInputChange('trans_name', t)}
               />
             </View>
 
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact Person 1"
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact Person 2"
-              />
-            </View>
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 1"
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 2"
-              />
-            </View>
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 3"
-              />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="CNIC"
                 keyboardType="numeric"
-                maxLength={13}
+                maxLength={15}
+                value={addForm.cnic}
+                onChangeText={t => handleAddInputChange('cnic', t)}
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact"
+                maxLength={12}
+                keyboardType="number-pad"
+                value={addForm.contact}
+                onChangeText={t => handleAddInputChange('contact', t)}
+              />
+            </View>
+
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Email"
+                value={addForm.email}
+                onChangeText={t => handleAddInputChange('email', t)}
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact Person 1"
+                maxLength={12}
+                keyboardType="number-pad"
+                value={addForm.contact_person_one}
+                onChangeText={t =>
+                  handleAddInputChange('contact_person_one', t)
+                }
+              />
+            </View>
+
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact 1"
+                maxLength={12}
+                keyboardType="number-pad"
+                value={addForm.sec_contact}
+                onChangeText={t => handleAddInputChange('sec_contact', t)}
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact Person 2"
+                maxLength={12}
+                keyboardType="number-pad"
+                value={addForm.contact_person_two}
+                onChangeText={t =>
+                  handleAddInputChange('contact_person_two', t)
+                }
+              />
+            </View>
+
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact 2"
+                maxLength={12}
+                keyboardType="number-pad"
+                value={addForm.third_contact}
+                onChangeText={t => handleAddInputChange('third_contact', t)}
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Address"
+                value={addForm.address}
+                onChangeText={t => handleAddInputChange('address', t)}
+              />
+            </View>
+
+            <View
+              style={[
+                styles.row,
+                {
+                  marginLeft: 7,
+                  marginRight: 10,
+                  justifyContent: 'flex-start',
+                  zIndex: 999,
+                },
+              ]}>
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                activeOpacity={0.7}
+                onPress={() => {
+                  const newOptions = enableBal.includes('on')
+                    ? enableBal.filter(opt => opt !== 'on')
+                    : [...enableBal, 'on'];
+                  setEnableBal(newOptions);
+                }}>
+                <Checkbox.Android
+                  status={enableBal.includes('on') ? 'checked' : 'unchecked'}
+                  color="#144272"
+                  uncheckedColor="#144272"
+                />
+                <Text style={{color: '#144272', marginLeft: 8}}>
+                  Enable Opening Balance
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View
+              style={[
+                styles.row,
+                {marginLeft: 7, marginRight: 10, zIndex: 999},
+              ]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Opening balance"
+                keyboardType="numeric"
+                value={addForm.opening_balance}
+                onChangeText={text =>
+                  handleAddInputChange('opening_balance', text)
+                }
+                editable={enableBal.includes('on')}
               />
             </View>
 
             <View
               style={{
                 flexDirection: 'row',
-              }}>
-              <TouchableOpacity>
-                <View
-                  style={[
-                    styles.row,
-                    {
-                      marginLeft: 10,
-                      backgroundColor: '#144272',
-                      borderRadius: 10,
-                      width: 120,
-                    },
-                  ]}>
-                  <Text
-                    style={[
-                      styles.productinput,
-                      {color: 'white', textAlign: 'center'},
-                    ]}>
-                    Choose Image
-                  </Text>
-                </View>
-              </TouchableOpacity>
-              <View
-                style={{
-                  marginTop: 10,
-                  flexDirection: 'row',
-                  marginLeft: 32,
-                }}>
-                <RadioButton
-                  value="EnableOpeningBalance"
-                  status={
-                    Type === 'EnableOpeningBalance' ? 'checked' : 'unchecked'
-                  }
-                  color="#144272"
-                  uncheckedColor="#144272"
-                  onPress={() => setType('EnableOpeningBalance')}
-                />
-                <Text
-                  style={{
-                    color: '#144272',
-                    marginTop: 7,
-                    marginLeft: -5,
-                  }}>
-                  Enable Balance
-                </Text>
-              </View>
-            </View>
-            <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Opening balance"
-                keyboardType="numeric"
-              />
-            </View>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginLeft: 10,
+                marginLeft: 8,
                 marginRight: 10,
+                zIndex: 999,
               }}>
               <DropDownPicker
                 items={paymentTypeItem}
@@ -543,116 +731,77 @@ export default function TransporterPeople() {
                 placeholder="Payment Type"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
                 style={[
                   styles.dropdown,
                   {
                     borderColor: '#144272',
-                    width: 295,
+                    width: '100%',
+                    marginLeft: 0,
+                    height: 40,
+                    backgroundColor: enableBal.includes('on')
+                      ? 'transparent'
+                      : '#e0e0e0',
                   },
                 ]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
-                  width: 295,
+                  width: '100%',
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                disabled={!enableBal.includes('on')}
               />
             </View>
-            <View style={[styles.row, {marginLeft: 7,
-               marginRight: 10,marginTop:-1}]}>
-              <Text style={[styles.productinput, {color: '#144272'}]}>
-                Balance
+
+            <View
+              style={[
+                styles.row,
+                {
+                  marginLeft: 7,
+                  marginRight: 10,
+                  marginTop: -1,
+                  backgroundColor: '#e0e0e0', // lighter gray
+                  borderRadius: 10,
+                },
+              ]}>
+              <Text
+                style={[
+                  styles.productinput,
+                  {
+                    color: '#144272',
+                    textAlignVertical: 'center',
+                    fontWeight: 'bold',
+                  },
+                ]}>
+                {current === 'payable' ? 'Credit Amount' : 'Debit Amount'}
               </Text>
             </View>
-            <TouchableOpacity onPress={togglebtncustomerarea}>
-              <View
-                style={{
-                  backgroundColor: '#144272',
-                  height: 30,
-                  width: 120,
-                  margin: 10,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignSelf: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Add Transporter
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </Modal>
 
-        {/*btn customer*/}
-        <Modal isVisible={btncustomerarea}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Transporter has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomerarea(!btncustomerarea)}>
+            <View style={{flex: 1, justifyContent: 'flex-end'}}>
+              <TouchableOpacity onPress={handleAddTrans}>
                 <View
                   style={{
                     backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
                     height: 30,
-                    padding: 5,
-                    marginRight: 5,
+                    width: 120,
+                    margin: 10,
+                    borderRadius: 10,
+                    justifyContent: 'center',
+                    alignSelf: 'center',
                   }}>
                   <Text
                     style={{
                       color: 'white',
                       textAlign: 'center',
                     }}>
-                    OK
+                    Add Transporter
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -706,7 +855,11 @@ export default function TransporterPeople() {
                 marginTop: 10,
                 justifyContent: 'center',
               }}>
-              <TouchableOpacity onPress={() => setModalV(!isModalV)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalV(!isModalV);
+                  setSelectedTransporter(null);
+                }}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -726,7 +879,7 @@ export default function TransporterPeople() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity>
+              <TouchableOpacity onPress={handleDeleteTrans}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -755,7 +908,7 @@ export default function TransporterPeople() {
               flex: 1,
               backgroundColor: 'white',
               width: '98%',
-              maxHeight: 370,
+              maxHeight: '70%',
               borderRadius: 10,
               borderWidth: 1,
               borderColor: '#144272',
@@ -776,7 +929,12 @@ export default function TransporterPeople() {
                 }}>
                 Edit Transporter
               </Text>
-              <TouchableOpacity onPress={() => setedit(!edit)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setedit(!edit);
+                  setEditForm(initialEditForm);
+                  setSelectedTransporter(null);
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -792,18 +950,43 @@ export default function TransporterPeople() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Transporter Name"
+                value={editForm.trans_name}
+                onChangeText={t => handleEditInputChange('trans_name', t)}
               />
             </View>
+
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="CNIC"
+                keyboardType="numeric"
+                maxLength={15}
+                value={editForm.trans_cnic}
+                onChangeText={t => handleEditInputChange('trans_cnic', t)}
+              />
+            </View>
+
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact"
+                maxLength={12}
+                keyboardType="numeric"
+                value={editForm.trans_contact}
+                onChangeText={t => handleEditInputChange('trans_contact', t)}
+              />
+            </View>
+
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Email"
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Address"
+                keyboardType="email-address"
+                value={editForm.trans_email}
+                onChangeText={t => handleEditInputChange('trans_email', t)}
               />
             </View>
 
@@ -812,154 +995,90 @@ export default function TransporterPeople() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Contact Person 1"
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact Person 2"
+                maxLength={12}
+                keyboardType="numeric"
+                value={editForm.trans_contact_person_one}
+                onChangeText={t =>
+                  handleEditInputChange('trans_contact_person_one', t)
+                }
               />
             </View>
+
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Contact 1"
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 2"
+                maxLength={12}
+                keyboardType="numeric"
+                value={editForm.trans_sec_contact}
+                onChangeText={t =>
+                  handleEditInputChange('trans_sec_contact', t)
+                }
               />
             </View>
+
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
-                placeholder="Contact 3"
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="CNIC"
+                placeholder="Contact Person 2"
+                maxLength={12}
                 keyboardType="numeric"
-                maxLength={13}
+                value={editForm.trans_contact_person_two}
+                onChangeText={t =>
+                  handleEditInputChange('trans_contact_person_two', t)
+                }
               />
             </View>
 
-            <TouchableOpacity>
-              <View
-                style={[
-                  styles.row,
-                  {
-                    marginLeft: 3,
-                    backgroundColor: '#144272',
-                    borderRadius: 10,
-                    width: 290,
-                    alignSelf: 'center',
-                  },
-                ]}>
-                <Text
-                  style={[
-                    styles.productinput,
-                    {color: 'white', textAlign: 'center'},
-                  ]}>
-                  Choose Image
-                </Text>
-              </View>
-            </TouchableOpacity>
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact 2"
+                maxLength={12}
+                keyboardType="numeric"
+                value={editForm.trans_third_contact}
+                onChangeText={t =>
+                  handleEditInputChange('trans_third_contact', t)
+                }
+              />
+            </View>
 
-            <TouchableOpacity onPress={togglebtncustomereditarea}>
-              <View
-                style={{
-                  backgroundColor: '#144272',
-                  height: 30,
-                  width: 140,
-                  margin: 10,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignSelf: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Update Transporter
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </Modal>
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Address"
+                value={editForm.trans_address}
+                onChangeText={t => handleEditInputChange('trans_address', t)}
+              />
+            </View>
 
-        {/*btn customer*/}
-        <Modal isVisible={btncustomeraditarea}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Updated
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Transporter has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomereditarea(!btncustomeraditarea)}>
+            <View style={{flex: 1, justifyContent: 'flex-end'}}>
+              <TouchableOpacity onPress={handleEditTrans}>
                 <View
                   style={{
                     backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
                     height: 30,
-                    padding: 5,
-                    marginRight: 5,
+                    width: 140,
+                    margin: 10,
+                    borderRadius: 10,
+                    justifyContent: 'center',
+                    alignSelf: 'center',
                   }}>
                   <Text
                     style={{
                       color: 'white',
                       textAlign: 'center',
                     }}>
-                    OK
+                    Update Transporter
                   </Text>
                 </View>
               </TouchableOpacity>
             </View>
-          </View>
+          </ScrollView>
         </Modal>
 
         {/*view modal*/}
@@ -1001,98 +1120,79 @@ export default function TransporterPeople() {
               </TouchableOpacity>
             </View>
 
-            <View>
-              <View>
-                <FlatList
-                  data={ViewModal}
-                  keyExtractor={(item, index) => index.toString()}
-                  renderItem={({item}) => (
-                    <ScrollView
-                      style={{
-                        padding: 5,
-                      }}>
-                      <View style={styles.table}>
-                        <View style={[styles.cardContainer]}>
-                          <View
-                            style={{alignItems: 'center', marginBottom: 16}}>
-                            {item.CustomerPicture ? (
-                              <Image
-                                source={{uri: item.CustomerPicture}}
-                                style={styles.customerImage}
-                                resizeMode="cover"
-                              />
-                            ) : (
-                              <Text style={styles.noImageText}>
-                                No Image Provided
-                              </Text>
-                            )}
-                          </View>
+            <ScrollView>
+              {viewTransporters.map(item => (
+                <View style={styles.table} key={item.trans_cnic}>
+                  <View style={[styles.cardContainer]}>
+                    <View style={{alignItems: 'center', marginBottom: 16}}>
+                      {item.trans_image ? (
+                        <Image
+                          source={{uri: item.trans_image}}
+                          style={styles.customerImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <Text style={styles.noImageText}>
+                          No Image Provided
+                        </Text>
+                      )}
+                    </View>
 
-                          <View style={styles.infoGrid}>
-                            <Text style={styles.labl}>Transporter Name:</Text>
-                            <Text style={styles.valu}>{item.CustomerName}</Text>
+                    <View style={styles.infoGrid}>
+                      <Text style={styles.labl}>Transporter Name:</Text>
+                      <Text style={styles.valu}>{item.trans_name}</Text>
 
-                            <Text style={styles.labl}>Email:</Text>
-                            <Text style={styles.valu}>{item.Email}</Text>
+                      <Text style={styles.labl}>Contact:</Text>
+                      <Text style={styles.valu}>{item.trans_contact}</Text>
 
-                            <Text style={styles.labl}>
-                              Transporter Contact:
-                            </Text>
-                            <Text style={styles.valu}>
-                              {item.CustomerContact}
-                            </Text>
+                      <Text style={styles.labl}>CNIC:</Text>
+                      <Text style={styles.valu}>{item.trans_cnic}</Text>
 
-                            <Text style={styles.labl}>Contact:</Text>
-                            <Text style={styles.valu}>{item.Contact}</Text>
+                      <Text style={styles.labl}>Email:</Text>
+                      <Text style={styles.valu}>{item.trans_email}</Text>
 
-                            <Text style={styles.labl}>Contact Person One:</Text>
-                            <Text style={styles.valu}>
-                              {item.ContactPersonOne ?? 'N/A'}
-                            </Text>
+                      <Text style={styles.labl}>Contact 1:</Text>
+                      <Text style={styles.valu}>
+                        {item.trans_sec_contact ?? 'N/A'}
+                      </Text>
 
-                            <Text style={styles.labl}>Contact Number One:</Text>
-                            <Text style={styles.valu}>
-                              {item.ContactNumberOne ?? 'N/A'}
-                            </Text>
+                      <Text style={styles.labl}>Contact 2:</Text>
+                      <Text style={styles.valu}>
+                        {item.trans_third_contact ?? 'N/A'}
+                      </Text>
 
-                            <Text style={styles.labl}>Contact Person Two:</Text>
-                            <Text style={styles.valu}>
-                              {item.ContactPersonTwo ?? 'N/A'}
-                            </Text>
+                      <Text style={styles.labl}>Contact Person 1:</Text>
+                      <Text style={styles.valu}>
+                        {item.trans_contact_person_one ?? 'N/A'}
+                      </Text>
 
-                            <Text style={styles.labl}>Contact Number Two:</Text>
-                            <Text style={styles.valu}>
-                              {item.ContactNumberTwo ?? 'N/A'}
-                            </Text>
+                      <Text style={styles.labl}>Contact Person 2:</Text>
+                      <Text style={styles.valu}>
+                        {item.trans_contact_person_two ?? 'N/A'}
+                      </Text>
 
-                            <Text style={styles.labl}>CNIC:</Text>
-                            <Text style={styles.valu}>{item.CNIC}</Text>
+                      <Text style={styles.labl}>Address:</Text>
+                      <Text style={styles.valu}>{item.trans_address}</Text>
 
-                            <Text style={styles.labl}>Address:</Text>
-                            <Text style={styles.valu}>{item.Address}</Text>
+                      <Text style={styles.labl}>Opening Balance:</Text>
+                      <Text style={styles.valu}>
+                        {item.trans_opening_balance ?? 'N/A'}
+                      </Text>
 
-                            <Text style={styles.labl}>Opening Balance:</Text>
-                            <Text style={styles.valu}>
-                              {item.OpeningBalance ?? 'N/A'}
-                            </Text>
+                      <Text style={styles.labl}>Payment Type:</Text>
+                      <Text style={styles.valu}>
+                        {item.trans_payment_type ?? 'N/A'}
+                      </Text>
 
-                            <Text style={styles.labl}>Payment Type:</Text>
-                            <Text style={styles.valu}>
-                              {item.PaymentType ?? 'N/A'}
-                            </Text>
-
-                            <Text style={styles.labl}>Transaction Type:</Text>
-                            <Text style={styles.valu}>
-                              {item.TransactionType ?? 'N/A'}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                    </ScrollView>
-                  )}
-                />
-              </View>
-            </View>
+                      <Text style={styles.labl}>Transaction Type:</Text>
+                      <Text style={styles.valu}>
+                        {item.trans_transaction_type ?? 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
           </View>
         </Modal>
       </ImageBackground>
@@ -1228,8 +1328,10 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: '#144272',
+    color: '#144272',
     borderRadius: 6,
     padding: 8,
+    height: 40,
   },
   cardContainer: {
     margin: 20,
