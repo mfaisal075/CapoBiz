@@ -10,106 +10,54 @@ import {
   FlatList,
   TextInput,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
 import Modal from 'react-native-modal';
 import {RadioButton} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
+import axios from 'axios';
+import BASE_URL from '../BASE_URL';
+import {useUser} from '../CTX/UserContext';
+import Toast from 'react-native-toast-message';
+
+interface Employee {
+  id: number;
+  emp_name: string;
+  emp_address: string;
+  emp_contact: string;
+  emp_cnic: string;
+  emp_email: string;
+}
+
+interface EmployeeView {
+  id: number;
+  emp_name: string;
+  emp_address: string;
+  emp_contact: string;
+  emp_cnic: string;
+  emp_email: string;
+  emp_fathername: string;
+  emp_sec_contact: string;
+  emp_third_contact: string;
+  emp_contact_person_one: string;
+  emp_contact_person_two: string;
+  emp_opening_balance: string;
+  emp_transaction_type: string;
+  emp_payment_type: string;
+  emp_status: string;
+  emp_image: string;
+  emp_type: string;
+  created_at: string;
+  updated_at: string;
+}
 
 export default function EmployeesPeople() {
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const Info = [
-    {
-      Name: 'Naeem',
-      Email: '@',
-      Contact: '03001234567',
-      Cnic: '13',
-      Address: 'Gujranwala',
-    },
-    {
-      Name: 'Asim',
-      Email: '@',
-      Contact: '03001234567',
-      Cnic: '13',
-      Address: 'Mandi bahuddin',
-    },
-    {
-      Name: 'Ali',
-      Email: '@',
-      Contact: '03001234567',
-      Cnic: '13',
-      Address: 'Lahore',
-    },
-  ];
-
-  {
-    /*view modal*/
-  }
-  const ViewModal = [
-    {
-      CustomerName: 'Naeem',
-      FatherName: null,
-      Email: 'naeem@gmail.com',
-      CustomerContact: '0322-2222222',
-      Contact: '03001234567',
-      ContactPersonOne: null,
-      ContactNumberOne: null,
-      ContactPersonTwo: null,
-      ContactNumberTwo: null,
-      CNIC: '11111-1111111-8',
-      Address: 'Gujranwala',
-      CustomerArea: 'gujranwala',
-      CustomerType: 'Type',
-      OpeningBalance: null,
-      PaymentType: null,
-      TransactionType: null,
-      CustomerPicture: '',
-    },
-  ];
-
-  {
-    /*customer*/
-  }
-  const [customer, setcustomer] = useState(false);
-
-  const togglecustomer = () => {
-    setcustomer(!customer);
-  };
-
-  const [customerType, setcustomerType] = useState(false);
-  const [currentcustomer, setCurrentcustomer] = useState<string | null>('');
-  const customerItem = [
-    {label: 'New', value: 'New'},
-    {label: 'Blue', value: 'Blue'},
-    {label: 'Standard', value: 'Standard'},
-  ];
-
-  const [addcustomer, setaddcustomer] = useState(false);
-
-  const [btncustomer, setbtncustomer] = useState(false);
-
-  const togglebtncustomer = () => {
-    setbtncustomer(!btncustomer);
-  };
-
-  const [area, setarea] = useState(false);
-
-  const togglearea = () => {
-    setarea(!area);
-  };
-  const [customerArea, setcustomerArea] = useState(false);
-  const [currentcustomerarea, setCurrentcustomerarea] = useState<string | null>(
-    '',
-  );
-  const customerAreaItem = [
-    {label: 'Gujranwala', value: 'Gujranwala'},
-    {label: 'Lahore', value: 'Lahore'},
-  ];
-  const [areabtn, setareabtn] = useState(false);
-
-  const toggleareabtn = () => {
-    setareabtn(!areabtn);
-  };
+  const [employeeData, setEmployeeData] = useState<Employee[]>([]);
+  const [viewEmp, setViewEmp] = useState<EmployeeView[]>([]);
+  const [modalVisible, setModalVisible] = useState('');
+  const [selectedEmp, setSelectedEmp] = useState<number | null>(null);
 
   const [btncustomerarea, setbtncustomerarea] = useState(false);
 
@@ -126,11 +74,6 @@ export default function EmployeesPeople() {
     {label: 'Payable', value: 'Payable'},
     {label: 'Recievable', value: 'Recievable'},
   ];
-
-  const [isModalV, setModalV] = useState(false);
-  const tglModal = () => {
-    setModalV(!isModalV);
-  };
   const [Worker, setWorker] = React.useState<'Worker' | 'number'>('Worker');
 
   const [Other, setOther] = React.useState<'Other' | 'number'>('Other');
@@ -143,71 +86,58 @@ export default function EmployeesPeople() {
     setedit(!edit);
   };
 
-  const [editType, seteditType] = useState(false);
-  const [currentedit, setCurrentedit] = useState<string | null>('');
-  const editItem = [
-    {label: 'New', value: 'New'},
-    {label: 'Blue', value: 'Blue'},
-    {label: 'Standard', value: 'Standard'},
-  ];
-
-  const [editcustomer, seteditcustomer] = useState(false);
-
-  const toggleeditcustomer = () => {
-    seteditcustomer(!editcustomer);
-  };
-
-  const [btnedit, setbtnedit] = useState(false);
-
-  const togglebtnedit = () => {
-    setbtnedit(!btnedit);
-  };
-
-  const [editarea, seteditarea] = useState(false);
-
-  const toggleeditarea = () => {
-    seteditarea(!editarea);
-  };
-  const [customereditArea, setcustomereditArea] = useState(false);
-  const [currentcustomereditarea, setCurrentcustomereditarea] = useState<
-    string | null
-  >('');
-  const customerAreaeditItem = [
-    {label: 'Gujranwala', value: 'Gujranwala'},
-    {label: 'Lahore', value: 'Lahore'},
-  ];
-  const [areaeditbtn, setareaeditbtn] = useState(false);
-
-  const toggleareaeditbtn = () => {
-    setareaeditbtn(!areabtn);
-  };
-
   const [btncustomeraditarea, setbtncustomereditarea] = useState(false);
 
   const togglebtncustomereditarea = () => {
     setbtncustomereditarea(!btncustomeraditarea);
   };
-  const [radioeditType, setradioeditType] = React.useState<
-    'EnableOpeningBalance' | 'number'
-  >('EnableOpeningBalance');
-
-  const [editpaymentType, seteditpaymentType] = useState(false);
-  const [editcurrent, seteditcurrentpaymentType] = useState<string | null>('');
-  const editpaymentTypeItem = [
-    {label: 'Payable', value: 'Payable'},
-    {label: 'Recievable', value: 'Recievable'},
-  ];
 
   const [EditWorker, setEditWorker] = React.useState<'Worker' | 'number'>(
     'Worker',
   );
 
   const [EditOther, setEditOther] = React.useState<'Other' | 'number'>('Other');
-  const [view, setview] = useState(false);
 
-  const toggleview = () => {
-    setview(!view);
+  // Fetch Employee
+  const fetchEmployees = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchemployeedata`);
+      setEmployeeData(res.data.emp);
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  // Delete Employee
+  const delEmployee = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/employeedelete`, {
+        id: selectedEmp,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Deleted!',
+          text2: 'Employee has been Deleted successfully!',
+          visibilityTime: 1500,
+        });
+
+        setSelectedEmp(null);
+        setModalVisible('');
+        fetchEmployees();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -242,7 +172,7 @@ export default function EmployeesPeople() {
               Employees
             </Text>
           </View>
-          <TouchableOpacity onPress={togglecustomer}>
+          <TouchableOpacity onPress={() => setModalVisible('AddEmp')}>
             <Image
               style={{
                 tintColor: 'white',
@@ -271,128 +201,154 @@ export default function EmployeesPeople() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={Info}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.Name}
-                      </Text>
+        <View>
+          <FlatList
+            data={employeeData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <ScrollView
+                style={{
+                  padding: 5,
+                }}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.emp_name}
+                    </Text>
 
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}>
-                        <TouchableOpacity onPress={toggleview}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 9,
-                            }}
-                            source={require('../../assets/show.png')}
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={toggleedit}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginTop: 8,
-                            }}
-                            source={require('../../assets/edit.png')}
-                          />
-                        </TouchableOpacity>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                      }}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setModalVisible('View Employee');
+                          const fetchDetails = async (id: number) => {
+                            try {
+                              const res = await axios.get(
+                                `${BASE_URL}/employeesshow?id=${id}&_token=${token}`,
+                              );
+                              setViewEmp([res.data]);
+                            } catch (error) {
+                              console.log(error);
+                            }
+                          };
 
-                        <TouchableOpacity onPress={tglModal}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 8,
-                            }}
-                            source={require('../../assets/delete.png')}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
+                          fetchDetails(item.id);
+                        }}>
+                        <Image
+                          style={{
+                            tintColor: '#144272',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginRight: 5,
+                            marginTop: 9,
+                          }}
+                          source={require('../../assets/show.png')}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={toggleedit}>
+                        <Image
+                          style={{
+                            tintColor: '#144272',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginTop: 8,
+                          }}
+                          source={require('../../assets/edit.png')}
+                        />
+                      </TouchableOpacity>
 
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
+                      <TouchableOpacity
+                        onPress={() => {
+                          setModalVisible('EmpDelete');
+                          setSelectedEmp(item.id);
                         }}>
-                        <Text style={styles.text}>Email:</Text>
-                        <Text style={styles.text}>{item.Email}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Contact:</Text>
-                        <Text style={styles.text}>{item.Contact}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>CNIC:</Text>
-                        <Text style={styles.text}>{item.Cnic}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                           <Text style={[styles.value,{marginBottom: 5}]}>
-                          Address: 
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                        {item.Address}
-                        </Text>
-                      </View>
+                        <Image
+                          style={{
+                            tintColor: '#144272',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginRight: 5,
+                            marginTop: 8,
+                          }}
+                          source={require('../../assets/delete.png')}
+                        />
+                      </TouchableOpacity>
                     </View>
                   </View>
-                </ScrollView>
-              )}
-            />
-          </View>
-        </ScrollView>
 
-        {/*employees*/}
-        <Modal isVisible={customer}>
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Email:</Text>
+                      <Text style={styles.text}>{item.emp_email ?? 'N/A'}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Contact:</Text>
+                      <Text style={styles.text}>
+                        {item.emp_contact ?? 'N/A'}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>CNIC:</Text>
+                      <Text style={styles.text}>{item.emp_cnic ?? 'N/A'}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        Address:
+                      </Text>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        {item.emp_address ?? 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+            )}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>
+                  No Employee found.
+                </Text>
+              </View>
+            }
+          />
+        </View>
+
+        {/*Add Employee*/}
+        <Modal isVisible={modalVisible === 'AddEmp'}>
           <ScrollView
             style={{
               flex: 1,
               backgroundColor: 'white',
               width: '98%',
-              maxHeight: 500,
+              maxHeight: 550,
               borderRadius: 10,
               borderWidth: 1,
               borderColor: '#144272',
@@ -413,7 +369,7 @@ export default function EmployeesPeople() {
                 }}>
                 Add New Employee
               </Text>
-              <TouchableOpacity onPress={() => setcustomer(!customer)}>
+              <TouchableOpacity onPress={() => setModalVisible('')}>
                 <Image
                   style={{
                     width: 15,
@@ -747,8 +703,8 @@ export default function EmployeesPeople() {
           </View>
         </Modal>
 
-        {/*delete*/}
-        <Modal isVisible={isModalV}>
+        {/*Epmloyee Delete*/}
+        <Modal isVisible={modalVisible === 'EmpDelete'}>
           <View
             style={{
               flex: 1,
@@ -793,7 +749,11 @@ export default function EmployeesPeople() {
                 marginTop: 10,
                 justifyContent: 'center',
               }}>
-              <TouchableOpacity onPress={() => setModalV(!isModalV)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setSelectedEmp(null);
+                }}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -813,7 +773,7 @@ export default function EmployeesPeople() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity>
+              <TouchableOpacity onPress={delEmployee}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -1125,8 +1085,8 @@ export default function EmployeesPeople() {
           </View>
         </Modal>
 
-        {/*view modal*/}
-        <Modal isVisible={view}>
+        {/*Employee View Modal*/}
+        <Modal isVisible={modalVisible === 'View Employee'}>
           <View
             style={{
               flex: 1,
@@ -1153,7 +1113,11 @@ export default function EmployeesPeople() {
                 }}>
                 Employee's Detail
               </Text>
-              <TouchableOpacity onPress={() => setview(!view)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setViewEmp([]);
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -1165,102 +1129,104 @@ export default function EmployeesPeople() {
             </View>
 
             <View>
-              <View>
-                <FlatList
-                  data={ViewModal}
-                  keyExtractor={(item, index) => index.toString()}
-                  renderItem={({item}) => (
-                    <ScrollView
-                      style={{
-                        padding: 5,
-                      }}>
-                      <View style={styles.table}>
-                        <View style={[styles.cardContainer]}>
-                          <View
-                            style={{alignItems: 'center', marginBottom: 16}}>
-                            {item.CustomerPicture ? (
-                              <Image
-                                source={{uri: item.CustomerPicture}}
-                                style={styles.customerImage}
-                                resizeMode="cover"
-                              />
-                            ) : (
-                              <Text style={styles.noImageText}>
-                                No Image Provided
-                              </Text>
-                            )}
-                          </View>
-
-                          <View style={styles.infoGrid}>
-                            <Text style={styles.labl}>Employee Name:</Text>
-                            <Text style={styles.valu}>{item.CustomerName}</Text>
-
-                            <Text style={styles.labl}>Father Name:</Text>
-                            <Text style={styles.valu}>
-                              {item.FatherName ?? 'N/A'}
+              <FlatList
+                data={viewEmp}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={({item}) => (
+                  <ScrollView
+                    style={{
+                      padding: 5,
+                    }}>
+                    <View style={styles.table}>
+                      <View style={[styles.cardContainer]}>
+                        <View style={{alignItems: 'center', marginBottom: 16}}>
+                          {item.emp_image ? (
+                            <Image
+                              source={{uri: item.emp_image}}
+                              style={styles.customerImage}
+                              resizeMode="cover"
+                            />
+                          ) : (
+                            <Text style={styles.noImageText}>
+                              No Image Provided
                             </Text>
+                          )}
+                        </View>
 
-                            <Text style={styles.labl}>Email:</Text>
-                            <Text style={styles.valu}>{item.Email}</Text>
+                        <View style={styles.infoGrid}>
+                          <Text style={styles.labl}>Employee Name:</Text>
+                          <Text style={styles.valu}>{item.emp_name}</Text>
 
-                            <Text style={styles.labl}>Employee Contact:</Text>
-                            <Text style={styles.valu}>
-                              {item.CustomerContact}
-                            </Text>
+                          <Text style={styles.labl}>Father Name:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_fathername ?? 'N/A'}
+                          </Text>
 
-                            <Text style={styles.labl}>Contact:</Text>
-                            <Text style={styles.valu}>{item.Contact}</Text>
+                          <Text style={styles.labl}>Contact:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_contact ?? 'N/A'}
+                          </Text>
 
-                            <Text style={styles.labl}>Contact Person One:</Text>
-                            <Text style={styles.valu}>
-                              {item.ContactPersonOne ?? 'N/A'}
-                            </Text>
+                          <Text style={styles.labl}>Email:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_email ?? 'N/A'}
+                          </Text>
 
-                            <Text style={styles.labl}>Contact Number One:</Text>
-                            <Text style={styles.valu}>
-                              {item.ContactNumberOne ?? 'N/A'}
-                            </Text>
+                          <Text style={styles.labl}>Second Contact:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_sec_contact ?? 'N/A'}
+                          </Text>
 
-                            <Text style={styles.labl}>Contact Person Two:</Text>
-                            <Text style={styles.valu}>
-                              {item.ContactPersonTwo ?? 'N/A'}
-                            </Text>
+                          <Text style={styles.labl}>Third Contact:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_third_contact ?? 'N/A'}
+                          </Text>
 
-                            <Text style={styles.labl}>Contact Number Two:</Text>
-                            <Text style={styles.valu}>
-                              {item.ContactNumberTwo ?? 'N/A'}
-                            </Text>
+                          <Text style={styles.labl}>Contact Person One:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_contact_person_one ?? 'N/A'}
+                          </Text>
 
-                            <Text style={styles.labl}>CNIC:</Text>
-                            <Text style={styles.valu}>{item.CNIC}</Text>
+                          <Text style={styles.labl}>Contact Person Two:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_contact_person_two ?? 'N/A'}
+                          </Text>
 
-                            <Text style={styles.labl}>Address:</Text>
-                            <Text style={styles.valu}>{item.Address}</Text>
+                          <Text style={styles.labl}>CNIC:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_cnic ?? 'N/A'}
+                          </Text>
 
-                            <Text style={styles.labl}>Employee Type:</Text>
-                            <Text style={styles.valu}>{item.CustomerType}</Text>
+                          <Text style={styles.labl}>Address:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_address ?? 'N/A'}
+                          </Text>
 
-                            <Text style={styles.labl}>Opening Balance:</Text>
-                            <Text style={styles.valu}>
-                              {item.OpeningBalance ?? 'N/A'}
-                            </Text>
+                          <Text style={styles.labl}>Employee Type:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_type ?? 'N/A'}
+                          </Text>
 
-                            <Text style={styles.labl}>Payment Type:</Text>
-                            <Text style={styles.valu}>
-                              {item.PaymentType ?? 'N/A'}
-                            </Text>
+                          <Text style={styles.labl}>Opening Balance:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_opening_balance ?? 'N/A'}
+                          </Text>
 
-                            <Text style={styles.labl}>Transaction Type:</Text>
-                            <Text style={styles.valu}>
-                              {item.TransactionType ?? 'N/A'}
-                            </Text>
-                          </View>
+                          <Text style={styles.labl}>Payment Type:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_payment_type ?? 'N/A'}
+                          </Text>
+
+                          <Text style={styles.labl}>Transaction Type:</Text>
+                          <Text style={styles.valu}>
+                            {item.emp_transaction_type ?? 'N/A'}
+                          </Text>
                         </View>
                       </View>
-                    </ScrollView>
-                  )}
-                />
-              </View>
+                    </View>
+                  </ScrollView>
+                )}
+              />
             </View>
           </View>
         </Modal>
