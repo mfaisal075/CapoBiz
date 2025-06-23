@@ -9,40 +9,52 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
 import Modal from 'react-native-modal';
+import axios from 'axios';
+import BASE_URL from '../BASE_URL';
+import {useUser} from '../CTX/UserContext';
+
+interface Profiles {
+  id: number;
+  fixprf_business_account_name: string;
+  fixprf_title: string;
+  fixprf_mobile: string;
+}
+
+interface ViewProfile {
+  id: number;
+  fixprf_area_id: number;
+  fixprf_business_account_name: string;
+  fixprf_title: string;
+  fixprf_business_address: string;
+  fixprf_tehsil: string;
+  fixprf_district: string;
+  fixprf_mobile: string;
+  fixprf_status: string;
+}
 
 export default function FixedAccountsPeople() {
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const Info = [
-    {
-      BusinessAccountName: 'Company',
-      Title: 'abc',
-      Contact: '03001234567',
-    },
-  ];
+  const [profiles, setProfiles] = useState<Profiles[]>([]);
+  const [modalVisible, setModalVisible] = useState('');
+  const [viewProfile, setViewProfile] = useState<ViewProfile[]>([]);
 
-  {
-    /*view modal*/
-  }
-  const ViewModal = [
-    {
-      BusinessAccountName: 'abc',
-      Title: 'abc',
-      Contact: '012',
-      Area: 'Daska',
-      Tehsil: 'Daska',
-      District: 'Sialkot',
-      Address: 'Xyz',
-    },
-  ];
-
-  const [view, setview] = useState(false);
-
-  const toggleview = () => {
-    setview(!view);
+  // Fetch Expense Profiles
+  const fetchProfiles = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchexpenseprofiles`);
+      setProfiles(res.data.expenseprofiles);
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  useEffect(() => {
+    fetchProfiles();
+  }, []);
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -94,80 +106,98 @@ export default function FixedAccountsPeople() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={Info}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.BusinessAccountName}
-                      </Text>
+        <FlatList
+          data={profiles}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <ScrollView
+              style={{
+                padding: 5,
+              }}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
+                  <Text
+                    style={{
+                      color: '#144272',
+                      fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
+                    }}>
+                    {item.fixprf_business_account_name}
+                  </Text>
 
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}>
-                        <TouchableOpacity onPress={toggleview}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 9,
-                            }}
-                            source={require('../../assets/show.png')}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                    }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('ViewProfile');
+                        const fetchProfileData = async (id: number) => {
+                          try {
+                            const res = await axios.get(
+                              `${BASE_URL}/expenseprofileshow?id=${id}&_token=${token}`,
+                            );
+                            setViewProfile([res.data.expenseprofile]);
+                          } catch (error) {
+                            console.log(error);
+                          }
+                        };
 
-                    <View style={styles.infoRow}>
-                      <View
+                        fetchProfileData(item.id);
+                      }}>
+                      <Image
                         style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Title:</Text>
-                        <Text style={styles.text}>{item.Title}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.text, {marginBottom: 5}]}>
-                          Contact:
-                        </Text>
-                        <Text style={[styles.text, {marginBottom: 5}]}>
-                          {item.Contact}
-                        </Text>
-                      </View>
-                    </View>
+                          tintColor: '#144272',
+                          width: 15,
+                          height: 15,
+                          alignSelf: 'center',
+                          marginRight: 5,
+                          marginTop: 9,
+                        }}
+                        source={require('../../assets/show.png')}
+                      />
+                    </TouchableOpacity>
                   </View>
-                </ScrollView>
-              )}
-            />
-          </View>
-        </ScrollView>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Title:</Text>
+                    <Text style={styles.text}>{item.fixprf_title}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.text, {marginBottom: 5}]}>
+                      Contact:
+                    </Text>
+                    <Text style={[styles.text, {marginBottom: 5}]}>
+                      {item.fixprf_mobile}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          )}
+          ListEmptyComponent={
+            <View style={{alignItems: 'center', marginTop: 20}}>
+              <Text style={{color: '#fff', fontSize: 14}}>
+                No Account found.
+              </Text>
+            </View>
+          }
+        />
 
         {/*view modal*/}
-        <Modal isVisible={view}>
+        <Modal isVisible={modalVisible === 'ViewProfile'}>
           <View
             style={{
               flex: 1,
@@ -194,7 +224,11 @@ export default function FixedAccountsPeople() {
                 }}>
                 Expense Profile Detail
               </Text>
-              <TouchableOpacity onPress={() => setview(!view)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setViewProfile([]);
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -205,49 +239,53 @@ export default function FixedAccountsPeople() {
               </TouchableOpacity>
             </View>
 
-            <View>
-              <View>
-                <FlatList
-                  data={ViewModal}
-                  keyExtractor={(item, index) => index.toString()}
-                  renderItem={({item}) => (
-                    <ScrollView
-                      style={{
-                        padding: 5,
-                      }}>
-                      <View style={styles.table}>
-                        <View style={[styles.cardContainer]}>
-                          <View style={styles.infoGrid}>
-                            <Text style={styles.labl}>Name:</Text>
-                            <Text style={styles.valu}>
-                              {item.BusinessAccountName}
-                            </Text>
+            <FlatList
+              data={viewProfile}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({item}) => (
+                <ScrollView
+                  style={{
+                    padding: 5,
+                  }}>
+                  <View style={styles.table}>
+                    <View style={[styles.cardContainer]}>
+                      <View style={styles.infoGrid}>
+                        <Text style={styles.labl}>Name:</Text>
+                        <Text style={styles.valu}>
+                          {item.fixprf_business_account_name}
+                        </Text>
 
-                            <Text style={styles.labl}>Title:</Text>
-                            <Text style={styles.valu}>{item.Title}</Text>
+                        <Text style={styles.labl}>Title:</Text>
+                        <Text style={styles.valu}>{item.fixprf_title}</Text>
 
-                            <Text style={styles.labl}>Contact:</Text>
-                            <Text style={styles.valu}>{item.Contact}</Text>
+                        <Text style={styles.labl}>Contact:</Text>
+                        <Text style={styles.valu}>{item.fixprf_mobile}</Text>
 
-                            <Text style={styles.labl}>Area:</Text>
-                            <Text style={styles.valu}>{item.Area}</Text>
+                        <Text style={styles.labl}>Area:</Text>
+                        <Text style={styles.valu}>
+                          {item.fixprf_area_id ?? 'N/A'}
+                        </Text>
 
-                            <Text style={styles.labl}>District:</Text>
-                            <Text style={styles.valu}>{item.District}</Text>
+                        <Text style={styles.labl}>District:</Text>
+                        <Text style={styles.valu}>
+                          {item.fixprf_district ?? 'N/A'}
+                        </Text>
 
-                            <Text style={styles.labl}>Tehsil:</Text>
-                            <Text style={styles.valu}>{item.Tehsil}</Text>
+                        <Text style={styles.labl}>Tehsil:</Text>
+                        <Text style={styles.valu}>
+                          {item.fixprf_tehsil ?? 'N/A'}
+                        </Text>
 
-                            <Text style={styles.labl}>Address:</Text>
-                            <Text style={styles.valu}>{item.Address}</Text>
-                          </View>
-                        </View>
+                        <Text style={styles.labl}>Address:</Text>
+                        <Text style={styles.valu}>
+                          {item.fixprf_business_address ?? 'N/A'}
+                        </Text>
                       </View>
-                    </ScrollView>
-                  )}
-                />
-              </View>
-            </View>
+                    </View>
+                  </View>
+                </ScrollView>
+              )}
+            />
           </View>
         </Modal>
       </ImageBackground>

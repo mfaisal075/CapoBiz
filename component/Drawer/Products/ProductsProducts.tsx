@@ -10,7 +10,7 @@ import {
   FlatList,
   TextInput,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import Modal from 'react-native-modal';
 import {RadioButton} from 'react-native-paper';
@@ -18,56 +18,131 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 import {heightPercentageToDP as hp} from 'react-native-responsive-screen';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import {useUser} from '../../CTX/UserContext';
+import Toast from 'react-native-toast-message';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+
+interface Products {
+  id: number;
+  prod_name: string;
+  prod_UPC_EAN: string;
+  prod_costprice: string;
+  prod_retailprice: string;
+  prod_expirydate: string;
+  prod_qty: string;
+  pcat_name: string;
+}
+
+interface ViewProduct {
+  pro: {
+    id: number;
+    prod_name: string;
+    prod_generic_name: string;
+    prod_manage_stock: string;
+    pct_code: string;
+    prod_UPC_EAN: string;
+    prod_sup_id: string;
+    prod_type: string;
+    prod_image: string;
+    prod_pcat_id: string;
+    prod_ums_id: string;
+    prod_costprice: string;
+    prod_retailprice: string;
+    prod_discount: string;
+    prod_fretailprice: string;
+    prod_expirydate: string;
+    prod_have_sub_uom: string;
+    prod_sub_uom: string;
+    prod_master_uom: string;
+    prod_sub_price: string;
+    prod_qty: string;
+    prod_sub_qty: string;
+    prod_reorder_qty: string;
+    prod_equivalent: string;
+    prod_f_equivalent: string;
+  };
+  uom: {
+    id: number;
+    ums_name: string;
+  };
+  cat: {
+    id: number;
+    pcat_name: string;
+  };
+  supp: {
+    id: string;
+    sup_area_id: string;
+    sup_name: string;
+    sup_company_name: string;
+    sup_agancy_name: string;
+    sup_address: string;
+    sup_contact: string;
+    sup_sec_contact: string;
+    sup_third_contact: string;
+    sup_email: string;
+    sup_is_customer: string;
+    sup_image: string;
+    sup_payment_type: string;
+    sup_transaction_type: string;
+    sup_opening_balance: string;
+    sup_status: string;
+  };
+}
+
+interface AddProduct {
+  product_name: string;
+  generic_name: string;
+  autobarcode: string;
+  upc_ean: string;
+  apply_expiry: string;
+  expiry_date: Date;
+  cat_id: string;
+  productuom_id: string;
+  opening_qty: string;
+  reorder_qty: string;
+  cost_price: string;
+  retail_price: string;
+  discount: string;
+  final_price: string;
+  supplier: string;
+  supp_id: string;
+}
+
+const initialAddProduct: AddProduct = {
+  apply_expiry: '',
+  autobarcode: '',
+  cat_id: '',
+  cost_price: '',
+  discount: '',
+  expiry_date: new Date(),
+  final_price: '',
+  generic_name: '',
+  opening_qty: '',
+  product_name: '',
+  productuom_id: '',
+  reorder_qty: '',
+  retail_price: '',
+  supp_id: '',
+  supplier: '',
+  upc_ean: '',
+};
 
 export default function CustomerPeople() {
-  const Information = [
-    {
-      Name: 'Kunafa Bar',
-      Barcode: '1',
-      Category: '34',
-      Cost: '89',
-      RetailPrice: '56',
-      Quantity: '00',
-      Expiry: '790',
-    },
-  ];
+  const {token} = useUser();
+  const [products, setProducts] = useState<Products[]>([]);
+  const [viewProd, setViewProd] = useState<ViewProduct[]>([]);
+  const [modalVisible, setModalVisible] = useState('');
+  const [selectedProd, setSelectedProd] = useState<number | null>(null);
+  const [addForm, setAddForm] = useState<AddProduct>(initialAddProduct);
 
-  {
-    /*view modal*/
-  }
-  const ViewModal = [
-    {
-      ProductName: 'Kunafa Bar',
-      SecondName: null,
-      UPC_EAN: '836256',
-      ExpiryDate: '2025-06-15',
-      Reorder: 'abc',
-      Category: 'Chocolate',
-      UOM: 'Box',
-      SubUOM: 'Pieces',
-      MasterUOM: 'Box',
-      SubtoMasterUOMEquivalent: 10,
-      SubUOMPrice: 599.0,
-      ManageStock: 'Y',
-      OpeningQuantity: 6503,
-      CostPrice: 500.0,
-      RetailPrice: 599.0,
-      'Discount(%)': 0.0,
-      FinalPrice: 599.0,
-      SupplierName: 'abc',
-      CustomerPicture: null,
-    },
-  ];
-
-  const [view, setview] = useState(false);
-
-  const toggleview = () => {
-    setview(!view);
-  };
-
-  const [isModalV, setModalV] = useState(false);
-  const tglModal = () => {
-    setModalV(!isModalV);
+  //Add Form OnChange
+  const onChnage = (field: keyof AddProduct, value: string | Date) => {
+    setAddForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const {openDrawer} = useDrawer();
@@ -286,6 +361,45 @@ export default function CustomerPeople() {
   const togglebtneditproduct = () => {
     setbtneditproduct(!btneditproduct);
   };
+
+  // Fetch Products
+  const fetchPrducts = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchproductlist`);
+      setProducts(res.data.product);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Delete Product
+  const delProduct = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/productdelete`, {
+        id: selectedProd,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Deleted!',
+          text2: 'Product has been deleted successfully!',
+          visibilityTime: 1500,
+        });
+        setModalVisible('');
+        fetchPrducts();
+        setSelectedProd(null);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchPrducts();
+  }, []);
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -320,7 +434,7 @@ export default function CustomerPeople() {
               Products
             </Text>
           </View>
-          <TouchableOpacity onPress={toggleproduct}>
+          <TouchableOpacity onPress={() => setModalVisible('AddProd')}>
             <Image
               style={{
                 tintColor: 'white',
@@ -349,163 +463,163 @@ export default function CustomerPeople() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={Information}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.Name}
-                      </Text>
+        <FlatList
+          data={products}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <ScrollView
+              style={{
+                padding: 5,
+              }}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
+                  <Text
+                    style={{
+                      color: '#144272',
+                      fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
+                    }}>
+                    {item.prod_name}
+                  </Text>
 
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}>
-                        <TouchableOpacity onPress={toggleview}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 9,
-                            }}
-                            source={require('../../../assets/show.png')}
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={toggleeditproduct}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginTop: 8,
-                            }}
-                            source={require('../../../assets/edit.png')}
-                          />
-                        </TouchableOpacity>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                    }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('ViewProd');
 
-                        <TouchableOpacity onPress={tglModal}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 8,
-                            }}
-                            source={require('../../../assets/delete.png')}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
+                        const fetchSingleProd = async (id: number) => {
+                          try {
+                            const res = await axios.get(
+                              `${BASE_URL}/productsshow?id=${id}&_token=${token}`,
+                            );
+                            setViewProd([res.data]);
+                          } catch (error) {
+                            console.log(error);
+                          }
+                        };
 
-                    <View style={styles.infoRow}>
-                      <View
+                        fetchSingleProd(item.id);
+                      }}>
+                      <Image
                         style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>
-                          Barcode:
-                        </Text>
-                        <Text style={styles.text}>
-                         {item.Barcode}
-                        </Text>
-                      </View>
+                          tintColor: '#144272',
+                          width: 15,
+                          height: 15,
+                          alignSelf: 'center',
+                          marginRight: 5,
+                          marginTop: 9,
+                        }}
+                        source={require('../../../assets/show.png')}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={toggleeditproduct}>
+                      <Image
+                        style={{
+                          tintColor: '#144272',
+                          width: 15,
+                          height: 15,
+                          alignSelf: 'center',
+                          marginTop: 8,
+                        }}
+                        source={require('../../../assets/edit.png')}
+                      />
+                    </TouchableOpacity>
 
-                      <View
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('DeleteProd');
+                        setSelectedProd(item.id);
+                      }}>
+                      <Image
                         style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>
-                          Category:
-                      
-                        </Text>
-                        <Text style={styles.text}>
-                      
-                          {item.Category}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Cost:
-                          
-                        </Text>
-                        <Text style={styles.text}>{item.Cost}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>
-                          Retail Price:
-                         
-                        </Text>
-                        <Text style={styles.text}>
-                      {item.RetailPrice}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>
-                          Quantity:
-                     
-                        </Text>
-                        <Text style={styles.text}>
-                      
-                          {item.Quantity}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Expiry :
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                       {item.Expiry}
-                        </Text>
-                      </View>
-                    </View>
+                          tintColor: '#144272',
+                          width: 15,
+                          height: 15,
+                          alignSelf: 'center',
+                          marginRight: 5,
+                          marginTop: 8,
+                        }}
+                        source={require('../../../assets/delete.png')}
+                      />
+                    </TouchableOpacity>
                   </View>
-                </ScrollView>
-              )}
-            />
-          </View>
-        </ScrollView>
+                </View>
 
-        {/*delete*/}
-        <Modal isVisible={isModalV}>
+                <View style={styles.infoRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Barcode:</Text>
+                    <Text style={styles.text}>{item.prod_UPC_EAN}</Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Category:</Text>
+                    <Text style={styles.text}>{item.pcat_name}</Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Cost:</Text>
+                    <Text style={styles.text}>{item.prod_costprice}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Retail Price:</Text>
+                    <Text style={styles.text}>{item.prod_retailprice}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Quantity:</Text>
+                    <Text style={styles.text}>{item.prod_qty}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Expiry :
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.prod_expirydate ?? 'No expiry date'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          )}
+          ListEmptyComponent={
+            <View style={{alignItems: 'center', marginTop: 20}}>
+              <Text style={{color: '#fff', fontSize: 14}}>
+                No Product found.
+              </Text>
+            </View>
+          }
+        />
+
+        {/*Delete Modal*/}
+        <Modal isVisible={modalVisible === 'DeleteProd'}>
           <View
             style={{
               flex: 1,
@@ -550,7 +664,11 @@ export default function CustomerPeople() {
                 marginTop: 10,
                 justifyContent: 'center',
               }}>
-              <TouchableOpacity onPress={() => setModalV(!isModalV)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setSelectedProd(null);
+                }}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -570,7 +688,10 @@ export default function CustomerPeople() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => {
+                  delProduct();
+                }}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -592,13 +713,13 @@ export default function CustomerPeople() {
           </View>
         </Modal>
 
-        {/*view modal*/}
-        <Modal isVisible={view}>
+        {/*View Product Modal*/}
+        <Modal isVisible={modalVisible === 'ViewProd'}>
           <View
             style={{
               flex: 1,
               backgroundColor: 'white',
-               width: '98%',
+              width: '98%',
               maxHeight: 500,
               borderRadius: 10,
               borderWidth: 1,
@@ -620,7 +741,11 @@ export default function CustomerPeople() {
                 }}>
                 Product's Detail
               </Text>
-              <TouchableOpacity onPress={() => setview(!view)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setViewProd([]);
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -631,103 +756,114 @@ export default function CustomerPeople() {
               </TouchableOpacity>
             </View>
 
-            <View>
-              <View>
-                <FlatList
-                  data={ViewModal}
-                  keyExtractor={(item, index) => index.toString()}
-                  renderItem={({item}) => (
-                    <ScrollView
-                      style={{
-                        padding: 5,
-                      }}>
-                      <View style={styles.table}>
-                        <View style={[styles.cardContainer]}>
-                          <View
-                            style={{alignItems: 'center', marginBottom: 16}}>
-                            {item.CustomerPicture ? (
-                              <Image
-                                source={{uri: item.CustomerPicture}}
-                                style={styles.customerImage}
-                                resizeMode="cover"
-                              />
-                            ) : (
-                              <Text style={styles.noImageText}>
-                                No Image Provided
-                              </Text>
-                            )}
-                          </View>
-
-                          <View style={styles.infoGrid}>
-                            <Text style={styles.labl}>Product Name:</Text>
-                            <Text style={styles.valu}>{item.ProductName}</Text>
-                            <Text style={styles.labl}>Second Name:</Text>
-                            <Text style={styles.valu}>
-                              {item.SecondName ?? 'N/A'}
-                            </Text>
-                            <Text style={styles.labl}>UPC_EAN:</Text>
-                            <Text style={styles.valu}>{item.UPC_EAN}</Text>
-                            <Text style={styles.labl}>Expiry Date:</Text>
-                            <Text style={styles.valu}>{item.ExpiryDate}</Text>
-                            <Text style={styles.labl}>Reorder:</Text>
-                            <Text style={styles.valu}>{item.Reorder}</Text>
-                            <Text style={styles.labl}>Category:</Text>
-                            <Text style={styles.valu}>
-                              {item.Category ?? 'N/A'}
-                            </Text>
-                            <Text style={styles.labl}>UOM:</Text>
-                            <Text style={styles.valu}>{item.UOM ?? 'N/A'}</Text>
-                            <Text style={styles.labl}>Sub UOM:</Text>
-                            <Text style={styles.valu}>
-                              {item.SubUOM ?? 'N/A'}
-                            </Text>
-                            <Text style={styles.labl}>Master UOM:</Text>
-                            <Text style={styles.valu}>
-                              {item.MasterUOM ?? 'N/A'}
-                            </Text>
-                            <Text style={styles.labl}>
-                              Sub To Master UOM Equivalent:
-                            </Text>
-                            <Text style={styles.valu}>
-                              {item.SubtoMasterUOMEquivalent}
-                            </Text>
-                            <Text style={styles.labl}>Sub UOM Price:</Text>
-                            <Text style={styles.valu}>{item.SubUOMPrice}</Text>
-                            <Text style={styles.labl}>Manage Stock:</Text>
-                            <Text style={styles.valu}>{item.ManageStock}</Text>
-                            <Text style={styles.labl}>Opening Quantity:</Text>
-                            <Text style={styles.valu}>
-                              {item.OpeningQuantity}
-                            </Text>
-                            p<Text style={styles.labl}>Cost Price:</Text>
-                            <Text style={styles.valu}>
-                              {item.CostPrice ?? 'N/A'}
-                            </Text>
-                            <Text style={styles.labl}>Retail Price:</Text>
-                            <Text style={styles.valu}>
-                              {item.RetailPrice ?? 'N/A'}
-                            </Text>
-                            <Text style={styles.labl}>Discount(%):</Text>
-                            <Text style={styles.valu}>
-                              {item['Discount(%)'] ?? 'N/A'}
-                            </Text>
-                            <Text style={styles.labl}>Final Price:</Text>
-                            <Text style={styles.valu}>{item.FinalPrice}</Text>
-                            <Text style={styles.labl}>Supplier Name:</Text>
-                            <Text style={styles.valu}>{item.SupplierName}</Text>
-                          </View>
-                        </View>
+            <FlatList
+              data={viewProd}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({item}) => (
+                <ScrollView
+                  style={{
+                    padding: 5,
+                  }}>
+                  <View style={styles.table}>
+                    <View style={[styles.cardContainer]}>
+                      <View style={{alignItems: 'center', marginBottom: 16}}>
+                        {item.pro.prod_image ? (
+                          <Image
+                            source={{uri: item.pro.prod_image}}
+                            style={styles.customerImage}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <Text style={styles.noImageText}>
+                            No Image Provided
+                          </Text>
+                        )}
                       </View>
-                    </ScrollView>
-                  )}
-                />
-              </View>
-            </View>
+
+                      <View style={styles.infoGrid}>
+                        <Text style={styles.labl}>Product Name:</Text>
+                        <Text style={styles.valu}>{item.pro.prod_name}</Text>
+                        <Text style={styles.labl}>Second Name:</Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_generic_name ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>UPC_EAN:</Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_UPC_EAN ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>Expiry Date:</Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_expirydate ?? 'No expiry date'}
+                        </Text>
+                        <Text style={styles.labl}>Reorder:</Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_reorder_qty ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>Category:</Text>
+                        <Text style={styles.valu}>
+                          {item.cat.pcat_name ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>UOM:</Text>
+                        <Text style={styles.valu}>
+                          {item.uom.ums_name ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>Sub UOM:</Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_sub_uom ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>Master UOM:</Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_master_uom ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>
+                          Sub To Master UOM Equivalent:
+                        </Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_master_uom ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>Sub UOM Price:</Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_sub_uom ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>Manage Stock:</Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_manage_stock ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>Opening Quantity:</Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_qty ?? '0'}
+                        </Text>
+                        <Text style={styles.labl}>Cost Price:</Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_costprice ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>Retail Price:</Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_retailprice ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>Discount(%):</Text>
+                        <Text style={styles.valu}>
+                          {item.pro.prod_discount ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>Final Price:</Text>
+                        <Text style={styles.valu}>
+                          {item.pro?.prod_fretailprice ?? 'N/A'}
+                        </Text>
+                        <Text style={styles.labl}>Supplier Name:</Text>
+                        <Text style={styles.valu}>
+                          {item.supp?.sup_name ?? 'N/A'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </ScrollView>
+              )}
+            />
           </View>
         </Modal>
 
         {/*Add Product*/}
-        <Modal isVisible={addproduct}>
+        <Modal isVisible={modalVisible === 'AddProd'}>
           <ScrollView
             style={{
               flex: 1,
@@ -754,7 +890,7 @@ export default function CustomerPeople() {
                 }}>
                 Add New Product
               </Text>
-              <TouchableOpacity onPress={() => setaddproduct(!addproduct)}>
+              <TouchableOpacity onPress={() => setModalVisible('')}>
                 <Image
                   style={{
                     width: 15,
@@ -770,11 +906,15 @@ export default function CustomerPeople() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Product Name"
+                value={addForm.product_name}
+                onChangeText={t => onChnage('product_name', t)}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Second Name"
+                value={addForm.generic_name}
+                onChangeText={t => onChnage('generic_name', t)}
               />
             </View>
 
@@ -886,7 +1026,12 @@ export default function CustomerPeople() {
                 placeholder="Select Category"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
                 style={[styles.dropdown, {borderColor: '#144272', width: 265}]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
@@ -926,9 +1071,13 @@ export default function CustomerPeople() {
                 placeholder="Select UOM"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
-                style={[styles.dropdown, {borderColor: '#144272', 
-                  width: 265}]}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
+                style={[styles.dropdown, {borderColor: '#144272', width: 265}]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
@@ -1034,7 +1183,12 @@ export default function CustomerPeople() {
                 placeholder="Select"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
                 style={[
                   styles.dropdown,
                   {
@@ -1047,7 +1201,8 @@ export default function CustomerPeople() {
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
-                  width: 140,marginLeft:18
+                  width: 140,
+                  marginLeft: 18,
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
@@ -1106,7 +1261,12 @@ export default function CustomerPeople() {
               placeholder="Select Sub UOM"
               placeholderStyle={{color: '#144272'}}
               textStyle={{color: '#144272'}}
-              arrowIconStyle={{tintColor: '#144272'}}
+              ArrowUpIconComponent={() => (
+                <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+              )}
+              ArrowDownIconComponent={() => (
+                <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+              )}
               style={[
                 styles.dropdown,
                 {
@@ -1118,7 +1278,8 @@ export default function CustomerPeople() {
               dropDownContainerStyle={{
                 backgroundColor: 'white',
                 borderColor: '#144272',
-                width: 295,marginLeft:11
+                width: 295,
+                marginLeft: 11,
               }}
               labelStyle={{color: '#144272'}}
               listItemLabelStyle={{color: '#144272'}}
@@ -1154,7 +1315,7 @@ export default function CustomerPeople() {
                   margin: 10,
                   borderRadius: 10,
                   justifyContent: 'center',
-                  alignSelf:'center'
+                  alignSelf: 'center',
                 }}>
                 <Text
                   style={{
@@ -1826,7 +1987,8 @@ export default function CustomerPeople() {
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
-                  width: 140,marginLeft:18
+                  width: 140,
+                  marginLeft: 18,
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
@@ -1897,7 +2059,8 @@ export default function CustomerPeople() {
               dropDownContainerStyle={{
                 backgroundColor: 'white',
                 borderColor: '#144272',
-                width: 290,marginLeft:14,
+                width: 290,
+                marginLeft: 14,
               }}
               labelStyle={{color: '#144272'}}
               listItemLabelStyle={{color: '#144272'}}
@@ -1932,7 +2095,8 @@ export default function CustomerPeople() {
                   width: 290,
                   margin: 10,
                   borderRadius: 10,
-                  justifyContent: 'center',alignSelf:'center'
+                  justifyContent: 'center',
+                  alignSelf: 'center',
                 }}>
                 <Text
                   style={{

@@ -402,7 +402,6 @@ export default function CustomerPeople() {
   const editCustomer = async () => {
     if (
       !editForm.cust_name.trim() ||
-      !editForm.cust_fathername.trim() ||
       !editForm.cust_contact.trim() ||
       !editForm.cust_email.trim() ||
       !editForm.cust_address.trim() ||
@@ -768,6 +767,7 @@ export default function CustomerPeople() {
                 onChangeText={t => onChange('father_name', t)}
               />
             </View>
+
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
                 style={styles.productinput}
@@ -1170,6 +1170,7 @@ export default function CustomerPeople() {
                 }
               />
             </View>
+
             <TouchableOpacity onPress={addCustomer}>
               <View
                 style={{
