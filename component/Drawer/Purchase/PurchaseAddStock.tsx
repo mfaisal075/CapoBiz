@@ -19,6 +19,7 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 import {heightPercentageToDP as hp} from 'react-native-responsive-screen';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 export default function PurchaseAddStock() {
   const navigation = useNavigation();
@@ -394,7 +395,12 @@ export default function PurchaseAddStock() {
             placeholder="Select Supplier"
             placeholderStyle={{color: 'white'}}
             textStyle={{color: 'white'}}
-            arrowIconStyle={{tintColor: 'white'}}
+            ArrowUpIconComponent={() => (
+              <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+            )}
+            ArrowDownIconComponent={() => (
+              <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+            )}
             style={[
               styles.dropdown,
               {
@@ -414,6 +420,7 @@ export default function PurchaseAddStock() {
             }}
             labelStyle={{color: 'white'}}
             listItemLabelStyle={{color: '#144272'}}
+            listMode="SCROLLVIEW"
           />
           <View style={[styles.row]}>
             <Text style={[styles.inputSmall, {color: 'white', marginLeft: 10}]}>
@@ -544,7 +551,12 @@ export default function PurchaseAddStock() {
                 placeholder="Select Transporter"
                 placeholderStyle={{color: 'white'}}
                 textStyle={{color: currentVal ? 'white' : 'white'}}
-                arrowIconStyle={{tintColor: 'white'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                )}
                 style={[
                   styles.dropdown,
                   {width: 335, marginLeft: 3, marginTop: -5},
@@ -557,6 +569,7 @@ export default function PurchaseAddStock() {
                 }}
                 labelStyle={{color: 'white'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
             </View>
           </View>
@@ -608,85 +621,83 @@ export default function PurchaseAddStock() {
               Total Purchase
             </Text>
           </View>
+
           <View>
-            <View>
-              <FlatList
-                data={Info}
-                keyExtractor={(item, index) => index.toString()}
-                renderItem={({item}) => (
-                  <ScrollView
-                    style={{
-                      padding: 5,
-                    }}>
-                    <View style={styles.table}>
-                      <View style={styles.tablehead}>
-                        <Text
-                          style={{
-                            color: '#144272',
-                            fontWeight: 'bold',
-                            marginLeft: 5,
-                            marginTop: 5,
-                          }}>
-                          {item.ItemName}
-                        </Text>
+            <FlatList
+              data={Info}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({item}) => (
+                <ScrollView
+                  style={{
+                    padding: 5,
+                  }}>
+                  <View style={styles.table}>
+                    <View style={styles.tablehead}>
+                      <Text
+                        style={{
+                          color: '#144272',
+                          fontWeight: 'bold',
+                          marginLeft: 5,
+                          marginTop: 5,
+                        }}>
+                        {item.ItemName}
+                      </Text>
 
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginRight: 5,
-                          }}
-                          source={require('../../../assets/show.png')}
-                        />
+                      <Image
+                        style={{
+                          tintColor: '#144272',
+                          width: 15,
+                          height: 15,
+                          alignSelf: 'center',
+                          marginRight: 5,
+                        }}
+                        source={require('../../../assets/show.png')}
+                      />
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.rowt}>
+                        <Text style={styles.txt}>Quantity:</Text>
+                        <Text style={styles.txt}>{item.QTY}</Text>
                       </View>
-
-                      <View style={styles.infoRow}>
-                        <View style={styles.rowt}>
-                          <Text style={styles.txt}>Quantity:</Text>
-                          <Text style={styles.txt}>{item.QTY}</Text>
-                        </View>
-                        <View style={styles.rowt}>
-                          <Text style={styles.txt}>Purchase Price:</Text>
-                          <Text style={styles.txt}>{item.PurchasePrice}</Text>
-                        </View>
-                        <View style={styles.rowt}>
-                          <Text style={styles.txt}>Retail Price:</Text>
-                          <Text style={styles.txt}>{item.RetailPrice}</Text>
-                        </View>
-                        <View style={styles.rowt}>
-                          <Text style={styles.txt}>Total Price:</Text>
-                          <Text style={styles.txt}>{item.totalPrice}</Text>
-                        </View>
-                        <View style={styles.rowt}>
-                          <Text style={[styles.txt, {marginBottom: 5}]}>
-                            Expiry Date:
-                          </Text>
-                          <Text style={[styles.txt, {marginBottom: 5}]}>
-                            {item.ExpiryDate}
-                          </Text>
-                        </View>
+                      <View style={styles.rowt}>
+                        <Text style={styles.txt}>Purchase Price:</Text>
+                        <Text style={styles.txt}>{item.PurchasePrice}</Text>
+                      </View>
+                      <View style={styles.rowt}>
+                        <Text style={styles.txt}>Retail Price:</Text>
+                        <Text style={styles.txt}>{item.RetailPrice}</Text>
+                      </View>
+                      <View style={styles.rowt}>
+                        <Text style={styles.txt}>Total Price:</Text>
+                        <Text style={styles.txt}>{item.totalPrice}</Text>
+                      </View>
+                      <View style={styles.rowt}>
+                        <Text style={[styles.txt, {marginBottom: 5}]}>
+                          Expiry Date:
+                        </Text>
+                        <Text style={[styles.txt, {marginBottom: 5}]}>
+                          {item.ExpiryDate}
+                        </Text>
                       </View>
                     </View>
-                  </ScrollView>
-                )}
-              />
-            </View>
+                  </View>
+                </ScrollView>
+              )}
+            />
           </View>
+
           <View style={styles.totalContainer}>
-              <Text style={styles.totalText}>Total:</Text>
-              <Text style={styles.totalText}>{total}</Text>
-            </View>
+            <Text style={styles.totalText}>Total:</Text>
+            <Text style={styles.totalText}>{total}</Text>
+          </View>
           <View
             style={{
               flexDirection: 'row',
               alignSelf: 'center',
               justifyContent: 'center',
               marginBottom: 5,
-             
             }}>
-      
             <TouchableOpacity onPress={toggleclosebtn}>
               <View
                 style={{
@@ -961,7 +972,12 @@ export default function PurchaseAddStock() {
                 placeholder="Select Category"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                )}
                 style={[styles.dropdown, {borderColor: '#144272', width: 265}]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
@@ -970,6 +986,7 @@ export default function PurchaseAddStock() {
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
               <TouchableOpacity onPress={toggleaddcategory}>
                 <Image
@@ -1001,7 +1018,12 @@ export default function PurchaseAddStock() {
                 placeholder="Select UOM"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                )}
                 style={[styles.dropdown, {borderColor: '#144272', width: 265}]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
@@ -1010,6 +1032,7 @@ export default function PurchaseAddStock() {
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
               <TouchableOpacity onPress={toggleadduom}>
                 <Image
@@ -1113,7 +1136,12 @@ export default function PurchaseAddStock() {
                 placeholder="Select"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                )}
                 style={[
                   styles.dropdown,
                   {
@@ -1131,6 +1159,7 @@ export default function PurchaseAddStock() {
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
             </View>
             <View
@@ -1186,7 +1215,12 @@ export default function PurchaseAddStock() {
               placeholder="Select Sub UOM"
               placeholderStyle={{color: '#144272'}}
               textStyle={{color: '#144272'}}
-              arrowIconStyle={{tintColor: '#144272'}}
+              ArrowUpIconComponent={() => (
+                <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+              )}
+              ArrowDownIconComponent={() => (
+                <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+              )}
               style={[
                 styles.dropdown,
                 {
@@ -1203,6 +1237,7 @@ export default function PurchaseAddStock() {
               }}
               labelStyle={{color: '#144272'}}
               listItemLabelStyle={{color: '#144272'}}
+              listMode="SCROLLVIEW"
             />
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <Text
@@ -1610,7 +1645,8 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 15,
     marginBottom: 5,
-    padding: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
   },
   row: {
     flexDirection: 'row',
@@ -1734,11 +1770,11 @@ const styles = StyleSheet.create({
   txt: {
     marginLeft: 5,
     color: 'white',
-    marginRight:5
+    marginRight: 5,
   },
   valu: {
     marginLeft: 5,
     color: 'white',
-    marginRight:5
+    marginRight: 5,
   },
 });

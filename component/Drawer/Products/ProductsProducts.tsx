@@ -13,7 +13,7 @@ import {
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import Modal from 'react-native-modal';
-import {RadioButton} from 'react-native-paper';
+import {Checkbox} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
@@ -108,6 +108,8 @@ interface AddProduct {
   final_price: string;
   supplier: string;
   supp_id: string;
+  equivalent: string;
+  sub_price: string;
 }
 
 const initialAddProduct: AddProduct = {
@@ -127,6 +129,88 @@ const initialAddProduct: AddProduct = {
   supp_id: '',
   supplier: '',
   upc_ean: '',
+  equivalent: '',
+  sub_price: '',
+};
+
+interface Categories {
+  id: number;
+  pcat_name: string;
+}
+
+interface UOM {
+  id: number;
+  ums_name: string;
+}
+
+interface Suppliers {
+  id: string;
+  sup_name: string;
+  sup_company_name: string;
+}
+
+interface EditProduct {
+  id: number;
+  prod_name: string;
+  prod_generic_name: string;
+  pct_code: string;
+  prod_UPC_EAN: string;
+  prod_inventory: string;
+  prod_sup_id: string;
+  prod_status: string;
+  prod_type: string;
+  prod_manage_stock: string;
+  prod_image: string;
+  prod_pcat_id: string;
+  prod_ums_id: string;
+  prod_costprice: string;
+  prod_retailprice: string;
+  prod_discount: string;
+  prod_fretailprice: string;
+  prod_expirydate: Date;
+  prod_have_sub_uom: string;
+  prod_sub_uom: string;
+  prod_master_uom: string;
+  prod_sub_price: string;
+  prod_qty: string;
+  prod_sub_qty: string;
+  prod_reorder_qty: string;
+  prod_equivalent: string;
+  prod_f_equivalent: string;
+  created_at: string;
+  updated_at: string;
+}
+
+const initialEditProduct: EditProduct = {
+  id: 0,
+  prod_name: '',
+  prod_generic_name: '',
+  pct_code: '',
+  prod_UPC_EAN: '',
+  prod_inventory: '',
+  prod_sup_id: '',
+  prod_status: '',
+  prod_type: '',
+  prod_manage_stock: '',
+  prod_image: '',
+  prod_pcat_id: '',
+  prod_ums_id: '',
+  prod_costprice: '',
+  prod_retailprice: '',
+  prod_discount: '',
+  prod_fretailprice: '',
+  prod_expirydate: new Date(),
+  prod_have_sub_uom: '',
+  prod_sub_uom: '',
+  prod_master_uom: '',
+  prod_sub_price: '',
+  prod_qty: '',
+  prod_sub_qty: '',
+  prod_reorder_qty: '',
+  prod_equivalent: '',
+  prod_f_equivalent: '',
+  created_at: '',
+  updated_at: '',
 };
 
 export default function CustomerPeople() {
@@ -136,6 +220,50 @@ export default function CustomerPeople() {
   const [modalVisible, setModalVisible] = useState('');
   const [selectedProd, setSelectedProd] = useState<number | null>(null);
   const [addForm, setAddForm] = useState<AddProduct>(initialAddProduct);
+  const [genBarCode, setGenBarCode] = useState<string[]>([]);
+  const [catItems, setCatItems] = useState<Categories[]>([]);
+  const [catOpen, setCatOpen] = useState(false);
+  const [catValue, setCatValue] = useState<string | null>('');
+  const [uomItems, setUomItems] = useState<UOM[]>([]);
+  const [uomOpen, setUomOpen] = useState(false);
+  const [uomValue, setUomValue] = useState<string | null>('');
+  const [supplier, setSupplier] = useState<string[]>([]);
+  const [supItems, setSupItems] = useState<Suppliers[]>([]);
+  const [supOpen, setSupOpen] = useState(false);
+  const [supValue, setSupValue] = useState<string | null>('');
+  const [subUom, setSubUom] = useState<string[]>([]);
+  const [subUmoOpen, setSubUmoOpen] = useState(false);
+  const [subUmoValue, setSubUmoValue] = useState<string | null>('');
+  const [manageStock, setManageStock] = useState<string[]>([]);
+  const [expiry, setExpiry] = useState<string[]>([]);
+  const [barCode, setBarCode] = useState('');
+  const [editForm, setEditForm] = useState<EditProduct>(initialEditProduct);
+  const [editCatOpen, setEditCatOpen] = useState(false);
+  const [editCatValue, setEditCatValue] = useState<string | null>('');
+  const [editUomOpen, setEditUomOpen] = useState(false);
+  const [editUomValue, setEditUomValue] = useState<string | null>('');
+  const [editSupOpen, setEditSupOpen] = useState(false);
+  const [editSupValue, setEditSupValue] = useState<string | null>('');
+  const [editSubUmoOpen, setEditSubUmoOpen] = useState(false);
+  const [editSubUmoValue, setEditSubUmoValue] = useState<string | null>('');
+  const [category, setCategory] = useState('');
+  const [subModalVisible, setSubModalVisible] = useState('');
+  const [uomName, setUomName] = useState('')
+
+  const transformedCat = catItems.map(cat => ({
+    label: cat.pcat_name,
+    value: String(cat.id),
+  }));
+
+  const transformedUom = uomItems.map(cat => ({
+    label: cat.ums_name,
+    value: cat.ums_name,
+  }));
+
+  const transformedSup = supItems.map(sup => ({
+    label: `${sup.sup_name}_${sup.sup_company_name}`,
+    value: String(sup.id),
+  }));
 
   //Add Form OnChange
   const onChnage = (field: keyof AddProduct, value: string | Date) => {
@@ -145,16 +273,15 @@ export default function CustomerPeople() {
     }));
   };
 
-  const {openDrawer} = useDrawer();
-
-  const [addproduct, setaddproduct] = useState(false);
-
-  const toggleproduct = () => {
-    setaddproduct(!addproduct);
+  //Edit Form OnChange
+  const editOnChnage = (field: keyof EditProduct, value: string | Date) => {
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
   };
-  const [Type, setType] = React.useState<'GenerateAutoBarCode' | 'number'>(
-    'GenerateAutoBarCode',
-  );
+
+  const {openDrawer} = useDrawer();
 
   const [startDate, setStartDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -167,62 +294,14 @@ export default function CustomerPeople() {
     setShowStartDatePicker(false);
     setStartDate(currentDate);
   };
-  const [category, setcategory] = useState(false);
-  const [currentcategory, setCurrentcategory] = useState<string | null>('');
-  const categoryItem = [
-    {
-      label: 'Chocolate',
-      value: 'Chocolate',
-    },
-    {label: 'Jelly', value: 'Jelly'},
-    {label: 'Oil', value: 'Oil'},
-    {label: 'Flour', value: 'Flour'},
-  ];
 
-  const [uom, setuom] = useState(false);
-  const [currentuom, setCurrentuom] = useState<string | null>('');
-  const uomItem = [
-    {
-      label: 'Pieces',
-      value: 'Pieces',
-    },
-    {label: 'Kg', value: 'Kg'},
-    {label: 'Box', value: 'Box'},
-    {label: 'Inches', value: 'Inches'},
-  ];
-  const [stock, setstock] = React.useState<'managestock' | 'number'>(
-    'managestock',
-  );
-
-  const [expire, setexpire] = React.useState<'applyexpiry' | 'number'>(
-    'applyexpiry',
-  );
-
-  const [supplier, setsupplier] = React.useState<'supplier' | 'number'>(
-    'supplier',
-  );
-
-  const [issupplier, setissupplier] = useState(false);
-  const [currentsupplier, setCurrentsupplier] = useState<string | null>('');
-  const supplierItem = [{label: '', value: ''}];
-
-  const [subuom, setsubuom] = React.useState<'subuom' | 'number'>('subuom');
-  const [issubuom, setissubuom] = useState(false);
-  const [currentsub, setCurrentsub] = useState<string | null>('');
-  const subuomItem = [
-    {
-      label: 'Pieces',
-      value: 'Pieces',
-    },
-    {label: 'Kg', value: 'Kg'},
-    {label: 'Box', value: 'Box'},
-    {label: 'Inches', value: 'Inches'},
-  ];
-
-  const [btnproduct, setbtnproduct] = useState(false);
-
-  const togglebtnproduct = () => {
-    setbtnproduct(!btnproduct);
+  const editOnDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    const currentDate = selectedDate || editForm.prod_expirydate;
+    setShowStartDatePicker(false);
+    editOnChnage('prod_expirydate', currentDate);
   };
 
   const [addcategory, setaddcategory] = useState(false);
@@ -255,53 +334,6 @@ export default function CustomerPeople() {
 
   const [editproduct, seteditproduct] = useState(false);
 
-  const toggleeditproduct = () => {
-    seteditproduct(!editproduct);
-  };
-
-  const [editType, seteditType] = React.useState<
-    'GenerateAutoBarCode' | 'number'
-  >('GenerateAutoBarCode');
-
-  const [editstock, seteditstock] = React.useState<'managestock' | 'number'>(
-    'managestock',
-  );
-
-  const [editexpire, seteditexpire] = React.useState<'applyexpiry' | 'number'>(
-    'applyexpiry',
-  );
-
-  const [editsupplier, seteditsupplier] = React.useState<'supplier' | 'number'>(
-    'supplier',
-  );
-
-  const [date, setDate] = useState(new Date());
-  const [showDatePicker, setShowDatePicker] = useState(false);
-
-  const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    const currentDate = selectedDate || date;
-    setShowDatePicker(false);
-    setDate(currentDate);
-  };
-
-  const [editsubuom, seteditsubuom] = React.useState<'subuom' | 'number'>(
-    'subuom',
-  );
-
-  const [editcategory, seteditcategory] = useState(false);
-  const [currenteditcategory, seteditCurrentcategory] = useState<string | null>(
-    '',
-  );
-  const editcategoryItem = [
-    {
-      label: 'Chocolate',
-      value: 'Chocolate',
-    },
-    {label: 'Jelly', value: 'Jelly'},
-    {label: 'Oil', value: 'Oil'},
-    {label: 'Flour', value: 'Flour'},
-  ];
-
   const [edit, setedit] = useState(false);
 
   const toggleeditcategory = () => {
@@ -314,18 +346,6 @@ export default function CustomerPeople() {
     seteditbtncategory(!editbtncategory);
   };
 
-  const [edituom, setedituom] = useState(false);
-  const [editcurrentuom, seteditCurrentuom] = useState<string | null>('');
-  const edituomItem = [
-    {
-      label: 'Pieces',
-      value: 'Pieces',
-    },
-    {label: 'Kg', value: 'Kg'},
-    {label: 'Box', value: 'Box'},
-    {label: 'Inches', value: 'Inches'},
-  ];
-
   const [uomd, setuomd] = useState(false);
 
   const toggleedituom = () => {
@@ -337,30 +357,7 @@ export default function CustomerPeople() {
   const togglebtnedituom = () => {
     setbtnedituom(!btnedituom);
   };
-
-  const [iseditsupplier, setiseditsupplier] = useState(false);
-  const [currenteditsupplier, setCurrenteditsupplier] = useState<string | null>(
-    '',
-  );
-  const editsupplierItem = [{label: '', value: ''}];
-
-  const [iseditsubuom, setiseditsubuom] = useState(false);
-  const [currenteditsub, setCurrenteditsub] = useState<string | null>('');
-  const editsubuomItem = [
-    {
-      label: 'Pieces',
-      value: 'Pieces',
-    },
-    {label: 'Kg', value: 'Kg'},
-    {label: 'Box', value: 'Box'},
-    {label: 'Inches', value: 'Inches'},
-  ];
-
   const [btneditproduct, setbtneditproduct] = useState(false);
-
-  const togglebtneditproduct = () => {
-    setbtneditproduct(!btneditproduct);
-  };
 
   // Fetch Products
   const fetchPrducts = async () => {
@@ -397,9 +394,429 @@ export default function CustomerPeople() {
     }
   };
 
+  // Fetch Categories
+  const fetchCatgories = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcombocat`);
+      setCatItems(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch UOM
+  const fetchUom = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcombouom`);
+      setUomItems(res.data);
+    } catch (error) {
+      console.log();
+    }
+  };
+
+  // Fetch Suppliers
+  const fetchSuppliers = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/loadsuppliers`);
+      setSupItems(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Bar Code
+  const getBarCode = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/auto_gen_barcode`);
+      setBarCode(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Add Product
+  const addProduct = async () => {
+    if (!addForm.product_name.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Product Name is required',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (!genBarCode.includes('on') && !addForm.autobarcode.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Barcode is required',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (!catValue) {
+      Toast.show({
+        type: 'error',
+        text1: 'Category is required',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (!uomValue) {
+      Toast.show({
+        type: 'error',
+        text1: 'UOM is required',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (
+      !manageStock.includes('on') &&
+      addForm.opening_qty.trim() !== '' &&
+      addForm.reorder_qty.trim() !== ''
+    ) {
+      const openingQty = parseFloat(addForm.opening_qty);
+      const reorderQty = parseFloat(addForm.reorder_qty);
+      if (!isNaN(openingQty) && !isNaN(reorderQty) && openingQty < reorderQty) {
+        Toast.show({
+          type: 'error',
+          text1: 'Opening quantity cannot be less than reorder quantity!',
+          visibilityTime: 1500,
+        });
+        return;
+      }
+    }
+    if (!addForm.cost_price.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Cost Price is required',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (!addForm.retail_price.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Retail Price is required',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (subUom.includes('on')) {
+      if (!subUmoValue) {
+        Toast.show({
+          type: 'error',
+          text1: 'Sub UOM is required',
+          visibilityTime: 1500,
+        });
+        return;
+      }
+      if (!addForm.equivalent.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: 'Equivalence is required',
+          visibilityTime: 1500,
+        });
+        return;
+      }
+      if (!addForm.sub_price.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: 'Sale Price is required',
+          visibilityTime: 1500,
+        });
+        return;
+      }
+    }
+
+    try {
+      const res = await axios.post(`${BASE_URL}/addproducts`, {
+        product_name: addForm.product_name.trim(),
+        generic_name: addForm.generic_name.trim(),
+        ...(genBarCode.includes('on') && {autobarcode: 'on'}),
+        upc_ean: addForm.upc_ean,
+        ...(expiry.includes('on') && {apply_expiry: 'on'}),
+        expiry_date: startDate.toISOString().split('T')[0],
+        cat_id: catValue,
+        productuom_id: uomValue,
+        ...(manageStock.includes('on') && {opening_qty: addForm.opening_qty}),
+        ...(manageStock.includes('on') && {reorder_qty: addForm.reorder_qty}),
+        cost_price: addForm.cost_price,
+        retail_price: addForm.retail_price,
+        discount: addForm.discount,
+        final_price: addForm.final_price,
+        ...(supplier.includes('on') && {supplier: 'on'}),
+        supp_id: supValue,
+        ...(subUom.includes('on') && {have_sub_uom: 'on'}),
+        sub_uom: subUmoValue,
+        equivalent: addForm.equivalent,
+        sub_price: addForm.sub_price,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Added!',
+          text2: 'Product has been added successfully!',
+          visibilityTime: 1500,
+        });
+        setModalVisible('');
+        setAddForm(initialAddProduct);
+        setGenBarCode([]);
+        setCatValue('');
+        setUomValue('');
+        setSupplier([]);
+        setSupValue('');
+        setSubUom([]);
+        setSubUmoValue('');
+        setManageStock([]);
+        setExpiry([]);
+        setBarCode('');
+        setStartDate(new Date());
+        fetchPrducts();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Edit Product
+  const updateProduct = async () => {
+    if (!editForm.prod_name.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Product Name is required',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (!genBarCode.includes('on') && !editForm.prod_UPC_EAN.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Barcode is required',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (!editCatValue) {
+      Toast.show({
+        type: 'error',
+        text1: 'Category is required',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (!editUomValue) {
+      Toast.show({
+        type: 'error',
+        text1: 'UOM is required',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (
+      !manageStock.includes('on') &&
+      editForm.prod_qty.trim() !== '' &&
+      editForm.prod_reorder_qty.trim() !== ''
+    ) {
+      const openingQty = parseFloat(editForm.prod_qty);
+      const reorderQty = parseFloat(editForm.prod_reorder_qty);
+      if (!isNaN(openingQty) && !isNaN(reorderQty) && openingQty < reorderQty) {
+        Toast.show({
+          type: 'error',
+          text1: 'Opening quantity cannot be less than reorder quantity!',
+          visibilityTime: 1500,
+        });
+        return;
+      }
+    }
+    if (!editForm.prod_costprice.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Cost Price is required',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (!editForm.prod_retailprice.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Retail Price is required',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (subUom.includes('on')) {
+      if (!editSubUmoValue) {
+        Toast.show({
+          type: 'error',
+          text1: 'Sub UOM is required',
+          visibilityTime: 1500,
+        });
+        return;
+      }
+      if (!editForm.prod_equivalent.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: 'Equivalence is required',
+          visibilityTime: 1500,
+        });
+        return;
+      }
+      if (!editForm.prod_sub_price.trim()) {
+        Toast.show({
+          type: 'error',
+          text1: 'Sale Price is required',
+          visibilityTime: 1500,
+        });
+        return;
+      }
+    }
+
+    try {
+      const res = await axios.post(`${BASE_URL}/updateproduct`, {
+        pro_id: editForm.id,
+        product_name: editForm.prod_name.trim(),
+        generic_name: editForm.prod_generic_name.trim(),
+        ...(genBarCode.includes('on') && {autobarcode: 'on'}),
+        upc_ean: editForm.prod_UPC_EAN,
+        ...(expiry.includes('on') && {apply_expiry: 'on'}),
+        expiry_date: editForm.prod_expirydate,
+        cat_id: editCatValue,
+        uom_id: editUomValue,
+        cost_price: editForm.prod_costprice,
+        retail_price: editForm.prod_retailprice,
+        discount: editForm.prod_discount,
+        final_price: editForm.prod_fretailprice,
+        ...(subUom.includes('on') && {have_sub_uom: 'on'}),
+        sub_uom: editSubUmoValue,
+        equivalent: editForm.prod_equivalent,
+        sub_price: editForm.prod_sub_price,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Updated!',
+          text2: 'Product has been updated successfully!',
+          visibilityTime: 1500,
+        });
+        setModalVisible('');
+        setEditForm(initialEditProduct);
+        setGenBarCode([]);
+        setEditCatValue('');
+        setEditUomValue('');
+        setSupplier([]);
+        setEditSupValue('');
+        setSubUom([]);
+        setEditSubUmoValue('');
+        setManageStock([]);
+        setExpiry([]);
+        setBarCode('');
+        fetchPrducts();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Add Category
+  const addCategory = async () => {
+  if (!category) {
+    Toast.show({
+      type: 'error',
+      text1: 'Category name is required',
+      visibilityTime: 1500,
+    });
+    return;
+  }
+
+  try {
+    const res = await axios.post(
+      `${BASE_URL}/addcategory`,
+      {
+        cat_name: category.trim(),
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+      
+    );
+
+    const data = res.data;
+    console.log(res.data);
+
+    if (res.status === 200 && data.status === 200) {
+      Toast.show({
+        type: 'success',
+        text1: 'Added!',
+        text2: 'Category has been added successfully!',
+        visibilityTime: 1500,
+      });
+      setSubModalVisible('');
+      setCategory('');
+      fetchCatgories();
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+// Add Category
+  const addUom = async () => {
+  if (!uomName) {
+    Toast.show({
+      type: 'error',
+      text1: 'UOM name is required',
+      visibilityTime: 1500,
+    });
+    return;
+  }
+
+  try {
+    const res = await axios.post(
+      `${BASE_URL}/adduom`,
+      {
+        uom_name: uomName.trim(),
+      }, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+
+    const data = res.data;
+    console.log(res.data);
+
+    if (res.status === 200 && data.status === 200) {
+      Toast.show({
+        type: 'success',
+        text1: 'Added!',
+        text2: 'UOM has been added successfully!',
+        visibilityTime: 1500,
+      });
+      setSubModalVisible('');
+      setUomName('');
+      fetchUom();
+    }
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+
+
   useEffect(() => {
     fetchPrducts();
+    fetchCatgories();
+    fetchUom();
+    fetchSuppliers();
+    getBarCode();
   }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -517,7 +934,42 @@ export default function CustomerPeople() {
                         source={require('../../../assets/show.png')}
                       />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={toggleeditproduct}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('EditProd');
+                        const fetchProdData = async (id: number) => {
+                          try {
+                            const res = await axios.get(
+                              `${BASE_URL}/editproduct?id=${id}&_token=${token}`,
+                            );
+                            setEditForm(res.data.pro);
+                            setEditCatValue(
+                              res.data.pro.prod_pcat_id
+                                ? String(res.data.pro.prod_pcat_id)
+                                : '',
+                            );
+                            setEditUomValue(
+                              res.data.uom.ums_name
+                                ? String(res.data.uom.ums_name)
+                                : '',
+                            );
+                            setEditSupValue(
+                              res.data.pro.prod_sup_id
+                                ? String(res.data.pro.prod_sup_id)
+                                : '',
+                            );
+                            setEditSubUmoValue(
+                              res.data.pro.prod_sub_uom
+                                ? String(res.data.pro.prod_sub_uom)
+                                : '',
+                            );
+                          } catch (error) {
+                            console.log(error);
+                          }
+                        };
+
+                        fetchProdData(item.id);
+                      }}>
                       <Image
                         style={{
                           tintColor: '#144272',
@@ -869,7 +1321,7 @@ export default function CustomerPeople() {
               flex: 1,
               backgroundColor: 'white',
               width: '98%',
-              maxHeight: 500,
+              maxHeight: 600,
               borderRadius: 10,
               borderWidth: 1,
               borderColor: '#144272',
@@ -890,7 +1342,22 @@ export default function CustomerPeople() {
                 }}>
                 Add New Product
               </Text>
-              <TouchableOpacity onPress={() => setModalVisible('')}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setAddForm(initialAddProduct);
+                  setGenBarCode([]);
+                  setCatValue('');
+                  setUomValue('');
+                  setSupplier([]);
+                  setSupValue('');
+                  setSubUom([]);
+                  setSubUmoValue('');
+                  setManageStock([]);
+                  setExpiry([]);
+                  setBarCode('');
+                  setStartDate(new Date());
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -919,59 +1386,94 @@ export default function CustomerPeople() {
             </View>
 
             <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-              <RadioButton
-                value="GenerateAutoBarCode"
-                status={
-                  Type === 'GenerateAutoBarCode' ? 'checked' : 'unchecked'
-                }
-                color="#144272"
-                uncheckedColor="#144272"
-                onPress={() => setType('GenerateAutoBarCode')}
-              />
-              <Text
-                style={{
-                  color: '#144272',
-                  marginTop: 7,
-                  marginLeft: -10,
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                activeOpacity={0.7}
+                onPress={async () => {
+                  const newOptions = genBarCode.includes('on')
+                    ? genBarCode.filter(opt => opt !== 'on')
+                    : [...genBarCode, 'on'];
+                  setGenBarCode(newOptions);
+                  if (!genBarCode.includes('on')) {
+                    await getBarCode();
+                    onChnage(
+                      'upc_ean',
+                      typeof barCode === 'string' ? barCode : String(barCode),
+                    );
+                  } else {
+                    onChnage('upc_ean', '');
+                  }
                 }}>
-                Generate Auto BarCode
-              </Text>
+                <Checkbox.Android
+                  status={genBarCode.includes('on') ? 'checked' : 'unchecked'}
+                  color="#144272"
+                  uncheckedColor="#144272"
+                />
+                <Text style={{color: '#144272', marginLeft: 8}}>
+                  Generate Auto BarCode
+                </Text>
+              </TouchableOpacity>
+
               <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
+                style={[
+                  styles.productinput,
+                  genBarCode.includes('on') && {
+                    backgroundColor: '#b0b0b0',
+                    color: '#f5f5f5',
+                  },
+                ]}
+                placeholderTextColor={
+                  genBarCode.includes('on') ? '#f5f5f5' : '#144272'
+                }
                 keyboardType="numeric"
+                value={
+                  genBarCode.includes('on')
+                    ? typeof barCode === 'string'
+                      ? barCode
+                      : String(barCode)
+                    : addForm.upc_ean
+                }
+                editable={!genBarCode.includes('on')}
+                onChangeText={t => {
+                  if (!genBarCode.includes('on')) onChnage('upc_ean', t);
+                }}
               />
             </View>
 
             <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-              <RadioButton
-                value="applyexpiry"
-                status={expire === 'applyexpiry' ? 'checked' : 'unchecked'}
-                color="#144272"
-                uncheckedColor="#144272"
-                onPress={() => setexpire('applyexpiry')}
-              />
-              <Text
-                style={{
-                  color: '#144272',
-                  marginTop: 7,
-                  marginLeft: -10,
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                activeOpacity={0.7}
+                onPress={() => {
+                  const newOptions = expiry.includes('on')
+                    ? expiry.filter(opt => opt !== 'on')
+                    : [...expiry, 'on'];
+                  setExpiry(newOptions);
                 }}>
-                Apply Expiry
-              </Text>
+                <Checkbox.Android
+                  status={expiry.includes('on') ? 'checked' : 'unchecked'}
+                  color="#144272"
+                  uncheckedColor="#144272"
+                />
+                <Text style={{color: '#144272', marginLeft: 8}}>
+                  Apply Expiry
+                </Text>
+              </TouchableOpacity>
+
               <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
                   borderTopWidth: 1,
                   borderBottomWidth: 1,
-                  width: 168,
+                  width: '53%',
                   borderRightWidth: 1,
                   borderLeftWidth: 1,
                   borderRadius: 5,
                   borderColor: '#144272',
                   marginLeft: hp('2%'),
                   height: 30,
+                  opacity: expiry.includes('on') ? 1 : 0.5,
                 }}>
                 <View
                   style={{
@@ -983,21 +1485,24 @@ export default function CustomerPeople() {
                   <Text style={{marginLeft: 10, color: '#144272'}}>
                     {`${startDate.toLocaleDateString()}`}
                   </Text>
-
                   <TouchableOpacity
-                    onPress={() => setShowStartDatePicker(true)}>
+                    onPress={() => {
+                      if (expiry.includes('on')) setShowStartDatePicker(true);
+                    }}
+                    disabled={!expiry.includes('on')}>
                     <Image
                       style={{
                         height: 20,
                         width: 20,
                         resizeMode: 'stretch',
                         alignItems: 'center',
-                        marginLeft: 60,
+                        marginLeft: 55,
                         tintColor: '#144272',
+                        opacity: expiry.includes('on') ? 1 : 0.5,
                       }}
                       source={require('../../../assets/calendar.png')}
                     />
-                    {showStartDatePicker && (
+                    {showStartDatePicker && expiry.includes('on') && (
                       <DateTimePicker
                         testID="startDatePicker"
                         value={startDate}
@@ -1011,6 +1516,7 @@ export default function CustomerPeople() {
                 </View>
               </View>
             </View>
+
             <View
               style={{
                 flexDirection: 'row',
@@ -1018,11 +1524,11 @@ export default function CustomerPeople() {
                 marginRight: 10,
               }}>
               <DropDownPicker
-                items={categoryItem}
-                open={category}
-                setOpen={setcategory}
-                value={currentcategory}
-                setValue={setCurrentcategory}
+                items={transformedCat}
+                open={catOpen}
+                setOpen={setCatOpen}
+                value={catValue}
+                setValue={setCatValue}
                 placeholder="Select Category"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
@@ -1037,11 +1543,14 @@ export default function CustomerPeople() {
                   backgroundColor: 'white',
                   borderColor: '#144272',
                   width: 265,
+                  zIndex: 1000,
+                  marginTop: 8,
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
-              <TouchableOpacity onPress={toggleaddcategory}>
+              <TouchableOpacity onPress={() => setSubModalVisible('AddCat')}>
                 <Image
                   style={{
                     tintColor: '#144272',
@@ -1063,11 +1572,11 @@ export default function CustomerPeople() {
                 marginRight: 10,
               }}>
               <DropDownPicker
-                items={uomItem}
-                open={uom}
-                setOpen={setuom}
-                value={currentuom}
-                setValue={setCurrentuom}
+                items={transformedUom}
+                open={uomOpen}
+                setOpen={setUomOpen}
+                value={uomValue}
+                setValue={setUomValue}
                 placeholder="Select UOM"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
@@ -1077,16 +1586,21 @@ export default function CustomerPeople() {
                 ArrowDownIconComponent={() => (
                   <Icon name="keyboard-arrow-down" size={18} color="#144272" />
                 )}
-                style={[styles.dropdown, {borderColor: '#144272', width: 265}]}
+                style={[
+                  styles.dropdown,
+                  {borderColor: '#144272', width: 265, zIndex: 999},
+                ]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
                   width: 265,
+                  marginTop: 8,
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
-              <TouchableOpacity onPress={toggleadduom}>
+              <TouchableOpacity onPress={() => setSubModalVisible('AddUom')}>
                 <Image
                   style={{
                     tintColor: '#144272',
@@ -1100,37 +1614,70 @@ export default function CustomerPeople() {
                 />
               </TouchableOpacity>
             </View>
+
             <View
               style={[
                 styles.row,
                 {marginLeft: 10, marginRight: 10, marginTop: -8},
               ]}>
-              <RadioButton
-                value="managestock"
-                status={stock === 'managestock' ? 'checked' : 'unchecked'}
-                color="#144272"
-                uncheckedColor="#144272"
-                onPress={() => setstock('managestock')}
-              />
-              <Text
-                style={{
-                  color: '#144272',
-                  marginTop: 7,
-                  marginLeft: -10,
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                activeOpacity={0.7}
+                onPress={() => {
+                  const newOptions = manageStock.includes('on')
+                    ? manageStock.filter(opt => opt !== 'on')
+                    : [...manageStock, 'on'];
+                  setManageStock(newOptions);
                 }}>
-                Don't Manage Stock
-              </Text>
+                <Checkbox.Android
+                  status={manageStock.includes('on') ? 'checked' : 'unchecked'}
+                  color="#144272"
+                  uncheckedColor="#144272"
+                />
+                <Text style={{color: '#144272', marginLeft: 8}}>
+                  Don't Manage Stock
+                </Text>
+              </TouchableOpacity>
             </View>
+
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
+                style={[
+                  styles.productinput,
+                  manageStock.includes('on') && {
+                    backgroundColor: '#b0b0b0',
+                    color: '#f5f5f5',
+                  },
+                ]}
+                placeholderTextColor={
+                  manageStock.includes('on') ? '#f5f5f5' : '#144272'
+                }
                 placeholder="Opening Quantity"
+                value={manageStock.includes('on') ? '0' : addForm.opening_qty}
+                editable={!manageStock.includes('on')}
+                onChangeText={t => {
+                  if (!manageStock.includes('on')) onChnage('opening_qty', t);
+                }}
+                keyboardType="number-pad"
               />
               <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
+                style={[
+                  styles.productinput,
+                  manageStock.includes('on') && {
+                    backgroundColor: '#b0b0b0',
+                    color: '#f5f5f5',
+                  },
+                ]}
+                placeholderTextColor={
+                  manageStock.includes('on') ? '#f5f5f5' : '#144272'
+                }
                 placeholder="Re Order Level"
+                value={manageStock.includes('on') ? '0' : addForm.reorder_qty}
+                editable={!manageStock.includes('on')}
+                onChangeText={t => {
+                  if (!manageStock.includes('on')) onChnage('reorder_qty', t);
+                }}
+                keyboardType="numeric"
               />
             </View>
 
@@ -1139,48 +1686,182 @@ export default function CustomerPeople() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Cost Price"
+                value={addForm.cost_price}
+                keyboardType="numeric"
+                onChangeText={t => {
+                  onChnage('cost_price', t);
+                  // Calculate final price if possible
+                  const cost = parseFloat(t) || 0;
+                  const retail = parseFloat(addForm.retail_price) || 0;
+                  const discount = parseFloat(addForm.discount) || 0;
+                  const final =
+                    retail > 0
+                      ? (retail - (retail * discount) / 100).toFixed(2)
+                      : (cost - (cost * discount) / 100).toFixed(2);
+                  setAddForm(prev => ({
+                    ...prev,
+                    final_price: isNaN(Number(final)) ? '' : final,
+                  }));
+                }}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Retail Price"
+                value={addForm.retail_price}
+                keyboardType="numeric"
+                onChangeText={t => {
+                  onChnage('retail_price', t);
+                  // Calculate final price if possible
+                  const cost = parseFloat(addForm.cost_price) || 0;
+                  const retail = parseFloat(t) || 0;
+                  const discount = parseFloat(addForm.discount) || 0;
+                  const final =
+                    retail > 0
+                      ? (retail - (retail * discount) / 100).toFixed(2)
+                      : (cost - (cost * discount) / 100).toFixed(2);
+                  setAddForm(prev => ({
+                    ...prev,
+                    final_price: isNaN(Number(final)) ? '' : final,
+                  }));
+                }}
               />
             </View>
+
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Discount"
+                value={addForm.discount}
+                keyboardType="numeric"
+                onChangeText={t => {
+                  onChnage('discount', t);
+                  // Calculate final price if possible
+                  const cost = parseFloat(addForm.cost_price) || 0;
+                  const retail = parseFloat(addForm.retail_price) || 0;
+                  const discount = parseFloat(t) || 0;
+                  const final =
+                    retail > 0
+                      ? (retail - (retail * discount) / 100).toFixed(2)
+                      : (cost - (cost * discount) / 100).toFixed(2);
+                  setAddForm(prev => ({
+                    ...prev,
+                    final_price: isNaN(Number(final)) ? '' : final,
+                  }));
+                }}
               />
-              <Text style={[styles.productinput, {color: '#144272'}]}>
-                Final Price:000
-              </Text>
+              <TextInput
+                style={[
+                  styles.productinput,
+                  {color: '#f5f5f5', backgroundColor: '#b0b0b0'},
+                ]}
+                placeholder="Final Price"
+                value={addForm.final_price || '0.00'}
+                editable={false}
+                placeholderTextColor="#f5f5f5"
+              />
             </View>
 
             <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-              <RadioButton
-                value="supplier"
-                status={supplier === 'supplier' ? 'checked' : 'unchecked'}
-                color="#144272"
-                uncheckedColor="#144272"
-                onPress={() => setsupplier('supplier')}
-              />
-              <Text
-                style={{
-                  color: '#144272',
-                  marginTop: 7,
-                  marginLeft: -10,
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                activeOpacity={0.7}
+                onPress={() => {
+                  const newOptions = supplier.includes('on')
+                    ? supplier.filter(opt => opt !== 'on')
+                    : [...supplier, 'on'];
+                  setSupplier(newOptions);
                 }}>
-                Enable Supplier
-              </Text>
+                <Checkbox.Android
+                  status={supplier.includes('on') ? 'checked' : 'unchecked'}
+                  color="#144272"
+                  uncheckedColor="#144272"
+                />
+                <Text style={{color: '#144272', marginLeft: 8}}>
+                  Enable Supplier
+                </Text>
+              </TouchableOpacity>
+            </View>
 
+            <View
+              style={{
+                flexDirection: 'row',
+                marginLeft: 10,
+                marginRight: 10,
+                opacity: supplier.includes('on') ? 1 : 0.5,
+              }}>
               <DropDownPicker
-                items={supplierItem}
-                open={issupplier}
-                setOpen={setissupplier}
-                value={currentsupplier}
-                setValue={setCurrentsupplier}
-                placeholder="Select"
+                items={transformedSup}
+                open={supOpen}
+                setOpen={setSupOpen}
+                value={supValue}
+                setValue={setSupValue}
+                placeholder="Select Supplier"
+                placeholderStyle={{color: '#144272'}}
+                textStyle={{color: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
+                style={[
+                  styles.dropdown,
+                  {
+                    width: '100%',
+                    borderColor: '#144272',
+                  },
+                ]}
+                dropDownContainerStyle={{
+                  backgroundColor: 'white',
+                  borderColor: '#144272',
+                  width: '100%',
+                  marginTop: 8,
+                  zIndex: 1000,
+                }}
+                labelStyle={{color: '#144272'}}
+                listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
+                disabled={!supplier.includes('on')}
+              />
+            </View>
+
+            <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                activeOpacity={0.7}
+                onPress={() => {
+                  const newOptions = subUom.includes('on')
+                    ? subUom.filter(opt => opt !== 'on')
+                    : [...subUom, 'on'];
+                  setSubUom(newOptions);
+                }}>
+                <Checkbox.Android
+                  status={subUom.includes('on') ? 'checked' : 'unchecked'}
+                  color="#144272"
+                  uncheckedColor="#144272"
+                />
+                <Text style={{color: '#144272', marginLeft: 8}}>
+                  Have Sub UOM?
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View
+              style={{
+                flexDirection: 'row',
+                marginLeft: 10,
+                marginRight: 10,
+                opacity: subUom.includes('on') ? 1 : 0.5,
+              }}>
+              <DropDownPicker
+                items={transformedUom}
+                open={subUmoOpen}
+                setOpen={setSubUmoOpen}
+                value={subUmoValue}
+                setValue={setSubUmoValue}
+                placeholder="Select Sub UOM"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
                 ArrowUpIconComponent={() => (
@@ -1193,97 +1874,25 @@ export default function CustomerPeople() {
                   styles.dropdown,
                   {
                     borderColor: '#144272',
-                    width: 140,
-                    marginLeft: 18,
-                    marginTop: 1,
+                    width: '100%',
+                    alignSelf: 'center',
+                    zIndex: 999,
                   },
                 ]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
-                  width: 140,
-                  marginLeft: 18,
+                  width: '100%',
+                  marginTop: 8,
+                  maxHeight: 150,
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
+                disabled={!subUom.includes('on')}
               />
             </View>
-            <View
-              style={{
-                flexDirection: 'row',
-              }}>
-              <TouchableOpacity>
-                <View
-                  style={[
-                    styles.row,
-                    {
-                      marginLeft: 18,
-                      marginRight: 10,
-                      backgroundColor: '#144272',
-                      borderRadius: 10,
-                      width: 120,
-                    },
-                  ]}>
-                  <Text
-                    style={[
-                      styles.productinput,
-                      {color: 'white', textAlign: 'center'},
-                    ]}>
-                    Choose Image
-                  </Text>
-                </View>
-              </TouchableOpacity>
-              <View style={[styles.row, {marginLeft: 11, marginRight: 10}]}>
-                <RadioButton
-                  value="subuom"
-                  status={subuom === 'subuom' ? 'checked' : 'unchecked'}
-                  color="#144272"
-                  uncheckedColor="#144272"
-                  onPress={() => setsubuom('subuom')}
-                />
-                <Text
-                  style={{
-                    color: '#144272',
-                    marginTop: 7,
-                    marginLeft: -10,
-                  }}>
-                  Have Sub UOM?
-                </Text>
-              </View>
-            </View>
 
-            <DropDownPicker
-              items={subuomItem}
-              open={issubuom}
-              setOpen={setissubuom}
-              value={currentsub}
-              setValue={setCurrentsub}
-              placeholder="Select Sub UOM"
-              placeholderStyle={{color: '#144272'}}
-              textStyle={{color: '#144272'}}
-              ArrowUpIconComponent={() => (
-                <Icon name="keyboard-arrow-up" size={18} color="#144272" />
-              )}
-              ArrowDownIconComponent={() => (
-                <Icon name="keyboard-arrow-down" size={18} color="#144272" />
-              )}
-              style={[
-                styles.dropdown,
-                {
-                  borderColor: '#144272',
-                  width: 295,
-                  alignSelf: 'center',
-                },
-              ]}
-              dropDownContainerStyle={{
-                backgroundColor: 'white',
-                borderColor: '#144272',
-                width: 295,
-                marginLeft: 11,
-              }}
-              labelStyle={{color: '#144272'}}
-              listItemLabelStyle={{color: '#144272'}}
-            />
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <Text
                 style={[
@@ -1296,22 +1905,51 @@ export default function CustomerPeople() {
 
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
+                style={[
+                  styles.productinput,
+                  !subUom.includes('on') && {
+                    backgroundColor: '#b0b0b0',
+                    color: '#f5f5f5',
+                  },
+                ]}
+                placeholderTextColor={
+                  !subUom.includes('on') ? '#f5f5f5' : '#144272'
+                }
                 placeholder="Equivalence"
+                keyboardType="number-pad"
+                value={addForm.equivalent}
+                editable={subUom.includes('on')}
+                onChangeText={t => {
+                  if (subUom.includes('on')) onChnage('equivalent', t);
+                }}
               />
               <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
+                style={[
+                  styles.productinput,
+                  !subUom.includes('on') && {
+                    backgroundColor: '#b0b0b0',
+                    color: '#f5f5f5',
+                  },
+                ]}
+                placeholderTextColor={
+                  !subUom.includes('on') ? '#f5f5f5' : '#144272'
+                }
                 placeholder="Sale Price"
+                keyboardType="number-pad"
+                value={addForm.sub_price}
+                editable={subUom.includes('on')}
+                onChangeText={t => {
+                  if (subUom.includes('on')) onChnage('sub_price', t);
+                }}
               />
             </View>
-            <TouchableOpacity onPress={togglebtnproduct}>
+
+            <TouchableOpacity onPress={addProduct}>
               <View
                 style={{
                   backgroundColor: '#144272',
-                  height: 30,
-                  width: 290,
+                  paddingVertical: 10,
+                  paddingHorizontal: 8,
                   margin: 10,
                   borderRadius: 10,
                   justifyContent: 'center',
@@ -1329,78 +1967,8 @@ export default function CustomerPeople() {
           </ScrollView>
         </Modal>
 
-        {/*add product btn*/}
-        <Modal isVisible={btnproduct}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Product has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setbtnproduct(!btnproduct)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        {/*add category modal*/}
-        <Modal isVisible={addcategory}>
+        {/*Add Category*/}
+        <Modal isVisible={subModalVisible === 'AddCat'}>
           <View
             style={{
               flex: 1,
@@ -1426,7 +1994,11 @@ export default function CustomerPeople() {
                 }}>
                 Add New Category
               </Text>
-              <TouchableOpacity onPress={() => setaddcategory(!addcategory)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setSubModalVisible('');
+                  setCategory('');
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -1441,9 +2013,11 @@ export default function CustomerPeople() {
                 style={styles.search}
                 placeholderTextColor={'#144272'}
                 placeholder="Category Name"
+                value={category}
+                onChangeText={t => setCategory(t)}
               />
             </View>
-            <TouchableOpacity onPress={togglebtncategory}>
+            <TouchableOpacity onPress={addCategory}>
               <View
                 style={{
                   alignSelf: 'center',
@@ -1464,77 +2038,9 @@ export default function CustomerPeople() {
             </TouchableOpacity>
           </View>
         </Modal>
-        {/*Add btn category*/}
-        <Modal isVisible={btncategory}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Category has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setbtncategory(!btncategory)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
 
-        <Modal isVisible={adduom}>
+{/* Add UOM */}
+        <Modal isVisible={subModalVisible === 'AddUom'}>
           <View
             style={{
               flex: 1,
@@ -1560,7 +2066,10 @@ export default function CustomerPeople() {
                 }}>
                 Add New UOM
               </Text>
-              <TouchableOpacity onPress={() => setadduom(!adduom)}>
+              <TouchableOpacity onPress={() => {
+              setSubModalVisible('');
+              setUomName('')
+              }}>
                 <Image
                   style={{
                     width: 15,
@@ -1575,9 +2084,11 @@ export default function CustomerPeople() {
                 style={styles.search}
                 placeholderTextColor={'#144272'}
                 placeholder="UOM Name"
+                value={uomName}
+                onChangeText={t => setUomName(t)}
               />
             </View>
-            <TouchableOpacity onPress={togglebtnuom}>
+            <TouchableOpacity onPress={addUom}>
               <View
                 style={{
                   alignSelf: 'center',
@@ -1668,8 +2179,8 @@ export default function CustomerPeople() {
           </View>
         </Modal>
 
-        {/*edit product*/}
-        <Modal isVisible={editproduct}>
+        {/*Edit Product*/}
+        <Modal isVisible={modalVisible === 'EditProd'}>
           <ScrollView
             style={{
               flex: 1,
@@ -1696,7 +2207,21 @@ export default function CustomerPeople() {
                 }}>
                 Update Product
               </Text>
-              <TouchableOpacity onPress={() => seteditproduct(!editproduct)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setEditForm(initialEditProduct);
+                  setGenBarCode([]);
+                  setEditCatValue('');
+                  setEditUomValue('');
+                  setSupplier([]);
+                  setEditSupValue('');
+                  setSubUom([]);
+                  setEditSubUmoValue('');
+                  setManageStock([]);
+                  setExpiry([]);
+                  setBarCode('');
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -1712,68 +2237,108 @@ export default function CustomerPeople() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Product Name"
+                value={editForm.prod_name}
+                onChangeText={t => editOnChnage('prod_name', t)}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Second Name"
+                value={editForm.prod_generic_name}
+                onChangeText={t => editOnChnage('prod_generic_name', t)}
               />
             </View>
 
             <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-              <RadioButton
-                value="GenerateAutoBarCode"
-                status={
-                  editType === 'GenerateAutoBarCode' ? 'checked' : 'unchecked'
-                }
-                color="#144272"
-                uncheckedColor="#144272"
-                onPress={() => seteditType('GenerateAutoBarCode')}
-              />
-              <Text
-                style={{
-                  color: '#144272',
-                  marginTop: 7,
-                  marginLeft: -10,
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                activeOpacity={0.7}
+                onPress={async () => {
+                  const newOptions = genBarCode.includes('on')
+                    ? genBarCode.filter(opt => opt !== 'on')
+                    : [...genBarCode, 'on'];
+                  setGenBarCode(newOptions);
+                  if (!genBarCode.includes('on')) {
+                    await getBarCode();
+                    editOnChnage(
+                      'prod_UPC_EAN',
+                      typeof barCode === 'string' ? barCode : String(barCode),
+                    );
+                  } else {
+                    editOnChnage('prod_UPC_EAN', '');
+                  }
                 }}>
-                Generate Auto BarCode
-              </Text>
+                <Checkbox.Android
+                  status={genBarCode.includes('on') ? 'checked' : 'unchecked'}
+                  color="#144272"
+                  uncheckedColor="#144272"
+                />
+                <Text style={{color: '#144272', marginLeft: 8}}>
+                  Generate Auto BarCode
+                </Text>
+              </TouchableOpacity>
+
               <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
+                style={[
+                  styles.productinput,
+                  genBarCode.includes('on') && {
+                    backgroundColor: '#b0b0b0',
+                    color: '#f5f5f5',
+                  },
+                ]}
+                placeholderTextColor={
+                  genBarCode.includes('on') ? '#f5f5f5' : '#144272'
+                }
                 keyboardType="numeric"
+                value={
+                  genBarCode.includes('on')
+                    ? typeof barCode === 'string'
+                      ? barCode
+                      : String(barCode)
+                    : editForm.prod_UPC_EAN
+                }
+                editable={!genBarCode.includes('on')}
+                onChangeText={t => {
+                  if (!genBarCode.includes('on'))
+                    editOnChnage('prod_UPC_EAN', t);
+                }}
               />
             </View>
 
             <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-              <RadioButton
-                value="applyexpiry"
-                status={editexpire === 'applyexpiry' ? 'checked' : 'unchecked'}
-                color="#144272"
-                uncheckedColor="#144272"
-                onPress={() => seteditexpire('applyexpiry')}
-              />
-              <Text
-                style={{
-                  color: '#144272',
-                  marginTop: 7,
-                  marginLeft: -10,
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                activeOpacity={0.7}
+                onPress={() => {
+                  const newOptions = expiry.includes('on')
+                    ? expiry.filter(opt => opt !== 'on')
+                    : [...expiry, 'on'];
+                  setExpiry(newOptions);
                 }}>
-                Apply Expiry
-              </Text>
+                <Checkbox.Android
+                  status={expiry.includes('on') ? 'checked' : 'unchecked'}
+                  color="#144272"
+                  uncheckedColor="#144272"
+                />
+                <Text style={{color: '#144272', marginLeft: 8}}>
+                  Apply Expiry
+                </Text>
+              </TouchableOpacity>
+
               <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
                   borderTopWidth: 1,
                   borderBottomWidth: 1,
-                  width: 165,
+                  width: '53%',
                   borderRightWidth: 1,
                   borderLeftWidth: 1,
                   borderRadius: 5,
                   borderColor: '#144272',
                   marginLeft: hp('2%'),
                   height: 30,
+                  opacity: expiry.includes('on') ? 1 : 0.5,
                 }}>
                 <View
                   style={{
@@ -1783,35 +2348,49 @@ export default function CustomerPeople() {
                     borderColor: '#144272',
                   }}>
                   <Text style={{marginLeft: 10, color: '#144272'}}>
-                    {`${date.toLocaleDateString()}`}
+                    {editForm.prod_expirydate
+                      ? new Date(
+                          editForm.prod_expirydate,
+                        ).toLocaleDateString?.() ||
+                        new Date().toLocaleDateString()
+                      : new Date().toLocaleDateString()}
                   </Text>
-
-                  <TouchableOpacity onPress={() => setShowDatePicker(true)}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (expiry.includes('on')) setShowStartDatePicker(true);
+                    }}
+                    disabled={!expiry.includes('on')}>
                     <Image
                       style={{
                         height: 20,
                         width: 20,
                         resizeMode: 'stretch',
                         alignItems: 'center',
-                        marginLeft: 60,
+                        marginLeft: 55,
                         tintColor: '#144272',
+                        opacity: expiry.includes('on') ? 1 : 0.5,
                       }}
                       source={require('../../../assets/calendar.png')}
                     />
-                    {showDatePicker && (
+                    {showStartDatePicker && expiry.includes('on') && (
                       <DateTimePicker
-                        testID="DatePicker"
-                        value={date}
+                        testID="startDatePicker"
+                        value={
+                          editForm.prod_expirydate
+                            ? new Date(editForm.prod_expirydate)
+                            : new Date()
+                        }
                         mode="date"
                         is24Hour={true}
                         display="default"
-                        onChange={onDateChange}
+                        onChange={editOnDateChange}
                       />
                     )}
                   </TouchableOpacity>
                 </View>
               </View>
             </View>
+
             <View
               style={{
                 flexDirection: 'row',
@@ -1819,23 +2398,31 @@ export default function CustomerPeople() {
                 marginRight: 10,
               }}>
               <DropDownPicker
-                items={editcategoryItem}
-                open={editcategory}
-                setOpen={seteditcategory}
-                value={currenteditcategory}
-                setValue={seteditCurrentcategory}
+                items={transformedCat}
+                open={editCatOpen}
+                setOpen={setEditCatOpen}
+                value={editCatValue}
+                setValue={setEditCatValue}
                 placeholder="Select Category"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
                 style={[styles.dropdown, {borderColor: '#144272', width: 265}]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
                   width: 265,
+                  zIndex: 1000,
+                  marginTop: 8,
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
               <TouchableOpacity onPress={toggleeditcategory}>
                 <Image
@@ -1859,23 +2446,33 @@ export default function CustomerPeople() {
                 marginRight: 10,
               }}>
               <DropDownPicker
-                items={edituomItem}
-                open={edituom}
-                setOpen={setedituom}
-                value={editcurrentuom}
-                setValue={seteditCurrentuom}
+                items={transformedUom}
+                open={editUomOpen}
+                setOpen={setEditUomOpen}
+                value={editUomValue}
+                setValue={setEditUomValue}
                 placeholder="Select UOM"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
-                style={[styles.dropdown, {borderColor: '#144272', width: 265}]}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
+                style={[
+                  styles.dropdown,
+                  {borderColor: '#144272', width: 265, zIndex: 999},
+                ]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
                   width: 265,
+                  marginTop: 8,
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
               <TouchableOpacity onPress={toggleedituom}>
                 <Image
@@ -1891,37 +2488,73 @@ export default function CustomerPeople() {
                 />
               </TouchableOpacity>
             </View>
+
             <View
               style={[
                 styles.row,
                 {marginLeft: 10, marginRight: 10, marginTop: -8},
               ]}>
-              <RadioButton
-                value="managestock"
-                status={editstock === 'managestock' ? 'checked' : 'unchecked'}
-                color="#144272"
-                uncheckedColor="#144272"
-                onPress={() => seteditstock('managestock')}
-              />
-              <Text
-                style={{
-                  color: '#144272',
-                  marginTop: 7,
-                  marginLeft: -10,
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                activeOpacity={0.7}
+                onPress={() => {
+                  const newOptions = manageStock.includes('on')
+                    ? manageStock.filter(opt => opt !== 'on')
+                    : [...manageStock, 'on'];
+                  setManageStock(newOptions);
                 }}>
-                Don't Manage Stock
-              </Text>
+                <Checkbox.Android
+                  status={manageStock.includes('on') ? 'checked' : 'unchecked'}
+                  color="#144272"
+                  uncheckedColor="#144272"
+                />
+                <Text style={{color: '#144272', marginLeft: 8}}>
+                  Don't Manage Stock
+                </Text>
+              </TouchableOpacity>
             </View>
+
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
+                style={[
+                  styles.productinput,
+                  manageStock.includes('on') && {
+                    backgroundColor: '#b0b0b0',
+                    color: '#f5f5f5',
+                  },
+                ]}
+                placeholderTextColor={
+                  manageStock.includes('on') ? '#f5f5f5' : '#144272'
+                }
                 placeholder="Opening Quantity"
+                value={manageStock.includes('on') ? '0' : editForm.prod_qty}
+                editable={!manageStock.includes('on')}
+                onChangeText={t => {
+                  if (!manageStock.includes('on')) editOnChnage('prod_qty', t);
+                }}
+                keyboardType="number-pad"
               />
               <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
+                style={[
+                  styles.productinput,
+                  manageStock.includes('on') && {
+                    backgroundColor: '#b0b0b0',
+                    color: '#f5f5f5',
+                  },
+                ]}
+                placeholderTextColor={
+                  manageStock.includes('on') ? '#f5f5f5' : '#144272'
+                }
                 placeholder="Re Order Level"
+                value={
+                  manageStock.includes('on') ? '0' : editForm.prod_reorder_qty
+                }
+                editable={!manageStock.includes('on')}
+                onChangeText={t => {
+                  if (!manageStock.includes('on'))
+                    editOnChnage('prod_reorder_qty', t);
+                }}
+                keyboardType="numeric"
               />
             </View>
 
@@ -1930,141 +2563,213 @@ export default function CustomerPeople() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Cost Price"
+                value={editForm.prod_costprice}
+                keyboardType="numeric"
+                onChangeText={t => {
+                  editOnChnage('prod_costprice', t);
+                  // Calculate final price if possible
+                  const cost = parseFloat(t) || 0;
+                  const retail = parseFloat(editForm.prod_retailprice) || 0;
+                  const discount = parseFloat(editForm.prod_discount) || 0;
+                  const final =
+                    retail > 0
+                      ? (retail - (retail * discount) / 100).toFixed(2)
+                      : (cost - (cost * discount) / 100).toFixed(2);
+                  setEditForm(prev => ({
+                    ...prev,
+                    prod_fretailprice: isNaN(Number(final)) ? '' : final,
+                  }));
+                }}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Retail Price"
+                value={editForm.prod_retailprice}
+                keyboardType="numeric"
+                onChangeText={t => {
+                  editOnChnage('prod_retailprice', t);
+                  // Calculate final price if possible
+                  const cost = parseFloat(editForm.prod_costprice) || 0;
+                  const retail = parseFloat(t) || 0;
+                  const discount = parseFloat(editForm.prod_discount) || 0;
+                  const final =
+                    retail > 0
+                      ? (retail - (retail * discount) / 100).toFixed(2)
+                      : (cost - (cost * discount) / 100).toFixed(2);
+                  setEditForm(prev => ({
+                    ...prev,
+                    prod_fretailprice: isNaN(Number(final)) ? '' : final,
+                  }));
+                }}
               />
             </View>
+
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Discount"
+                value={editForm.prod_discount}
+                keyboardType="numeric"
+                onChangeText={t => {
+                  editOnChnage('prod_discount', t);
+                  // Calculate final price if possible
+                  const cost = parseFloat(editForm.prod_costprice) || 0;
+                  const retail = parseFloat(editForm.prod_retailprice) || 0;
+                  const discount = parseFloat(t) || 0;
+                  const final =
+                    retail > 0
+                      ? (retail - (retail * discount) / 100).toFixed(2)
+                      : (cost - (cost * discount) / 100).toFixed(2);
+                  setEditForm(prev => ({
+                    ...prev,
+                    prod_fretailprice: isNaN(Number(final)) ? '' : final,
+                  }));
+                }}
               />
-              <Text style={[styles.productinput, {color: '#144272'}]}>
-                Final Price:000
-              </Text>
+              <TextInput
+                style={[
+                  styles.productinput,
+                  {color: '#f5f5f5', backgroundColor: '#b0b0b0'},
+                ]}
+                placeholder="Final Price"
+                value={addForm.final_price || '0.00'}
+                editable={false}
+                placeholderTextColor="#f5f5f5"
+              />
             </View>
 
             <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-              <RadioButton
-                value="supplier"
-                status={editsupplier === 'supplier' ? 'checked' : 'unchecked'}
-                color="#144272"
-                uncheckedColor="#144272"
-                onPress={() => seteditsupplier('supplier')}
-              />
-              <Text
-                style={{
-                  color: '#144272',
-                  marginTop: 7,
-                  marginLeft: -10,
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                activeOpacity={0.7}
+                onPress={() => {
+                  const newOptions = supplier.includes('on')
+                    ? supplier.filter(opt => opt !== 'on')
+                    : [...supplier, 'on'];
+                  setSupplier(newOptions);
                 }}>
-                Enable Supplier
-              </Text>
+                <Checkbox.Android
+                  status={supplier.includes('on') ? 'checked' : 'unchecked'}
+                  color="#144272"
+                  uncheckedColor="#144272"
+                />
+                <Text style={{color: '#144272', marginLeft: 8}}>
+                  Enable Supplier
+                </Text>
+              </TouchableOpacity>
+            </View>
 
+            <View
+              style={{
+                flexDirection: 'row',
+                marginLeft: 10,
+                marginRight: 10,
+                opacity: supplier.includes('on') ? 1 : 0.5,
+              }}>
               <DropDownPicker
-                items={editsupplierItem}
-                open={iseditsupplier}
-                setOpen={setiseditsupplier}
-                value={currenteditsupplier}
-                setValue={setCurrenteditsupplier}
-                placeholder="Select"
+                items={transformedSup}
+                open={editSupOpen}
+                setOpen={setEditSupOpen}
+                value={editSupValue}
+                setValue={setEditSupValue}
+                placeholder="Select Supplier"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
                 style={[
                   styles.dropdown,
                   {
+                    width: '100%',
                     borderColor: '#144272',
-                    width: 140,
-                    marginLeft: 18,
-                    marginTop: 1,
                   },
                 ]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
-                  width: 140,
-                  marginLeft: 18,
+                  width: '100%',
+                  marginTop: 8,
+                  zIndex: 1000,
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
+                disabled={!supplier.includes('on')}
               />
             </View>
+
+            <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                activeOpacity={0.7}
+                onPress={() => {
+                  const newOptions = subUom.includes('on')
+                    ? subUom.filter(opt => opt !== 'on')
+                    : [...subUom, 'on'];
+                  setSubUom(newOptions);
+                }}>
+                <Checkbox.Android
+                  status={subUom.includes('on') ? 'checked' : 'unchecked'}
+                  color="#144272"
+                  uncheckedColor="#144272"
+                />
+                <Text style={{color: '#144272', marginLeft: 8}}>
+                  Have Sub UOM?
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <View
               style={{
                 flexDirection: 'row',
+                marginLeft: 10,
+                marginRight: 10,
+                opacity: subUom.includes('on') ? 1 : 0.5,
               }}>
-              <TouchableOpacity>
-                <View
-                  style={[
-                    styles.row,
-                    {
-                      marginLeft: 17,
-                      marginRight: 10,
-                      backgroundColor: '#144272',
-                      borderRadius: 10,
-                      width: 120,
-                    },
-                  ]}>
-                  <Text
-                    style={[
-                      styles.productinput,
-                      {color: 'white', textAlign: 'center'},
-                    ]}>
-                    Choose Image
-                  </Text>
-                </View>
-              </TouchableOpacity>
-              <View style={[styles.row, {marginLeft: 13, marginRight: 10}]}>
-                <RadioButton
-                  value="subuom"
-                  status={editsubuom === 'subuom' ? 'checked' : 'unchecked'}
-                  color="#144272"
-                  uncheckedColor="#144272"
-                  onPress={() => seteditsubuom('subuom')}
-                />
-                <Text
-                  style={{
-                    color: '#144272',
-                    marginTop: 7,
-                    marginLeft: -10,
-                  }}>
-                  Have Sub UOM?
-                </Text>
-              </View>
+              <DropDownPicker
+                items={transformedUom}
+                open={editSubUmoOpen}
+                setOpen={setEditSubUmoOpen}
+                value={editSubUmoValue}
+                setValue={setEditSubUmoValue}
+                placeholder="Select Sub UOM"
+                placeholderStyle={{color: '#144272'}}
+                textStyle={{color: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
+                style={[
+                  styles.dropdown,
+                  {
+                    borderColor: '#144272',
+                    width: '100%',
+                    alignSelf: 'center',
+                    zIndex: 999,
+                  },
+                ]}
+                dropDownContainerStyle={{
+                  backgroundColor: 'white',
+                  borderColor: '#144272',
+                  width: '100%',
+                  marginTop: 8,
+                  maxHeight: 150,
+                }}
+                labelStyle={{color: '#144272'}}
+                listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
+                disabled={!subUom.includes('on')}
+              />
             </View>
 
-            <DropDownPicker
-              items={editsubuomItem}
-              open={iseditsubuom}
-              setOpen={setiseditsubuom}
-              value={currenteditsub}
-              setValue={setCurrenteditsub}
-              placeholder="Select Sub UOM"
-              placeholderStyle={{color: '#144272'}}
-              textStyle={{color: '#144272'}}
-              arrowIconStyle={{tintColor: '#144272'}}
-              style={[
-                styles.dropdown,
-                {
-                  borderColor: '#144272',
-                  width: 290,
-                  alignSelf: 'center',
-                },
-              ]}
-              dropDownContainerStyle={{
-                backgroundColor: 'white',
-                borderColor: '#144272',
-                width: 290,
-                marginLeft: 14,
-              }}
-              labelStyle={{color: '#144272'}}
-              listItemLabelStyle={{color: '#144272'}}
-            />
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <Text
                 style={[
@@ -2077,17 +2782,46 @@ export default function CustomerPeople() {
 
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
               <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
+                style={[
+                  styles.productinput,
+                  !subUom.includes('on') && {
+                    backgroundColor: '#b0b0b0',
+                    color: '#f5f5f5',
+                  },
+                ]}
+                placeholderTextColor={
+                  !subUom.includes('on') ? '#f5f5f5' : '#144272'
+                }
                 placeholder="Equivalence"
+                keyboardType="number-pad"
+                value={editForm.prod_equivalent}
+                editable={subUom.includes('on')}
+                onChangeText={t => {
+                  if (subUom.includes('on')) editOnChnage('prod_equivalent', t);
+                }}
               />
               <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
+                style={[
+                  styles.productinput,
+                  !subUom.includes('on') && {
+                    backgroundColor: '#b0b0b0',
+                    color: '#f5f5f5',
+                  },
+                ]}
+                placeholderTextColor={
+                  !subUom.includes('on') ? '#f5f5f5' : '#144272'
+                }
                 placeholder="Sale Price"
+                keyboardType="number-pad"
+                value={editForm.prod_sub_price}
+                editable={subUom.includes('on')}
+                onChangeText={t => {
+                  if (subUom.includes('on')) editOnChnage('prod_sub_price', t);
+                }}
               />
             </View>
-            <TouchableOpacity onPress={togglebtneditproduct}>
+
+            <TouchableOpacity onPress={updateProduct}>
               <View
                 style={{
                   backgroundColor: '#144272',
@@ -2577,6 +3311,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: '#144272',
+    color: '#000',
     borderRadius: 5,
     paddingHorizontal: 10,
     height: 40,

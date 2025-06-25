@@ -9,11 +9,25 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+
+interface Products {
+  id: number;
+  prod_name: string;
+  prod_UPC_EAN: string;
+  pcat_name: string;
+  prod_costprice: string;
+  prod_retailprice: string;
+  prod_qty: string;
+  prod_expirydate: string;
+}
 
 export default function DeletedProducts() {
   const {openDrawer} = useDrawer();
+  const [delProducts, setDelProducts] = useState<Products[]>([]);
   const Info = [
     {
       Product: 'Sufi',
@@ -25,6 +39,20 @@ export default function DeletedProducts() {
       Expiry: '15-Nov-2025',
     },
   ];
+
+  // Fetch Deleted Products
+  const fetchProds = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchDeletedProducts`);
+      setDelProducts(res.data.deletedProducts);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchProds();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -77,127 +105,109 @@ export default function DeletedProducts() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={Info}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.Product}
-                      </Text>
+        <FlatList
+          data={delProducts}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <ScrollView
+              style={{
+                padding: 5,
+              }}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
+                  <Text
+                    style={{
+                      color: '#144272',
+                      fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
+                    }}>
+                    {item.prod_name}
+                  </Text>
 
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}>
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginRight: 5,
-                            marginTop: 2,
-                          }}
-                          source={require('../../../assets/tick.png')}
-                        />
-                      </View>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>
-                          Barcode: 
-                        </Text>
-                        <Text style={styles.text}>
-                       {item.Barcode}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>
-                          Category:
-                        
-                        </Text>
-                        <Text style={styles.text}>
-                     
-                          {item.Category}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                           <Text style={styles.text}>Cost:
-                         
-                            </Text>
-                        <Text style={styles.text}>{item.Cost}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>
-                          Retail Price:
-                        </Text>
-                        <Text style={styles.text}>
-                          {item.RetailPrice}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>
-                          Quantity:
-                         
-                        </Text>
-                        <Text style={styles.text}>
-                             {item.Quantity}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Expiry: 
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                         {item.Expiry}
-                        </Text>
-                      </View>
-                    </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                    }}>
+                    <Image
+                      style={{
+                        tintColor: '#144272',
+                        width: 15,
+                        height: 15,
+                        alignSelf: 'center',
+                        marginRight: 5,
+                        marginTop: 2,
+                      }}
+                      source={require('../../../assets/tick.png')}
+                    />
                   </View>
-                </ScrollView>
-              )}
-            />
-          </View>
-        </ScrollView>
+                </View>
+                <View style={styles.infoRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Barcode:</Text>
+                    <Text style={styles.text}>{item.prod_UPC_EAN}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Category:</Text>
+                    <Text style={styles.text}>{item.pcat_name}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Cost:</Text>
+                    <Text style={styles.text}>{item.prod_costprice}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Retail Price:</Text>
+                    <Text style={styles.text}>{item.prod_retailprice}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Quantity:</Text>
+                    <Text style={styles.text}>{item?.prod_qty ?? '0'}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Expiry:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item?.prod_expirydate ?? 'No expiry date'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          )}
+          ListEmptyComponent={
+            <View style={{alignItems: 'center', marginTop: 20}}>
+              <Text style={{color: '#fff', fontSize: 14}}>
+                No Deleted Product found.
+              </Text>
+            </View>
+          }
+        />
       </ImageBackground>
     </SafeAreaView>
   );

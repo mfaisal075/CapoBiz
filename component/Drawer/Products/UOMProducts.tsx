@@ -10,57 +10,134 @@ import {
   FlatList,
   TextInput,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import Modal from 'react-native-modal';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import {useUser} from '../../CTX/UserContext';
+import Toast from 'react-native-toast-message';
 
+interface UMOs {
+  id: number;
+  ums_name: string;
+}
 
 export default function UOMProducts() {
-
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const Info = [
-    {
-      CustomerName: 'Pieces',
-    },
-    {
-      CustomerName: 'KG',
-    },
-    {
-      CustomerName: 'Inches',
-    },
-  ];
+  const [umos, setUmos] = useState<UMOs[]>([]);
+  const [modalVisible, setModalVisible] = useState('');
+  const [editUmo, setEditUmo] = useState('');
+  const [selectedUmo, setSelectedUmo] = useState<number | null>(null);
+  const [umoName, setUmoName] = useState('');
 
-  const [isModalV, setModalV] = useState(false);
-  const tglModal = () => {
-    setModalV(!isModalV);
+  // Fetch UMOs
+  const fetchUoms = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchuoms`);
+
+      setUmos(res.data.uom);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  {
-    /*edit*/
-  }
-  const [edit, setedit] = useState(false);
+  // Update Umo
+  const updateUmo = async () => {
+    if (!editUmo) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please enter a UOM name',
+      });
+      return;
+    }
 
-  const toggleedit = () => {
-    setedit(!edit);
+    try {
+      const res = await axios.post(`${BASE_URL}/updateuom`, {
+        uom_id: selectedUmo,
+        ums_name: editUmo.trim(),
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'UOM has been Updated successfully',
+          visibilityTime: 1500,
+        });
+
+        setEditUmo('');
+        setModalVisible('');
+        setSelectedUmo(null);
+        fetchUoms();
+      }
+    } catch (error) {}
   };
 
-  const [addcategory, setaddcategory] = useState(false);
+  // Delete Umo
+  const deleteUmo = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/uomdelete`, {
+        id: selectedUmo,
+      });
 
-  const toggleaddcategory = () => {
-    setaddcategory(!addcategory);
+      const data = res.data;
+
+      if (res.status === 200 && data.status) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'UOM has been deleted successfully.',
+          visibilityTime: 1500,
+        });
+        setSelectedUmo(null);
+        setModalVisible('');
+        fetchUoms();
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const [btncategory, setbtncategory] = useState(false);
+  // Add Umo
+  const addUmo = async () => {
+    if (!umoName) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please enter a UOM name',
+        visibilityTime: 1500,
+      });
+      return;
+    }
 
-  const togglebtncategory = () => {
-    setbtncategory(!btncategory);
+    try {
+      const res = await axios.post(`${BASE_URL}/adduom`, {
+        uom_name: umoName,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'UOM has been added successfully',
+          visibilityTime: 1500,
+        });
+
+        fetchUoms();
+        setUmoName('');
+        setModalVisible('');
+      }
+    } catch (error) {}
   };
 
-  const [editbtncategory, seteditbtncategory] = useState(false);
-
-  const toggleeditbtncategory = () => {
-    seteditbtncategory(!editbtncategory);
-  };
+  useEffect(() => {
+    fetchUoms();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -96,7 +173,7 @@ export default function UOMProducts() {
               UOMs
             </Text>
           </View>
-          <TouchableOpacity onPress={toggleaddcategory}>
+          <TouchableOpacity onPress={() => setModalVisible('Add')}>
             <Image
               style={{
                 tintColor: 'white',
@@ -125,70 +202,93 @@ export default function UOMProducts() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={Info}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: 'white',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.CustomerName}
-                      </Text>
+        <View>
+          <FlatList
+            data={umos}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <ScrollView
+                style={{
+                  padding: 5,
+                }}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: 'white',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.ums_name}
+                    </Text>
 
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}>
-                        <TouchableOpacity onPress={toggleedit}>
-                          <Image
-                            style={{
-                              tintColor: 'white',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginTop: 8,
-                            }}
-                            source={require('../../../assets/edit.png')}
-                          />
-                        </TouchableOpacity>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                      }}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setModalVisible('Edit');
+                          const fetchSignleUmo = async (id: number) => {
+                            try {
+                              const res = await axios.get(
+                                `${BASE_URL}/edituom?id=${id}&_token=${token}`,
+                              );
+                              setEditUmo(res.data.ums_name);
+                              setSelectedUmo(res.data.id);
+                            } catch (error) {
+                              console.log(error);
+                            }
+                          };
 
-                        <TouchableOpacity onPress={tglModal}>
-                          <Image
-                            style={{
-                              tintColor: 'white',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 8,
-                            }}
-                            source={require('../../../assets/delete.png')}
-                          />
-                        </TouchableOpacity>
-                      </View>
+                          fetchSignleUmo(item.id);
+                        }}>
+                        <Image
+                          style={{
+                            tintColor: 'white',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginTop: 8,
+                          }}
+                          source={require('../../../assets/edit.png')}
+                        />
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        onPress={() => {
+                          setModalVisible('Delete');
+                          setSelectedUmo(item.id);
+                        }}>
+                        <Image
+                          style={{
+                            tintColor: 'white',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginRight: 5,
+                            marginTop: 8,
+                          }}
+                          source={require('../../../assets/delete.png')}
+                        />
+                      </TouchableOpacity>
                     </View>
                   </View>
-                </ScrollView>
-              )}
-            />
-          </View>
-        </ScrollView>
+                </View>
+              </ScrollView>
+            )}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>No Umo found.</Text>
+              </View>
+            }
+          />
+        </View>
 
-        {/*delete*/}
-        <Modal isVisible={isModalV}>
+        {/*Delete Umo*/}
+        <Modal isVisible={modalVisible === 'Delete'}>
           <View
             style={{
               flex: 1,
@@ -233,7 +333,11 @@ export default function UOMProducts() {
                 marginTop: 10,
                 justifyContent: 'center',
               }}>
-              <TouchableOpacity onPress={() => setModalV(!isModalV)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setSelectedUmo(null);
+                }}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -253,7 +357,7 @@ export default function UOMProducts() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity>
+              <TouchableOpacity onPress={deleteUmo}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -275,8 +379,8 @@ export default function UOMProducts() {
           </View>
         </Modal>
 
-        {/*edit*/}
-        <Modal isVisible={edit}>
+        {/*Edit Umos*/}
+        <Modal isVisible={modalVisible === 'Edit'}>
           <ScrollView
             style={{
               flex: 1,
@@ -303,7 +407,11 @@ export default function UOMProducts() {
                 }}>
                 Edit UOM
               </Text>
-              <TouchableOpacity onPress={() => setedit(!edit)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setEditUmo('');
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -319,16 +427,18 @@ export default function UOMProducts() {
                 style={styles.search}
                 placeholderTextColor={'#144272'}
                 placeholder="UOM Name"
+                value={editUmo}
+                onChangeText={t => setEditUmo(t)}
               />
             </View>
-            <TouchableOpacity onPress={toggleeditbtncategory}>
+            <TouchableOpacity onPress={updateUmo}>
               <View
                 style={{
                   alignSelf: 'center',
                   backgroundColor: '#144272',
-                  height: 30,
                   borderRadius: 10,
-                  width: 80,
+                  paddingVertical: 8,
+                  paddingHorizontal: 10,
                   justifyContent: 'center',
                 }}>
                 <Text
@@ -336,15 +446,15 @@ export default function UOMProducts() {
                     color: 'white',
                     textAlign: 'center',
                   }}>
-                  Add UOM
+                  Update UOM
                 </Text>
               </View>
             </TouchableOpacity>
           </ScrollView>
         </Modal>
 
-        {/*add uom modal*/}
-        <Modal isVisible={addcategory}>
+        {/*Add Umo*/}
+        <Modal isVisible={modalVisible === 'Add'}>
           <View
             style={{
               flex: 1,
@@ -370,7 +480,11 @@ export default function UOMProducts() {
                 }}>
                 Add New UOM
               </Text>
-              <TouchableOpacity onPress={() => setaddcategory(!addcategory)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setUmoName('');
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -385,16 +499,18 @@ export default function UOMProducts() {
                 style={styles.search}
                 placeholderTextColor={'#144272'}
                 placeholder="UOM Name"
+                value={umoName}
+                onChangeText={t => setUmoName(t)}
               />
             </View>
-            <TouchableOpacity onPress={togglebtncategory}>
+            <TouchableOpacity onPress={addUmo}>
               <View
                 style={{
                   alignSelf: 'center',
                   backgroundColor: '#144272',
-                  height: 30,
                   borderRadius: 10,
-                  width: 80,
+                  paddingVertical: 8,
+                  paddingHorizontal: 10,
                   justifyContent: 'center',
                 }}>
                 <Text
@@ -406,145 +522,6 @@ export default function UOMProducts() {
                 </Text>
               </View>
             </TouchableOpacity>
-          </View>
-        </Modal>
-        {/*Add btn category*/}
-        <Modal isVisible={btncategory}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 230,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              UOM has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setbtncategory(!btncategory)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        <Modal isVisible={editbtncategory}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 230,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Updated
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              UOM has been updated successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => seteditbtncategory(!editbtncategory)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
           </View>
         </Modal>
       </ImageBackground>
@@ -669,6 +646,7 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     borderColor: '#144272',
+    color: '#000',
     borderRadius: 5,
     paddingHorizontal: 10,
     height: 40,

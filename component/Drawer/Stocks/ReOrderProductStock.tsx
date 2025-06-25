@@ -9,152 +9,26 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 type Product = {
-  Product: string;
-  Category: string;
-  Quantity: number;
-  Reorder: number;
-  CostPrice: number;
-  Cost: number;
-  RetailPrice: number;
-  Retail: number;
-};
-
-type InfoType = {
-  [key: string]: Product[];
+  id: number;
+  prod_name: string;
+  pcat_name: string;
+  prod_qty: string;
+  prod_reorder_qty: string;
+  prod_costprice: string;
+  prod_retailprice: string;
 };
 
 export default function ReOrderProductStock() {
   const {openDrawer} = useDrawer();
-
-  const Info: InfoType = {
-    'Select Category': [
-      {
-        Product: 'Sufi',
-        Category: 'Oil',
-        Quantity: 150,
-        Reorder: 0,
-        CostPrice: 120.0,
-        Cost: 2,
-        RetailPrice: 299.0,
-        Retail: 5,
-      },
-      {
-        Product: 'Dark Bliss',
-        Category: 'Chocolate',
-        Quantity: 100,
-        Reorder: 0,
-        CostPrice: 180.0,
-        Cost: 1,
-        RetailPrice: 450.0,
-        Retail: 4,
-      },
-    ],
-    Chocolate: [
-      {
-        Product: 'Choco Delight',
-        Category: 'Chocolate',
-        Quantity: 150,
-        Reorder: 0,
-        CostPrice: 120.0,
-        Cost: 2,
-        RetailPrice: 299.0,
-        Retail: 5,
-      },
-      {
-        Product: 'Dark Bliss',
-        Category: 'Chocolate',
-        Quantity: 100,
-        Reorder: 0,
-        CostPrice: 180.0,
-        Cost: 1,
-        RetailPrice: 450.0,
-        Retail: 4,
-      },
-    ],
-    Jelly: [
-      {
-        Product: 'Berry Blast',
-        Category: 'Jelly',
-        Quantity: 180,
-        Reorder: 0,
-        CostPrice: 90.0,
-        Cost: 4,
-        RetailPrice: 250.0,
-        Retail: 6,
-      },
-      {
-        Product: 'Fruit Jelly',
-        Category: 'Jelly',
-        Quantity: 220,
-        Reorder: 0,
-        CostPrice: 100.0,
-        Cost: 5,
-        RetailPrice: 280.0,
-        Retail: 7,
-      },
-    ],
-    Oil: [
-      {
-        Product: 'Sufi',
-        Category: 'Oil',
-        Quantity: 285,
-        Reorder: 0,
-        CostPrice: 200.0,
-        Cost: 3,
-        RetailPrice: 599.0,
-        Retail: 9,
-      },
-      {
-        Product: 'Olive Oil',
-        Category: 'Oil',
-        Quantity: 150,
-        Reorder: 0,
-        CostPrice: 250.0,
-        Cost: 5,
-        RetailPrice: 700.0,
-        Retail: 8,
-      },
-    ],
-    Flour: [
-      {
-        Product: 'Wheat Flour',
-        Category: 'Flour',
-        Quantity: 100,
-        Reorder: 0,
-        CostPrice: 50.0,
-        Cost: 2,
-        RetailPrice: 120.0,
-        Retail: 4,
-      },
-      {
-        Product: 'Rice Flour',
-        Category: 'Flour',
-        Quantity: 80,
-        Reorder: 0,
-        CostPrice: 60.0,
-        Cost: 3,
-        RetailPrice: 150.0,
-        Retail: 5,
-      },
-    ],
-    'Murree Brwerry': [
-      {
-        Product: 'Murree Berry Drink',
-        Category: 'Murree Brwerry',
-        Quantity: 200,
-        Reorder: 0,
-        CostPrice: 150.0,
-        Cost: 4,
-        RetailPrice: 350.0,
-        Retail: 7,
-      },
-    ],
-  };
+  const [products, setProducts] = useState<Product[]>([]);
 
   const [category, setCategory] = useState(false);
   const [currentCategory, setCurrentCategory] =
@@ -168,6 +42,21 @@ export default function ReOrderProductStock() {
     {label: 'Flour', value: 'Flour'},
     {label: 'Murree Brwerry', value: 'Murree Brwerry'},
   ];
+
+  const fetchProd = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/loadexpired`, {
+        cat_id: '',
+      });
+      setProducts(res.data.stock);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchProd();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -220,7 +109,12 @@ export default function ReOrderProductStock() {
           placeholder="Select Category"
           placeholderStyle={{color: 'white'}}
           textStyle={{color: 'white'}}
-          arrowIconStyle={{tintColor: 'white'}}
+          ArrowUpIconComponent={() => (
+            <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+          )}
+          ArrowDownIconComponent={() => (
+            <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+          )}
           style={[
             styles.dropdown,
             {borderColor: 'white', width: '88%', alignSelf: 'center'},
@@ -228,95 +122,84 @@ export default function ReOrderProductStock() {
           dropDownContainerStyle={{
             backgroundColor: 'white',
             borderColor: '#144272',
-            width: '88%',marginLeft:22
+            width: '88.5%',
+            marginLeft: 22,
+            marginTop: 8,
           }}
           labelStyle={{color: 'white'}}
           listItemLabelStyle={{color: '#144272'}}
         />
 
-        <ScrollView>
-          <FlatList
-            data={Info[currentCategory] || []}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <View style={{padding: 5}}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text
-                      style={{
-                        color: '#144272',
-                        fontWeight: 'bold',
-                        marginLeft: 5,
-                        marginTop: 5,
-                      }}>
-                      {item.Product}
-                    </Text>
+        <FlatList
+          data={products}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <View style={{padding: 5}}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
+                  <Text
+                    style={{
+                      color: '#144272',
+                      fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
+                    }}>
+                    {item.prod_name}
+                  </Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Category:</Text>
+                    <Text style={styles.text}>{item.pcat_name}</Text>
                   </View>
-                  <View style={styles.infoRow}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Category:</Text>
-                      <Text style={styles.text}>{item.Category}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Quantity:</Text>
-                      <Text style={styles.text}>{item.Quantity}</Text>
-                    </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Quantity:</Text>
+                    <Text style={styles.text}>{item.prod_qty}</Text>
+                  </View>
 
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Reorder:</Text>
-                      <Text style={styles.text}>{item.Reorder}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Cost Price:</Text>
-                      <Text style={styles.text}>{item.CostPrice}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Cost:</Text>
-                      <Text style={styles.text}>{item.Cost}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Retail Price:</Text>
-                      <Text style={styles.text}>{item.RetailPrice}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        marginBottom: 5,
-                      }}>
-                      <Text style={styles.text}>Retail:</Text>
-                      <Text style={styles.text}>{item.Retail}</Text>
-                    </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Reorder:</Text>
+                    <Text style={styles.text}>{item.prod_reorder_qty}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Cost Price:</Text>
+                    <Text style={styles.text}>{item.prod_costprice}</Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Retail Price:</Text>
+                    <Text style={styles.text}>{item.prod_retailprice}</Text>
                   </View>
                 </View>
               </View>
-            )}
-          />
-        </ScrollView>
+            </View>
+          )}
+          ListEmptyComponent={
+            <View style={{alignItems: 'center', marginTop: 20}}>
+              <Text style={{color: '#fff', fontSize: 14}}>No Stock found.</Text>
+            </View>
+          }
+        />
       </ImageBackground>
     </SafeAreaView>
   );
