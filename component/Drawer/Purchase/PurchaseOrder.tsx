@@ -10,22 +10,60 @@ import {
   TextInput,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
-import {RadioButton} from 'react-native-paper';
+import React, {useEffect, useState} from 'react';
+import {Checkbox} from 'react-native-paper';
 import {useDrawer} from '../../DrawerContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 import DropDownPicker from 'react-native-dropdown-picker';
-import {useNavigation} from '@react-navigation/native';
-import Modal from 'react-native-modal';
+import {useFocusEffect, useNavigation} from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import BASE_URL from '../../BASE_URL';
+import axios from 'axios';
+import Toast from 'react-native-toast-message';
+import {useUser} from '../../CTX/UserContext';
+
+interface Supplier {
+  id: number;
+  sup_name: string;
+}
+
+interface SupplierData {
+  id: number;
+  sup_name: string;
+  sup_company_name: string;
+}
+
+interface CartItem {
+  prod_id: number;
+  product_name: string;
+  upc_ean: string;
+  purchase_qty: string;
+  cost_price: string;
+  retail_price: string;
+  expiry_date: string;
+  fretail_price: string;
+  total?: string;
+}
 
 export default function PurchaseOrder() {
-  
-  const [btnproduct, setbtnproduct] = useState(false);
-
-  const togglebtnproduct = () => {
-    setbtnproduct(!btnproduct);
-  };
+  const {token, refreshAddToCart} = useUser();
+  const [expiry, setExpiry] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [quantity, setQuantity] = useState('');
+  const [purchasePrice, setPurchasePrice] = useState('');
+  const [retailPrice, setRetailPrice] = useState('');
+  const [supData, setSupData] = useState<SupplierData | null>(null);
+  const [addToCartOrders, setAddToCartOrders] = useState<CartItem[]>([]);
+  const [supplierItems, setSupplierItems] = useState<Supplier[]>([]);
+  const [orderTotal, setOrderTotal] = useState(0);
+  const transformedSupplier = supplierItems.map(sup => ({
+    label: sup.sup_name,
+    value: sup.id.toString(),
+  }));
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const navigation = useNavigation();
 
   const {openDrawer} = useDrawer();
@@ -41,9 +79,6 @@ export default function PurchaseOrder() {
     setShowStartDatePicker(false);
     setStartDate(currentDate);
   };
-  const [expire, setexpire] = React.useState<'applyexpiry' | 'number'>(
-    'applyexpiry',
-  );
   const [orderDate, setorderDate] = useState(new Date());
   const [showorderDatePicker, setShoworderDatePicker] = useState(false);
 
@@ -58,39 +93,223 @@ export default function PurchaseOrder() {
 
   const [issupplier, setissupplier] = useState(false);
   const [currentsupplier, setCurrentsupplier] = useState<string | null>('');
-  const supplierItem = [
-    {label: 'Naeem', value: 'Naeem'},
-    {label: 'Malik', value: 'Malik'},
-  ];
 
-  const Info = [
-    {
-      ItemName: 'abc',
-      QTY: '1',
-      PurchasePrice: '4',
-      RetailPrice: '9',
-      totalPrice: '200',
-      ExpiryDate: '33',
-      total: '555',
-    },
-    {
-      ItemName: 'abc',
-      QTY: '1',
-      PurchasePrice: '4',
-      RetailPrice: '9',
-      totalPrice: '200',
-      ExpiryDate: '33',
-      total: '11',
-    },
-  ];
+  // Handle Search
+  const handleSearch = async (text: string) => {
+    setSearchTerm(text);
+    if (text.length > 0) {
+      try {
+        const response = await axios.post(`${BASE_URL}/autocomplete`, {
+          term: text,
+        });
+        setSearchResults(response.data);
+        setShowResults(true);
+      } catch (error) {
+        console.error('Search failed:', error);
+        setShowResults(false);
+      }
+    } else {
+      setShowResults(false);
+    }
+  };
 
-  const total = Info.reduce((acc, item) => acc + parseFloat(item.total), 0);
+  // Fetch Supplier Dropdown Data
+  const fetchSupplierData = async () => {
+    try {
+      const response = await axios.get(`${BASE_URL}/fetchsuppliersdropdown`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setSupplierItems(response.data);
+    } catch (error) {
+      console.error('Failed to fetch suppliers:', error);
+      return [];
+    }
+  };
 
-  Info.forEach(item => {
-    const qty = parseFloat(item.QTY);
-    const purchasePrice = parseFloat(item.PurchasePrice);
-    item.total = (qty * purchasePrice).toString();
-  });
+  // Purchase Order Add To Cart
+  const purchaseOrderAddToCart = async () => {
+    if (!selectedProduct) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please select a product first',
+      });
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        `${BASE_URL}/purchaseorderaddtocart`,
+        {
+          search_name: selectedProduct.value,
+          prod_id: selectedProduct.prod_id,
+          purchase_qty: quantity,
+          cost_price: purchasePrice,
+          retail_price: retailPrice,
+          expiry_date: startDate.toISOString().split('T')[0],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const data = res.data;
+      if (res.status === 200 && data.status) {
+        Toast.show({
+          type: 'success',
+          text1: 'Product added to cart successfully!',
+        });
+        setSearchTerm('');
+        setQuantity('');
+        setPurchasePrice('');
+        setRetailPrice('');
+        setStartDate(new Date());
+        setExpiry([]);
+        setShowResults(false);
+        fetchAddToCartOrders();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Add To Cart Orders
+  const fetchAddToCartOrders = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/loadpurchaseordercart`, {
+        headers: {Authorization: `Bearer ${token}`},
+      });
+
+      if (res.data.cartsessiondata) {
+        // Convert object to array and add calculated total
+        const cartItems = Object.values(res.data.cartsessiondata).map(
+          (item: any) => ({
+            ...item,
+            total: (
+              parseFloat(item.purchase_qty) * parseFloat(item.cost_price)
+            ).toString(),
+          }),
+        );
+
+        setAddToCartOrders(cartItems);
+
+        // Use server's order_total if available
+        if (res.data.order_total) {
+          setOrderTotal(parseFloat(res.data.order_total));
+        }
+      } else {
+        setAddToCartOrders([]);
+        setOrderTotal(0);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Delete Add to cart
+  const removeAddToCart = async (id: number) => {
+    const res = await axios.get(
+      `${BASE_URL}/removefrompurchaseordercart?id=${id}&_token=${token}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      },
+    );
+
+    const data = res.data;
+
+    if (res.status === 200 && data.status === 200) {
+      Toast.show({
+        type: 'success',
+        text1: 'Deleted Successfully!',
+        visibilityTime: 1500,
+      });
+      fetchAddToCartOrders();
+    }
+  };
+
+  // Purchase Order Checkuot
+  const purchaseOrderCheckout = async () => {
+    if (!currentsupplier) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please select a supplier',
+      });
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        `${BASE_URL}/purchaseordercheckout`,
+        {
+          supp_id: currentsupplier,
+          date: orderDate.toISOString().split('T')[0],
+          purchase_total: orderTotal.toFixed(2), // Use server's total
+        },
+        {
+          headers: {Authorization: `Bearer ${token}`},
+        },
+      );
+
+      if (res.data.status) {
+        Toast.show({
+          type: 'success',
+          text1: 'Order placed successfully!',
+        });
+        setAddToCartOrders([]);
+        setOrderTotal(0);
+        setSearchTerm('');
+        setQuantity('');
+        setPurchasePrice('');
+        setRetailPrice('');
+        setCurrentsupplier('');
+        setSupData(null);
+        setOrderTotal(0);
+        refreshAddToCart();
+        await axios.get(`${BASE_URL}/emptypurchaseordercart`, {
+          headers: {Authorization: `Bearer ${token}`},
+        });
+        navigation.navigate('Purchase Order List' as never);
+      }
+    } catch (error) {
+      console.log(error);
+      Toast.show({
+        type: 'error',
+        text1: 'Checkout failed',
+        text2: 'Please try again',
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (currentsupplier) {
+      const fetchSupplierDetails = async () => {
+        try {
+          const response = await axios.post(`${BASE_URL}/fetchsuppdata`, {
+            id: currentsupplier,
+          });
+          setSupData(response.data.supplier);
+        } catch (error) {
+          console.error('Failed to fetch supplier details:', error);
+        }
+      };
+      fetchSupplierDetails();
+    }
+  }, [currentsupplier]);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      fetchAddToCartOrders();
+    }, []),
+  );
+
+  useEffect(() => {
+    fetchSupplierData();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -98,52 +317,80 @@ export default function PurchaseOrder() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
+        {/* Topbar */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: 5,
+            justifyContent: 'space-between',
+          }}>
+          <TouchableOpacity onPress={openDrawer}>
+            <Image
+              source={require('../../../assets/menu.png')}
+              style={{
+                width: 30,
+                height: 30,
+                tintColor: 'white',
+              }}
+            />
+          </TouchableOpacity>
+
+          <View style={styles.headerTextContainer}>
+            <Text
+              style={{
+                color: 'white',
+                fontSize: 22,
+                fontWeight: 'bold',
+              }}>
+              Purchase Order
+            </Text>
+          </View>
+        </View>
+
         <ScrollView
           style={{
             marginBottom: 10,
           }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 5,
-              justifyContent: 'space-between',
-            }}>
-            <TouchableOpacity onPress={openDrawer}>
-              <Image
-                source={require('../../../assets/menu.png')}
-                style={{
-                  width: 30,
-                  height: 30,
-                  tintColor: 'white',
-                }}
-              />
-            </TouchableOpacity>
-
-            <View style={styles.headerTextContainer}>
-              <Text
-                style={{
-                  color: 'white',
-                  fontSize: 22,
-                  fontWeight: 'bold',
-                }}>
-                Purchase Order
-              </Text>
-            </View>
-          </View>
-
           <View style={styles.section}>
             <Text style={styles.label}>Search Product By Name/Barcode</Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginBottom: -10,
-              }}>
+            <View style={styles.row}>
               <TextInput
-                style={[styles.input, {width: '92%'}]}
+                style={[styles.input, {width: '90%'}]}
                 placeholderTextColor={'white'}
                 placeholder="Search Product..."
+                value={searchTerm}
+                onChangeText={handleSearch}
               />
+
+              {searchTerm.length > 0 &&
+                showResults &&
+                searchResults.length > 0 && (
+                  <View style={styles.resultsContainer}>
+                    {searchResults.map((item: any) => (
+                      <TouchableOpacity
+                        key={item.prod_id}
+                        style={styles.resultItem}
+                        onPress={() => {
+                          setSearchTerm(item.value);
+                          setSelectedProduct(item);
+                          setQuantity('0');
+                          setPurchasePrice(item.prod_costprice);
+                          setRetailPrice(item.prod_price);
+                          setStartDate(
+                            new Date(item?.prod_expirydate ?? new Date()),
+                          );
+                          if (item?.prod_expirydate) {
+                            setExpiry(['on']);
+                          }
+                          setShowResults(false);
+                        }}>
+                        <Text style={styles.resultText}>{item.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+
               <TouchableOpacity>
                 <Image
                   style={{
@@ -158,276 +405,259 @@ export default function PurchaseOrder() {
                 />
               </TouchableOpacity>
             </View>
-            <View style={[styles.row, {alignItems: 'center'}]}>
+
+            <View style={styles.row}>
               <TextInput
                 style={styles.inputSmall}
                 placeholderTextColor={'white'}
                 placeholder="Quantity"
+                value={quantity}
+                onChangeText={setQuantity}
               />
 
               <TextInput
                 style={styles.inputSmall}
                 placeholderTextColor={'white'}
                 placeholder="Purchase Price"
+                value={purchasePrice}
+                onChangeText={setPurchasePrice}
               />
             </View>
 
-            <View style={[styles.row, {marginLeft: -3}]}>
-              <RadioButton
-                value="applyexpiry"
-                status={expire === 'applyexpiry' ? 'checked' : 'unchecked'}
-                color="white"
-                uncheckedColor="white"
-                onPress={() => setexpire('applyexpiry')}
-              />
-              <Text
-                style={{
-                  color: 'white',
-                  marginTop: 7,
-                  marginLeft: -10,
-                }}>
-                Apply Expiry
-              </Text>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  borderTopWidth: 1,
-                  borderBottomWidth: 1,
-                  width: 165,
-                  borderRightWidth: 1,
-                  borderLeftWidth: 1,
-                  borderRadius: 5,
-                  borderColor: 'white',
-                  marginLeft: 58,
-                  height: 30,
-                }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    borderRadius: 5,
-                    borderColor: 'white',
-                  }}>
-                  <Text style={{marginLeft: 10, color: 'white'}}>
-                    {`${startDate.toLocaleDateString()}`}
-                  </Text>
-
-                  <TouchableOpacity
-                    onPress={() => setShowStartDatePicker(true)}>
-                    <Image
-                      style={{
-                        height: 20,
-                        width: 20,
-                        resizeMode: 'stretch',
-                        alignItems: 'center',
-                        marginLeft: 60,
-                        tintColor: 'white',
-                        alignSelf: 'flex-end',
-                      }}
-                      source={require('../../../assets/calendar.png')}
-                    />
-                    {showStartDatePicker && (
-                      <DateTimePicker
-                        testID="startDatePicker"
-                        value={startDate}
-                        mode="date"
-                        is24Hour={true}
-                        display="default"
-                        onChange={onStartDateChange}
-                      />
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            <View style={[styles.row, {alignItems: 'center'}]}>
+            <View style={styles.row}>
               <TextInput
-                style={styles.inputSmall}
+                style={[styles.inputSmall, {width: '100%'}]}
                 placeholderTextColor={'white'}
                 placeholder="Retail Price"
+                value={retailPrice}
+                onChangeText={setRetailPrice}
               />
             </View>
-            <View style={styles.submitButton}>
+
+            <View style={styles.row}>
+              <View style={{width: '46%'}}>
+                <TouchableOpacity
+                  style={{flexDirection: 'row', alignItems: 'center'}}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    const newOptions = expiry.includes('on')
+                      ? expiry.filter(opt => opt !== 'on')
+                      : [...expiry, 'on'];
+                    setExpiry(newOptions);
+                  }}>
+                  <Checkbox.Android
+                    status={expiry.includes('on') ? 'checked' : 'unchecked'}
+                    color="#fff"
+                    uncheckedColor="#fff"
+                  />
+                  <Text style={{color: '#fff', marginLeft: 8}}>
+                    Apply Expiry
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setShowStartDatePicker(true)}
+                style={styles.dateInput}>
+                <Text style={{color: 'white', flex: 1}}>
+                  {`${startDate.toLocaleDateString()}`}
+                </Text>
+                <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
+                  <Image
+                    style={{
+                      height: 18,
+                      width: 18,
+                      resizeMode: 'stretch',
+                      tintColor: 'white',
+                      marginLeft: 8,
+                    }}
+                    source={require('../../../assets/calendar.png')}
+                  />
+                </TouchableOpacity>
+                {showStartDatePicker && (
+                  <DateTimePicker
+                    testID="startDatePicker"
+                    value={startDate}
+                    mode="date"
+                    is24Hour={true}
+                    display="default"
+                    onChange={onStartDateChange}
+                  />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={styles.submitButton}
+              onPress={purchaseOrderAddToCart}>
               <Text
                 style={{
                   color: '#144272',
                   textAlign: 'center',
-                  marginTop: 5,
+                  fontSize: 14,
+                  fontWeight: 'bold',
                 }}>
-                Submit
+                Add To Cart
               </Text>
-            </View>
-           
-            <View style={[styles.row]}>
-            <Text style={[styles.inputSmall, {color: 'white',}]}>
-              New Invoice
-            </Text>
-            
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  borderTopWidth: 1,
-                  borderBottomWidth: 1,
-                  width: 165,
-                  borderRightWidth: 1,
-                  borderLeftWidth: 1,
-                  borderRadius: 5,
-                  borderColor: 'white',
-             
-                  height: 35,
-                }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    borderRadius: 5,
-                    borderColor: 'white',
-                  }}>
-                  <Text style={{marginLeft: 10, color: 'white'}}>
-                    {`${orderDate.toLocaleDateString()}`}
-                  </Text>
+            </TouchableOpacity>
 
-                  <TouchableOpacity
-                    onPress={() => setShoworderDatePicker(true)}>
-                    <Image
-                      style={{
-                        height: 20,
-                        width: 20,
-                        resizeMode: 'stretch',
-                        alignItems: 'center',
-                        marginLeft: 60,
-                        tintColor: 'white',
-                        alignSelf: 'flex-end',
-                      }}
-                      source={require('../../../assets/calendar.png')}
-                    />
-                    {showorderDatePicker && (
-                      <DateTimePicker
-                        testID="startDatePicker"
-                        value={startDate}
-                        mode="date"
-                        is24Hour={true}
-                        display="default"
-                        onChange={onorderDateChange}
-                      />
-                    )}
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </View>
-
-            <DropDownPicker
-              items={supplierItem}
-              open={issupplier}
-              setOpen={setissupplier}
-              value={currentsupplier}
-              setValue={setCurrentsupplier}
-              placeholder="Select"
-              placeholderStyle={{color: 'white'}}
-              textStyle={{color: 'white'}}
-              arrowIconStyle={{tintColor: 'white'}}
-              style={[
-                styles.dropdown,
-                {
-                  borderColor: 'white',
-                  width: 340,
-                  alignSelf: 'center',
-                  marginTop: 10,
-                  marginRight: 10,
-                  marginLeft: 10,
-                },
-              ]}
-              dropDownContainerStyle={{
-                backgroundColor: 'white',
-                borderColor: 'white',
-                width: 340,
-                marginLeft: 10,
-              }}
-              labelStyle={{color: 'white'}}
-              listItemLabelStyle={{color: '#144272'}}
-            />
             <View style={[styles.row]}>
-              <Text style={[styles.inputSmall, {color: 'white'}]}>
-                Supplier Name
-              </Text>
-              <Text style={[styles.inputSmall, {color: 'white'}]}>
-                Company Name
-              </Text>
-            </View>
-          </View>
-          <View>
-            <View>
-              <FlatList
-                data={Info}
-                keyExtractor={(item, index) => index.toString()}
-                renderItem={({item}) => (
-                  <ScrollView
+              <Text style={styles.inputSmall}>New Invoice</Text>
+
+              <TouchableOpacity
+                onPress={() => setShoworderDatePicker(true)}
+                style={styles.dateInput}>
+                <Text style={{color: 'white', flex: 1}}>
+                  {`${orderDate.toLocaleDateString()}`}
+                </Text>
+                <TouchableOpacity onPress={() => setShoworderDatePicker(true)}>
+                  <Image
                     style={{
-                      padding: 5,
-                    }}>
-                    <View style={styles.table}>
-                      <View style={styles.tablehead}>
-                        <Text
-                          style={{
-                            color: '#144272',
-                            fontWeight: 'bold',
-                            marginLeft: 5,
-                            marginTop: 5,
-                          }}>
-                          {item.ItemName}
-                        </Text>
-
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginRight: 5,
-                          }}
-                          source={require('../../../assets/show.png')}
-                        />
-                      </View>
-
-                      <View style={styles.infoRow}>
-                        <View style={styles.rowt}>
-                          <Text style={styles.text}>Quantity:</Text>
-                          <Text style={styles.text}>{item.QTY}</Text>
-                        </View>
-                        <View style={styles.rowt}>
-                          <Text style={styles.text}>Purchase Price:</Text>
-                          <Text style={styles.text}>{item.PurchasePrice}</Text>
-                        </View>
-                        <View style={styles.rowt}>
-                          <Text style={styles.text}>Retail Price:</Text>
-                          <Text style={styles.text}>{item.RetailPrice}</Text>
-                        </View>
-                        <View style={styles.rowt}>
-                          <Text style={styles.text}>Total Price:</Text>
-                          <Text style={styles.text}>{item.totalPrice}</Text>
-                        </View>
-                        <View style={styles.rowt}>
-                          <Text style={[styles.text, {marginBottom: 5}]}>
-                            Expiry Date:
-                          </Text>
-                          <Text style={[styles.text, {marginBottom: 5}]}>
-                            {item.ExpiryDate}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  </ScrollView>
+                      height: 18,
+                      width: 18,
+                      resizeMode: 'stretch',
+                      tintColor: 'white',
+                      marginLeft: 8,
+                    }}
+                    source={require('../../../assets/calendar.png')}
+                  />
+                </TouchableOpacity>
+                {showorderDatePicker && (
+                  <DateTimePicker
+                    testID="orderDatePicker"
+                    value={orderDate}
+                    mode="date"
+                    is24Hour={true}
+                    display="default"
+                    onChange={onorderDateChange}
+                  />
                 )}
+              </TouchableOpacity>
+            </View>
+
+            <View style={{zIndex: 1000}}>
+              <DropDownPicker
+                items={transformedSupplier}
+                open={issupplier}
+                setOpen={setissupplier}
+                value={currentsupplier}
+                setValue={setCurrentsupplier}
+                placeholder="Select Supplier"
+                placeholderStyle={{color: 'white'}}
+                textStyle={{color: 'white'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                )}
+                style={styles.dropdown}
+                dropDownContainerStyle={{
+                  backgroundColor: 'white',
+                  borderColor: 'white',
+                  width: '100%',
+                  marginTop: 1,
+                  zIndex: 1000,
+                }}
+                labelStyle={{color: 'white'}}
+                listItemLabelStyle={{color: '#144272'}}
+                listMode="MODAL"
               />
             </View>
+
+            <View style={styles.row}>
+              <Text
+                style={[
+                  styles.inputSmall,
+                  {backgroundColor: 'gray', color: 'white'},
+                ]}>
+                {supData?.sup_name || 'Supplier Name'}
+              </Text>
+              <Text
+                style={[
+                  styles.inputSmall,
+                  {backgroundColor: 'gray', color: 'white'},
+                ]}>
+                {supData?.sup_company_name || 'Company Name'}
+              </Text>
+            </View>
           </View>
+
+          {/* FlatList */}
+          <FlatList
+            data={addToCartOrders}
+            keyExtractor={item => item.prod_id.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.product_name}
+                    </Text>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        removeAddToCart(item.prod_id);
+                      }}>
+                      <Icon
+                        name="delete"
+                        size={20}
+                        color="#B22222"
+                        style={{
+                          alignSelf: 'center',
+                          marginRight: 5,
+                        }}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.rowt}>
+                      <Text style={styles.text}>Quantity:</Text>
+                      <Text style={styles.text}>{item.purchase_qty}</Text>
+                    </View>
+                    <View style={styles.rowt}>
+                      <Text style={styles.text}>Purchase Price:</Text>
+                      <Text style={styles.text}>{item.cost_price}</Text>
+                    </View>
+                    <View style={styles.rowt}>
+                      <Text style={styles.text}>Retail Price:</Text>
+                      <Text style={styles.text}>{item.retail_price}</Text>
+                    </View>
+                    <View style={styles.rowt}>
+                      <Text style={styles.text}>Total Price:</Text>
+                      <Text style={styles.text}>
+                        {(
+                          parseFloat(item.purchase_qty) *
+                          parseFloat(item.cost_price)
+                        ).toFixed(2)}
+                      </Text>
+                    </View>
+                    <View style={styles.rowt}>
+                      <Text style={[styles.text, {marginBottom: 5}]}>
+                        Expiry Date:
+                      </Text>
+                      <Text style={[styles.text, {marginBottom: 5}]}>
+                        {item.expiry_date}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
+            scrollEnabled={false}
+          />
         </ScrollView>
+
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total:</Text>
-          <Text style={styles.totalText}>{total}</Text>
+          <Text style={styles.totalText}>{orderTotal.toFixed(2)}</Text>
         </View>
         <View
           style={{
@@ -436,7 +666,7 @@ export default function PurchaseOrder() {
             justifyContent: 'center',
             marginBottom: 7,
           }}>
-          <TouchableOpacity onPress={togglebtnproduct}>
+          <TouchableOpacity onPress={purchaseOrderCheckout}>
             <View
               style={{
                 width: 80,
@@ -476,75 +706,6 @@ export default function PurchaseOrder() {
             </View>
           </TouchableOpacity>
         </View>
-        {/*add product btn*/}
-        <Modal isVisible={btnproduct}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Product has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setbtnproduct(!btnproduct)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
       </ImageBackground>
     </SafeAreaView>
   );
@@ -569,12 +730,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     elevation: 15,
     marginBottom: 5,
-    padding: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   input: {
     borderWidth: 1,
@@ -585,11 +748,12 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   inputSmall: {
-    flex: 1,
     borderWidth: 1,
     borderColor: 'white',
+    color: '#fff',
     borderRadius: 6,
     padding: 8,
+    width: '46%',
   },
   addButton: {
     marginLeft: 8,
@@ -609,24 +773,27 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 16,
     color: 'white',
+    marginLeft: 10,
   },
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
-    marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
+    width: '100%',
+    marginBottom: 10,
   },
   submitButton: {
-    marginTop: 10,
     backgroundColor: 'white',
-    borderRadius: 15,
-    width: 330,
+    borderRadius: 12,
+    width: '100%',
     alignSelf: 'center',
-    height: 30,
+    height: 38,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 10,
   },
   table: {
     borderWidth: 1,
@@ -643,6 +810,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 5,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     backgroundColor: 'white',
   },
   text: {
@@ -669,5 +837,35 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  dateInput: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 5,
+    alignItems: 'center',
+    width: '46%',
+    borderColor: '#fff',
+    borderWidth: 1,
+    borderRadius: 6,
+    height: 38,
+  },
+  resultsContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 5,
+    zIndex: 100,
+    elevation: 10,
+    maxHeight: 'auto',
+  },
+  resultItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  resultText: {
+    color: '#144272',
   },
 });

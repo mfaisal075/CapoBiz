@@ -9,14 +9,25 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 import {heightPercentageToDP as hp} from 'react-native-responsive-screen';
 import {useDrawer} from '../../DrawerContext';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+
+interface PurchaseReturn {
+  prchr_return_invoice_no: string;
+  prchr_return_amount: string;
+  created_at: string;
+}
 
 export default function PurchaseReturnList() {
   const {openDrawer} = useDrawer();
+  const [purchaseReturnList, setPurchaseReturnList] = useState<
+    PurchaseReturn[]
+  >([]);
 
   const [startDate, setStartDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -38,13 +49,26 @@ export default function PurchaseReturnList() {
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
-  const Info = [
-    {
-      Invoice: '123',
-      Date: '29-April-2025',
-      ReturnAmount: '666',
-    },
-  ];
+
+  // Fetch Purchase Return List
+  const fetchOrders = async () => {
+    try {
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+      const res = await axios.post(`${BASE_URL}/getpurchasereturnlist`, {
+        from,
+        to,
+      });
+
+      setPurchaseReturnList(res.data.inv_data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -52,55 +76,38 @@ export default function PurchaseReturnList() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
+        {/* Topbar */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: 5,
+            justifyContent: 'space-between',
+          }}>
+          <TouchableOpacity onPress={openDrawer}>
+            <Image
+              source={require('../../../assets/menu.png')}
+              style={{width: 30, height: 30, tintColor: 'white'}}
+            />
+          </TouchableOpacity>
+          <View style={styles.headerTextContainer}>
+            <Text
+              style={{
+                color: 'white',
+                fontSize: 22,
+                fontWeight: 'bold',
+              }}>
+              Purchase Return List
+            </Text>
+          </View>
+        </View>
+
         <ScrollView
           style={{
             marginBottom: 10,
           }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 5,
-              justifyContent: 'space-between',
-            }}>
-            <TouchableOpacity onPress={openDrawer}>
-              <Image
-                source={require('../../../assets/menu.png')}
-                style={{width: 30, height: 30, tintColor: 'white'}}
-              />
-            </TouchableOpacity>
-            <View style={styles.headerTextContainer}>
-              <Text
-                style={{
-                  color: 'white',
-                  fontSize: 22,
-                  fontWeight: 'bold',
-                }}>
-                Purchase Return List
-              </Text>
-            </View>
-          </View>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              marginTop: hp('2%'),
-              marginBottom: hp('2%'),
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                borderTopWidth: 1,
-                borderBottomWidth: 1,
-                width: 140,
-                borderRightWidth: 1,
-                borderLeftWidth: 1,
-                borderRadius: 5,
-                borderColor: 'white',
-                marginLeft: hp('2%'),
-                height: 30,
-              }}>
+          <View style={styles.dateContainer}>
+            <View style={styles.dateInput}>
               <Text style={styles.label}>From</Text>
 
               <View
@@ -139,20 +146,7 @@ export default function PurchaseReturnList() {
               </View>
             </View>
 
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                borderTopWidth: 1,
-                borderBottomWidth: 1,
-                width: 140,
-                borderRightWidth: 1,
-                borderLeftWidth: 1,
-                borderRadius: 5,
-                borderColor: 'white',
-                marginLeft: hp('1%'),
-                marginRight: hp('1%'),
-              }}>
+            <View style={styles.dateInput}>
               <Text style={styles.label}>To</Text>
 
               <View
@@ -197,6 +191,7 @@ export default function PurchaseReturnList() {
               </View>
             </View>
           </View>
+
           <View style={styles.headerButtons}>
             <TouchableOpacity style={styles.exportBtn}>
               <Text style={styles.exportText}>Copy</Text>
@@ -215,8 +210,9 @@ export default function PurchaseReturnList() {
           <ScrollView>
             <View>
               <FlatList
-                data={Info}
+                data={purchaseReturnList}
                 keyExtractor={(item, index) => index.toString()}
+                scrollEnabled={false}
                 renderItem={({item}) => (
                   <ScrollView
                     style={{
@@ -231,7 +227,7 @@ export default function PurchaseReturnList() {
                             marginLeft: 5,
                             marginTop: 5,
                           }}>
-                          {item.Invoice}
+                          {item.prchr_return_invoice_no}
                         </Text>
 
                         <View
@@ -262,7 +258,15 @@ export default function PurchaseReturnList() {
                             justifyContent: 'space-between',
                           }}>
                           <Text style={styles.text}>Date:</Text>
-                          <Text style={styles.text}>{item.Date}</Text>
+                          <Text style={styles.text}>
+                            {new Date(item.created_at)
+                              .toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })
+                              .replace(/ /g, '-')}
+                          </Text>
                         </View>
                         <View
                           style={{
@@ -273,13 +277,16 @@ export default function PurchaseReturnList() {
                             Return Amount:
                           </Text>
                           <Text style={[styles.value, {marginBottom: 5}]}>
-                            {item.ReturnAmount}
+                            {item.prchr_return_amount}
                           </Text>
                         </View>
                       </View>
                     </View>
                   </ScrollView>
                 )}
+                ListEmptyComponent={
+                  <View style={{marginTop: 20, }}></View>
+                }
               />
             </View>
           </ScrollView>
@@ -377,5 +384,25 @@ const styles = StyleSheet.create({
   exportText: {
     color: 'white',
     fontWeight: 'bold',
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderBottomWidth: 1,
+    width: '46%',
+    borderRightWidth: 1,
+    borderLeftWidth: 1,
+    borderRadius: 5,
+    borderColor: 'white',
+    height: 38,
   },
 });
