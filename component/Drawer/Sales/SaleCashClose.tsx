@@ -7,8 +7,6 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
-  TextInput,
-  FlatList,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import React, {useState} from 'react';

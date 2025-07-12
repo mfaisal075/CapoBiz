@@ -8,28 +8,63 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
+  Modal,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import Modal from 'react-native-modal';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import {useUser} from '../../CTX/UserContext';
+
+interface AllTrades {
+  id: number;
+  trad_invoice_no: string;
+  trad_date: string;
+  sup_name: string;
+  cust_name: string;
+  trad_ref_no: string;
+  trad_total_cost: string;
+  trad_total_sale: string;
+  trad_payable: string;
+  trad_profit: string;
+}
+
+interface TradeDetails {
+  supplier: {
+    sup_name: string;
+  };
+  customer: {
+    cust_name: string;
+  };
+  trade: {
+    trad_invoice_no: string;
+    trad_date: string;
+    trad_total_cost: string;
+    trad_total_sale: string;
+    trad_payable: string;
+    trad_profit: string;
+  };
+}
+
+interface ModalTradeDetails {
+  id: number;
+  prod_name: string;
+  tradd_cost_price: string;
+  tradd_sale_price: string;
+  tradd_qty: string;
+  tradd_sub_total: string;
+}
 
 export default function TradingList() {
-  
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const Info = [
-    {
-      Invoice: 'TD-1',
-      Date: '11 - 3 - 25',
-      Supplier: 'ali',
-      CustomerName: 'Naeem',
-      Reference: 111,
-      TotalCost: 55,
-      TotalSale: 99,
-      Profit: 399.0,
-      TradeTotal: 599.0,
-    },
-  ];
-
+  const [allTrades, setAllTrades] = useState<AllTrades[]>([]);
+  const [singleTradeDetails, setSingleTradeDetails] =
+    useState<TradeDetails | null>(null);
+  const [modalTradeDetails, setModalTradeDetails] = useState<
+    ModalTradeDetails[]
+  >([]);
+  const [modalVisible, setModalVisible] = useState('');
   {
     /*view modal*/
   }
@@ -56,6 +91,33 @@ export default function TradingList() {
   const toggleview = () => {
     setview(!view);
   };
+
+  // Fetch All Trade
+  const fetchAllTrades = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchalltrade`);
+      setAllTrades(res.data.detail);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Single Trade
+  const fetchSingleTrade = async (id: number) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/showtrade?id=${id}&_token=${token}`,
+      );
+      setSingleTradeDetails(res.data);
+      setModalTradeDetails(res.data.traddetail);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllTrades();
+  }, []);
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -107,250 +169,286 @@ export default function TradingList() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={Info}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.Invoice}
-                      </Text>
+        <View>
+          <FlatList
+            data={allTrades}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <ScrollView
+                style={{
+                  padding: 5,
+                }}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.trad_invoice_no}
+                    </Text>
 
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                      }}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setModalVisible('View');
+                          fetchSingleTrade(item.id);
                         }}>
-                        <TouchableOpacity onPress={toggleview}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 9,
-                            }}
-                            source={require('../../../assets/show.png')}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Supplier Name:</Text>
-                        <Text style={styles.text}>{item.Supplier}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Customer Name:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.CustomerName}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Date:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.Date}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Reference:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.Reference}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Total Cost:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.TotalCost}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Total Sale:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.TotalSale}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Profit:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.Profit}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Trade Total:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.TradeTotal}
-                        </Text>
-                      </View>
+                        <Image
+                          style={{
+                            tintColor: '#144272',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginRight: 5,
+                            marginTop: 9,
+                          }}
+                          source={require('../../../assets/show.png')}
+                        />
+                      </TouchableOpacity>
                     </View>
                   </View>
-                </ScrollView>
-              )}
-            />
-          </View>
-        </ScrollView>
+
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Supplier Name:</Text>
+                      <Text style={styles.text}>{item.sup_name}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        Customer Name:
+                      </Text>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        {item.cust_name}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        Date:
+                      </Text>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        {new Date(item.trad_date).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        Reference:
+                      </Text>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        {item.trad_ref_no}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        Total Cost:
+                      </Text>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        {item.trad_total_cost}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        Total Sale:
+                      </Text>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        {item.trad_total_sale}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        Profit:
+                      </Text>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        {item.trad_profit}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        Trade Total:
+                      </Text>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        {item.trad_payable}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+            )}
+          />
+        </View>
+
         {/*view modal*/}
-        <Modal isVisible={view}>
+        <Modal
+          visible={modalVisible === 'View'}
+          transparent
+          animationType="slide">
           <View
             style={{
               flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 500,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
+              backgroundColor: 'rgba(0,0,0,0.3)',
+              justifyContent: 'center',
+              alignItems: 'center',
             }}>
             <View
               style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
+                backgroundColor: 'white',
+                borderRadius: 10,
+                padding: 16,
+                width: '95%',
+                maxHeight: '90%',
               }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Trading Detail
-              </Text>
-              <TouchableOpacity onPress={() => setview(!view)}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
-                  }}
-                  source={require('../../../assets/cross.png')}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View>
-              <View>
-                <FlatList
-                  data={ViewModal}
-                  keyExtractor={(item, index) => index.toString()}
-                  renderItem={({item}) => (
-                    <ScrollView
-                      style={{
-                        padding: 5,
-                      }}>
-                      <View style={styles.table}>
-                        <View style={[styles.cardContainer]}>
-                          <View style={styles.infoGrid}>
-                            <Text style={styles.labl}>{item.Invoice}</Text>
-                            <Text style={styles.labl}>Supplier Name:</Text>
-                            <Text style={styles.valu}>{item.Supplier}</Text>
-
-                            <Text style={styles.labl}>Customer Name:</Text>
-                            <Text style={styles.valu}>{item.CustomerName}</Text>
-
-                            <Text style={styles.labl}>Date:</Text>
-                            <Text style={styles.valu}>{item.Date}</Text>
-
-                            <Text style={styles.labl}>Product:</Text>
-                            <Text style={styles.valu}>{item.Product}</Text>
-
-                            <Text style={styles.labl}>Date:</Text>
-                            <Text style={styles.valu}>{item.Date}</Text>
-
-                            <Text style={styles.labl}>Cost Price:</Text>
-                            <Text style={styles.valu}>{item.CostPrice}</Text>
-
-                            <Text style={styles.labl}>Sale Price:</Text>
-                            <Text style={styles.valu}>{item.SalePrice}</Text>
-
-                            <Text style={styles.labl}>Quantity:</Text>
-                            <Text style={styles.valu}>{item.QTY}</Text>
-
-                            <Text style={styles.labl}>SubTotal:</Text>
-                            <Text style={styles.valu}>{item.SubTotal}</Text>
-
-                            <Text style={styles.labl}>Total Cost:</Text>
-                            <Text style={styles.valu}>{item.TotalCost}</Text>
-
-                            <Text style={styles.labl}>Total Sale:</Text>
-                            <Text style={styles.valu}>{item.TotalSale}</Text>
-
-                            <Text style={styles.labl}>Profit:</Text>
-                            <Text style={styles.valu}>{item.Profit}</Text>
-
-                            <Text style={styles.labl}>Order Total:</Text>
-                            <Text style={styles.valu}>{item.OrderTotal}</Text>
-                          </View>
-                        </View>
-                      </View>
-                    </ScrollView>
-                  )}
-                />
+              <View
+                style={{flexDirection: 'row', justifyContent: 'space-between'}}>
+                <Text
+                  style={{fontSize: 18, fontWeight: 'bold', color: '#144272'}}>
+                  Trading Detail
+                </Text>
+                <TouchableOpacity onPress={() => setModalVisible('')}>
+                  <Image
+                    source={require('../../../assets/cross.png')}
+                    style={{width: 20, height: 20}}
+                  />
+                </TouchableOpacity>
               </View>
+
+              {singleTradeDetails && (
+                <View style={{marginVertical: 10}}>
+                  <Text style={{fontWeight: 'bold', color: '#144272'}}>
+                    TD-{singleTradeDetails.trade.trad_invoice_no}
+                  </Text>
+                  <Text>
+                    Supplier:{' '}
+                    <Text style={{color: '#144272'}}>
+                      {singleTradeDetails.supplier.sup_name}
+                    </Text>
+                  </Text>
+                  <Text>
+                    Customer:{' '}
+                    <Text style={{color: '#144272'}}>
+                      {singleTradeDetails.customer.cust_name}
+                    </Text>
+                  </Text>
+                  <Text>
+                    Date:{' '}
+                    <Text style={{color: '#144272'}}>
+                      {new Date(
+                        singleTradeDetails.trade.trad_date,
+                      ).toLocaleDateString('en-GB')}
+                    </Text>
+                  </Text>
+                </View>
+              )}
+
+              {/* Table Header */}
+              <View
+                style={{
+                  flexDirection: 'row',
+                  borderBottomWidth: 1,
+                  borderColor: '#ccc',
+                  paddingBottom: 5,
+                }}>
+                <Text style={{flex: 0.8, fontWeight: 'bold'}}>Sr#</Text>
+                <Text style={{flex: 2, fontWeight: 'bold'}}>Product</Text>
+                <Text style={{flex: 1.2, fontWeight: 'bold'}}>Cost Price</Text>
+                <Text style={{flex: 1.2, fontWeight: 'bold'}}>Sale Price</Text>
+                <Text style={{flex: 1, fontWeight: 'bold'}}>QTY</Text>
+                <Text style={{flex: 1.4, fontWeight: 'bold'}}>Subtotal</Text>
+              </View>
+
+              {/* FlatList */}
+              <FlatList
+                data={modalTradeDetails}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={({item, index}) => (
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      paddingVertical: 5,
+                      borderBottomWidth: 0.5,
+                      borderColor: '#eee',
+                    }}>
+                    <Text style={{flex: 0.8}}>{index + 1}</Text>
+                    <Text style={{flex: 2}}>{item.prod_name}</Text>
+                    <Text style={{flex: 1.2}}>{item.tradd_cost_price}</Text>
+                    <Text style={{flex: 1.2}}>{item.tradd_sale_price}</Text>
+                    <Text style={{flex: 1}}>{item.tradd_qty}</Text>
+                    <Text style={{flex: 1.4}}>{item.tradd_sub_total}</Text>
+                  </View>
+                )}
+              />
+
+              {/* Totals */}
+              {singleTradeDetails && (
+                <View style={{marginTop: 15}}>
+                  <Text>
+                    Total Cost: {singleTradeDetails.trade.trad_total_cost}
+                  </Text>
+                  <Text>
+                    Total Sale: {singleTradeDetails.trade.trad_total_sale}
+                  </Text>
+                  <Text>Profit: {singleTradeDetails.trade.trad_profit}</Text>
+                  <Text>
+                    Order Total: {singleTradeDetails.trade.trad_payable}
+                  </Text>
+                </View>
+              )}
+
+              <TouchableOpacity
+                onPress={() => setModalVisible('')}
+                style={{
+                  backgroundColor: '#6C63FF',
+                  padding: 10,
+                  borderRadius: 5,
+                  marginTop: 15,
+                  alignSelf: 'flex-end',
+                }}>
+                <Text style={{color: 'white', fontWeight: 'bold'}}>Close</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>

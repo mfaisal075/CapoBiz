@@ -8,24 +8,61 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {ImageBackground} from 'react-native';
 import {Image} from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+
+interface Labour {
+  id: string;
+  labr_name: string;
+  labr_cnic: string;
+  labr_address: string;
+}
+
+interface SingleAccountDetails {
+  id: number;
+  labrac_invoice_no: string;
+  labrac_total_bill_amount: string;
+  labrac_paid_amount: string;
+  labrac_balance: string;
+  labrac_payment_type: string;
+  labrac_payment_method: string;
+  labrac_date: string;
+}
+
+interface AllLabour {
+  labr_name: string;
+  labrac_total_bill_amount: string;
+  labrac_paid_amount: string;
+  labrac_balance: string;
+}
 
 export default function LabourAccount() {
   const {openDrawer} = useDrawer();
   const [selectedTab, setSelectedTab] = useState('Single');
   const [Open, setOpen] = useState(false);
-  const [customerVal, setCustomerVal] = useState<string | ''>('');
-  const [fromDate, setFromDate] = useState<Date | null>(new Date());
-  const [toDate, setToDate] = useState<Date | null>(new Date());
+  const [labourVal, setLabourVal] = useState<string | ''>('');
+  const [fromDate, setFromDate] = useState<Date | null>(null);
+  const [toDate, setToDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState<'from' | 'to' | null>(
     null,
   );
+  const [labourDropdown, setLabourDropdown] = useState<Labour[]>([]);
+  const transformedLab = labourDropdown.map(lab => ({
+    label: lab.labr_name,
+    value: lab.id.toString(),
+  }));
+  const [labourData, setLabourData] = useState<Labour | null>(null);
+  const [singleAccDetails, setSingleAccDetails] = useState<
+    SingleAccountDetails[]
+  >([]);
+  const [allLabourData, setAllLabourData] = useState<AllLabour[]>([]);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
@@ -42,78 +79,6 @@ export default function LabourAccount() {
     }
     setShowDatePicker(null);
   };
-
-  const item = [
-    {
-      label: 'Iqbal',
-      value: 'Iqbal',
-    },
-    {label: 'Bilal', value: 'Bilal'},
-    {label: 'Saif', value: 'Saif'},
-  ];
-
-  const Info = [
-    {
-      'Sr#': 1,
-      'Invoice#': 'LB-1',
-      Date: '09-May-2025',
-      Payable: 0.0,
-      Paid: 1230.0,
-      Balance: -1230.0,
-      'Pre Balance': 0.0,
-      Total: -1230.0,
-      Type: 'Payment Withdraw',
-      Method: 'By Cash',
-    },
-    {
-      'Sr#': 2,
-      'Invoice#': 'LB-2',
-      Date: '10-May-2025',
-      Payable: 0.0,
-      Paid: 1500.0,
-      Balance: -1500.0,
-      'Pre Balance': -1230.0,
-      Total: -2730.0,
-      Type: 'Payment Withdraw',
-      Method: 'By Cash',
-    },
-    {
-      'Sr#': 3,
-      'Invoice#': 'LB-3',
-      Date: '11-May-2025',
-      Payable: 0.0,
-      Paid: 1000.0,
-      Balance: -1000.0,
-      'Pre Balance': -2730.0,
-      Total: -3730.0,
-      Type: 'Payment Withdraw',
-      Method: 'By Cash',
-    },
-    {
-      'Sr#': 4,
-      'Invoice#': 'LB-4',
-      Date: '12-May-2025',
-      Payable: 0.0,
-      Paid: 800.0,
-      Balance: -800.0,
-      'Pre Balance': -3730.0,
-      Total: -4530.0,
-      Type: 'Payment Withdraw',
-      Method: 'By Cash',
-    },
-    {
-      'Sr#': 5,
-      'Invoice#': 'LB-5',
-      Date: '13-May-2025',
-      Payable: 0.0,
-      Paid: 2000.0,
-      Balance: -2000.0,
-      'Pre Balance': -4530.0,
-      Total: -6530.0,
-      Type: 'Payment Withdraw',
-      Method: 'By Cash',
-    },
-  ];
 
   const allLabourInfo = [
     {
@@ -152,6 +117,108 @@ export default function LabourAccount() {
       Balance: -2000.0,
     },
   ];
+
+  // Fetch Labour dropdown
+  const fetchCustDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchlaboursdropdown`);
+      setLabourDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Get Single Labour Data
+  const getLabourData = async () => {
+    if (labourVal) {
+      try {
+        const res = await axios.post(`${BASE_URL}/fetchlabourdata`, {
+          id: labourVal,
+        });
+        setLabourData({
+          id: res.data.labour.id,
+          labr_address: res.data.labour.labr_address,
+          labr_cnic: res.data.labour.labr_cnic,
+          labr_name: res.data.labour.labr_name,
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  // Fetch Single Labour Details
+  const fetchTransportDetails = async () => {
+    try {
+      const from = fromDate?.toISOString().split('T')[0];
+      const to = toDate?.toISOString().split('T')[0];
+      const res = await axios.post(`${BASE_URL}/singlelabouraccount`, {
+        labour_id: labourVal,
+        from,
+        to,
+      });
+      setSingleAccDetails(res.data.account);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate Single Labour Totals
+  const calculateSingleTransTotals = () => {
+    let totalReceivables = 0;
+    let totalReceived = 0;
+
+    singleAccDetails.forEach(trans => {
+      const receivables = parseFloat(trans.labrac_total_bill_amount) || 0;
+      const received = parseFloat(trans.labrac_paid_amount) || 0;
+
+      totalReceivables += receivables;
+      totalReceived += received;
+    });
+
+    return {
+      totalReceivables: totalReceivables.toFixed(2),
+      totalReceived: totalReceived.toFixed(2),
+      netReceivables: (totalReceivables - totalReceived).toFixed(2),
+    };
+  };
+
+  //Fetch All Labour Data
+  const fetchAllLabourData = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/alllabouraccount`);
+      setAllLabourData(res.data.supp);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate All Labour Totals
+  const calculateAllLabourTotals = () => {
+    let totalReceivables = 0;
+    let totalReceived = 0;
+
+    allLabourData.forEach(lab => {
+      const receivables = parseFloat(lab.labrac_total_bill_amount) || 0;
+      const received = parseFloat(lab.labrac_paid_amount) || 0;
+
+      totalReceivables += receivables;
+      totalReceived += received;
+    });
+
+    return {
+      totalReceivables: totalReceivables.toFixed(2),
+      totalReceived: totalReceived.toFixed(2),
+      netReceivables: (totalReceivables - totalReceived).toFixed(2),
+    };
+  };
+
+  useEffect(() => {
+    fetchCustDropdown();
+    getLabourData();
+    fetchTransportDetails();
+    fetchAllLabourData();
+  }, [labourVal]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -243,19 +310,20 @@ export default function LabourAccount() {
                   Labour:
                 </Text>
                 <DropDownPicker
-                  items={item}
+                  items={transformedLab}
                   open={Open}
-                  value={customerVal}
-                  setValue={setCustomerVal}
+                  value={labourVal}
+                  setValue={setLabourVal}
                   setOpen={setOpen}
-                  placeholder="Select Customer"
+                  placeholder="Select Labour"
                   placeholderStyle={{color: 'white'}}
                   textStyle={{color: 'white'}}
                   style={styles.dropdown}
                   dropDownContainerStyle={{
                     backgroundColor: 'white',
                     borderColor: '#144272',
-                    width: 287,
+                    width: '90%',
+                    marginTop: 8,
                   }}
                   labelStyle={{color: 'white'}}
                   listItemLabelStyle={{color: '#144272'}}
@@ -269,6 +337,7 @@ export default function LabourAccount() {
                       <Icon name="chevron-down" size={15} color="white" />
                     </Text>
                   )}
+                  listMode="SCROLLVIEW"
                 />
               </View>
 
@@ -355,7 +424,11 @@ export default function LabourAccount() {
                   }}>
                   Labour Name:
                 </Text>
-                <TextInput style={styles.productinput} />
+                <TextInput
+                  style={[styles.productinput, {backgroundColor: 'gray'}]}
+                  value={labourData?.labr_name}
+                  editable={false}
+                />
               </View>
 
               <View
@@ -374,7 +447,11 @@ export default function LabourAccount() {
                   }}>
                   CNIC:
                 </Text>
-                <TextInput style={styles.productinput} />
+                <TextInput
+                  style={[styles.productinput, {backgroundColor: 'gray'}]}
+                  value={labourData?.labr_cnic}
+                  editable={false}
+                />
               </View>
 
               <View
@@ -393,58 +470,95 @@ export default function LabourAccount() {
                   }}>
                   Address:
                 </Text>
-                <TextInput style={styles.productinput} />
+                <TextInput
+                  style={[styles.productinput, {backgroundColor: 'gray'}]}
+                  value={labourData?.labr_address}
+                  editable={false}
+                />
               </View>
 
               {/* Invoices Cards */}
               <View style={{paddingBottom: 30}}>
                 <View style={{marginTop: 20}}>
-                  {Info.map((item, index) => (
-                    <View key={item['Sr#']} style={{padding: 5}}>
-                      <View style={styles.table}>
-                        <View style={styles.tablehead}>
-                          <Text
-                            style={{
-                              color: '#144272',
-                              fontWeight: 'bold',
-                              marginLeft: 5,
-                              marginTop: 5,
-                            }}>
-                            {item['Invoice#']}
-                          </Text>
-                        </View>
-
-                        <View style={styles.infoRow}>
-                          {[
-                            {label: 'Date:', value: item.Date},
-                            {label: 'Payable:', value: item.Payable},
-                            {label: 'Paid:', value: item.Paid},
-                            {label: 'Balance:', value: item.Balance},
-                            {label: 'Pre Balance:', value: item['Pre Balance']},
-                            {label: 'Total:', value: item.Total},
-                            {label: 'Type:', value: item.Type},
-                            {label: 'Method:', value: item.Method},
-                          ].map((field, idx) => (
-                            <View
-                              key={`${item['Sr#']}-${idx}`}
+                  {singleAccDetails.length === 0 ? (
+                    <View style={{alignItems: 'center', marginTop: 20}}>
+                      <Text
+                        style={{
+                          color: 'white',
+                          fontSize: 16,
+                          fontWeight: 'bold',
+                        }}>
+                        No record found.
+                      </Text>
+                    </View>
+                  ) : (
+                    singleAccDetails.map((item, index) => (
+                      <View key={item.id} style={{padding: 5}}>
+                        <View style={styles.table}>
+                          <View style={styles.tablehead}>
+                            <Text
                               style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
+                                color: '#144272',
+                                fontWeight: 'bold',
+                                marginLeft: 5,
+                                marginTop: 5,
                               }}>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {field.label}
-                              </Text>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {typeof field.value === 'number'
-                                  ? field.value.toFixed(2)
-                                  : field.value}
-                              </Text>
-                            </View>
-                          ))}
+                              {item.labrac_invoice_no}
+                            </Text>
+                          </View>
+
+                          <View style={styles.infoRow}>
+                            {[
+                              {
+                                label: 'Date:',
+                                value: new Date(item.labrac_date)
+                                  .toLocaleDateString('en-GB', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })
+                                  .replace(/\//g, '-'),
+                              },
+                              {
+                                label: 'Payable:',
+                                value: item.labrac_total_bill_amount,
+                              },
+                              {label: 'Paid:', value: item.labrac_paid_amount},
+                              {label: 'Balance:', value: item.labrac_balance},
+                              {label: 'Type:', value: item.labrac_payment_type},
+                              {
+                                label: 'Method:',
+                                value: item.labrac_payment_method,
+                              },
+                            ].map(
+                              (
+                                field: {label: string; value: number | string},
+                                idx,
+                              ) => (
+                                <View
+                                  key={`${index}-${idx}`}
+                                  style={{
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                  }}>
+                                  <Text
+                                    style={[styles.value, {marginBottom: 5}]}>
+                                    {field.label}
+                                  </Text>
+                                  <Text
+                                    style={[styles.value, {marginBottom: 5}]}>
+                                    {typeof field.value === 'number'
+                                      ? field.value.toFixed(2)
+                                      : field.value}
+                                  </Text>
+                                </View>
+                              ),
+                            )}
+                          </View>
                         </View>
                       </View>
-                    </View>
-                  ))}
+                    ))
+                  )}
                 </View>
               </View>
 
@@ -455,46 +569,57 @@ export default function LabourAccount() {
                   paddingVertical: 20,
                   paddingHorizontal: 10,
                 }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Total Payables:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    47203.00
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Total Paid:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    47203.00
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Net Payables:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>0.00</Text>
-                </View>
+                {(() => {
+                  const {netReceivables, totalReceivables, totalReceived} =
+                    calculateSingleTransTotals();
+
+                  return (
+                    <>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Total Payables:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {totalReceivables}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Total Paid:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {totalReceived}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Net Payables:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {netReceivables}
+                        </Text>
+                      </View>
+                    </>
+                  );
+                })()}
 
                 <View style={styles.btnContainer}>
                   <TouchableOpacity style={styles.btnItem}>
@@ -507,50 +632,73 @@ export default function LabourAccount() {
             <>
               <View style={{paddingBottom: 30}}>
                 <View style={{marginTop: 20}}>
-                  {allLabourInfo.map((item, index) => (
-                    <View key={item['Sr#']} style={{padding: 5}}>
-                      <View style={styles.table}>
-                        <View style={styles.tablehead}>
-                          <Text
-                            style={{
-                              color: '#144272',
-                              fontWeight: 'bold',
-                              marginLeft: 5,
-                              marginTop: 5,
-                            }}>
-                            {item['Labour name']}
-                          </Text>
-                        </View>
-
-                        <View style={styles.infoRow}>
-                          {[
-                            {
-                              label: 'Bill Amount:',
-                              value: item['Total Bill Amount'],
-                            },
-                            {label: 'Paid amount:', value: item['Paid amount']},
-                            {label: 'Balance:', value: item.Balance},
-                          ].map((field, idx) => (
-                            <View
-                              key={`${item['Sr#']}-${idx}`}
+                  {allLabourData.length === 0 ? (
+                    <View style={{alignItems: 'center', marginTop: 20}}>
+                      <Text
+                        style={{
+                          color: 'white',
+                          fontSize: 16,
+                          fontWeight: 'bold',
+                        }}>
+                        No record found.
+                      </Text>
+                    </View>
+                  ) : (
+                    allLabourData.map((item, index) => (
+                      <View key={index} style={{padding: 5}}>
+                        <View style={styles.table}>
+                          <View style={styles.tablehead}>
+                            <Text
                               style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
+                                color: '#144272',
+                                fontWeight: 'bold',
+                                marginLeft: 5,
+                                marginTop: 5,
                               }}>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {field.label}
-                              </Text>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {typeof field.value === 'number'
-                                  ? field.value.toFixed(2)
-                                  : field.value}
-                              </Text>
-                            </View>
-                          ))}
+                              {item.labr_name}
+                            </Text>
+                          </View>
+
+                          <View style={styles.infoRow}>
+                            {[
+                              {
+                                label: 'Bill Amount:',
+                                value: item.labrac_total_bill_amount,
+                              },
+                              {
+                                label: 'Paid amount:',
+                                value: item.labrac_paid_amount,
+                              },
+                              {label: 'Balance:', value: item.labrac_balance},
+                            ].map(
+                              (
+                                field: {label: string; value: number | string},
+                                idx,
+                              ) => (
+                                <View
+                                  key={`${index}-${idx}`}
+                                  style={{
+                                    flexDirection: 'row',
+                                    justifyContent: 'space-between',
+                                  }}>
+                                  <Text
+                                    style={[styles.value, {marginBottom: 5}]}>
+                                    {field.label}
+                                  </Text>
+                                  <Text
+                                    style={[styles.value, {marginBottom: 5}]}>
+                                    {typeof field.value === 'number'
+                                      ? field.value.toFixed(2)
+                                      : field.value}
+                                  </Text>
+                                </View>
+                              ),
+                            )}
+                          </View>
                         </View>
                       </View>
-                    </View>
-                  ))}
+                    ))
+                  )}
                 </View>
               </View>
 
@@ -561,48 +709,57 @@ export default function LabourAccount() {
                   paddingVertical: 20,
                   paddingHorizontal: 10,
                 }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Total Payables:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    333251.00
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Total Paid:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    65173.00
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Net Payables:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    268078.00
-                  </Text>
-                </View>
+                {(() => {
+                  const {netReceivables, totalReceivables, totalReceived} =
+                    calculateAllLabourTotals();
+
+                  return (
+                    <>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Total Payables:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {totalReceivables}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Total Paid:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {totalReceived}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Net Payables:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {netReceivables}
+                        </Text>
+                      </View>
+                    </>
+                  );
+                })()}
               </View>
             </>
           )}
@@ -660,7 +817,7 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
@@ -674,7 +831,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 8,
     marginTop: 5,
-    height: 40,
+    height: 38,
+    color: '#fff',
   },
   dateInput: {
     borderWidth: 1,

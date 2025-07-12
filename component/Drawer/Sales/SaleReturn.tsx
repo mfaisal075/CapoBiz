@@ -13,14 +13,43 @@ import {
 import React, {useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import Modal from 'react-native-modal';
-import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import Toast from 'react-native-toast-message';
+import {useUser} from '../../CTX/UserContext';
+
+interface CartDetails {
+  name: string;
+  fatherName: string;
+  address: string;
+}
+
+const initialCartDetails: CartDetails = {
+  address: '',
+  fatherName: '',
+  name: '',
+};
 
 export default function SaleReturn() {
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [cartDetails, setCartDetails] =
+    useState<CartDetails>(initialCartDetails);
+  const [searchTermWithout, setSearchTermWithout] = useState('');
+  const [searchResultsWithout, setSearchResultsWithout] = useState<any[]>([]);
+  const [showResultsWithout, setShowResultsWithout] = useState(false);
+  const [selectedProductWithout, setSelectedProductWithout] =
+    useState<any>(null);
   const [selectedOption, setSelectedOption] = useState<'with' | 'without'>(
     'with',
   );
   const [close, setclose] = useState(false);
+  const [qty, setQty] = useState('');
+  const [subQty, setSubQty] = useState('');
 
   const toggleclosebtn = () => {
     setclose(!close);
@@ -125,71 +154,247 @@ export default function SaleReturn() {
     const Price = parseFloat(item.Price);
     item.totals = (qty * Price).toString();
   });
+
+  // Handle Search With
+  const handleSearch = async (text: string) => {
+    setSearchTerm(text);
+    if (text.length > 0) {
+      try {
+        const response = await axios.post(`${BASE_URL}/srinvautocomplete`, {
+          term: text,
+        });
+        setSearchResults(response.data);
+        setShowResults(true);
+      } catch (error) {
+        console.error('Search failed:', error);
+        setShowResults(false);
+      }
+    } else {
+      setShowResults(false);
+    }
+  };
+
+  // Add Invoice to Cart
+  const addInvoice = async (product: any) => {
+    if (!product) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please select a product first',
+      });
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        `${BASE_URL}/addtoinvoicecart`,
+        {
+          search_invoice: product.value, // use passed product
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      const data = res.data;
+      if (res.status === 200 && data.status) {
+        Toast.show({
+          type: 'success',
+          text1: 'Product added to cart successfully!',
+        });
+        setSearchTerm('');
+        setShowResults(false);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  // Get Invoice Cart
+  const getInvoiceCart = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/loadinvoicereturncart`);
+      setCartDetails({
+        address: res.data?.address,
+        fatherName: res.data?.fathername,
+        name: res.data?.cust_name,
+      });
+      console.log(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Handle Search Without
+  const handleSearchWithout = async (text: string) => {
+    setSearchTermWithout(text);
+    if (text.length > 0) {
+      try {
+        const response = await axios.post(`${BASE_URL}/autocomplete`, {
+          term: text,
+        });
+        setSearchResultsWithout(response.data);
+        setShowResultsWithout(true);
+      } catch (error) {
+        console.error('Search failed:', error);
+        setShowResultsWithout(false);
+      }
+    } else {
+      setShowResultsWithout(false);
+    }
+  };
+
+  // Add Item to cart (Without)
+  const handleAddToCart = async () => {
+    if (!selectedProductWithout) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please select a product first',
+      });
+      return;
+    }
+
+    if (!qty) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please enter quantity',
+      });
+      return;
+    }
+
+    if (!subQty) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please enter sub quantity',
+      });
+      return;
+    }
+
+    try {
+      const res = await axios.post(`${BASE_URL}/addtoreturncart`, {
+        search_name: selectedProductWithout.value,
+        prod_id: selectedProductWithout.prod_id,
+        return_qty: qty,
+        return_subqty: subQty,
+      });
+
+      const data = res.data;
+      if (res.status === 200 && data.status) {
+        Toast.show({
+          type: 'success',
+          text1: 'Product added to cart successfully!',
+        });
+        setSearchTermWithout('');
+        setShowResultsWithout(false);
+        setQty('');
+        setSubQty('');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <ScrollView
+        {/* Topbar */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: 5,
+            justifyContent: 'space-between',
+          }}>
+          <TouchableOpacity onPress={openDrawer}>
+            <Image
+              source={require('../../../assets/menu.png')}
+              style={{
+                width: 30,
+                height: 30,
+                tintColor: 'white',
+              }}
+            />
+          </TouchableOpacity>
+
+          <View style={styles.headerTextContainer}>
+            <Text
+              style={{
+                color: 'white',
+                fontSize: 22,
+                fontWeight: 'bold',
+              }}>
+              Sale Return
+            </Text>
+          </View>
+        </View>
+
+        <View
           style={{
             marginBottom: 10,
           }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 5,
-              justifyContent: 'space-between',
-            }}>
-            <TouchableOpacity onPress={openDrawer}>
-              <Image
-                source={require('../../../assets/menu.png')}
-                style={{
-                  width: 30,
-                  height: 30,
-                  tintColor: 'white',
-                }}
-              />
-            </TouchableOpacity>
-
-            <View style={styles.headerTextContainer}>
-              <Text
-                style={{
-                  color: 'white',
-                  fontSize: 22,
-                  fontWeight: 'bold',
-                }}>
-                Sale Return
-              </Text>
-            </View>
-
-            <Text style={{color: 'white'}}>NEW INV</Text>
-          </View>
           <View style={{flexDirection: 'row'}}>
+            {/* Updated With Invoice Button */}
             <TouchableOpacity onPress={() => setSelectedOption('with')}>
-              <View style={styles.addButton}>
+              <View
+                style={[
+                  styles.toggleButton,
+                  selectedOption === 'with'
+                    ? styles.selectedButton
+                    : styles.unselectedButton,
+                ]}>
                 <Text
-                  style={{
-                    color: '#144272',
-                    textAlign: 'center',
-                  }}>
+                  style={[
+                    styles.toggleButtonText,
+                    selectedOption === 'with'
+                      ? styles.selectedText
+                      : styles.unselectedText,
+                  ]}>
                   Return With Invoice
                 </Text>
               </View>
             </TouchableOpacity>
 
+            {/* Updated Without Invoice Button */}
             <TouchableOpacity onPress={() => setSelectedOption('without')}>
-              <View style={styles.addButton}>
+              <View
+                style={[
+                  styles.toggleButton,
+                  selectedOption === 'without'
+                    ? styles.selectedButton
+                    : styles.unselectedButton,
+                ]}>
                 <Text
-                  style={{
-                    color: '#144272',
-                    textAlign: 'center',
-                  }}>
+                  style={[
+                    styles.toggleButtonText,
+                    selectedOption === 'without'
+                      ? styles.selectedText
+                      : styles.unselectedText,
+                  ]}>
                   Return Without Invoice
                 </Text>
               </View>
             </TouchableOpacity>
+          </View>
+
+          <View
+            style={{
+              flexDirection: 'row',
+              alignSelf: 'flex-end',
+              borderWidth: 1,
+              borderRadius: 10,
+              paddingHorizontal: 10,
+              paddingVertical: 8,
+              borderColor: '#fff',
+              marginHorizontal: 8,
+              width: '30%',
+              backgroundColor: 'gray',
+              marginVertical: 5,
+            }}>
+            <Text style={{color: '#fff'}}>NEW INV</Text>
           </View>
 
           <View>
@@ -197,120 +402,140 @@ export default function SaleReturn() {
               <View>
                 <View
                   style={{
-                    flexDirection: 'row',
-                    alignSelf: 'center',
-                    justifyContent: 'center',
+                    width: '100%',
+                    paddingHorizontal: 10,
                   }}>
                   <TextInput
-                    style={[styles.input, {width: 310}]}
+                    style={[styles.input, {width: '100%'}]}
                     placeholderTextColor={'white'}
                     placeholder="Search Invoice..."
+                    value={searchTerm}
+                    onChangeText={handleSearch}
                   />
-                  <TouchableOpacity>
-                    <Image
-                      style={{
-                        tintColor: 'white',
-                        width: 20,
-                        height: 17,
-                        alignSelf: 'center',
-                        marginLeft: 5,
-                        marginTop: 18,
-                      }}
-                      source={require('../../../assets/search.png')}
-                    />
-                  </TouchableOpacity>
+
+                  {searchTerm.length > 0 &&
+                    showResults &&
+                    searchResults.length > 0 && (
+                      <View style={styles.resultsContainer}>
+                        {searchResults.map((item: any) => (
+                          <TouchableOpacity
+                            key={item.prod_id}
+                            style={styles.resultItem}
+                            onPress={() => {
+                              setSearchTerm(item.value);
+                              setShowResults(false);
+                              setSelectedProduct(item); // still update state if needed
+                              addInvoice(item); // pass product directly
+                              getInvoiceCart();
+                            }}>
+                            <Text style={styles.resultText}>{item.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
                 </View>
+
                 <View
-                  style={[
-                    styles.row,
-                    {marginLeft: 14, marginRight: 10, marginTop: -2},
-                  ]}>
-                  <Text style={[styles.inputSmall, {color: 'white'}]}>
-                    Name:
+                  style={{
+                    width: '100%',
+                    paddingHorizontal: 10,
+                    marginVertical: 10,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                  }}>
+                  <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                    {cartDetails.name ? cartDetails.name : 'Name'}
                   </Text>
-                  <Text style={[styles.inputSmall, {color: 'white'}]}>
-                    Father Name:
-                  </Text>
-                  <Text style={[styles.inputSmall, {color: 'white'}]}>
-                    Address:
+                  <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                    {cartDetails.fatherName
+                      ? cartDetails.fatherName
+                      : 'Father Name'}
                   </Text>
                 </View>
-                <View>
-                  <View>
-                    <FlatList
-                      data={Info}
-                      keyExtractor={(item, index) => index.toString()}
-                      renderItem={({item}) => (
-                        <ScrollView
-                          style={{
-                            padding: 5,
-                          }}>
-                          <View style={styles.table}>
-                            <View style={styles.tablehead}>
-                              <Text
-                                style={{
-                                  color: '#144272',
-                                  fontWeight: 'bold',
-                                  marginLeft: 5,
-                                  marginTop: 5,
-                                }}>
-                                {item.ItemName}
-                              </Text>
 
-                              <Image
-                                style={{
-                                  tintColor: '#144272',
-                                  width: 15,
-                                  height: 15,
-                                  alignSelf: 'center',
-                                  marginRight: 5,
-                                }}
-                                source={require('../../../assets/show.png')}
-                              />
+                <View style={{width: '100%', paddingHorizontal: 10}}>
+                  <Text
+                    style={[
+                      styles.inputSmall,
+                      {width: '100%', backgroundColor: 'gray'},
+                    ]}>
+                    {cartDetails.address ? cartDetails.address : 'Address'}
+                  </Text>
+                </View>
+
+                <View style={{marginTop: 10}}>
+                  <FlatList
+                    data={Info}
+                    keyExtractor={(item, index) => index.toString()}
+                    renderItem={({item}) => (
+                      <ScrollView
+                        style={{
+                          padding: 5,
+                        }}>
+                        <View style={styles.table}>
+                          <View style={styles.tablehead}>
+                            <Text
+                              style={{
+                                color: '#144272',
+                                fontWeight: 'bold',
+                                marginLeft: 5,
+                                marginTop: 5,
+                              }}>
+                              {item.ItemName}
+                            </Text>
+
+                            <Image
+                              style={{
+                                tintColor: '#144272',
+                                width: 15,
+                                height: 15,
+                                alignSelf: 'center',
+                                marginRight: 5,
+                              }}
+                              source={require('../../../assets/show.png')}
+                            />
+                          </View>
+
+                          <View style={styles.infoRow}>
+                            <View style={styles.rowt}>
+                              <Text style={styles.txt}>Sold Quantity:</Text>
+                              <Text style={styles.txt}>{item.SoldQTY}</Text>
                             </View>
-
-                            <View style={styles.infoRow}>
-                              <View style={styles.rowt}>
-                                <Text style={styles.txt}>Sold Quantity:</Text>
-                                <Text style={styles.txt}>{item.SoldQTY}</Text>
-                              </View>
-                              <View style={styles.rowt}>
-                                <Text style={styles.txt}>Return Quantity:</Text>
-                                <Text style={styles.txt}>{item.ReturnQty}</Text>
-                              </View>
-                              <View style={styles.rowt}>
-                                <Text style={styles.txt}>
-                                  Return Sub Quantity:
-                                </Text>
-                                <Text style={styles.txt}>
-                                  {item.ReturnSubQty}
-                                </Text>
-                              </View>
-                              <View style={styles.rowt}>
-                                <Text style={styles.txt}>
-                                  Transaction Quantity:
-                                </Text>
-                                <Text style={styles.txt}>
-                                  {item.TransactionQTY}
-                                </Text>
-                              </View>
-                              <View style={styles.rowt}>
-                                <Text style={styles.txt}>Price:</Text>
-                                <Text style={styles.txt}>{item.Price}</Text>
-                              </View>
-                              <View style={[styles.rowt, {marginBottom: 5}]}>
-                                <Text style={styles.txt}>Total Price:</Text>
-                                <Text style={styles.txt}>
-                                  {item.totalPrice}
-                                </Text>
-                              </View>
+                            <View style={styles.rowt}>
+                              <Text style={styles.txt}>Return Quantity:</Text>
+                              <Text style={styles.txt}>{item.ReturnQty}</Text>
+                            </View>
+                            <View style={styles.rowt}>
+                              <Text style={styles.txt}>
+                                Return Sub Quantity:
+                              </Text>
+                              <Text style={styles.txt}>
+                                {item.ReturnSubQty}
+                              </Text>
+                            </View>
+                            <View style={styles.rowt}>
+                              <Text style={styles.txt}>
+                                Transaction Quantity:
+                              </Text>
+                              <Text style={styles.txt}>
+                                {item.TransactionQTY}
+                              </Text>
+                            </View>
+                            <View style={styles.rowt}>
+                              <Text style={styles.txt}>Price:</Text>
+                              <Text style={styles.txt}>{item.Price}</Text>
+                            </View>
+                            <View style={[styles.rowt, {marginBottom: 5}]}>
+                              <Text style={styles.txt}>Total Price:</Text>
+                              <Text style={styles.txt}>{item.totalPrice}</Text>
                             </View>
                           </View>
-                        </ScrollView>
-                      )}
-                    />
-                  </View>
+                        </View>
+                      </ScrollView>
+                    )}
+                  />
                 </View>
+
                 <View style={styles.totalContainer}>
                   <Text style={styles.totalText}>Total:</Text>
                   <Text style={styles.totalText}>{total}</Text>
@@ -332,50 +557,80 @@ export default function SaleReturn() {
               <View>
                 <View
                   style={{
-                    flexDirection: 'row',
-                    alignSelf: 'center',
-                    justifyContent: 'center',
+                    width: '100%',
+                    paddingHorizontal: 10,
                   }}>
                   <TextInput
-                    style={[styles.input, {width: 310}]}
+                    style={[styles.input, {width: '100%'}]}
                     placeholderTextColor={'white'}
                     placeholder="Search Product..."
+                    value={searchTermWithout}
+                    onChangeText={handleSearchWithout}
                   />
-                  <TouchableOpacity>
-                    <Image
-                      style={{
-                        tintColor: 'white',
-                        width: 20,
-                        height: 17,
-                        alignSelf: 'center',
-                        marginLeft: 5,
-                        marginTop: 18,
-                      }}
-                      source={require('../../../assets/search.png')}
-                    />
-                  </TouchableOpacity>
+
+                  {searchTermWithout.length > 0 &&
+                    showResultsWithout &&
+                    searchResultsWithout.length > 0 && (
+                      <View
+                        style={[
+                          styles.resultsContainer,
+                          {marginHorizontal: 10},
+                        ]}>
+                        {searchResultsWithout.map((item: any) => (
+                          <TouchableOpacity
+                            key={item.prod_id}
+                            style={styles.resultItem}
+                            onPress={() => {
+                              setSearchTermWithout(item.value);
+                              setShowResultsWithout(false);
+                              setSelectedProductWithout(item);
+                            }}>
+                            <Text style={styles.resultText}>{item.label}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </View>
+                    )}
                 </View>
+
                 <View
-                  style={[
-                    styles.row,
-                    {
-                      alignItems: 'center',
-                      marginLeft: 14,
-                      marginRight: 10,
-                      marginTop: -2,
-                    },
-                  ]}>
+                  style={{
+                    width: '100%',
+                    paddingHorizontal: 10,
+                    justifyContent: 'space-between',
+                    flexDirection: 'row',
+                    marginVertical: 10,
+                  }}>
                   <TextInput
                     style={styles.inputSmall}
                     placeholderTextColor={'white'}
                     placeholder="Quantity"
+                    keyboardType="numeric"
+                    value={qty}
+                    onChangeText={t => setQty(t)}
                   />
 
                   <TextInput
                     style={styles.inputSmall}
                     placeholderTextColor={'white'}
                     placeholder="Sub Quantity"
+                    keyboardType="numeric"
+                    value={subQty}
+                    onChangeText={t => setSubQty(t)}
                   />
+                </View>
+
+                <View
+                  style={{
+                    width: '100%',
+                    paddingHorizontal: 10,
+                    justifyContent: 'space-between',
+                    flexDirection: 'row',
+                  }}>
+                  <TouchableOpacity
+                    style={styles.addButton}
+                    onPress={handleAddToCart}>
+                    <Text style={styles.addButtonText}>Add</Text>
+                  </TouchableOpacity>
                 </View>
 
                 <FlatList
@@ -459,7 +714,7 @@ export default function SaleReturn() {
               </View>
             )}
           </View>
-        </ScrollView>
+        </View>
 
         <Modal isVisible={close}>
           <View
@@ -567,13 +822,16 @@ const styles = StyleSheet.create({
     padding: 8,
     marginVertical: 8,
     color: 'white',
+    height: 38,
   },
   inputSmall: {
-    flex: 1,
     borderWidth: 1,
     borderColor: 'white',
     borderRadius: 6,
     padding: 8,
+    width: '46%',
+    color: '#fff',
+    height: 38,
   },
   label: {
     fontWeight: 'bold',
@@ -581,13 +839,19 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   addButton: {
-    margin: 10,
+    marginBottom: 10,
     alignSelf: 'center',
     justifyContent: 'center',
+    alignItems: 'center',
     backgroundColor: 'white',
-    borderRadius: 15,
-    width: 160,
-    height: 30,
+    borderRadius: 10,
+    width: '100%',
+    height: 38,
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#144272',
   },
   completeButton: {
     backgroundColor: 'white',
@@ -688,5 +952,51 @@ const styles = StyleSheet.create({
     marginLeft: 5,
     color: 'white',
     marginRight: 5,
+  },
+  toggleButton: {
+    margin: 10,
+    alignSelf: 'center',
+    justifyContent: 'center',
+    borderRadius: 10,
+    height: 30,
+    borderWidth: 1,
+    borderColor: 'white',
+  },
+  selectedButton: {
+    backgroundColor: 'white',
+    borderColor: '#144272',
+  },
+  unselectedButton: {
+    backgroundColor: 'transparent',
+  },
+  toggleButtonText: {
+    textAlign: 'center',
+    fontWeight: 'bold',
+    marginHorizontal: 5,
+  },
+  selectedText: {
+    color: '#144272',
+  },
+  unselectedText: {
+    color: 'white',
+  },
+  resultsContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 5,
+    zIndex: 100,
+    elevation: 10,
+    maxHeight: 'auto',
+  },
+  resultItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  resultText: {
+    color: '#144272',
   },
 });

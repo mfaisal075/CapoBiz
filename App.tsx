@@ -132,6 +132,11 @@ import SaleInvoice from './component/Drawer/Configuration/SaleInvoice';
 import {DrawerProvider} from './component/DrawerContext';
 import DrawerModal from './component/DrawModal';
 import {UserProvider} from './component/CTX/UserContext';
+import AddCustomerPayment from './component/Drawer/Accounts/AddCustomerPayment';
+import ChequeClearance from './component/Drawer/Accounts/ChequeClearance';
+import SupplierAddPayment from './component/Drawer/Accounts/SupplierAddPayment';
+import SupplierChequeClearance from './component/Drawer/Accounts/SupplierChequeClearance';
+import TransporterAddPayment from './component/Drawer/Accounts/TransporterAddPayment';
 
 const Stack = createStackNavigator();
 export const navigationRef = createNavigationContainerRef();
@@ -234,6 +239,10 @@ function App(): React.JSX.Element {
             <Stack.Screen name="Labour Account" component={LabourAccount} />
             <Stack.Screen name="Employee Account" component={EmployeeAccount} />
             <Stack.Screen name="Fixed Accounts" component={FixedAccounts} />
+            <Stack.Screen
+              name="AddCustomerPayment"
+              component={AddCustomerPayment}
+            />
 
             {/*Reports*/}
 
@@ -280,6 +289,10 @@ function App(): React.JSX.Element {
               component={SupplierAccounts}
             />
             <Stack.Screen
+              name="SupplierAddPayment"
+              component={SupplierAddPayment}
+            />
+            <Stack.Screen
               name="Transporter Accounts"
               component={TransporterAccounts}
             />
@@ -289,6 +302,9 @@ function App(): React.JSX.Element {
               component={EmployeeAccounts}
             />
             <Stack.Screen name="Fix Accounts" component={FixAccounts} />
+            <Stack.Screen name="ChequeClearance" component={ChequeClearance} />
+            <Stack.Screen name="SupplierChequeClearance" component={SupplierChequeClearance} />
+            <Stack.Screen name="TransporterAddPayment" component={TransporterAddPayment} />
 
             {/*Sale Report*/}
             <Stack.Screen name="All User Sales" component={AllUserSale} />

@@ -11,148 +11,250 @@ import {
   FlatList,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 import Modal from 'react-native-modal';
-import {RadioButton} from 'react-native-paper';
+import {Checkbox} from 'react-native-paper';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import Toast from 'react-native-toast-message';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useUser} from '../../CTX/UserContext';
+
+interface Customers {
+  id: number;
+  cust_name: string;
+  cust_fathername: string;
+}
+
+interface Supplier {
+  id: number;
+  sup_name: string;
+  sup_company_name: string;
+}
+
+interface ProductDetails {
+  name: string;
+  barCode: string;
+  costPrice: string;
+  salePrice: string;
+  qty: string;
+}
+
+const initialProductDetails: ProductDetails = {
+  barCode: '',
+  costPrice: '',
+  name: '',
+  qty: '',
+  salePrice: '',
+};
+
+interface CartItem {
+  id: number;
+  tmptrd_qty: string;
+  tmptrd_cost_price: string;
+  tmptrd_sale_price: string;
+  tmptrd_sub_total: string;
+  prod_name: string;
+}
+
+interface SelectedCustomer {
+  name: string;
+  fatherName: string;
+  address: string;
+}
+
+const initialSelectedCust: SelectedCustomer = {
+  address: '',
+  fatherName: '',
+  name: '',
+};
+
+interface SelectedSupplier {
+  name: string;
+  compnayName: string;
+  address: string;
+}
+
+const initialSelectedSup: SelectedSupplier = {
+  address: '',
+  compnayName: '',
+  name: '',
+};
+
+interface CheckoutDetails {
+  costtotal: string;
+  saletotal: string;
+  profitandloss: string;
+  payable: string;
+}
+
+interface AddCustomer {
+  name: string;
+  father_name: string;
+  contact: string;
+  email: string;
+  contact_person_one: string;
+  sec_contact: string;
+  contact_person_two: string;
+  third_contact: string;
+  cnic: string;
+  address: string;
+  opening_balance: string;
+  transfer_type: string;
+  transaction_type: string;
+}
+
+const initialAddCustomer: AddCustomer = {
+  name: '',
+  father_name: '',
+  contact: '',
+  email: '',
+  contact_person_one: '',
+  sec_contact: '',
+  contact_person_two: '',
+  third_contact: '',
+  cnic: '',
+  address: '',
+  opening_balance: '',
+  transfer_type: '',
+  transaction_type: '',
+};
+
+interface TypeData {
+  id: string;
+  custtyp_name: string;
+  custtyp_status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AreaData {
+  id: string;
+  area_name: string;
+  area_status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AddSupplier {
+  alsocust: string;
+  comp_name: string;
+  agencyname: string;
+  supp_name: string;
+  contact: string;
+  sec_contact: string;
+  third_contact: string;
+  email: string;
+  address: string;
+  supp_area: string;
+  opening_balancechechboc: string;
+  opening_balance: string;
+  transfer_type: string;
+  transaction_type: string;
+}
+
+const initialAddSupplier: AddSupplier = {
+  address: '',
+  agencyname: '',
+  alsocust: '',
+  comp_name: '',
+  contact: '',
+  email: '',
+  opening_balance: '',
+  opening_balancechechboc: '',
+  sec_contact: '',
+  supp_area: '',
+  supp_name: '',
+  third_contact: '',
+  transfer_type: '',
+  transaction_type: '',
+};
+
+interface SupplierArea {
+  id: string;
+  area_name: string;
+}
 
 export default function Trade() {
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const labour = [
-    {label: 'Saif', value: 'Saif'},
-    {label: 'Bilal', value: 'Bilal'},
-    {label: 'Khan', value: 'Khan'},
-  ];
-  const [Labour, setLabour] = useState(false);
-  const [currentLabour, setCurrentLabour] = useState<string | null>('');
-
-  const [customer, setcustomer] = useState(false);
-
-  const [Customerdr, setCustomerdr] = useState(false);
-  const [currentCustomerdr, setCurrentCustomerdr] = useState<string | null>('');
-
-  const togglecustomer = () => {
-    setcustomer(!customer);
-  };
-
-  const [area, setarea] = useState(false);
-
-  const togglearea = () => {
-    setarea(!area);
-  };
-  const [customerArea, setcustomerArea] = useState(false);
-  const [currentcustomerarea, setCurrentcustomerarea] = useState<string | null>(
-    '',
+  const [searchTerm, setSearchTerm] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showResults, setShowResults] = useState(false);
+  const [prodDetails, setProdDetails] = useState<ProductDetails>(
+    initialProductDetails,
   );
-  const customerAreaItem = [
-    {label: 'Gujranwala', value: 'Gujranwala'},
-    {label: 'Lahore', value: 'Lahore'},
-  ];
-  const [areabtn, setareabtn] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
+  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [custData, setCustData] = useState<Customers[]>([]);
+  const transformedCust = custData.map(cust => ({
+    label: cust.cust_name,
+    value: cust.id.toString(),
+  }));
+  const [supData, setSupData] = useState<Supplier[]>([]);
+  const transformedSup = supData.map(sup => ({
+    label: `${sup.sup_name}_${sup.sup_company_name}`,
+    value: sup.id.toString(),
+  }));
+  const [supOpen, setSupOpen] = useState(false);
+  const [supValue, setSupValue] = useState('');
+  const [custOpen, setCustOpen] = useState(false);
+  const [custValue, setCustValue] = useState('');
+  const [selectedCust, setSelectedCust] =
+    useState<SelectedCustomer>(initialSelectedCust);
+  const [selectedSup, setSelectedSup] =
+    useState<SelectedSupplier>(initialSelectedSup);
+  const [checkoutDetails, setCheckoutDetails] =
+    useState<CheckoutDetails | null>(null);
+  const [paidAmount, setPaidAmount] = useState('');
+  const [refNumber, setRefNumber] = useState('');
+  const [modalVisible, setModalVisible] = useState('');
+  const [addForm, setAddForm] = useState<AddCustomer>(initialAddCustomer);
+  const [types, setTypes] = useState<TypeData[]>([]);
+  const [areaData, setAreaData] = useState<AreaData[]>([]);
+  const [custType, setCustType] = useState<string | null>('');
+  const [custTypeOpen, setCustTypeOpen] = useState(false);
+  const transformedTypes = types.map(item => ({
+    label: item.custtyp_name,
+    value: item.id,
+  }));
+  const [custArea, setCustArea] = useState<string | null>('');
+  const [custAreaOpen, setCustAreaOpen] = useState(false);
+  const transformedAreas = areaData.map(item => ({
+    label: item.area_name,
+    value: item.id,
+  }));
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [supAddForm, setSupAddForm] = useState<AddSupplier>(initialAddSupplier);
+  const [areaOpen, setAreaOpen] = useState(false);
+  const [areaValue, setAreaValue] = useState('');
 
-  const toggleareabtn = () => {
-    setareabtn(!areabtn);
+  // Add Supplier Form onChange
+  const handleAddInputChange = (field: keyof AddSupplier, value: string) => {
+    setSupAddForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
-  const [btncustomerarea, setbtncustomerarea] = useState(false);
-
-  const togglebtncustomerarea = () => {
-    setbtncustomerarea(!btncustomerarea);
+  // Add Customer Form On Change
+  const onChange = (field: keyof AddCustomer, value: string) => {
+    setAddForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
-  const [customerType, setcustomerType] = React.useState<
-    'addacustomer' | 'string'
-  >('addacustomer');
-
-  const item = [
-    {
-      label: 'walk_in_customer s/o Nill | NILL',
-      value: 'walk_in_customer s/o Nill | NILL',
-    },
-    {label: 'Naeem s/o | NILL', value: 'Naeem s/o  | NILL'},
-    {label: 'Khalid s/o | NILL', value: 'Khalid s/o  | NILL'},
-    {label: 'a s/o | NILL', value: 'a s/o  | NILL'},
-  ];
-
-  {
-    /*customer*/
-  }
-  const [customermodal, setcustomermodal] = useState(false);
-
-  const togglecustomermodal = () => {
-    setcustomermodal(!customermodal);
+  // Product Details onChange
+  const detailsOnChange = (field: keyof ProductDetails, value: string) => {
+    setProdDetails(prev => ({
+      ...prev,
+      [field]: value,
+    }));
   };
-
-  const [customerTypemodal, setcustomerTypemodal] = useState(false);
-  const [currentcustomer, setCurrentcustomer] = useState<string | null>('');
-  const customerItem = [
-    {label: 'New', value: 'New'},
-    {label: 'Blue', value: 'Blue'},
-    {label: 'Standard', value: 'Standard'},
-  ];
-
-  const [addcustomermodal, setaddcustomermodal] = useState(false);
-
-  const toggleaddcustomer = () => {
-    setaddcustomermodal(!addcustomermodal);
-  };
-
-  const [btncustomermodal, setbtncustomermodal] = useState(false);
-
-  const togglebtncustomer = () => {
-    setbtncustomermodal(!btncustomermodal);
-  };
-
-  const [areamodal, setareamodal] = useState(false);
-
-  const toggleareamodal = () => {
-    setareamodal(!areamodal);
-  };
-  const [customerAreamodal, setcustomerAreamodal] = useState(false);
-  const [currentcustomerareamodal, setCurrentcustomerareamodal] = useState<
-    string | null
-  >('');
-  const customerAreaItemmodal = [
-    {label: 'Gujranwala', value: 'Gujranwala'},
-    {label: 'Lahore', value: 'Lahore'},
-  ];
-  const [areabtnmodal, setareabtnmodal] = useState(false);
-
-  const toggleareabtnmodal = () => {
-    setareabtnmodal(!areabtnmodal);
-  };
-
-  const [btncustomerareamodal, setbtncustomerareamodal] = useState(false);
-
-  const togglebtncustomerareamodal = () => {
-    setbtncustomerareamodal(!btncustomerareamodal);
-  };
-
-  const Info = [
-    {
-      ProductName: 'abc',
-      CostPrice: 6,
-      SalePrice: 9,
-      Quantity: '5',
-      subtotal: '555',
-    },
-    {
-      ProductName: 'abc',
-      CostPrice: 6,
-      SalePrice: 9,
-      Quantity: '5',
-      subtotal: '555',
-    },
-  ];
-
-  const CostPrice = Object.values(Info)
-    .flat()
-    .reduce((acc, item) => acc + item.CostPrice, 0);
-  const SalePrice = Object.values(Info)
-    .flat()
-    .reduce((acc, item) => acc + item.SalePrice, 0);
 
   const [orderDate, setorderDate] = useState(new Date());
   const [showorderDatePicker, setShoworderDatePicker] = useState(false);
@@ -166,11 +268,380 @@ export default function Trade() {
     setorderDate(currentDate);
   };
 
-  const [checkout, setcheckout] = useState(false);
-
-  const togglecheckout = () => {
-    setcheckout(!checkout);
+  // Handle Search
+  const handleSearch = async (text: string) => {
+    setSearchTerm(text);
+    if (text.length > 0) {
+      try {
+        const response = await axios.post(`${BASE_URL}/autocomplete`, {
+          term: text,
+        });
+        setSearchResults(response.data);
+        setShowResults(true);
+        console.log(response.data);
+      } catch (error) {
+        console.error('Search failed:', error);
+        setShowResults(false);
+      }
+    } else {
+      setShowResults(false);
+    }
   };
+
+  // Handle Store Product
+  const handleStore = async () => {
+    if (!selectedProduct) {
+      Toast.show({
+        type: 'error',
+        text1: 'Select Product First',
+      });
+      return;
+    }
+
+    if (!prodDetails.qty || !prodDetails.salePrice || !prodDetails.costPrice) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please enter quantity, sale price, and cost price',
+      });
+      return;
+    }
+
+    try {
+      const res = await axios.post(`${BASE_URL}/temp_store`, {
+        search_name: selectedProduct.value,
+        prod_id: selectedProduct.prod_id,
+        cond_type: 'Add',
+        cost_price: prodDetails.costPrice,
+        sale_price: prodDetails.salePrice,
+        qty: prodDetails.qty,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Added!',
+          text2: 'Product has been added successfully',
+          visibilityTime: 1500,
+        });
+
+        setProdDetails(initialProductDetails);
+        setSelectedProduct([]);
+        setSearchTerm('');
+        fetchCartItems();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Cart Items
+  const fetchCartItems = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/temp_loadproductcart`);
+      setCartItems(res.data.cart);
+      setCheckoutDetails(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Handle Delete Item from the Cart
+  const handleDelete = async (id: number) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/deletetemptrade?id=${id}&_token=${token}`,
+      );
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Deleted!',
+          text2: 'Product has been deleted successfully.',
+          visibilityTime: 1500,
+        });
+
+        fetchCartItems();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Customer Dropdown
+  const fetchCustomers = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcustomersdata`);
+      setCustData(res.data.cust);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Supplier Dropdown
+  const fetchSupplier = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/loadsuppliers`);
+      setSupData(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Customer Data
+  const fetchCustData = async () => {
+    if (custValue) {
+      try {
+        const res = await axios.post(`${BASE_URL}/fetchcustdata`, {
+          id: custValue,
+        });
+
+        setSelectedCust({
+          address: res.data.customer.cust_address,
+          fatherName: res.data.customer.cust_fathername,
+          name: res.data.customer.cust_name,
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  // Fetch Customer Data
+  const fetchSupData = async () => {
+    if (supValue) {
+      try {
+        const res = await axios.post(`${BASE_URL}/fetchsuppdata`, {
+          id: supValue,
+        });
+
+        setSelectedSup({
+          address: res.data.supplier.sup_address,
+          compnayName: res.data.supplier.sup_company_name,
+          name: res.data.supplier.sup_name,
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  // Handle Checkout
+  const handleCheckout = async () => {
+    if (!supValue) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please select a supplier',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (!custValue) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please select a customer',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    if (!refNumber.trim()) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please enter a reference number',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(`${BASE_URL}/checkouttrade`, {
+        invoice_no: '',
+        ref_no: refNumber.trim(),
+        supplier_id: supValue,
+        customer_id: custValue,
+        cost_price: checkoutDetails?.costtotal,
+        totalsale_price: checkoutDetails?.saletotal,
+        profit_amount: checkoutDetails?.profitandloss,
+        payable: checkoutDetails?.payable,
+        paid: paidAmount,
+        date: orderDate.toISOString().split('T')[0],
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Checkout successfully',
+          visibilityTime: 1500,
+        });
+
+        setCheckoutDetails(null);
+        await axios.post(`${BASE_URL}/clearCart`);
+        fetchCartItems();
+        setPaidAmount('');
+        setRefNumber('');
+        setSupValue('');
+        setCustValue('');
+      } else if (res.status === 200 && data.status === 409) {
+        Toast.show({
+          type: 'info',
+          text1: 'Warning!',
+          text2: 'Paid amount should equal to payable amount!',
+          visibilityTime: 1500,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Type
+  const fetchType = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchtypedata`);
+      setTypes(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Area
+  const fetchAreas = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchareadata`);
+      setAreaData(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Add Customer
+  const addCustomer = async () => {
+    if (
+      !addForm.name.trim() ||
+      !addForm.contact.trim() ||
+      !addForm.address.trim()
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Fields',
+        text2: 'Please fill all required fields.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(`${BASE_URL}/addcustomer`, {
+        cust_name: addForm.name.trim(),
+        fathername: addForm.father_name.trim(),
+        contact: addForm.contact.trim(),
+        email: addForm.email.trim(),
+        sec_contact: addForm.sec_contact,
+        third_contact: addForm.third_contact,
+        cnic: addForm.cnic.trim(),
+        address: addForm.address.trim(),
+        cust_type: custType,
+        cust_area: custArea,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Added!',
+          text2: 'Customer has been Added successfully',
+          visibilityTime: 1500,
+        });
+        fetchCustomers();
+        setAddForm(initialAddCustomer);
+        setCustArea('');
+        setCustType('');
+        setModalVisible('');
+      }
+    } catch (error) {
+      console.log();
+    }
+  };
+
+  // Fetch Supplier Dropdown Area
+  const handleFetchAreas = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchareadata`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      setAreaData(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Add Supplier
+  const handleAddSupplier = async () => {
+    if (
+      !supAddForm.comp_name ||
+      !supAddForm.supp_name ||
+      !supAddForm.contact ||
+      !supAddForm.address
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Fields',
+        text2: 'Please fill all fields and select a role before updating.',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(`${BASE_URL}/addsupplier`, {
+        comp_name: supAddForm.comp_name.trim(),
+        agencyname: supAddForm.agencyname,
+        supp_name: supAddForm.supp_name.trim(),
+        contact: supAddForm.contact,
+        sec_contact: supAddForm.sec_contact,
+        third_contact: supAddForm.third_contact,
+        email: supAddForm.email.trim(),
+        address: supAddForm.address.trim(),
+        supp_area: areaValue,
+        alsocust: selectedOptions.includes('on') ? 'on' : '',
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Added!',
+          text2: 'Supplier has been Added successfully',
+          visibilityTime: 1500,
+        });
+        setSupAddForm(initialAddSupplier);
+        setSelectedOptions([]);
+        setAreaValue('');
+        fetchSupplier();
+        setModalVisible('');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchCartItems();
+    fetchCustomers();
+    fetchSupplier();
+    fetchAreas();
+    handleFetchAreas();
+    fetchCustData();
+    fetchSupData();
+    fetchType();
+  }, [custValue, supValue]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -178,73 +649,82 @@ export default function Trade() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
+        {/* Topbar */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            padding: 5,
+            justifyContent: 'space-between',
+          }}>
+          <TouchableOpacity onPress={openDrawer}>
+            <Image
+              source={require('../../../assets/menu.png')}
+              style={{width: 30, height: 30, tintColor: 'white'}}
+            />
+          </TouchableOpacity>
+          <View style={styles.headerTextContainer}>
+            <Text
+              style={{
+                color: 'white',
+                fontSize: 22,
+                fontWeight: 'bold',
+              }}>
+              Trading
+            </Text>
+          </View>
+        </View>
+
         <ScrollView
           style={{
             marginBottom: 10,
           }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 5,
-              justifyContent: 'space-between',
-            }}>
-            <TouchableOpacity onPress={openDrawer}>
-              <Image
-                source={require('../../../assets/menu.png')}
-                style={{width: 30, height: 30, tintColor: 'white'}}
-              />
-            </TouchableOpacity>
-            <View style={styles.headerTextContainer}>
-              <Text
-                style={{
-                  color: 'white',
-                  fontSize: 22,
-                  fontWeight: 'bold',
-                }}>
-                Trading
-              </Text>
-            </View>
-          </View>
-
           <View style={styles.section}>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginBottom: -10,
-              }}>
+            <View style={styles.row}>
               <TextInput
-                style={[styles.input, {width: 310}]}
+                style={[styles.input]}
                 placeholderTextColor={'white'}
                 placeholder="Search Product..."
+                value={searchTerm}
+                onChangeText={handleSearch}
               />
-              <TouchableOpacity>
-                <Image
-                  style={{
-                    tintColor: 'white',
-                    width: 20,
-                    height: 17,
-                    alignSelf: 'center',
-                    marginLeft: 5,
-                    marginTop: 18,
-                  }}
-                  source={require('../../../assets/search.png')}
-                />
-              </TouchableOpacity>
+
+              {/* Search Result Container */}
+              {searchTerm.length > 0 &&
+                showResults &&
+                searchResults.length > 0 && (
+                  <View style={styles.resultsContainer}>
+                    {searchResults.map((item: any) => (
+                      <TouchableOpacity
+                        key={item.prod_id}
+                        style={styles.resultItem}
+                        onPress={() => {
+                          setSearchTerm(item.value);
+                          setProdDetails({
+                            barCode: item.value,
+                            costPrice: item.prod_costprice,
+                            name: item.prod_name,
+                            qty: '',
+                            salePrice: item.prod_price,
+                          });
+                          setSelectedProduct(item);
+                          setShowResults(false);
+                        }}>
+                        <Text style={styles.resultText}>{item.label}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
             </View>
-            <View style={[styles.row, {alignItems: 'center'}]}>
-              <Text style={[styles.inputSmall, {color: 'white'}]}>
-                Item Name:
+
+            <View style={styles.row}>
+              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                {prodDetails.name ? prodDetails.name : 'Item Name'}
               </Text>
 
-              <Text style={[styles.inputSmall, {color: 'white'}]}>BarCode</Text>
-
-              <TextInput
-                style={styles.inputSmall}
-                placeholderTextColor={'white'}
-                placeholder="Quantity"
-                keyboardType="numeric"
-              />
+              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                {prodDetails.barCode ? prodDetails.barCode : 'BarCode'}
+              </Text>
             </View>
 
             <View style={styles.row}>
@@ -253,803 +733,384 @@ export default function Trade() {
                 placeholderTextColor={'white'}
                 placeholder="Sale Price"
                 keyboardType="numeric"
+                value={prodDetails.salePrice}
+                onChangeText={t => detailsOnChange('salePrice', t)}
               />
               <TextInput
                 style={styles.inputSmall}
                 placeholderTextColor={'white'}
                 placeholder="Cost Price"
                 keyboardType="numeric"
+                value={prodDetails.costPrice}
+                onChangeText={t => detailsOnChange('costPrice', t)}
               />
-
-              <View style={styles.addButton}>
-                <Text
-                  style={{
-                    color: '#144272',
-                    padding: 6,
-                    textAlign: 'center',
-                  }}>
-                  Submit
-                </Text>
-              </View>
             </View>
+
+            <View style={styles.row}>
+              <TextInput
+                style={styles.input}
+                placeholderTextColor={'white'}
+                placeholder="Quantity"
+                keyboardType="numeric"
+                value={prodDetails.qty}
+                onChangeText={t => detailsOnChange('qty', t)}
+              />
+            </View>
+
+            <TouchableOpacity style={styles.addButton} onPress={handleStore}>
+              <Text
+                style={{
+                  color: '#144272',
+                  textAlign: 'center',
+                  fontSize: 14,
+                  fontWeight: 'bold',
+                }}>
+                Submit
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.section}>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                }}>
-                <DropDownPicker
-                  items={labour}
-                  open={Labour}
-                  setOpen={setLabour}
-                  value={currentLabour}
-                  setValue={setCurrentLabour}
-                  placeholder="Select Supplier"
-                  placeholderStyle={{color: 'white'}}
-                  textStyle={{color: 'white'}}
-                  arrowIconStyle={{tintColor: 'white'}}
-                  style={[
-                    styles.dropdown,
-                    {
-                      flex: 1,
-                      marginLeft: 1,
-                      marginBottom: -1,
-                      marginTop: -1,
-                      zIndex: Labour ? 1000 : 0,
-                      width: 310,
-                    },
-                  ]}
-                  dropDownContainerStyle={{
-                    backgroundColor: 'white',
-                    borderColor: '#144272',
-                    width: 310,
-                    marginLeft: 1,
-                  }}
-                  labelStyle={{color: 'white'}}
-                  listItemLabelStyle={{color: '#144272'}}
-                />
-
-                <TouchableOpacity
-                  onPress={togglecustomer}
-                  style={{marginLeft: -19}}>
-                  <Image
-                    style={{
-                      tintColor: 'white',
-                      width: 18,
-                      height: 18,
-                      alignSelf: 'center',
-                    }}
-                    source={require('../../../assets/add.png')}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={[styles.row, {alignItems: 'center'}]}>
-              <Text style={[styles.inputSmall, {color: 'white'}]}>
-                Invoice No:
+            <View style={styles.row}>
+              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                Invoice No
               </Text>
 
-              <Text style={[styles.inputSmall, {color: 'white'}]}>
-                Supplier Name
+              <TextInput
+                style={styles.inputSmall}
+                placeholder="Reference No"
+                placeholderTextColor={'white'}
+                value={refNumber}
+                onChangeText={t => setRefNumber(t)}
+              />
+            </View>
+
+            <View style={styles.row}>
+              <DropDownPicker
+                items={transformedSup}
+                open={supOpen}
+                setOpen={setSupOpen}
+                value={supValue}
+                setValue={setSupValue}
+                placeholder="Select Supplier"
+                placeholderStyle={{color: 'white'}}
+                textStyle={{color: 'white'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                )}
+                style={[styles.dropdown]}
+                dropDownContainerStyle={{
+                  backgroundColor: 'white',
+                  borderColor: '#144272',
+                  width: '90%',
+                  marginTop: 8,
+                  maxHeight: 130,
+                }}
+                labelStyle={{color: 'white'}}
+                listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
+              />
+
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('AddSupplier');
+                }}
+                style={{marginLeft: -19}}>
+                <Image
+                  style={{
+                    tintColor: 'white',
+                    width: 18,
+                    height: 18,
+                    alignSelf: 'center',
+                  }}
+                  source={require('../../../assets/add.png')}
+                />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.row}>
+              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                {selectedSup.name ? selectedSup.name : 'Supplier Name'}
+              </Text>
+              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                {selectedSup.compnayName
+                  ? selectedSup.compnayName
+                  : 'Company Name'}
               </Text>
             </View>
 
             <View style={styles.row}>
-              <Text style={[styles.inputSmall, {color: 'white'}]}>
-                Company Name:
+              <Text style={[styles.input, {backgroundColor: 'gray'}]}>
+                {selectedSup.address ? selectedSup.address : 'Address'}
               </Text>
-
-              <Text style={[styles.inputSmall, {color: 'white'}]}>Address</Text>
             </View>
           </View>
 
           <View style={styles.section}>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginBottom: -8,
-                marginTop: -7,
-              }}>
+            <View style={styles.row}>
               <DropDownPicker
-                items={item}
-                open={Customerdr}
-                setOpen={setCustomerdr}
-                value={currentCustomerdr}
-                setValue={setCurrentCustomerdr}
+                items={transformedCust}
+                open={custOpen}
+                setOpen={setCustOpen}
+                value={custValue}
+                setValue={setCustValue}
                 placeholder="Select Customer"
                 placeholderStyle={{color: 'white'}}
                 textStyle={{color: 'white'}}
-                arrowIconStyle={{tintColor: 'white'}}
-                style={[styles.dropdown, {width: 310}]}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                )}
+                style={styles.dropdown}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
-                  width: 310,
+                  width: '90%',
+                  marginTop: 8,
+                  maxHeight: 130,
                 }}
                 labelStyle={{color: 'white'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
-              <TouchableOpacity onPress={togglecustomermodal}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('AddCustomer');
+                }}
+                style={{marginLeft: -19}}>
                 <Image
                   style={{
                     tintColor: 'white',
-                    width: 22,
-                    height: 17,
+                    width: 18,
+                    height: 18,
                     alignSelf: 'center',
-                    marginLeft: -26,
-                    marginTop: 17,
                   }}
                   source={require('../../../assets/add.png')}
                 />
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.row, {alignItems: 'center'}]}>
-              <Text style={[styles.inputSmall, {color: 'white'}]}>
-                Reference No:
+            <View style={styles.row}>
+              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                {selectedCust.name ? selectedCust.name : 'Customer Name'}
               </Text>
-
-              <Text style={[styles.inputSmall, {color: 'white'}]}>
-                Customer Name
+              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                {selectedCust.fatherName
+                  ? selectedCust.fatherName
+                  : 'Father Name'}
               </Text>
             </View>
 
-            <View style={[styles.row, {marginBottom: 10}]}>
-              <Text style={[styles.inputSmall, {color: 'white'}]}>
-                Father Name:
+            <View style={styles.row}>
+              <Text style={[styles.input, {backgroundColor: 'gray'}]}>
+                {selectedCust.address ? selectedCust.address : 'Address'}
               </Text>
-
-              <Text style={[styles.inputSmall, {color: 'white'}]}>Address</Text>
             </View>
           </View>
 
           <View>
-            <View>
-              <FlatList
-                data={Info}
-                keyExtractor={(item, index) => index.toString()}
-                renderItem={({item}) => (
-                  <ScrollView
-                    style={{
-                      padding: 5,
-                    }}>
-                    <View style={styles.table}>
-                      <View style={styles.tablehead}>
-                        <Text
+            <FlatList
+              data={cartItems}
+              keyExtractor={(item, index) => index.toString()}
+              scrollEnabled={false}
+              renderItem={({item}) => (
+                <ScrollView
+                  style={{
+                    padding: 5,
+                  }}>
+                  <View style={styles.table}>
+                    <View style={styles.tablehead}>
+                      <Text
+                        style={{
+                          color: '#144272',
+                          fontWeight: 'bold',
+                          marginLeft: 5,
+                          marginTop: 5,
+                        }}>
+                        {item.prod_name}
+                      </Text>
+
+                      <TouchableOpacity onPress={() => handleDelete(item.id)}>
+                        <Icon
+                          name="delete"
+                          size={20}
+                          color="#e57373"
                           style={{
-                            color: '#144272',
-                            fontWeight: 'bold',
-                            marginLeft: 5,
+                            marginRight: 10,
                             marginTop: 5,
-                          }}>
-                          {item.ProductName}
-                        </Text>
-
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
                             alignSelf: 'center',
-                            marginRight: 5,
                           }}
-                          source={require('../../../assets/show.png')}
                         />
-                      </View>
+                      </TouchableOpacity>
+                    </View>
 
-                      <View style={styles.infoRow}>
-                        <View style={styles.rowt}>
-                          <Text style={styles.text}>Cost Price:</Text>
-                          <Text style={styles.text}>{item.CostPrice}</Text>
-                        </View>
-                        <View style={styles.rowt}>
-                          <Text style={styles.text}>Sale Price:</Text>
-                          <Text style={styles.text}>{item.SalePrice}</Text>
-                        </View>
-                        <View style={styles.rowt}>
-                          <Text style={styles.text}>Quantity:</Text>
-                          <Text style={styles.text}>{item.Quantity}</Text>
-                        </View>
-                        <View style={styles.rowt}>
-                          <Text style={[styles.text, {marginBottom: 5}]}>
-                            SubTotal:
-                          </Text>
-                          <Text style={[styles.text, {marginBottom: 5}]}>
-                            {item.subtotal}
-                          </Text>
-                        </View>
+                    <View style={styles.infoRow}>
+                      <View style={styles.rowt}>
+                        <Text style={styles.text}>Cost Price:</Text>
+                        <Text style={styles.text}>
+                          {item.tmptrd_cost_price}
+                        </Text>
+                      </View>
+                      <View style={styles.rowt}>
+                        <Text style={styles.text}>Sale Price:</Text>
+                        <Text style={styles.text}>
+                          {item.tmptrd_sale_price}
+                        </Text>
+                      </View>
+                      <View style={styles.rowt}>
+                        <Text style={styles.text}>Quantity:</Text>
+                        <Text style={styles.text}>{item.tmptrd_qty}</Text>
+                      </View>
+                      <View style={styles.rowt}>
+                        <Text style={[styles.text, {marginBottom: 5}]}>
+                          SubTotal:
+                        </Text>
+                        <Text style={[styles.text, {marginBottom: 5}]}>
+                          {item.tmptrd_sub_total}
+                        </Text>
                       </View>
                     </View>
-                  </ScrollView>
-                )}
-              />
-            </View>
-            <View style={[styles.row, {marginLeft: 15, marginRight: 10}]}>
-              <Text style={[styles.inputSmall, {color: 'white'}]}>
-                Cost Price: {CostPrice}
-              </Text>
-              <Text style={[styles.inputSmall, {color: 'white'}]}>
-                Sale Price: {SalePrice}
-              </Text>
-            </View>
-            <View style={[styles.row, {marginLeft: 15, marginRight: 10}]}>
-              <Text style={[styles.inputSmall, {color: 'white'}]}>
-                Profit/Loss
-              </Text>
-              <Text style={[styles.inputSmall, {color: 'white'}]}>Payable</Text>
-            </View>
-
-            <View style={styles.section}>
-              <View
-                style={[
-                  styles.row,
-                  {
+                  </View>
+                </ScrollView>
+              )}
+              ListEmptyComponent={
+                <View
+                  style={{
+                    height: 100,
+                    width: '100%',
+                    justifyContent: 'center',
                     alignItems: 'center',
-                    marginBottom: 6,
-                    marginTop: -2,
-                    marginLeft: 5,
-                  },
-                ]}>
-                <TextInput
-                  style={styles.inputSmall}
-                  placeholder="Paid"
-                  placeholderTextColor={'white'}
-                />
+                  }}>
+                  <Text
+                    style={{
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      fontSize: 16,
+                    }}>
+                    No items found in cart.
+                  </Text>
+                </View>
+              }
+            />
+          </View>
 
+          <View style={styles.section}>
+            <View style={styles.row}>
+              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                Cost Price: {checkoutDetails?.costtotal ?? '0.00'}
+              </Text>
+              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                Sale Price: {checkoutDetails?.saletotal ?? '0.00'}
+              </Text>
+            </View>
+
+            <View style={styles.row}>
+              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                <Text style={{fontWeight: 'bold'}}>Profit/Loss:</Text>{' '}
+                {checkoutDetails?.profitandloss ?? '0.00'}
+              </Text>
+              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
+                Payable: {checkoutDetails?.payable ?? '0.00'}
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.section}>
+            <View style={styles.row}>
+              <TextInput
+                style={styles.inputSmall}
+                placeholder="Paid"
+                placeholderTextColor={'white'}
+                keyboardType="numeric"
+                value={paidAmount}
+                onChangeText={t => setPaidAmount(t)}
+              />
+
+              <View
+                style={{
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  borderTopWidth: 1,
+                  borderBottomWidth: 1,
+                  width: '46%',
+                  borderRightWidth: 1,
+                  borderLeftWidth: 1,
+                  borderRadius: 5,
+                  borderColor: 'white',
+                  height: 38,
+                }}>
                 <View
                   style={{
                     flexDirection: 'row',
                     alignItems: 'center',
-                    borderTopWidth: 1,
-                    borderBottomWidth: 1,
-                    width: 165,
-                    borderRightWidth: 1,
-                    borderLeftWidth: 1,
                     borderRadius: 5,
                     borderColor: 'white',
-                    height: 35,
+                    paddingHorizontal: 10,
                   }}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      borderRadius: 5,
-                      borderColor: 'white',
-                    }}>
-                    <Text style={{marginLeft: 10, color: 'white'}}>
-                      {`${orderDate.toLocaleDateString()}`}
-                    </Text>
+                  <Text style={{color: 'white'}}>
+                    {`${orderDate.toLocaleDateString()}`}
+                  </Text>
 
-                    <TouchableOpacity
-                      onPress={() => setShoworderDatePicker(true)}>
-                      <Image
-                        style={{
-                          height: 20,
-                          width: 20,
-                          resizeMode: 'stretch',
-                          alignItems: 'center',
-                          marginLeft: 60,
-                          tintColor: 'white',
-                          alignSelf: 'flex-end',
-                        }}
-                        source={require('../../../assets/calendar.png')}
-                      />
-                      {showorderDatePicker && (
-                        <DateTimePicker
-                          testID="startDatePicker"
-                          value={orderDate}
-                          mode="date"
-                          is24Hour={true}
-                          display="default"
-                          onChange={onorderDateChange}
-                        />
-                      )}
-                    </TouchableOpacity>
-                  </View>
+                  <TouchableOpacity
+                    onPress={() => setShoworderDatePicker(true)}
+                    style={{padding: 5, marginLeft: 35}}>
+                    <Icon name="calendar-today" size={22} color="white" />
+                  </TouchableOpacity>
+                  {showorderDatePicker && (
+                    <DateTimePicker
+                      testID="startDatePicker"
+                      value={orderDate}
+                      mode="date"
+                      is24Hour={true}
+                      display="default"
+                      onChange={onorderDateChange}
+                    />
+                  )}
                 </View>
               </View>
             </View>
-
-            <TouchableOpacity onPress={togglecheckout}>
-              <View
-                style={{
-                  width: 335,
-                  height: 30,
-                  backgroundColor: 'white',
-                  borderRadius: 15,
-                  alignSelf: 'center',
-                  margin: 5,
-                }}>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    color: '#144272',
-                    marginTop: 5,
-                  }}>
-                  Check Out
-                </Text>
-              </View>
-            </TouchableOpacity>
           </View>
+
+          <TouchableOpacity
+            onPress={() => {
+              handleCheckout();
+            }}>
+            <View
+              style={{
+                width: '90%',
+                height: 38,
+                backgroundColor: 'white',
+                borderRadius: 10,
+                alignSelf: 'center',
+                justifyContent: 'center',
+                marginTop: 15,
+              }}>
+              <Text
+                style={{
+                  textAlign: 'center',
+                  color: '#144272',
+                  fontSize: 14,
+                  fontWeight: 'bold',
+                }}>
+                Check Out
+              </Text>
+            </View>
+          </TouchableOpacity>
         </ScrollView>
 
-        {/*checkout*/}
-        <Modal isVisible={checkout}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Product has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setcheckout(!checkout)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-        {/*supplier*/}
-        <Modal isVisible={customer}>
+        {/*Add Customer Modal*/}
+        <Modal isVisible={modalVisible === 'AddCustomer'}>
           <ScrollView
             style={{
               flex: 1,
               backgroundColor: 'white',
               width: '98%',
-              maxHeight: 380,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Add New Supplier
-              </Text>
-              <TouchableOpacity onPress={() => setcustomer(!customer)}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
-                  }}
-                  source={require('../../../assets/cross.png')}
-                />
-              </TouchableOpacity>
-            </View>
-            <View
-              style={{
-                marginTop: 10,
-                flexDirection: 'row',
-                marginLeft: 10,
-              }}>
-              <RadioButton
-                value="addacustomer"
-                status={
-                  customerType === 'addacustomer' ? 'unchecked' : 'checked'
-                }
-                color="#144272"
-                uncheckedColor="#144272"
-                onPress={() => setcustomerType('addacustomer')}
-              />
-              <Text
-                style={{
-                  color: '#144272',
-                  marginTop: 7,
-                  marginLeft: -5,
-                }}>
-                Also a Customer
-              </Text>
-            </View>
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Company Name"
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Agency Name"
-              />
-            </View>
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Supplier Name"
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 1"
-              />
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Address"
-              />
-            </View>
-
-            <View
-              style={{
-                flexDirection: 'row',
-                marginLeft: 10,
-                marginRight: 10,
-              }}>
-              <DropDownPicker
-                items={customerAreaItem}
-                open={customerArea}
-                setOpen={setcustomerArea}
-                value={currentcustomerarea}
-                setValue={setCurrentcustomerarea}
-                placeholder="Select Supplier Area"
-                placeholderStyle={{color: '#144272'}}
-                textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
-                style={[
-                  styles.dropdown,
-                  {
-                    borderColor: '#144272',
-                    width: 265,
-                  },
-                ]}
-                dropDownContainerStyle={{
-                  backgroundColor: 'white',
-                  borderColor: '#144272',
-                  width: 265,
-                }}
-                labelStyle={{color: '#144272'}}
-                listItemLabelStyle={{color: '#144272'}}
-              />
-              <TouchableOpacity onPress={togglearea}>
-                <Image
-                  style={{
-                    tintColor: '#144272',
-                    width: 22,
-                    height: 17,
-                    alignSelf: 'center',
-                    marginLeft: -26,
-                    marginTop: 17,
-                  }}
-                  source={require('../../../assets/add.png')}
-                />
-              </TouchableOpacity>
-            </View>
-            <View
-              style={{
-                flexDirection: 'row',
-              }}>
-              <TouchableOpacity>
-                <View
-                  style={[
-                    styles.row,
-                    {
-                      marginLeft: 13,
-                      backgroundColor: '#144272',
-                      borderRadius: 10,
-                      width: 295,
-                    },
-                  ]}>
-                  <Text
-                    style={[
-                      styles.productinput,
-                      {color: 'white', textAlign: 'center'},
-                    ]}>
-                    Choose Image
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            <TouchableOpacity onPress={togglebtncustomerarea}>
-              <View
-                style={{
-                  backgroundColor: '#144272',
-                  height: 30,
-                  width: 120,
-                  margin: 10,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignSelf: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Add Supplier
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </Modal>
-
-        {/*supplier area*/}
-        <Modal isVisible={area}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: 'auto',
-              maxHeight: 135,
-              borderRadius: 5,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Add New Area
-              </Text>
-              <TouchableOpacity onPress={() => setarea(!area)}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
-                  }}
-                  source={require('../../../assets/cross.png')}
-                />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.search}
-                placeholderTextColor={'#144272'}
-                placeholder="Area Name"
-              />
-            </View>
-            <TouchableOpacity onPress={toggleareabtn}>
-              <View
-                style={{
-                  alignSelf: 'center',
-                  backgroundColor: '#144272',
-                  height: 30,
-                  borderRadius: 10,
-                  width: 100,
-                  justifyContent: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Add Area
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </Modal>
-
-        {/*add area btn*/}
-        <Modal isVisible={areabtn}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Area has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setareabtn(!areabtn)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        {/*btn supplier*/}
-        <Modal isVisible={btncustomerarea}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Supplier has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomerarea(!btncustomerarea)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        {/*customer*/}
-        <Modal isVisible={customermodal}>
-          <ScrollView
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 430,
+              maxHeight: '60%',
               borderRadius: 10,
               borderWidth: 1,
               borderColor: '#144272',
@@ -1071,7 +1132,10 @@ export default function Trade() {
                 Add New Customer
               </Text>
               <TouchableOpacity
-                onPress={() => setcustomermodal(!customermodal)}>
+                onPress={() => {
+                  setModalVisible('');
+                  setAddForm(initialAddCustomer);
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -1082,172 +1146,225 @@ export default function Trade() {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+            <View style={[styles.row, {paddingHorizontal: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Customer Name"
+                value={addForm.name}
+                onChangeText={t => onChange('name', t)}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
-                placeholder="father Name"
+                placeholder="Father Name"
+                value={addForm.father_name}
+                onChangeText={t => onChange('father_name', t)}
               />
             </View>
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+
+            <View style={[styles.row, {paddingHorizontal: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Email"
+                value={addForm.email}
+                onChangeText={t => onChange('email', t)}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Address"
+                value={addForm.address}
+                onChangeText={t => onChange('address', t)}
               />
             </View>
 
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+            <View style={[styles.row, {paddingHorizontal: 10}]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
-                placeholder="Contact 1"
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 2"
-              />
-            </View>
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 3"
+                placeholder="Contact"
+                value={addForm.contact}
+                keyboardType="phone-pad"
+                maxLength={12}
+                onChangeText={t => {
+                  // Remove all non-digits and non-dash
+                  let cleaned = t.replace(/[^0-9-]/g, '');
+                  // Remove existing dashes for formatting
+                  cleaned = cleaned.replace(/-/g, '');
+                  // Insert dash after 4 digits
+                  if (cleaned.length > 4) {
+                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                  }
+                  // Limit to 12 characters (including dash)
+                  if (cleaned.length > 12) {
+                    cleaned = cleaned.slice(0, 12);
+                  }
+                  onChange('contact', cleaned);
+                }}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="CNIC"
                 keyboardType="numeric"
-                maxLength={13}
+                maxLength={15}
+                onChangeText={t => {
+                  // Remove all non-digits and non-dash
+                  let cleaned = t.replace(/[^0-9-]/g, '');
+                  // Remove existing dashes for formatting
+                  cleaned = cleaned.replace(/-/g, '');
+                  // Insert dash after 5 digits
+                  if (cleaned.length > 5) {
+                    cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
+                  }
+                  // Insert another dash after 7 more digits (total 13 digits: 5-7-1)
+                  if (cleaned.length > 13) {
+                    cleaned =
+                      cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
+                  }
+                  // Limit to 15 characters (including dashes)
+                  if (cleaned.length > 15) {
+                    cleaned = cleaned.slice(0, 15);
+                  }
+                  onChange('cnic', cleaned);
+                }}
+                value={addForm.cnic}
               />
             </View>
 
+            <View style={[styles.row, {paddingHorizontal: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact 1"
+                value={addForm.sec_contact}
+                keyboardType="phone-pad"
+                maxLength={12}
+                onChangeText={t => {
+                  // Remove all non-digits and non-dash
+                  let cleaned = t.replace(/[^0-9-]/g, '');
+                  // Remove existing dashes for formatting
+                  cleaned = cleaned.replace(/-/g, '');
+                  // Insert dash after 4 digits
+                  if (cleaned.length > 4) {
+                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                  }
+                  // Limit to 12 characters (including dash)
+                  if (cleaned.length > 12) {
+                    cleaned = cleaned.slice(0, 12);
+                  }
+                  onChange('sec_contact', cleaned);
+                }}
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact 2"
+                value={addForm.third_contact}
+                keyboardType="phone-pad"
+                maxLength={12}
+                onChangeText={t => {
+                  // Remove all non-digits and non-dash
+                  let cleaned = t.replace(/[^0-9-]/g, '');
+                  // Remove existing dashes for formatting
+                  cleaned = cleaned.replace(/-/g, '');
+                  // Insert dash after 4 digits
+                  if (cleaned.length > 4) {
+                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                  }
+                  // Limit to 12 characters (including dash)
+                  if (cleaned.length > 12) {
+                    cleaned = cleaned.slice(0, 12);
+                  }
+                  onChange('third_contact', cleaned);
+                }}
+              />
+            </View>
+
+            {/* Customer Type Dropdown - moved above Customer Area */}
             <View
               style={{
                 flexDirection: 'row',
-                marginLeft: 10,
-                marginRight: 10,
+                paddingHorizontal: 10,
               }}>
               <DropDownPicker
-                items={customerItem}
-                open={customerTypemodal}
-                setOpen={setcustomerTypemodal}
-                value={currentcustomer}
-                setValue={setCurrentcustomer}
+                items={transformedTypes}
+                open={custTypeOpen}
+                setOpen={setCustTypeOpen}
+                value={custType}
+                setValue={setCustType}
                 placeholder="Select Customer Type"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
                 style={[
                   styles.dropdown,
-                  {
-                    borderColor: '#144272',
-                    width: 265,
-                  },
+                  {borderColor: '#144272', width: '100%'},
                 ]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
-                  width: 265,
+                  width: '100%',
+                  zIndex: 1000,
+                  marginTop: 8,
+                  maxHeight: 120,
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
-              <TouchableOpacity onPress={toggleaddcustomer}>
-                <Image
-                  style={{
-                    tintColor: '#144272',
-                    width: 22,
-                    height: 17,
-                    alignSelf: 'center',
-                    marginLeft: -26,
-                    marginTop: 17,
-                  }}
-                  source={require('../../../assets/add.png')}
-                />
-              </TouchableOpacity>
             </View>
 
+            {/* Customer Area Dropdown */}
             <View
               style={{
                 flexDirection: 'row',
-                marginLeft: 10,
-                marginRight: 10,
+                paddingHorizontal: 10,
               }}>
               <DropDownPicker
-                items={customerAreaItemmodal}
-                open={customerAreamodal}
-                setOpen={setcustomerAreamodal}
-                value={currentcustomerareamodal}
-                setValue={setCurrentcustomerareamodal}
+                items={transformedAreas}
+                open={custAreaOpen}
+                setOpen={setCustAreaOpen}
+                value={custArea}
+                setValue={setCustArea}
                 placeholder="Select Customer Area"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
                 style={[
                   styles.dropdown,
                   {
                     borderColor: '#144272',
-                    width: 265,
+                    width: '100%',
+                    zIndex: 999,
                   },
                 ]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
-                  width: 265,
+                  width: '100%',
+                  marginTop: 8,
+                  maxHeight: 120,
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
-              <TouchableOpacity onPress={toggleareamodal}>
-                <Image
-                  style={{
-                    tintColor: '#144272',
-                    width: 22,
-                    height: 17,
-                    alignSelf: 'center',
-                    marginLeft: -26,
-                    marginTop: 17,
-                  }}
-                  source={require('../../../assets/add.png')}
-                />
-              </TouchableOpacity>
             </View>
-            <TouchableOpacity>
-              <View
-                style={[
-                  styles.row,
-                  {
-                    marginLeft: 10,
-                    marginRight: 10,
-                    backgroundColor: '#144272',
-                    borderRadius: 10,
-                    width: 290,
-                    alignSelf: 'center',
-                  },
-                ]}>
-                <Text
-                  style={[
-                    styles.productinput,
-                    {color: 'white', textAlign: 'center'},
-                  ]}>
-                  Choose Image
-                </Text>
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={togglebtncustomerareamodal}>
+
+            <TouchableOpacity onPress={addCustomer}>
               <View
                 style={{
                   backgroundColor: '#144272',
@@ -1269,18 +1386,20 @@ export default function Trade() {
             </TouchableOpacity>
           </ScrollView>
         </Modal>
-        {/*add customer type*/}
-        <Modal isVisible={addcustomermodal}>
-          <View
+
+        {/*Add Supplier Modal*/}
+        <Modal isVisible={modalVisible === 'AddSupplier'}>
+          <ScrollView
             style={{
               flex: 1,
               backgroundColor: 'white',
-              width: 'auto',
-              maxHeight: 135,
-              borderRadius: 5,
+              width: '98%',
+              maxHeight: '60%',
+              borderRadius: 10,
               borderWidth: 1,
               borderColor: '#144272',
               overflow: 'hidden',
+              alignSelf: 'center',
             }}>
             <View
               style={{
@@ -1294,10 +1413,13 @@ export default function Trade() {
                   fontWeight: 'bold',
                   fontSize: 16,
                 }}>
-                Add New Type
+                Add New Supplier
               </Text>
               <TouchableOpacity
-                onPress={() => setaddcustomermodal(!addcustomermodal)}>
+                onPress={() => {
+                  setModalVisible('');
+                  setSupAddForm(initialAddSupplier);
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -1307,310 +1429,163 @@ export default function Trade() {
                 />
               </TouchableOpacity>
             </View>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.search}
-                placeholderTextColor={'#144272'}
-                placeholder="Type Name"
-              />
-            </View>
-            <TouchableOpacity onPress={togglebtncustomer}>
-              <View
-                style={{
-                  alignSelf: 'center',
-                  backgroundColor: '#144272',
-                  height: 30,
-                  borderRadius: 10,
-                  width: 100,
-                  justifyContent: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Add Type
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </Modal>
-        {/*add type btn*/}
-        <Modal isVisible={btncustomermodal}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Type has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomermodal(!btncustomermodal)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
 
-        {/*customer area*/}
-        <Modal isVisible={areamodal}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: 'auto',
-              maxHeight: 135,
-              borderRadius: 5,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-            }}>
             <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
+              style={[
+                styles.row,
+                {marginLeft: 7, marginRight: 10, justifyContent: 'flex-start'},
+              ]}>
+              <TouchableOpacity
+                style={{flexDirection: 'row', alignItems: 'center'}}
+                activeOpacity={0.7}
+                onPress={() => {
+                  const newOptions = selectedOptions.includes('on')
+                    ? selectedOptions.filter(opt => opt !== 'on')
+                    : [...selectedOptions, 'on'];
+                  setSelectedOptions(newOptions);
                 }}>
-                Add New Area
-              </Text>
-              <TouchableOpacity onPress={() => setareamodal(!areamodal)}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
-                  }}
-                  source={require('../../../assets/cross.png')}
+                <Checkbox.Android
+                  status={
+                    selectedOptions.includes('on') ? 'checked' : 'unchecked'
+                  }
+                  color="#144272"
+                  uncheckedColor="#144272"
                 />
+                <Text style={{color: '#144272', marginLeft: 8}}>
+                  Also a Customer
+                </Text>
               </TouchableOpacity>
             </View>
-            <View style={styles.inputRow}>
+
+            <View style={[styles.row, {paddingHorizontal: 10}]}>
               <TextInput
-                style={styles.search}
+                style={styles.productinput}
                 placeholderTextColor={'#144272'}
-                placeholder="Area Name"
+                placeholder="Company Name"
+                value={supAddForm.comp_name}
+                onChangeText={text => handleAddInputChange('comp_name', text)}
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Agency Name"
+                value={supAddForm.agencyname}
+                onChangeText={text => handleAddInputChange('agencyname', text)}
               />
             </View>
-            <TouchableOpacity onPress={toggleareabtnmodal}>
+
+            <View style={[styles.row, {paddingHorizontal: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Supplier Name"
+                value={supAddForm.supp_name}
+                onChangeText={text => handleAddInputChange('supp_name', text)}
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact 1"
+                keyboardType="numeric"
+                value={supAddForm.contact}
+                onChangeText={text => handleAddInputChange('contact', text)}
+              />
+            </View>
+
+            <View style={[styles.row, {paddingHorizontal: 10}]}>
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact 2"
+                keyboardType="numeric"
+                value={supAddForm.sec_contact}
+                onChangeText={text => handleAddInputChange('sec_contact', text)}
+              />
+              <TextInput
+                style={styles.productinput}
+                placeholderTextColor={'#144272'}
+                placeholder="Contact 3"
+                keyboardType="numeric"
+                value={supAddForm.third_contact}
+                onChangeText={text =>
+                  handleAddInputChange('third_contact', text)
+                }
+              />
+            </View>
+
+            <View style={[styles.row, {paddingHorizontal: 10}]}>
+              <TextInput
+                style={[styles.productinput, {width: '100%'}]}
+                placeholderTextColor={'#144272'}
+                placeholder="Address"
+                value={supAddForm.address}
+                onChangeText={text => handleAddInputChange('address', text)}
+              />
+            </View>
+
+            <View
+              style={{
+                flexDirection: 'row',
+                marginLeft: 10,
+                marginRight: 10,
+              }}>
+              <DropDownPicker
+                items={transformedAreas}
+                open={areaOpen}
+                setOpen={setAreaOpen}
+                value={areaValue}
+                setValue={setAreaValue}
+                placeholder="Select Supplier Area"
+                placeholderStyle={{color: '#144272'}}
+                textStyle={{color: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
+                style={[
+                  styles.dropdown,
+                  {
+                    borderColor: '#144272',
+                    width: '100%',
+                  },
+                ]}
+                dropDownContainerStyle={{
+                  backgroundColor: 'white',
+                  borderColor: '#144272',
+                  width: '100%',
+                  zIndex: 1000,
+                  marginTop: 8,
+                  maxHeight: 130,
+                }}
+                labelStyle={{color: '#144272'}}
+                listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
+              />
+            </View>
+
+            <TouchableOpacity onPress={handleAddSupplier}>
               <View
                 style={{
-                  alignSelf: 'center',
                   backgroundColor: '#144272',
                   height: 30,
+                  width: 120,
+                  margin: 10,
                   borderRadius: 10,
-                  width: 100,
                   justifyContent: 'center',
+                  alignSelf: 'center',
                 }}>
                 <Text
                   style={{
                     color: 'white',
                     textAlign: 'center',
                   }}>
-                  Add Area
+                  Add Supplier
                 </Text>
               </View>
             </TouchableOpacity>
-          </View>
-        </Modal>
-
-        {/*add area btn*/}
-        <Modal isVisible={areabtnmodal}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Area has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setareabtnmodal(!areabtnmodal)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        {/*btn customer*/}
-        <Modal isVisible={btncustomerareamodal}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Customer has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomerareamodal(!btncustomerareamodal)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
+          </ScrollView>
         </Modal>
       </ImageBackground>
     </SafeAreaView>
@@ -1635,74 +1610,59 @@ const styles = StyleSheet.create({
     height: 'auto',
     borderRadius: 12,
     elevation: 15,
-    marginBottom: -13,
     padding: 10,
+    paddingHorizontal: 15,
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    marginTop: 12,
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   input: {
     borderWidth: 1,
     borderColor: 'white',
     borderRadius: 6,
     padding: 8,
-    marginVertical: 8,
     color: 'white',
+    height: 38,
+    width: '100%',
   },
   inputSmall: {
-    flex: 1,
     borderWidth: 1,
     borderColor: 'white',
     borderRadius: 6,
     padding: 8,
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: 'white',
+    height: 38,
+    width: '46%',
+    color: '#fff',
   },
   addButton: {
-    marginLeft: 4,
     alignSelf: 'center',
     justifyContent: 'center',
     backgroundColor: 'white',
-    borderRadius: 15,
-    width: 100,
+    borderRadius: 10,
+    paddingVertical: 10,
+    marginTop: 12,
+    width: '100%',
   },
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    justifyContent: 'space-between',
-    marginLeft: 10,
-    marginRight: 10,
-  },
-  search: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    height: 40,
+    width: '90%',
   },
   productinput: {
-    flex: 1,
     borderWidth: 1,
     borderColor: '#144272',
     borderRadius: 6,
     padding: 8,
+    height: 38,
+    width: '46%',
   },
   text: {
     marginLeft: 5,
@@ -1732,5 +1692,24 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     marginTop: 5,
+  },
+  resultsContainer: {
+    position: 'absolute',
+    top: 50,
+    left: 0,
+    right: 0,
+    backgroundColor: 'white',
+    borderRadius: 5,
+    zIndex: 100,
+    elevation: 10,
+    maxHeight: 'auto',
+  },
+  resultItem: {
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+  },
+  resultText: {
+    color: '#144272',
   },
 });

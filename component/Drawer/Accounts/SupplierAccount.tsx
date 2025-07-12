@@ -6,7 +6,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import {SafeAreaView} from 'react-native';
 import {ImageBackground} from 'react-native';
@@ -16,20 +16,79 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {RadioButton} from 'react-native-paper';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import {useNavigation} from '@react-navigation/native';
+
+interface Suppliers {
+  id: number;
+  sup_name: string;
+  sup_company_name: string;
+}
+
+interface AllSupplierData {
+  sup_name: string;
+  supac_total_bill_amount: number;
+  supac_paid_amount: number;
+  supac_balance: number;
+}
+
+interface SingleSupplier {
+  id: string;
+  sup_name: string;
+  sup_company_name: string;
+  sup_address: string;
+}
+
+interface DetailsWithout {
+  id: string;
+  supac_invoice_no: string;
+  supac_date: string;
+  supac_total_bill_amount: string;
+  supac_paid_amount: string;
+  supac_balance: string;
+  supac_payment_type: string;
+  supac_payment_method: string;
+}
+
+interface DetailsWith {
+  id: string;
+  supac_invoice_no: string;
+  supac_date: string;
+  supac_total_bill_amount: string;
+  supac_paid_amount: string;
+  supac_balance: string;
+}
 
 export default function SupplierAccount() {
   const [selectedTab, setSelectedTab] = useState('Single');
-  const {openDrawer} = useDrawer();
+  const {openDrawer, closeDrawer} = useDrawer();
+  const navigation = useNavigation();
   const [Open, setOpen] = useState(false);
-  const [customerVal, setCustomerVal] = useState<string | ''>('');
-  const [fromDate, setFromDate] = useState<Date | null>(new Date());
-  const [toDate, setToDate] = useState<Date | null>(new Date());
+  const [suppValue, setSuppValue] = useState<string | ''>('');
+  const [fromDate, setFromDate] = useState<Date | null>(null);
+  const [toDate, setToDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState<'from' | 'to' | null>(
     null,
   );
   const [selectedOption, setSelectedOption] = useState<
     'withoutDetails' | 'withDetails'
   >('withoutDetails');
+  const [allSuppData, setAllSuppData] = useState<AllSupplierData[]>([]);
+  const [suppDropdown, setSuppDropdown] = useState<Suppliers[]>([]);
+  const transformedSupp = suppDropdown.map(sup => ({
+    label: `${sup.sup_name}_${sup.sup_company_name}`,
+    value: sup.id.toString(),
+  }));
+  const [suppData, setSuppData] = useState<SingleSupplier | null>(null);
+  const [accountDetailsWithout, setAccountDetailsWithout] = useState<
+    DetailsWithout[]
+  >([]);
+  const [chequeCount, setChequeCount] = useState<number | null>(null);
+  const [chequeAmount, setChequeAmount] = useState<number | null>(null);
+  const [accountDetailsWith, setAccountDetailsWith] = useState<DetailsWith[]>(
+    [],
+  );
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
@@ -47,109 +106,129 @@ export default function SupplierAccount() {
     setShowDatePicker(null);
   };
 
-  const item = [
-    {
-      label: 'walk_in_customer s/o Nill | NILL',
-      value: 'walk_in_customer s/o Nill | NILL',
-    },
-    {label: 'Naeem s/o | NILL', value: 'Naeem s/o  | NILL'},
-    {label: 'Khalid s/o | NILL', value: 'Khalid s/o  | NILL'},
-    {label: 'a s/o | NILL', value: 'a s/o  | NILL'},
-  ];
+  // Calculate All Supplier Totals
+  const calculateTotals = () => {
+    let totalReceivables = 0;
+    let totalReceived = 0;
 
-  const Info = [
-    {
-      'Sr#': 1,
-      'Invoice #': 'PU-3',
-      Date: '15-Mar-2025',
-      Payable: 50000.0,
-      Paid: 0.0,
-      Balance: 50000.0,
-      'Pre Balance': 0.0,
-      Total: 50000.0,
-      Type: 'Purchase Invoice',
-      Method: 'By Cash',
-    },
-    {
-      'Sr#': 2,
-      'Invoice #': 'PU-7',
-      Date: '15-Mar-2025',
-      Payable: 40000.0,
-      Paid: 0.0,
-      Balance: 40000.0,
-      'Pre Balance': 50000.0,
-      Total: 90000.0,
-      Type: 'Purchase Invoice',
-      Method: 'By Cash',
-    },
-    {
-      'Sr#': 3,
-      'Invoice #': 'PR-1',
-      Date: '15-Mar-2025',
-      Payable: 0.0,
-      Paid: 25000.0,
-      Balance: -25000.0,
-      'Pre Balance': 90000.0,
-      Total: 65000.0,
-      Type: 'Purchase Return',
-      Method: 'By Cash',
-    },
-    {
-      'Sr#': 5,
-      'Invoice #': 'PU-23',
-      Date: '26-Mar-2025',
-      Payable: 300000.0,
-      Paid: 0.0,
-      Balance: 300000.0,
-      'Pre Balance': 64000.0,
-      Total: 364000.0,
-      Type: 'Purchase Invoice',
-      Method: 'By Cash',
-    },
-    {
-      'Sr#': 8,
-      'Invoice #': 'PU-27',
-      Date: '07-Apr-2025',
-      Payable: 1000000.0,
-      Paid: 0.0,
-      Balance: 1000000.0,
-      'Pre Balance': 299000.0,
-      Total: 1299000.0,
-      Type: 'Purchase Invoice',
-      Method: 'By Cash',
-    },
-  ];
+    allSuppData.forEach(sup => {
+      const receivable = sup.supac_total_bill_amount || 0;
+      const received = sup.supac_paid_amount || 0;
 
-  const allSupplierInfo = [
-    {
-      'Sr#': 1,
-      'Supplier name': 'Hajra Ali',
-      'Total Bill Amount': 0.0,
-      'Paid amount': 1500.0,
-      Balance: -1500.0,
-    },
-    {
-      'Sr#': 2,
-      'Supplier name': 'Khalid',
-      'Total Bill Amount': 900000.0,
-      'Paid amount': 20800.0,
-      Balance: 879200.0,
-    },
-    {
-      'Sr#': 3,
-      'Supplier name': 'Naeem',
-      'Total Bill Amount': 4214000.0,
-      'Paid amount': 91000.0,
-      Balance: 4123000.0,
-    },
-    {
-      'Sr#': 4,
-      'Supplier name': 'zaheer',
-      'Total Bill Amount': 83600.0,
-      'Paid amount': 0.0,
-      Balance: 83600.0,
-    },
-  ];
+      totalReceivables += receivable;
+      totalReceived += received;
+    });
+
+    return {
+      totalReceivables: totalReceivables.toFixed(2),
+      totalReceived: totalReceived.toFixed(2),
+      netReceivables: (totalReceivables - totalReceived).toFixed(2),
+    };
+  };
+
+  //Fetch All Supplier Data
+  const fetchAllSupplierData = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/allsupplieraccount`);
+      setAllSuppData(res.data.supp);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Supplier dropdown
+  const fetchCustDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/loadsuppliers`);
+      setSuppDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Get Single Supplier Data
+  const getSuppData = async () => {
+    if (suppValue) {
+      try {
+        const res = await axios.post(`${BASE_URL}/fetchsuppdata`, {
+          id: suppValue,
+        });
+        setSuppData({
+          sup_address: res.data.supplier.sup_address,
+          sup_company_name: res.data.supplier.sup_company_name,
+          sup_name: res.data.supplier.sup_name,
+          id: res.data.supplier.id,
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  // Fetch Single Supplier Without Details
+  const fetchCustWithoutDetails = async () => {
+    try {
+      const from = fromDate?.toISOString().split('T')[0];
+      const to = toDate?.toISOString().split('T')[0];
+      const res = await axios.post(
+        `${BASE_URL}/singlesupplieraccountwithoutdetail`,
+        {
+          supplier_id: suppValue,
+          from,
+          to,
+        },
+      );
+      setAccountDetailsWithout(res.data.cust);
+      setChequeCount(res.data.no_of_chqs);
+      setChequeAmount(res.data.chq[0]?.chi_amount || 0);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate Withou Details Totals
+  const calculateWithoutTotals = () => {
+    let totalReceivables = 0;
+    let totalReceived = 0;
+
+    accountDetailsWithout.forEach(invc => {
+      const receivables = parseFloat(invc.supac_total_bill_amount) || 0;
+      const received = parseFloat(invc.supac_paid_amount) || 0;
+
+      totalReceivables += receivables;
+      totalReceived += received;
+    });
+
+    return {
+      totalReceivables: totalReceivables.toFixed(2),
+      totalReceived: totalReceived.toFixed(2),
+      netReceivables: (totalReceivables - totalReceived).toFixed(2),
+    };
+  };
+
+  // Fetch Single Customer With Details
+  const fetchCustWithDetails = async () => {
+    try {
+      const from = fromDate?.toISOString().split('T')[0];
+      const to = toDate?.toISOString().split('T')[0];
+      const res = await axios.post(`${BASE_URL}/singlesupplieraccount`, {
+        supplier_id: suppValue,
+        from,
+        to,
+      });
+      setAccountDetailsWith(res.data.account);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchAllSupplierData();
+    fetchCustWithoutDetails();
+    getSuppData();
+    fetchCustDropdown();
+    fetchCustWithDetails();
+  }, [suppValue]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -214,7 +293,11 @@ export default function SupplierAccount() {
               style={[
                 styles.toggleBtn,
                 {borderRadius: 10, backgroundColor: '#144272'},
-              ]}>
+              ]}
+              onPress={() => {
+                closeDrawer();
+                navigation.navigate('SupplierAddPayment' as never);
+              }}>
               <Text style={[styles.toggleBtnText, {color: 'white'}]}>
                 Add Payment
               </Text>
@@ -223,7 +306,11 @@ export default function SupplierAccount() {
               style={[
                 styles.toggleBtn,
                 {borderRadius: 10, backgroundColor: '#144272'},
-              ]}>
+              ]}
+              onPress={() => {
+                navigation.navigate('SupplierChequeClearance' as never);
+                closeDrawer();
+              }}>
               <Text style={[styles.toggleBtnText, {color: 'white'}]}>
                 Cheque Clearance
               </Text>
@@ -248,19 +335,20 @@ export default function SupplierAccount() {
                   Supplier:
                 </Text>
                 <DropDownPicker
-                  items={item}
+                  items={transformedSupp}
                   open={Open}
-                  value={customerVal}
-                  setValue={setCustomerVal}
+                  value={suppValue}
+                  setValue={setSuppValue}
                   setOpen={setOpen}
-                  placeholder="Select Customer"
+                  placeholder="Select Supplier"
                   placeholderStyle={{color: 'white'}}
                   textStyle={{color: 'white'}}
                   style={styles.dropdown}
                   dropDownContainerStyle={{
                     backgroundColor: 'white',
                     borderColor: '#144272',
-                    width: 287,
+                    width: '90%',
+                    marginTop: 8,
                   }}
                   labelStyle={{color: 'white'}}
                   listItemLabelStyle={{color: '#144272'}}
@@ -274,6 +362,7 @@ export default function SupplierAccount() {
                       <Icon name="chevron-down" size={15} color="white" />
                     </Text>
                   )}
+                  listMode="SCROLLVIEW"
                 />
               </View>
 
@@ -360,7 +449,11 @@ export default function SupplierAccount() {
                   }}>
                   Supplier Name:
                 </Text>
-                <TextInput style={styles.productinput} />
+                <TextInput
+                  style={[styles.productinput, {backgroundColor: 'gray'}]}
+                  value={suppData?.sup_name}
+                  editable={false}
+                />
               </View>
 
               <View
@@ -379,7 +472,11 @@ export default function SupplierAccount() {
                   }}>
                   Compnay Name:
                 </Text>
-                <TextInput style={styles.productinput} />
+                <TextInput
+                  style={[styles.productinput, {backgroundColor: 'gray'}]}
+                  value={suppData?.sup_company_name}
+                  editable={false}
+                />
               </View>
 
               <View
@@ -398,7 +495,11 @@ export default function SupplierAccount() {
                   }}>
                   Address:
                 </Text>
-                <TextInput style={styles.productinput} />
+                <TextInput
+                  style={[styles.productinput, {backgroundColor: 'gray'}]}
+                  value={suppData?.sup_address}
+                  editable={false}
+                />
               </View>
 
               {/* Account Type Radio Buttons */}
@@ -455,57 +556,183 @@ export default function SupplierAccount() {
                 </RadioButton.Group>
               </View>
 
-              {/* Invoices Cards */}
-              <View style={{paddingBottom: 30}}>
-                <View style={{marginTop: 20}}>
-                  {Info.map((item, index) => (
-                    <View key={item['Sr#']} style={{padding: 5}}>
-                      <View style={styles.table}>
-                        <View style={styles.tablehead}>
-                          <Text
-                            style={{
-                              color: '#144272',
-                              fontWeight: 'bold',
-                              marginLeft: 5,
-                              marginTop: 5,
-                            }}>
-                            {item['Invoice #']}
-                          </Text>
-                        </View>
-
-                        <View style={styles.infoRow}>
-                          {[
-                            {label: 'Date:', value: item.Date},
-                            {label: 'Payable:', value: item.Payable},
-                            {label: 'Paid:', value: item.Paid},
-                            {label: 'Balance:', value: item.Balance},
-                            {label: 'Pre Balance:', value: item['Pre Balance']},
-                            {label: 'Total:', value: item.Total},
-                            {label: 'Type:', value: item.Type},
-                            {label: 'Method:', value: item.Method},
-                          ].map((field, idx) => (
-                            <View
-                              key={`${item['Sr#']}-${idx}`}
-                              style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                              }}>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {field.label}
-                              </Text>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {typeof field.value === 'number'
-                                  ? field.value.toFixed(2)
-                                  : field.value}
+              {/* Without Details Invoices Cards */}
+              {selectedOption === 'withoutDetails' && (
+                <View style={{paddingBottom: 30}}>
+                  <View style={{marginTop: 20}}>
+                    {accountDetailsWithout.length === 0 ? (
+                      <View style={{alignItems: 'center', marginTop: 20}}>
+                        <Text
+                          style={{
+                            color: 'white',
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                          }}>
+                          No record found.
+                        </Text>
+                      </View>
+                    ) : (
+                      accountDetailsWithout.map((item, index) => (
+                        <View key={item.id} style={{padding: 5}}>
+                          <View style={styles.table}>
+                            <View style={styles.tablehead}>
+                              <Text
+                                style={{
+                                  color: '#144272',
+                                  fontWeight: 'bold',
+                                  marginLeft: 5,
+                                  marginTop: 5,
+                                }}>
+                                {item.supac_invoice_no}
                               </Text>
                             </View>
-                          ))}
+
+                            <View style={styles.infoRow}>
+                              {[
+                                {
+                                  label: 'Date:',
+                                  value: new Date(item.supac_date)
+                                    .toLocaleDateString('en-DB', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })
+                                    .replace(/\//g, '-'),
+                                },
+                                {
+                                  label: 'Payable:',
+                                  value: item.supac_total_bill_amount,
+                                },
+                                {label: 'Paid:', value: item.supac_paid_amount},
+                                {label: 'Balance:', value: item.supac_balance},
+                                {
+                                  label: 'Type:',
+                                  value: item.supac_payment_type,
+                                },
+                                {
+                                  label: 'Method:',
+                                  value: item.supac_payment_method,
+                                },
+                              ].map(
+                                (
+                                  field: {
+                                    label: string;
+                                    value: number | string;
+                                  },
+                                  idx,
+                                ) => (
+                                  <View
+                                    key={`${index}-${idx}`}
+                                    style={{
+                                      flexDirection: 'row',
+                                      justifyContent: 'space-between',
+                                    }}>
+                                    <Text
+                                      style={[styles.value, {marginBottom: 5}]}>
+                                      {field.label}
+                                    </Text>
+                                    <Text
+                                      style={[styles.value, {marginBottom: 5}]}>
+                                      {typeof field.value === 'number'
+                                        ? field.value.toFixed(2)
+                                        : field.value}
+                                    </Text>
+                                  </View>
+                                ),
+                              )}
+                            </View>
+                          </View>
                         </View>
-                      </View>
-                    </View>
-                  ))}
+                      ))
+                    )}
+                  </View>
                 </View>
-              </View>
+              )}
+
+              {/* Without Details Invoices Cards */}
+              {selectedOption === 'withDetails' && (
+                <View style={{paddingBottom: 30}}>
+                  <View style={{marginTop: 20}}>
+                    {accountDetailsWith.length === 0 ? (
+                      <View style={{alignItems: 'center', marginTop: 20}}>
+                        <Text
+                          style={{
+                            color: 'white',
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                          }}>
+                          No record found.
+                        </Text>
+                      </View>
+                    ) : (
+                      accountDetailsWith.map((item, index) => (
+                        <View key={item.id} style={{padding: 5}}>
+                          <View style={styles.table}>
+                            <View style={styles.tablehead}>
+                              <Text
+                                style={{
+                                  color: '#144272',
+                                  fontWeight: 'bold',
+                                  marginLeft: 5,
+                                  marginTop: 5,
+                                }}>
+                                {item.supac_invoice_no}
+                              </Text>
+                            </View>
+
+                            <View style={styles.infoRow}>
+                              {[
+                                {
+                                  label: 'Date:',
+                                  value: new Date(item.supac_date)
+                                    .toLocaleDateString('en-DB', {
+                                      day: '2-digit',
+                                      month: 'short',
+                                      year: 'numeric',
+                                    })
+                                    .replace(/\//g, '-'),
+                                },
+                                {
+                                  label: 'Payable:',
+                                  value: item.supac_total_bill_amount,
+                                },
+                                {label: 'Paid:', value: item.supac_paid_amount},
+                                {label: 'Balance:', value: item.supac_balance},
+                              ].map(
+                                (
+                                  field: {
+                                    label: string;
+                                    value: number | string;
+                                  },
+                                  idx,
+                                ) => (
+                                  <View
+                                    key={`${index}-${idx}`}
+                                    style={{
+                                      flexDirection: 'row',
+                                      justifyContent: 'space-between',
+                                    }}>
+                                    <Text
+                                      style={[styles.value, {marginBottom: 5}]}>
+                                      {field.label}
+                                    </Text>
+                                    <Text
+                                      style={[styles.value, {marginBottom: 5}]}>
+                                      {typeof field.value === 'number'
+                                        ? field.value.toFixed(2)
+                                        : field.value}
+                                    </Text>
+                                  </View>
+                                ),
+                              )}
+                            </View>
+                          </View>
+                        </View>
+                      ))
+                    )}
+                  </View>
+                </View>
+              )}
 
               {/* Last Component */}
               <View
@@ -524,7 +751,9 @@ export default function SupplierAccount() {
                   <Text style={[styles.text, {fontWeight: 'bold'}]}>
                     No of Unpaid Cheques:
                   </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>1</Text>
+                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                    {chequeCount}
+                  </Text>
                 </View>
                 <View
                   style={{
@@ -537,107 +766,128 @@ export default function SupplierAccount() {
                     Unpaid Cheques Amount:
                   </Text>
                   <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    11111.00
+                    {chequeAmount?.toFixed(2)}
                   </Text>
                 </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Total Receivables:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    47203.00
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Total Received:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    47203.00
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Net Receivables:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>0.00</Text>
-                </View>
+                {(() => {
+                  const {netReceivables, totalReceivables, totalReceived} =
+                    calculateWithoutTotals();
 
-                <View style={styles.btnContainer}>
-                  <TouchableOpacity style={styles.btnItem}>
-                    <Text style={styles.btnText}>View Details</Text>
-                  </TouchableOpacity>
-                </View>
+                  return (
+                    <>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Total Receivables:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {totalReceivables}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Total Received:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {totalReceived}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Net Receivables:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {netReceivables}
+                        </Text>
+                      </View>
+                    </>
+                  );
+                })()}
               </View>
             </>
           ) : (
             <>
-              <View style={{paddingBottom: 30}}>
-                <View style={{marginTop: 20}}>
-                  {allSupplierInfo.map((item, index) => (
-                    <View key={item['Sr#']} style={{padding: 5}}>
-                      <View style={styles.table}>
-                        <View style={styles.tablehead}>
-                          <Text
-                            style={{
-                              color: '#144272',
-                              fontWeight: 'bold',
-                              marginLeft: 5,
-                              marginTop: 5,
-                            }}>
-                            {item['Supplier name']}
-                          </Text>
-                        </View>
-
-                        <View style={styles.infoRow}>
-                          {[
-                            {
-                              label: 'Bill Amount:',
-                              value: item['Total Bill Amount'],
-                            },
-                            {label: 'Paid amount:', value: item['Paid amount']},
-                            {label: 'Balance:', value: item.Balance},
-                          ].map((field, idx) => (
-                            <View
-                              key={`${item['Sr#']}-${idx}`}
+              {allSuppData.length === 0 ? (
+                <View style={{alignItems: 'center', marginTop: 20}}>
+                  <Text
+                    style={{
+                      color: 'white',
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                    }}>
+                    No record found.
+                  </Text>
+                </View>
+              ) : (
+                <View style={{paddingBottom: 30}}>
+                  <View style={{marginTop: 20}}>
+                    {allSuppData.map((item, index) => (
+                      <View key={index} style={{padding: 5}}>
+                        <View style={styles.table}>
+                          <View style={styles.tablehead}>
+                            <Text
                               style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
+                                color: '#144272',
+                                fontWeight: 'bold',
+                                marginLeft: 5,
+                                marginTop: 5,
                               }}>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {field.label}
-                              </Text>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {typeof field.value === 'number'
-                                  ? field.value.toFixed(2)
-                                  : field.value}
-                              </Text>
-                            </View>
-                          ))}
+                              {item.sup_name}
+                            </Text>
+                          </View>
+
+                          <View style={styles.infoRow}>
+                            {[
+                              {
+                                label: 'Bill Amount:',
+                                value: item.supac_total_bill_amount,
+                              },
+                              {
+                                label: 'Paid amount:',
+                                value: item.supac_paid_amount,
+                              },
+                              {label: 'Balance:', value: item.supac_balance},
+                            ].map((field, idx) => (
+                              <View
+                                key={`${index}-${idx}`}
+                                style={{
+                                  flexDirection: 'row',
+                                  justifyContent: 'space-between',
+                                }}>
+                                <Text style={[styles.value, {marginBottom: 5}]}>
+                                  {field.label}
+                                </Text>
+                                <Text style={[styles.value, {marginBottom: 5}]}>
+                                  {typeof field.value === 'number'
+                                    ? field.value.toFixed(2)
+                                    : field.value}
+                                </Text>
+                              </View>
+                            ))}
+                          </View>
                         </View>
                       </View>
-                    </View>
-                  ))}
+                    ))}
+                  </View>
                 </View>
-              </View>
+              )}
 
               {/* Last Component */}
               <View
@@ -646,48 +896,56 @@ export default function SupplierAccount() {
                   paddingVertical: 20,
                   paddingHorizontal: 10,
                 }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Total Receivables:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    333251.00
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Total Received:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    65173.00
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Net Receivables:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    268078.00
-                  </Text>
-                </View>
+                {(() => {
+                  const {totalReceivables, totalReceived, netReceivables} =
+                    calculateTotals();
+                  return (
+                    <>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Total Receivables:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {totalReceivables}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Total Received:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {totalReceived}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Net Receivables:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {netReceivables}
+                        </Text>
+                      </View>
+                    </>
+                  );
+                })()}
               </View>
             </>
           )}
@@ -745,7 +1003,7 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
@@ -756,10 +1014,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     width: '100%',
     borderColor: 'white',
+    color: '#fff',
     borderRadius: 6,
     padding: 8,
     marginTop: 5,
-    height: 40,
+    height: 38,
   },
   dateInput: {
     borderWidth: 1,

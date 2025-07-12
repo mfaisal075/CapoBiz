@@ -7,26 +7,79 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
-import {TextInput} from 'react-native';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {RadioButton} from 'react-native-paper';
 import {ScrollView} from 'react-native-gesture-handler';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import {useNavigation} from '@react-navigation/native';
+
+interface Customers {
+  id: number;
+  cust_name: string;
+  cust_fathername: string;
+  cust_address: string;
+}
+
+interface CustomersAccounts {
+  cust_name: string;
+  custac_total_bill_amount: string;
+  custac_paid_amount: string;
+  custac_balance: string;
+}
+
+interface DetailsWithout {
+  id: string;
+  custac_invoice_no: string;
+  custac_date: string;
+  custac_total_bill_amount: string;
+  custac_paid_amount: string;
+  custac_balance: string;
+  custac_payment_type: string;
+  custac_payment_method: string;
+}
+
+interface DetailsWith {
+  id: string;
+  custac_invoice_no: string;
+  custac_date: string;
+  custac_total_bill_amount: string;
+  custac_paid_amount: string;
+  custac_balance: string;
+}
 
 export default function CustomerAccount() {
-  const {openDrawer} = useDrawer();
+  const {openDrawer, closeDrawer} = useDrawer();
+  const navigation = useNavigation();
   const [selectedTab, setSelectedTab] = useState('Single');
   const [Open, setOpen] = useState(false);
   const [customerVal, setCustomerVal] = useState<string | ''>('');
-  const [fromDate, setFromDate] = useState<Date | null>(new Date());
-  const [toDate, setToDate] = useState<Date | null>(new Date());
+  const [fromDate, setFromDate] = useState<Date | null>(null);
+  const [toDate, setToDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState<'from' | 'to' | null>(
     null,
   );
+  const [custDropdown, setCustDropdown] = useState<Customers[]>([]);
+  const transformedCust = custDropdown.map(cust => ({
+    label: `${cust.cust_name} s/o ${cust.cust_fathername} | ${cust.cust_address}`,
+    value: cust.id.toString(),
+  }));
+  const [custData, setCustData] = useState<Customers | null>(null);
+  const [allCustAccount, setAllCustAccount] = useState<CustomersAccounts[]>([]);
+  const [accountDetailsWithout, setAccountDetailsWithout] = useState<
+    DetailsWithout[]
+  >([]);
+  const [accountDetailsWith, setAccountDetailsWith] = useState<DetailsWith[]>(
+    [],
+  );
+  const [chequeCount, setChequeCount] = useState('');
+  const [chequeAmount, setChequeAmount] = useState('');
+
   const [selectedOption, setSelectedOption] = useState<
     'withoutDetails' | 'withDetails'
   >('withoutDetails');
@@ -47,102 +100,129 @@ export default function CustomerAccount() {
     setShowDatePicker(null);
   };
 
-  const item = [
-    {
-      label: 'walk_in_customer s/o Nill | NILL',
-      value: 'walk_in_customer s/o Nill | NILL',
-    },
-    {label: 'Naeem s/o | NILL', value: 'Naeem s/o  | NILL'},
-    {label: 'Khalid s/o | NILL', value: 'Khalid s/o  | NILL'},
-    {label: 'a s/o | NILL', value: 'a s/o  | NILL'},
-  ];
+  // Fetch Customer dropdown
+  const fetchCustDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchdropcustomer`);
+      setCustDropdown(res.data.customers);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
-  const Info = [
-    {
-      'Sr#': 1,
-      'Invoice #': 'SR-2',
-      Date: '15-Mar-2025',
-      Payable: 1198.0,
-      Paid: 1198.0,
-      Balance: 0.0,
-      'Pre Balance': 0.0,
-      Total: 0.0,
-      Type: 'Sale Return',
-      Method: 'By Cash',
-    },
-    {
-      'Sr#': 2,
-      'Invoice #': 'SL-21',
-      Date: '16-Mar-2025',
-      Payable: 600.0,
-      Paid: 600.0,
-      Balance: 0.0,
-      'Pre Balance': 0.0,
-      Total: 0.0,
-      Type: 'Sale Invoice',
-      Method: 'By Cash',
-    },
-    {
-      'Sr#': 3,
-      'Invoice #': 'SR-6',
-      Date: '26-Mar-2025',
-      Payable: 11980.0,
-      Paid: 11980.0,
-      Balance: 0.0,
-      'Pre Balance': 0.0,
-      Total: 0.0,
-      Type: 'Sale Return',
-      Method: 'By Cash',
-    },
-    {
-      'Sr#': 4,
-      'Invoice #': 'SL-52',
-      Date: '09-Apr-2025',
-      Payable: 1425.0,
-      Paid: 1425.0,
-      Balance: 0.0,
-      'Pre Balance': 0.0,
-      Total: 0.0,
-      Type: 'Sale Invoice',
-      Method: 'By Cash',
-    },
-    {
-      'Sr#': 5,
-      'Invoice #': 'SL-54',
-      Date: '12-Apr-2025',
-      Payable: 32000.0,
-      Paid: 32000.0,
-      Balance: 0.0,
-      'Pre Balance': 0.0,
-      Total: 0.0,
-      Type: 'Sale Invoice',
-      Method: 'By Cash',
-    },
-  ];
+  // Get Single Customet Data
+  const getCustData = async () => {
+    if (customerVal) {
+      try {
+        const res = await axios.post(`${BASE_URL}/fetchcustdata`, {
+          id: customerVal,
+        });
+        setCustData({
+          cust_address: res.data.customer.cust_address,
+          cust_fathername: res.data.customer.cust_fathername,
+          cust_name: res.data.customer.cust_name,
+          id: res.data.customer.id,
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
 
-  const allCustomerInfo = [
-    {
-      'Sr#': 1,
-      'Customer name': 'Khalid',
-      'Bill Amount': 71905.0,
-      'Paid amount': 14975.0,
-      Balance: 56930.0,
-    },
-    {
-      'Sr#': 2,
-      'Customer name': 'Naeem',
-      'Bill Amount': 214143.0,
-      'Paid amount': 2995.0,
-      Balance: 211148.0,
-    },
-    {
-      'Sr#': 3,
-      'Customer name': 'walk_in_customer',
-      'Bill Amount': 47203.0,
-      'Paid amount': 47203.0,
-      Balance: 0.0,
-    },
-  ];
+  // Fetch All Customer
+  const fetchAllCustAccounts = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/allcustomeraccount`);
+      setAllCustAccount(res.data.cust);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  //Calculate Totals
+  const calculateTotals = () => {
+    let totalReceivables = 0;
+    let totalReceived = 0;
+
+    allCustAccount.forEach(account => {
+      const receivable = parseFloat(account.custac_total_bill_amount) || 0;
+      const received = parseFloat(account.custac_paid_amount) || 0;
+
+      totalReceivables += receivable;
+      totalReceived += received;
+    });
+
+    return {
+      totalReceivables: totalReceivables.toFixed(2),
+      totalReceived: totalReceived.toFixed(2),
+      netReceivables: (totalReceivables - totalReceived).toFixed(2),
+    };
+  };
+
+  // Fetch Single Customer Without Details
+  const fetchCustWithoutDetails = async () => {
+    try {
+      const from = fromDate?.toISOString().split('T')[0];
+      const to = toDate?.toISOString().split('T')[0];
+      const res = await axios.post(
+        `${BASE_URL}/singlecustomeraccountwithoutdetail`,
+        {
+          customer_id: customerVal,
+          from,
+          to,
+        },
+      );
+      setAccountDetailsWithout(res.data.cust);
+      setChequeCount(res.data.no_of_chqs);
+      setChequeAmount(res.data.chq.chi_amount);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Single Customer With Details
+  const fetchCustWithDetails = async () => {
+    try {
+      const from = fromDate?.toISOString().split('T')[0];
+      const to = toDate?.toISOString().split('T')[0];
+      const res = await axios.post(`${BASE_URL}/singlecustomeraccount`, {
+        customer_id: customerVal,
+        from,
+        to,
+      });
+      setAccountDetailsWith(res.data.cust);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate With Details Totals
+  const calculateWithoutTotals = () => {
+    let totalReceivables = 0;
+    let totalReceived = 0;
+
+    accountDetailsWith.forEach(invc => {
+      const receivables = parseFloat(invc.custac_total_bill_amount) || 0;
+      const received = parseFloat(invc.custac_paid_amount) || 0;
+
+      totalReceivables += receivables;
+      totalReceived += received;
+    });
+
+    return {
+      totalReceivables: totalReceivables.toFixed(2),
+      totalReceived: totalReceived.toFixed(2),
+      netReceivables: (totalReceivables - totalReceived).toFixed(2),
+    };
+  };
+
+  useEffect(() => {
+    fetchCustDropdown();
+    getCustData();
+    fetchAllCustAccounts();
+    fetchCustWithoutDetails();
+    fetchCustWithDetails();
+  }, [customerVal, fromDate, toDate]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -208,7 +288,11 @@ export default function CustomerAccount() {
               style={[
                 styles.toggleBtn,
                 {borderRadius: 10, backgroundColor: '#144272'},
-              ]}>
+              ]}
+              onPress={() => {
+                closeDrawer();
+                navigation.navigate('AddCustomerPayment' as never);
+              }}>
               <Text style={[styles.toggleBtnText, {color: 'white'}]}>
                 Add Payment
               </Text>
@@ -217,7 +301,11 @@ export default function CustomerAccount() {
               style={[
                 styles.toggleBtn,
                 {borderRadius: 10, backgroundColor: '#144272'},
-              ]}>
+              ]}
+              onPress={() => {
+                closeDrawer();
+                navigation.navigate('ChequeClearance' as never);
+              }}>
               <Text style={[styles.toggleBtnText, {color: 'white'}]}>
                 Cheque Clearance
               </Text>
@@ -243,7 +331,7 @@ export default function CustomerAccount() {
                   Customer:
                 </Text>
                 <DropDownPicker
-                  items={item}
+                  items={transformedCust}
                   open={Open}
                   value={customerVal}
                   setValue={setCustomerVal}
@@ -255,7 +343,8 @@ export default function CustomerAccount() {
                   dropDownContainerStyle={{
                     backgroundColor: 'white',
                     borderColor: '#144272',
-                    width: 325,
+                    width: '90%',
+                    marginTop: 8,
                   }}
                   labelStyle={{color: 'white'}}
                   listItemLabelStyle={{color: '#144272'}}
@@ -269,6 +358,7 @@ export default function CustomerAccount() {
                       <Icon name="chevron-down" size={15} color="white" />
                     </Text>
                   )}
+                  listMode="SCROLLVIEW"
                 />
               </View>
 
@@ -288,7 +378,9 @@ export default function CustomerAccount() {
                   }}>
                   Customer Name:
                 </Text>
-                <TextInput style={styles.productinput} />
+                <Text style={[styles.productinput, {backgroundColor: 'gray'}]}>
+                  {custData?.cust_name}
+                </Text>
               </View>
 
               <View
@@ -307,7 +399,9 @@ export default function CustomerAccount() {
                   }}>
                   Father Name:
                 </Text>
-                <TextInput style={styles.productinput} />
+                <Text style={[styles.productinput, {backgroundColor: 'gray'}]}>
+                  {custData?.cust_fathername}
+                </Text>
               </View>
 
               <View
@@ -326,7 +420,9 @@ export default function CustomerAccount() {
                   }}>
                   Address:
                 </Text>
-                <TextInput style={styles.productinput} />
+                <Text style={[styles.productinput, {backgroundColor: 'gray'}]}>
+                  {custData?.cust_address}
+                </Text>
               </View>
 
               {/* Date Fields Section */}
@@ -450,57 +546,211 @@ export default function CustomerAccount() {
                 </RadioButton.Group>
               </View>
 
-              {/* Invoices Cards */}
-              <View style={{paddingBottom: 30}}>
-                <View style={{marginTop: 20}}>
-                  {Info.map((item, index) => (
-                    <View key={item['Sr#']} style={{padding: 5}}>
-                      <View style={styles.table}>
-                        <View style={styles.tablehead}>
+              {/* Without Details Invoices Cards */}
+              {selectedOption === 'withoutDetails' && (
+                <>
+                  <View style={{paddingBottom: 30}}>
+                    <View style={{marginTop: 20}}>
+                      {accountDetailsWithout.length === 0 ? (
+                        <View style={{alignItems: 'center', marginTop: 20}}>
                           <Text
                             style={{
-                              color: '#144272',
+                              color: 'white',
+                              fontSize: 16,
                               fontWeight: 'bold',
-                              marginLeft: 5,
-                              marginTop: 5,
                             }}>
-                            {item['Invoice #']}
+                            No record found.
                           </Text>
                         </View>
+                      ) : (
+                        accountDetailsWithout.map((item, index) => (
+                          <View key={item.id} style={{padding: 5}}>
+                            <View style={styles.table}>
+                              <View style={styles.tablehead}>
+                                <Text
+                                  style={{
+                                    color: '#144272',
+                                    fontWeight: 'bold',
+                                    marginLeft: 5,
+                                    marginTop: 5,
+                                  }}>
+                                  {item.custac_invoice_no}
+                                </Text>
+                              </View>
 
-                        <View style={styles.infoRow}>
-                          {[
-                            {label: 'Date:', value: item.Date},
-                            {label: 'Payable:', value: item.Payable},
-                            {label: 'Paid:', value: item.Paid},
-                            {label: 'Balance:', value: item.Balance},
-                            {label: 'Pre Balance:', value: item['Pre Balance']},
-                            {label: 'Total:', value: item.Total},
-                            {label: 'Type:', value: item.Type},
-                            {label: 'Method:', value: item.Method},
-                          ].map((field, idx) => (
-                            <View
-                              key={`${item['Sr#']}-${idx}`}
-                              style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                              }}>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {field.label}
-                              </Text>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {typeof field.value === 'number'
-                                  ? field.value.toFixed(2)
-                                  : field.value}
-                              </Text>
+                              <View style={styles.infoRow}>
+                                {[
+                                  {
+                                    label: 'Date:',
+                                    value: new Date(item.custac_date)
+                                      .toLocaleDateString('en-GB', {
+                                        day: '2-digit',
+                                        month: 'short',
+                                        year: 'numeric',
+                                      })
+                                      .replace(/\//g, '-'),
+                                  },
+                                  {
+                                    label: 'Payable:',
+                                    value: item.custac_total_bill_amount,
+                                  },
+                                  {
+                                    label: 'Paid:',
+                                    value: item.custac_paid_amount,
+                                  },
+                                  {
+                                    label: 'Balance:',
+                                    value: item.custac_balance,
+                                  },
+                                  {
+                                    label: 'Type:',
+                                    value: item.custac_payment_type,
+                                  },
+                                  {
+                                    label: 'Method:',
+                                    value: item.custac_payment_method,
+                                  },
+                                ].map(
+                                  (
+                                    field: {
+                                      label: string;
+                                      value: number | string;
+                                    },
+                                    idx,
+                                  ) => (
+                                    <View
+                                      key={`${index}-${idx}`}
+                                      style={{
+                                        flexDirection: 'row',
+                                        justifyContent: 'space-between',
+                                      }}>
+                                      <Text
+                                        style={[
+                                          styles.value,
+                                          {marginBottom: 5},
+                                        ]}>
+                                        {field.label}
+                                      </Text>
+                                      <Text
+                                        style={[
+                                          styles.value,
+                                          {marginBottom: 5},
+                                        ]}>
+                                        {typeof field.value === 'number'
+                                          ? field.value.toFixed(2)
+                                          : field.value}
+                                      </Text>
+                                    </View>
+                                  ),
+                                )}
+                              </View>
                             </View>
-                          ))}
-                        </View>
-                      </View>
+                          </View>
+                        ))
+                      )}
                     </View>
-                  ))}
-                </View>
-              </View>
+                  </View>
+                </>
+              )}
+
+              {/* With Details Invoices Cards */}
+              {selectedOption === 'withDetails' && (
+                <>
+                  <View style={{paddingBottom: 30}}>
+                    <View style={{marginTop: 20}}>
+                      {accountDetailsWith.length === 0 ? (
+                        <View style={{alignItems: 'center', marginTop: 20}}>
+                          <Text
+                            style={{
+                              color: 'white',
+                              fontSize: 16,
+                              fontWeight: 'bold',
+                            }}>
+                            No record found.
+                          </Text>
+                        </View>
+                      ) : (
+                        accountDetailsWith.map((item, index) => (
+                          <View key={item.id} style={{padding: 5}}>
+                            <View style={styles.table}>
+                              <View style={styles.tablehead}>
+                                <Text
+                                  style={{
+                                    color: '#144272',
+                                    fontWeight: 'bold',
+                                    marginLeft: 5,
+                                    marginTop: 5,
+                                  }}>
+                                  {item.custac_invoice_no}
+                                </Text>
+                              </View>
+
+                              <View style={styles.infoRow}>
+                                {[
+                                  {
+                                    label: 'Date:',
+                                    value: new Date(item.custac_date)
+                                      .toLocaleDateString('en-GB', {
+                                        day: '2-digit',
+                                        month: 'short',
+                                        year: 'numeric',
+                                      })
+                                      .replace(/\//g, '-'),
+                                  },
+                                  {
+                                    label: 'Payable:',
+                                    value: item.custac_total_bill_amount,
+                                  },
+                                  {
+                                    label: 'Paid:',
+                                    value: item.custac_paid_amount,
+                                  },
+                                  {
+                                    label: 'Balance:',
+                                    value: item.custac_balance,
+                                  },
+                                ].map(
+                                  (
+                                    field: {
+                                      label: string;
+                                      value: number | string;
+                                    },
+                                    idx,
+                                  ) => (
+                                    <View
+                                      key={`${index}-${idx}`}
+                                      style={{
+                                        flexDirection: 'row',
+                                        justifyContent: 'space-between',
+                                      }}>
+                                      <Text
+                                        style={[
+                                          styles.value,
+                                          {marginBottom: 5},
+                                        ]}>
+                                        {field.label}
+                                      </Text>
+                                      <Text
+                                        style={[
+                                          styles.value,
+                                          {marginBottom: 5},
+                                        ]}>
+                                        {typeof field.value === 'number'
+                                          ? field.value.toFixed(2)
+                                          : field.value}
+                                      </Text>
+                                    </View>
+                                  ),
+                                )}
+                              </View>
+                            </View>
+                          </View>
+                        ))
+                      )}
+                    </View>
+                  </View>
+                </>
+              )}
 
               {/* Last Component */}
               <View
@@ -519,7 +769,9 @@ export default function CustomerAccount() {
                   <Text style={[styles.text, {fontWeight: 'bold'}]}>
                     No of Unpaid Cheques:
                   </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>1</Text>
+                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                    {chequeCount ?? '0'}
+                  </Text>
                 </View>
                 <View
                   style={{
@@ -532,63 +784,67 @@ export default function CustomerAccount() {
                     Unpaid Cheques:
                   </Text>
                   <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    11111.00
+                    {parseFloat(chequeAmount).toFixed(2) ?? '0.00'}
                   </Text>
                 </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Total Receivables:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    47203.00
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Total Received:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    47203.00
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Net Receivables:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>0.00</Text>
-                </View>
-
-                <View style={styles.btnContainer}>
-                  <TouchableOpacity style={styles.btnItem}>
-                    <Text style={styles.btnText}>View Details</Text>
-                  </TouchableOpacity>
-                </View>
+                {(() => {
+                  const {netReceivables, totalReceivables, totalReceived} =
+                    calculateWithoutTotals();
+                  return (
+                    <>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Total Receivables:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {totalReceivables}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Total Received:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {totalReceived}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Net Receivables:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {netReceivables}
+                        </Text>
+                      </View>
+                    </>
+                  );
+                })()}
               </View>
             </>
           ) : (
             <>
               <View style={{paddingBottom: 30}}>
                 <View style={{marginTop: 20}}>
-                  {allCustomerInfo.map((item, index) => (
-                    <View key={item['Sr#']} style={{padding: 5}}>
+                  {allCustAccount.map((item, index) => (
+                    <View key={index} style={{padding: 5}}>
                       <View style={styles.table}>
                         <View style={styles.tablehead}>
                           <Text
@@ -598,32 +854,43 @@ export default function CustomerAccount() {
                               marginLeft: 5,
                               marginTop: 5,
                             }}>
-                            {item['Customer name']}
+                            {item.cust_name}
                           </Text>
                         </View>
 
                         <View style={styles.infoRow}>
                           {[
-                            {label: 'Bill Amount:', value: item['Bill Amount']},
-                            {label: 'Paid amount:', value: item['Paid amount']},
-                            {label: 'Balance:', value: item.Balance},
-                          ].map((field, idx) => (
-                            <View
-                              key={`${item['Sr#']}-${idx}`}
-                              style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                              }}>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {field.label}
-                              </Text>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {typeof field.value === 'number'
-                                  ? field.value.toFixed(2)
-                                  : field.value}
-                              </Text>
-                            </View>
-                          ))}
+                            {
+                              label: 'Bill Amount:',
+                              value: item.custac_total_bill_amount,
+                            },
+                            {
+                              label: 'Paid amount:',
+                              value: item.custac_paid_amount,
+                            },
+                            {label: 'Balance:', value: item.custac_balance},
+                          ].map(
+                            (
+                              field: {label: string; value: number | string},
+                              idx,
+                            ) => (
+                              <View
+                                key={`${index}-${idx}`}
+                                style={{
+                                  flexDirection: 'row',
+                                  justifyContent: 'space-between',
+                                }}>
+                                <Text style={[styles.value, {marginBottom: 5}]}>
+                                  {field.label}
+                                </Text>
+                                <Text style={[styles.value, {marginBottom: 5}]}>
+                                  {typeof field.value === 'number'
+                                    ? field.value.toFixed(2)
+                                    : field.value}
+                                </Text>
+                              </View>
+                            ),
+                          )}
                         </View>
                       </View>
                     </View>
@@ -638,48 +905,56 @@ export default function CustomerAccount() {
                   paddingVertical: 20,
                   paddingHorizontal: 10,
                 }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Total Receivables:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    333251.00
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Total Received:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    65173.00
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Net Receivables:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    268078.00
-                  </Text>
-                </View>
+                {(() => {
+                  const {totalReceivables, totalReceived, netReceivables} =
+                    calculateTotals();
+                  return (
+                    <>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Total Receivables:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {totalReceivables}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Total Received:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {totalReceived}
+                        </Text>
+                      </View>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                          marginVertical: 5,
+                          paddingHorizontal: '10%',
+                        }}>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          Net Receivables:
+                        </Text>
+                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                          {netReceivables}
+                        </Text>
+                      </View>
+                    </>
+                  );
+                })()}
               </View>
             </>
           )}
@@ -737,7 +1012,7 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
@@ -751,7 +1026,8 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     padding: 8,
     marginTop: 5,
-    height: 40,
+    color: '#fff',
+    height: 38,
   },
   dateInput: {
     borderWidth: 1,

@@ -10,205 +10,268 @@ import {
   FlatList,
   TextInput,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import Modal from 'react-native-modal';
 import DropDownPicker from 'react-native-dropdown-picker';
-
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import {useUser} from '../../CTX/UserContext';
+import Toast from 'react-native-toast-message';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+
+interface Expenses {
+  expc_name: string;
+  id: number;
+  exp_amount: string;
+  exp_addedby: string;
+  exp_date: string;
+  exp_desc: string;
+  exp_expc_id: number;
+}
+
+interface ExpenseCategories {
+  id: string;
+  expc_name: string;
+}
+
+interface AddExpense {
+  category: string;
+  amount: string;
+  addedBy: string;
+  date: Date;
+  description: string;
+}
+
+const initialAddExpense: AddExpense = {
+  addedBy: '',
+  amount: '',
+  category: '',
+  date: new Date(),
+  description: '',
+};
+
+interface EditExpense {
+  category: string;
+  amount: string;
+  addedBy: string;
+  date: Date;
+  description: string;
+}
+
+const initialEditExpense: EditExpense = {
+  addedBy: '',
+  amount: '',
+  category: '',
+  date: new Date(),
+  description: '',
+};
 
 export default function ManageExpenses() {
-
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const Info = [
-    {
-      ExpensesName: 'Internet Bill',
-      Amount: '700',
-      Expenseaddedby: 'Admin',
-      expenseDate: '04-08-25',
-    },
-    {
-      ExpensesName: 'Internet Bill',
-      Amount: '700',
-      Expenseaddedby: 'Admin',
-      expenseDate: '04-08-25',
-    },
-    {
-      ExpensesName: 'Internet Bill',
-      Amount: '700',
-      Expenseaddedby: 'Admin',
-      expenseDate: '04-08-25',
-    },
-  ];
-
-  const total = Info.reduce((acc, item) => acc + parseFloat(item.Amount), 0);
-
-  console.log('Total Amount:', total);
-  {
-    /*view modal*/
-  }
-  const ViewModal = [
-    {
-      ExpenseName: 'Internet Bill',
-      ExpenseAmount: 3500,
-      AddedBy: 'Admin',
-      Date: '3-7-24',
-      Description: 'abc',
-    },
-  ];
-
-  {
-    /*customer*/
-  }
-  const [customer, setcustomer] = useState(false);
-
-  const togglecustomer = () => {
-    setcustomer(!customer);
-  };
-
+  const [expenses, setExpenses] = useState<Expenses[]>([]);
+  const [totalExpense, setTotalExpense] = useState('');
+  const [selectedExpense, setSelectedExpense] = useState<Expenses[]>([]);
+  const [modalVisible, setModalVisible] = useState('');
+  const [expCategories, setExpCategories] = useState<ExpenseCategories[]>([]);
+  const transformedCategories = expCategories.map(cat => ({
+    label: cat.expc_name,
+    value: cat.id.toString(),
+  }));
+  const [addFrom, setAddFrom] = useState<AddExpense>(initialAddExpense);
+  const [editFrom, setEditFrom] = useState<EditExpense>(initialEditExpense);
+  const [categoryValue, setCategoryValue] = useState('');
+  const [editCategoryValue, setEditCategoryValue] = useState('');
+  const [editCatOpen, setEditCatOpen] = useState(false);
   const [customerType, setcustomerType] = useState(false);
-  const [currentcustomer, setCurrentcustomer] = useState<string | null>('');
-  const customerItem = [
-    {label: 'Rent', value: 'Rent'},
-    {label: 'Internet Bill', value: 'Internet Bill'},
+  const [showorderDatePicker, setShoworderDatePicker] = useState(false);
+  const [showeditDatePicker, setShoweditDatePicker] = useState(false);
 
-  ];
-
-   const [orderDate, setorderDate] = useState(new Date());
-    const [showorderDatePicker, setShoworderDatePicker] = useState(false);
-  
-    const onorderDateChange = (
-      event: DateTimePickerEvent,
-      selectedDate?: Date,
-    ) => {
-      const currentDate = selectedDate || orderDate;
-      setShoworderDatePicker(false);
-      setorderDate(currentDate);
-    };
-  
-
-  const [area, setarea] = useState(false);
-
-  const togglearea = () => {
-    setarea(!area);
-  };
-  const [customerArea, setcustomerArea] = useState(false);
-  const [currentcustomerarea, setCurrentcustomerarea] = useState<string | null>(
-    '',
-  );
-  const customerAreaItem = [
-    {label: 'Gujranwala', value: 'Gujranwala'},
-    {label: 'Lahore', value: 'Lahore'},
-  ];
-  const [areabtn, setareabtn] = useState(false);
-
-  const toggleareabtn = () => {
-    setareabtn(!areabtn);
+  // Add Form OnChange
+  const addOnChnage = (field: keyof AddExpense, value: string | Date) => {
+    setAddFrom(prev => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
-  const [btncustomerarea, setbtncustomerarea] = useState(false);
-
-  const togglebtncustomerarea = () => {
-    setbtncustomerarea(!btncustomerarea);
-  };
-  const [Type, setType] = React.useState<'EnableOpeningBalance' | 'number'>(
-    'EnableOpeningBalance',
-  );
-
-  const [paymentType, setpaymentType] = useState(false);
-  const [current, setcurrentpaymentType] = useState<string | null>('');
-  const paymentTypeItem = [
-    {label: 'Payable', value: 'Payable'},
-    {label: 'Recievable', value: 'Recievable'},
-  ];
-
-  const [isModalV, setModalV] = useState(false);
-  const tglModal = () => {
-    setModalV(!isModalV);
+  // Edit Form OnChange
+  const editOnChnage = (field: keyof EditExpense, value: string | Date) => {
+    setEditFrom(prev => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
-  {
-    /*edit*/
-  }
-  const [edit, setedit] = useState(false);
-
-  const toggleedit = () => {
-    setedit(!edit);
+  // Date On Change
+  const onorderDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    const currentDate = selectedDate || addFrom.date;
+    setShoworderDatePicker(false);
+    addOnChnage('date', currentDate);
   };
 
-  const [editDate, seteditDate] = useState(new Date());
-    const [showeditDatePicker, setShoweditDatePicker] = useState(false);
-  
-    const oneditDateChange = (
-      event: DateTimePickerEvent,
-      selectedDate?: Date,
-    ) => {
-      const currentDate = selectedDate || editDate;
-      setShoweditDatePicker(false);
-      seteditDate(currentDate);
-    };
-    const [editType, seteditType] = useState(false);
-    const [currentedit, setCurrentedit] = useState<string | null>('');
-    const editItem = [
-      {label: 'Rent', value: 'Rent'},
-      {label: 'Internet Bill', value: 'Internet Bill'},
-  
-    ];
-  
-
-  const [editcustomer, seteditcustomer] = useState(false);
-
-  const toggleeditcustomer = () => {
-    seteditcustomer(!editcustomer);
+  const oneditDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    const currentDate = selectedDate || editFrom.date;
+    setShoweditDatePicker(false);
+    editOnChnage('date', currentDate);
   };
 
-  const [btnedit, setbtnedit] = useState(false);
-
-  const togglebtnedit = () => {
-    setbtnedit(!btnedit);
+  // Fetch Expenses
+  const fetchExpenses = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchexpenses`);
+      setExpenses(res.data.exp);
+      setTotalExpense(res.data.total);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const [editarea, seteditarea] = useState(false);
+  // Delete Expense
+  const handleDelete = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/expdelete`, {
+        id: selectedExpense[0].id,
+      });
 
-  const toggleeditarea = () => {
-    seteditarea(!editarea);
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Deleted!',
+          text2: 'Expense has been Deleted successfully',
+          visibilityTime: 1500,
+        });
+      }
+      fetchExpenses();
+      setSelectedExpense([]);
+      setModalVisible('');
+    } catch (error) {
+      console.log(error);
+    }
   };
-  const [customereditArea, setcustomereditArea] = useState(false);
-  const [currentcustomereditarea, setCurrentcustomereditarea] = useState<
-    string | null
-  >('');
-  const customerAreaeditItem = [
-    {label: 'Gujranwala', value: 'Gujranwala'},
-    {label: 'Lahore', value: 'Lahore'},
-  ];
-  const [areaeditbtn, setareaeditbtn] = useState(false);
 
-  const toggleareaeditbtn = () => {
-    setareaeditbtn(!areabtn);
+  // Fetch Expenses Dropdown
+  const getExpenseDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchexpensecategorydropdown`);
+      setExpCategories(res.data);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const [btncustomeraditarea, setbtncustomereditarea] = useState(false);
+  // Add Expense
+  const handleAddExpense = async () => {
+    if (!categoryValue) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please select expanse category',
+        visibilityTime: 1500,
+      });
+      return;
+    }
 
-  const togglebtncustomereditarea = () => {
-    setbtncustomereditarea(!btncustomeraditarea);
+    if (!addFrom.amount || !addFrom.addedBy || !addFrom.description) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please fill all fields!',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(`${BASE_URL}/addexpense`, {
+        cat_id: categoryValue,
+        exp_amount: addFrom.amount,
+        exp_addedby: addFrom.addedBy.trim(),
+        exp_date: addFrom.date.toISOString().split('T')[0],
+        exp_desc: addFrom.description,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Added!',
+          text2: 'Expense has been added successfully',
+          visibilityTime: 1500,
+        });
+        fetchExpenses();
+        setAddFrom(initialAddExpense);
+        setModalVisible('');
+        setCategoryValue('');
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
-  const [radioeditType, setradioeditType] = React.useState<
-    'EnableOpeningBalance' | 'number'
-  >('EnableOpeningBalance');
 
-  const [editpaymentType, seteditpaymentType] = useState(false);
-  const [editcurrent, seteditcurrentpaymentType] = useState<string | null>('');
-  const editpaymentTypeItem = [
-    {label: 'Payable', value: 'Payable'},
-    {label: 'Recievable', value: 'Recievable'},
-  ];
+  // Edit Expense
+  const handleEditExpense = async () => {
+    if (!editCategoryValue) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please select expanse category',
+        visibilityTime: 1500,
+      });
+      return;
+    }
 
-  const [view, setview] = useState(false);
+    if (!editFrom.amount || !editFrom.addedBy || !editFrom.description) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please fill all fields!',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(`${BASE_URL}/updateexpenses`, {
+        cat_id: editCategoryValue,
+        exp_id: selectedExpense[0]?.id,
+        exp_amount: editFrom.amount,
+        exp_addedby: editFrom.addedBy.trim(),
+        exp_date: editFrom.date.toISOString().split('T')[0],
+        exp_desc: editFrom.description,
+        _method: 'PUT',
+      });
 
-  const toggleview = () => {
-    setview(!view);
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Added!',
+          text2: 'Expense has been added successfully',
+          visibilityTime: 1500,
+        });
+        fetchExpenses();
+        setEditFrom(initialAddExpense);
+        setModalVisible('');
+        setEditCategoryValue('');
+        setSelectedExpense([]);
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  useEffect(() => {
+    fetchExpenses();
+    getExpenseDropdown();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -244,7 +307,10 @@ export default function ManageExpenses() {
               Manage Expenses
             </Text>
           </View>
-          <TouchableOpacity onPress={togglecustomer}>
+          <TouchableOpacity
+            onPress={() => {
+              setModalVisible('Add');
+            }}>
             <Image
               style={{
                 tintColor: 'white',
@@ -273,128 +339,157 @@ export default function ManageExpenses() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={Info}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.ExpensesName}
-                      </Text>
+        <FlatList
+          data={expenses}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <ScrollView
+              style={{
+                padding: 5,
+              }}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
+                  <Text
+                    style={{
+                      color: '#144272',
+                      fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
+                    }}>
+                    {item.expc_name}
+                  </Text>
 
-                      <View
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                    }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('View');
+                        setSelectedExpense([item]);
+                      }}>
+                      <Image
                         style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}>
-                        <TouchableOpacity onPress={toggleview}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 9,
-                            }}
-                            source={require('../../../assets/show.png')}
-                          />
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={toggleedit}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginTop: 8,
-                            }}
-                            source={require('../../../assets/edit.png')}
-                          />
-                        </TouchableOpacity>
+                          tintColor: '#144272',
+                          width: 15,
+                          height: 15,
+                          alignSelf: 'center',
+                          marginRight: 5,
+                          marginTop: 9,
+                        }}
+                        source={require('../../../assets/show.png')}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('Edit');
+                        setEditFrom({
+                          addedBy: item.exp_addedby,
+                          amount: item.exp_amount,
+                          category: '',
+                          date: new Date(item.exp_date),
+                          description: item.exp_desc,
+                        });
+                        setEditCategoryValue(item.exp_expc_id.toString());
+                        setSelectedExpense([item]);
+                      }}>
+                      <Image
+                        style={{
+                          tintColor: '#144272',
+                          width: 15,
+                          height: 15,
+                          alignSelf: 'center',
+                          marginTop: 8,
+                        }}
+                        source={require('../../../assets/edit.png')}
+                      />
+                    </TouchableOpacity>
 
-                        <TouchableOpacity onPress={tglModal}>
-                          <Image
-                            style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 8,
-                            }}
-                            source={require('../../../assets/delete.png')}
-                          />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('Delete');
+                        setSelectedExpense([item]);
+                      }}>
+                      <Image
                         style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Amount:</Text>
-                        <Text style={styles.text}>{item.Amount}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Expense Added By:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.Expenseaddedby}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Expense Date:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.expenseDate}
-                        </Text>
-                      </View>
-                    </View>
+                          tintColor: '#144272',
+                          width: 15,
+                          height: 15,
+                          alignSelf: 'center',
+                          marginRight: 5,
+                          marginTop: 8,
+                        }}
+                        source={require('../../../assets/delete.png')}
+                      />
+                    </TouchableOpacity>
                   </View>
-                </ScrollView>
-              )}
-            />
-          </View>
-        </ScrollView>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Amount:</Text>
+                    <Text style={styles.text}>{item.exp_amount}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Expense Added By:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.exp_addedby}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Expense Date:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {new Date(item.exp_date)
+                        .toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        })
+                        .replace(/\//g, '-')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          )}
+          ListEmptyComponent={
+            <View style={{alignItems: 'center', marginTop: 30}}>
+              <Text style={{color: 'white', fontSize: 16}}>
+                No expense found.
+              </Text>
+            </View>
+          }
+        />
+
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total Expense Amount:</Text>
-          <Text style={styles.totalText}>{total}</Text>
+          <Text style={styles.totalText}>{totalExpense ?? '0'}</Text>
         </View>
 
-        {/*customer*/}
-        <Modal isVisible={customer}>
+        {/*Add Expense*/}
+        <Modal isVisible={modalVisible === 'Add'}>
           <ScrollView
             style={{
-              flex: 1,
               backgroundColor: 'white',
               width: '98%',
-              maxHeight: 270,
+              maxHeight: '45%',
               borderRadius: 10,
               borderWidth: 1,
               borderColor: '#144272',
@@ -405,7 +500,7 @@ export default function ManageExpenses() {
               style={{
                 flexDirection: 'row',
                 justifyContent: 'space-between',
-                margin: 10,
+                margin: 15,
               }}>
               <Text
                 style={{
@@ -415,7 +510,7 @@ export default function ManageExpenses() {
                 }}>
                 Add Expense
               </Text>
-              <TouchableOpacity onPress={() => setcustomer(!customer)}>
+              <TouchableOpacity onPress={() => setModalVisible('')}>
                 <Image
                   style={{
                     width: 15,
@@ -426,115 +521,113 @@ export default function ManageExpenses() {
               </TouchableOpacity>
             </View>
 
-            <DropDownPicker
-                items={customerItem}
+            <View style={styles.row}>
+              <DropDownPicker
+                items={transformedCategories}
                 open={customerType}
                 setOpen={setcustomerType}
-                value={currentcustomer}
-                setValue={setCurrentcustomer}
+                value={categoryValue}
+                setValue={setCategoryValue}
                 placeholder="Select Expense Name"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
                 style={[
                   styles.dropdown,
                   {
                     borderColor: '#144272',
-                    width: 295,marginLeft:10,marginBottom:-2
+                    width: '100%',
                   },
                 ]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
-                  width: 295,marginLeft:10
+                  width: '100%',
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+            </View>
+
+            <View style={[styles.row]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Expense Amount"
+                keyboardType="numeric"
+                value={addFrom.amount}
+                onChangeText={t => addOnChnage('amount', t)}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Added By"
+                value={addFrom.addedBy}
+                onChangeText={t => addOnChnage('addedBy', t)}
               />
             </View>
-            <View
+
+            <View style={styles.dateContainer}>
+              <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  borderTopWidth: 1,
-                  borderBottomWidth: 1,
-                  width: 295,
-                  borderRightWidth: 1,
-                  borderLeftWidth: 1,
                   borderRadius: 5,
                   borderColor: '#144272',
-             
-                  height: 35,
-                  marginLeft:10,marginRight:10,
-                  marginTop:10
                 }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    borderRadius: 5,
-                    borderColor: '#144272',
-                  }}>
-                  <Text style={{marginLeft: 10, color: '#144272'}}>
-                    {`${orderDate.toLocaleDateString()}`}
-                  </Text>
+                <Text style={{marginLeft: 10, color: '#144272'}}>
+                  {`${addFrom.date.toLocaleDateString()}`}
+                </Text>
 
-                  <TouchableOpacity
-                    onPress={() => setShoworderDatePicker(true)}>
-                    <Image
-                      style={{
-                        height: 20,
-                        width: 20,
-                        resizeMode: 'stretch',
-                        alignItems: 'center',
-                        marginLeft: 195,
-                        tintColor: '#144272',
-                        alignSelf: 'flex-end',
-                      }}
-                      source={require('../../../assets/calendar.png')}
+                <TouchableOpacity onPress={() => setShoworderDatePicker(true)}>
+                  <Image
+                    style={{
+                      height: 20,
+                      width: 20,
+                      resizeMode: 'stretch',
+                      alignItems: 'center',
+                      marginLeft: 195,
+                      tintColor: '#144272',
+                      alignSelf: 'flex-end',
+                    }}
+                    source={require('../../../assets/calendar.png')}
+                  />
+                  {showorderDatePicker && (
+                    <DateTimePicker
+                      testID="startDatePicker"
+                      value={addFrom.date}
+                      mode="date"
+                      is24Hour={true}
+                      display="default"
+                      onChange={onorderDateChange}
                     />
-                    {showorderDatePicker && (
-                      <DateTimePicker
-                        testID="startDatePicker"
-                        value={orderDate}
-                        mode="date"
-                        is24Hour={true}
-                        display="default"
-                        onChange={onorderDateChange}
-                      />
-                    )}
-                  </TouchableOpacity>
-                </View>
+                  )}
+                </TouchableOpacity>
               </View>
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Description"
-              />
-             
             </View>
 
-            
-            
-            
+            <View style={[styles.row]}>
+              <TextInput
+                style={[
+                  styles.productinput,
+                  {width: '100%', height: 85, textAlignVertical: 'top'},
+                ]}
+                placeholderTextColor={'#144272'}
+                placeholder="Description"
+                value={addFrom.description}
+                onChangeText={t => addOnChnage('description', t)}
+                numberOfLines={3}
+                multiline
+              />
+            </View>
 
-      
-          
-            
-        
-            <TouchableOpacity onPress={togglebtncustomerarea}>
+            <TouchableOpacity onPress={handleAddExpense}>
               <View
                 style={{
                   backgroundColor: '#144272',
@@ -556,81 +649,9 @@ export default function ManageExpenses() {
             </TouchableOpacity>
           </ScrollView>
         </Modal>
-        
 
-        {/*btn */}
-        <Modal isVisible={btncustomerarea}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Expense has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomerarea(!btncustomerarea)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        {/*delete*/}
-        <Modal isVisible={isModalV}>
+        {/*Delete Expense*/}
+        <Modal isVisible={modalVisible === 'Delete'}>
           <View
             style={{
               flex: 1,
@@ -675,7 +696,11 @@ export default function ManageExpenses() {
                 marginTop: 10,
                 justifyContent: 'center',
               }}>
-              <TouchableOpacity onPress={() => setModalV(!isModalV)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setSelectedExpense([]);
+                }}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -695,7 +720,7 @@ export default function ManageExpenses() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity>
+              <TouchableOpacity onPress={handleDelete}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -717,14 +742,13 @@ export default function ManageExpenses() {
           </View>
         </Modal>
 
-        {/*edit*/}
-        <Modal isVisible={edit}>
-        <ScrollView
+        {/*Edit Modal*/}
+        <Modal isVisible={modalVisible === 'Edit'}>
+          <ScrollView
             style={{
-              flex: 1,
               backgroundColor: 'white',
               width: '98%',
-              maxHeight: 270,
+              maxHeight: '45%',
               borderRadius: 10,
               borderWidth: 1,
               borderColor: '#144272',
@@ -735,7 +759,7 @@ export default function ManageExpenses() {
               style={{
                 flexDirection: 'row',
                 justifyContent: 'space-between',
-                margin: 10,
+                margin: 15,
               }}>
               <Text
                 style={{
@@ -743,9 +767,10 @@ export default function ManageExpenses() {
                   fontWeight: 'bold',
                   fontSize: 16,
                 }}>
-                Edit Expense
+                Update Expense
               </Text>
-              <TouchableOpacity onPress={() => setedit(!edit)}>                <Image
+              <TouchableOpacity onPress={() => setModalVisible('')}>
+                <Image
                   style={{
                     width: 15,
                     height: 15,
@@ -755,111 +780,113 @@ export default function ManageExpenses() {
               </TouchableOpacity>
             </View>
 
-            <DropDownPicker
-                items={editItem}
-                open={editType}
-                setOpen={seteditType}
-                value={currentedit}
-                setValue={setCurrentedit}
+            <View style={styles.row}>
+              <DropDownPicker
+                items={transformedCategories}
+                open={editCatOpen}
+                setOpen={setEditCatOpen}
+                value={editCategoryValue}
+                setValue={setEditCategoryValue}
                 placeholder="Select Expense Name"
                 placeholderStyle={{color: '#144272'}}
                 textStyle={{color: '#144272'}}
-                arrowIconStyle={{tintColor: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+                )}
                 style={[
                   styles.dropdown,
                   {
                     borderColor: '#144272',
-                    width: 295,marginLeft:10,marginBottom:-2
+                    width: '100%',
                   },
                 ]}
                 dropDownContainerStyle={{
                   backgroundColor: 'white',
                   borderColor: '#144272',
-                  width: 295,marginLeft:10
+                  width: '100%',
                 }}
                 labelStyle={{color: '#144272'}}
                 listItemLabelStyle={{color: '#144272'}}
+                listMode="SCROLLVIEW"
               />
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+            </View>
+
+            <View style={[styles.row]}>
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Expense Amount"
+                keyboardType="numeric"
+                value={editFrom.amount}
+                onChangeText={t => editOnChnage('amount', t)}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Added By"
+                value={editFrom.addedBy}
+                onChangeText={t => editOnChnage('addedBy', t)}
               />
             </View>
-            <View
+
+            <View style={styles.dateContainer}>
+              <View
                 style={{
                   flexDirection: 'row',
                   alignItems: 'center',
-                  borderTopWidth: 1,
-                  borderBottomWidth: 1,
-                  width: 295,
-                  borderRightWidth: 1,
-                  borderLeftWidth: 1,
                   borderRadius: 5,
                   borderColor: '#144272',
-             
-                  height: 35,
-                  marginLeft:10,marginRight:10,
-                  marginTop:10
                 }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    borderRadius: 5,
-                    borderColor: '#144272',
-                  }}>
-                  <Text style={{marginLeft: 10, color: '#144272'}}>
-                    {`${editDate.toLocaleDateString()}`}
-                  </Text>
+                <Text style={{marginLeft: 10, color: '#144272'}}>
+                  {`${editFrom.date.toLocaleDateString()}`}
+                </Text>
 
-                  <TouchableOpacity
-                    onPress={() => setShoweditDatePicker(true)}>
-                    <Image
-                      style={{
-                        height: 20,
-                        width: 20,
-                        resizeMode: 'stretch',
-                        alignItems: 'center',
-                        marginLeft: 190,
-                        tintColor: '#144272',
-                        alignSelf: 'flex-end',
-                      }}
-                      source={require('../../../assets/calendar.png')}
+                <TouchableOpacity onPress={() => setShoweditDatePicker(true)}>
+                  <Image
+                    style={{
+                      height: 20,
+                      width: 20,
+                      resizeMode: 'stretch',
+                      alignItems: 'center',
+                      marginLeft: 195,
+                      tintColor: '#144272',
+                      alignSelf: 'flex-end',
+                    }}
+                    source={require('../../../assets/calendar.png')}
+                  />
+                  {showeditDatePicker && (
+                    <DateTimePicker
+                      testID="startDatePicker"
+                      value={editFrom.date}
+                      mode="date"
+                      is24Hour={true}
+                      display="default"
+                      onChange={oneditDateChange}
                     />
-                    {showeditDatePicker && (
-                      <DateTimePicker
-                        testID="startDatePicker"
-                        value={editDate}
-                        mode="date"
-                        is24Hour={true}
-                        display="default"
-                        onChange={oneditDateChange}
-                      />
-                    )}
-                  </TouchableOpacity>
-                </View>
+                  )}
+                </TouchableOpacity>
               </View>
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Description"
-              />
-             
             </View>
 
-            
-            
-           
-        
-            <TouchableOpacity onPress={togglebtncustomereditarea}>
+            <View style={[styles.row]}>
+              <TextInput
+                style={[
+                  styles.productinput,
+                  {width: '100%', height: 85, textAlignVertical: 'top'},
+                ]}
+                placeholderTextColor={'#144272'}
+                placeholder="Description"
+                value={editFrom.description}
+                onChangeText={t => editOnChnage('description', t)}
+                numberOfLines={3}
+                multiline
+              />
+            </View>
+
+            <TouchableOpacity onPress={handleEditExpense}>
               <View
                 style={{
                   backgroundColor: '#144272',
@@ -881,87 +908,15 @@ export default function ManageExpenses() {
             </TouchableOpacity>
           </ScrollView>
         </Modal>
-      
 
-        {/*btn */}
-        <Modal isVisible={btncustomeraditarea}>
+        {/*View Expense*/}
+        <Modal isVisible={modalVisible === 'View'}>
           <View
             style={{
               flex: 1,
               backgroundColor: 'white',
               width: '98%',
-              maxHeight: 230,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Updated
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Expense has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomereditarea(!btncustomeraditarea)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        {/*view modal*/}
-        <Modal isVisible={view}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 380,
+              maxHeight: '55%',
               borderRadius: 10,
               borderWidth: 1,
               borderColor: '#144272',
@@ -982,7 +937,11 @@ export default function ManageExpenses() {
                 }}>
                 Expense Detail
               </Text>
-              <TouchableOpacity onPress={() => setview(!view)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setSelectedExpense([]);
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -993,43 +952,43 @@ export default function ManageExpenses() {
               </TouchableOpacity>
             </View>
 
-            <View>
-              <View>
-                <FlatList
-                  data={ViewModal}
-                  keyExtractor={(item, index) => index.toString()}
-                  renderItem={({item}) => (
-                    <ScrollView
-                      style={{
-                        padding: 5,
-                      }}>
-                      <View style={styles.table}>
-                        <View style={[styles.cardContainer]}>
-                          <View style={styles.infoGrid}>
-                            <Text style={styles.labl}>Expense Name:</Text>
-                            <Text style={styles.valu}>{item.ExpenseName}</Text>
+            <FlatList
+              data={selectedExpense}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({item}) => (
+                <ScrollView
+                  style={{
+                    padding: 5,
+                  }}>
+                  <View style={styles.table}>
+                    <View style={[styles.cardContainer]}>
+                      <View style={styles.infoGrid}>
+                        <Text style={styles.labl}>Expense Name:</Text>
+                        <Text style={styles.valu}>{item.expc_name}</Text>
 
-                            <Text style={styles.labl}>Expense Amount:</Text>
-                            <Text style={styles.valu}>
-                              {item.ExpenseAmount}
-                            </Text>
+                        <Text style={styles.labl}>Expense Amount:</Text>
+                        <Text style={styles.valu}>{item.exp_amount}</Text>
 
-                            <Text style={styles.labl}>Added By:</Text>
-                            <Text style={styles.valu}>{item.AddedBy}</Text>
+                        <Text style={styles.labl}>Added By:</Text>
+                        <Text style={styles.valu}>{item.exp_addedby}</Text>
 
-                            <Text style={styles.labl}>Date:</Text>
-                            <Text style={styles.valu}>{item.Date}</Text>
+                        <Text style={styles.labl}>Date:</Text>
+                        <Text style={styles.valu}>
+                          {new Date(item.exp_date).toLocaleString('en-GB', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric',
+                          })}
+                        </Text>
 
-                            <Text style={styles.labl}>Description:</Text>
-                            <Text style={styles.valu}>{item.Description}</Text>
-                          </View>
-                        </View>
+                        <Text style={styles.labl}>Description:</Text>
+                        <Text style={styles.valu}>{item.exp_desc}</Text>
                       </View>
-                    </ScrollView>
-                  )}
-                />
-              </View>
-            </View>
+                    </View>
+                  </View>
+                </ScrollView>
+              )}
+            />
           </View>
         </Modal>
       </ImageBackground>
@@ -1080,93 +1039,31 @@ const styles = StyleSheet.create({
   infoRow: {
     marginTop: 5,
   },
-  lastrow: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderBottomEndRadius: 10,
-    borderBottomLeftRadius: 10,
-  },
-  card: {
-    borderColor: '#144272',
-    backgroundColor: 'white',
-    height: 'auto',
-    borderRadius: 12,
-    elevation: 15,
-    marginBottom: 5,
-    padding: 10,
-  },
   row: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    color: 'white',
-  },
-  inputSmall: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: 'white',
-  },
-  addButton: {
-    marginLeft: 8,
-    alignSelf: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 60,
-  },
-  completeButton: {
-    marginTop: 16,
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 320,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 10,
+    width: '100%',
+    paddingHorizontal: 12,
   },
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
-    marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    justifyContent: 'space-between',
-    marginLeft: 10,
-    marginRight: 10,
-  },
-  search: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    height: 40,
+    width: '100%',
   },
   productinput: {
-    flex: 1,
     borderWidth: 1,
     borderColor: '#144272',
     borderRadius: 6,
     padding: 8,
+    color: '#144272',
+    height: 38,
+    width: '46%',
   },
   cardContainer: {
     margin: 20,
@@ -1179,17 +1076,6 @@ const styles = StyleSheet.create({
     elevation: 4,
     paddingBottom: 24,
     marginBottom: 40,
-  },
-  customerImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: '#144272',
-  },
-  noImageText: {
-    color: '#144272',
-    fontStyle: 'italic',
   },
   infoGrid: {
     flexDirection: 'row',
@@ -1224,6 +1110,7 @@ const styles = StyleSheet.create({
   },
   totalContainer: {
     padding: 7,
+    paddingHorizontal: 15,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,
@@ -1234,5 +1121,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#144272',
+    height: 38,
+    marginHorizontal: 12,
+    marginTop: 10,
   },
 });

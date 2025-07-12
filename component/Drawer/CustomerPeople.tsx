@@ -712,7 +712,7 @@ export default function CustomerPeople() {
           />
         </View>
 
-        {/*customer*/}
+        {/*Add Customer Modal*/}
         <Modal isVisible={customer}>
           <ScrollView
             style={{

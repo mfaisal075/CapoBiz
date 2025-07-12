@@ -560,7 +560,6 @@ export default function PurchaseReturn() {
                     flexDirection: 'row',
                     alignSelf: 'center',
                     justifyContent: 'center',
-                    paddingHorizontal: '5%',
                   }}>
                   <TextInput
                     style={[styles.input, {width: '100%'}]}

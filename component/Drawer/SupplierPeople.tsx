@@ -610,7 +610,7 @@ export default function SupplierPeople() {
           />
         </View>
 
-        {/*supplier*/}
+        {/*Add Supplier Modal*/}
         <Modal isVisible={customer}>
           <View
             style={{
