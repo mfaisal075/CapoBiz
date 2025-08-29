@@ -9,7 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {ImageBackground} from 'react-native';
 import {Image} from 'react-native';
 import {useDrawer} from '../../DrawerContext';
@@ -17,17 +17,66 @@ import {ScrollView} from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import {useUser} from '../../CTX/UserContext';
+import Toast from 'react-native-toast-message';
+
+interface FixedAccount {
+  id: number;
+  fixprf_business_account_name: string;
+}
+
+interface FixedAccountDetails {
+  id: number;
+  fixac_invoice_no: string;
+  fixac_date: string;
+  fixac_payment_type: string;
+  fixac_debit: string;
+  fixac_credit: string;
+  fixac_balance: string;
+  fixac_description: string;
+  fixprf_business_account_name: string;
+}
+
+interface FixedAccAddForm {
+  amount: string;
+  desc: string;
+  date: Date;
+}
+
+const initialFixedAccAddFrom: FixedAccAddForm = {
+  amount: '',
+  date: new Date(),
+  desc: '',
+};
 
 export default function FixedAccounts() {
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [Open, setOpen] = useState(false);
-  const [customerVal, setCustomerVal] = useState<string | ''>('');
+  const [txnOpen, setTxnOpen] = useState(false);
+  const [modalDropdownOpen, setModalDropdownOpen] = useState(false);
+  const [fixedAccValue, setFixedAccValue] = useState<string | ''>('');
   const [fromDate, setFromDate] = useState<Date | null>(new Date());
   const [toDate, setToDate] = useState<Date | null>(new Date());
   const [showDatePicker, setShowDatePicker] = useState<'from' | 'to' | null>(
     null,
   );
+  const [modalShowDatePicker, setModalShowDatePicker] = useState(false);
   const [modalVisible, setModalVisible] = useState('');
+  const [fixedDropdown, setFixedDropdown] = useState<FixedAccount[]>([]);
+  const transformedFixedAcc = fixedDropdown.map(fix => ({
+    label: fix.fixprf_business_account_name,
+    value: fix.id.toString(),
+  }));
+  const [fixedAccDetails, setFixedAccDetails] = useState<FixedAccountDetails[]>(
+    [],
+  );
+  const [cashAddFrom, setCashAddForm] = useState<FixedAccAddForm>(
+    initialFixedAccAddFrom,
+  );
+  const [txnTypeValue, setTxnTypeValue] = useState('');
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
@@ -45,73 +94,115 @@ export default function FixedAccounts() {
     setShowDatePicker(null);
   };
 
-  const item = [
-    {
-      label: 'Purchase Account',
-      value: 'Purchase',
-    },
-    {label: 'Freight Account', value: 'Freight'},
-    {label: 'Sales Account', value: 'Sales Account'},
-    {label: 'Counter Sale', value: 'Counter Sale'},
+  // Cash Payment Add Form OnChange
+  const cashOnChange = (field: keyof FixedAccAddForm, value: string | Date) => {
+    setCashAddForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const modalDateChange = (event: any, selectedDate?: Date) => {
+    if (event.type === 'dismissed') {
+      setModalShowDatePicker(false);
+      return;
+    }
+
+    if (selectedDate) {
+      cashOnChange('date', selectedDate);
+    }
+    setModalShowDatePicker(false);
+  };
+
+  // Transaction Type
+  const txnType = [
+    {label: 'Debit', value: 'Debit'},
+    {label: 'Credit', value: 'Credit'},
   ];
 
-  const AccountsInfo = [
-    {
-      'Sr#': 1,
-      Date: '01-May-2025',
-      'Invoice#': 'INV-001',
-      Account: 'Office Supplies',
-      Debit: 5000.0,
-      Credit: 0.0,
-      Balance: '+5000.00',
-      'Pre Balance': 0.0,
-      'Net Balance': 5000.0,
-    },
-    {
-      'Sr#': 2,
-      Date: '02-May-2025',
-      'Invoice#': 'INV-002',
-      Account: 'Client Payment',
-      Debit: 0.0,
-      Credit: 2000.0,
-      Balance: '-2000.00',
-      'Pre Balance': 5000.0,
-      'Net Balance': 3000.0,
-    },
-    {
-      'Sr#': 3,
-      Date: '03-May-2025',
-      'Invoice#': 'INV-003',
-      Account: 'Equipment Purchase',
-      Debit: 7000.0,
-      Credit: 0.0,
-      Balance: '+7000.00',
-      'Pre Balance': 3000.0,
-      'Net Balance': 10000.0,
-    },
-    {
-      'Sr#': 4,
-      Date: '04-May-2025',
-      'Invoice#': 'INV-004',
-      Account: 'Utility Bills',
-      Debit: 0.0,
-      Credit: 4500.0,
-      Balance: '-4500.00',
-      'Pre Balance': 10000.0,
-      'Net Balance': 5500.0,
-    },
-    {
-      'Sr#': 5,
-      Date: '05-May-2025',
-      'Invoice#': 'INV-005',
-      Account: 'Consulting Fees',
-      Debit: 3000.0,
-      Credit: 0.0,
-      Balance: '+3000.00',
-      'Pre Balance': 5500.0,
-      'Net Balance': 8500.0,
-    },
-  ];
+  // Fetch Fixed dropdown
+  const fetchFixesDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchfixedaccountdropdown`);
+      setFixedDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Fixed Accounts Details
+  const fetchFixedAccDetails = async () => {
+    try {
+      const from = fromDate?.toISOString().split('T')[0];
+      const to = toDate?.toISOString().split('T')[0];
+      const res = await axios.get(
+        `${BASE_URL}/fetchfixedaccounts?account_id=${fixedAccValue}&from=${from}&to=${to}&_token=${token}`,
+      );
+      setFixedAccDetails(res.data.accounts);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Add Cash Payment
+  const addCashPayment = async () => {
+    if (!fixedAccValue) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please Select Account First!',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
+    if (
+      !txnTypeValue ||
+      !cashAddFrom.amount ||
+      !cashAddFrom.date ||
+      !cashAddFrom.desc
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Fields Missing',
+        text2: 'Please filled add fields',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
+    try {
+      const res = await axios.post(`${BASE_URL}/addfixedaccountpayment`, {
+        invoice_no: '',
+        account_id: fixedAccValue,
+        payment_type: txnTypeValue,
+        date: cashAddFrom.date.toISOString().split('T')[0],
+        amount: cashAddFrom.amount,
+        description: cashAddFrom.desc.trim(),
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Added!',
+          text2: 'Payment has been added successfully!',
+          visibilityTime: 1500,
+        });
+        setFixedAccValue('');
+        setTxnTypeValue('');
+        setCashAddForm(initialFixedAccAddFrom);
+        setModalVisible('');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchFixesDropdown();
+    fetchFixedAccDetails();
+  }, [fixedAccValue, fromDate, toDate]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -181,10 +272,10 @@ export default function FixedAccounts() {
               Account:
             </Text>
             <DropDownPicker
-              items={item}
+              items={transformedFixedAcc}
               open={Open}
-              value={customerVal}
-              setValue={setCustomerVal}
+              value={fixedAccValue}
+              setValue={setFixedAccValue}
               setOpen={setOpen}
               placeholder="Select Customer"
               placeholderStyle={{color: 'white'}}
@@ -193,9 +284,10 @@ export default function FixedAccounts() {
               dropDownContainerStyle={{
                 backgroundColor: 'white',
                 borderColor: '#144272',
-                width: 287,
+                width: '90%',
+                marginTop: 8,
               }}
-              labelStyle={{color: 'white'}}
+              labelStyle={{color: 'white', fontWeight: 'bold'}}
               listItemLabelStyle={{color: '#144272'}}
               ArrowUpIconComponent={() => (
                 <Text>
@@ -207,6 +299,7 @@ export default function FixedAccounts() {
                   <Icon name="chevron-down" size={15} color="white" />
                 </Text>
               )}
+              listMode="SCROLLVIEW"
             />
           </View>
 
@@ -280,51 +373,79 @@ export default function FixedAccounts() {
           {/* Invoices Cards */}
           <View style={{paddingBottom: 30}}>
             <View style={{marginTop: 20}}>
-              {AccountsInfo.map((item, index) => (
-                <View key={item['Sr#']} style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item['Invoice#']}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      {[
-                        {label: 'Date:', value: item.Date},
-                        {label: 'Account:', value: item.Account},
-                        {label: 'Debit:', value: item.Debit},
-                        {label: 'Credit:', value: item.Credit},
-                        {label: 'Balance:', value: item['Balance']},
-                        {label: 'Pre Balance:', value: item['Pre Balance']},
-                        {label: 'Net Balance:', value: item['Net Balance']},
-                      ].map((field, idx) => (
-                        <View
-                          key={`${item['Sr#']}-${idx}`}
+              {fixedAccDetails.length === 0 ? (
+                <View style={{alignItems: 'center', marginTop: 20}}>
+                  <Text
+                    style={{
+                      color: 'white',
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                    }}>
+                    No record found.
+                  </Text>
+                </View>
+              ) : (
+                fixedAccDetails.map((item, index) => (
+                  <View key={item.id} style={{padding: 5}}>
+                    <View style={styles.table}>
+                      <View style={styles.tablehead}>
+                        <Text
                           style={{
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
+                            color: '#144272',
+                            fontWeight: 'bold',
+                            marginLeft: 5,
+                            marginTop: 5,
                           }}>
-                          <Text style={[styles.value, {marginBottom: 5}]}>
-                            {field.label}
-                          </Text>
-                          <Text style={[styles.value, {marginBottom: 5}]}>
-                            {typeof field.value === 'number'
-                              ? field.value.toFixed(2)
-                              : field.value}
-                          </Text>
-                        </View>
-                      ))}
+                          {item.fixac_invoice_no}
+                        </Text>
+                      </View>
+
+                      <View style={styles.infoRow}>
+                        {[
+                          {
+                            label: 'Date:',
+                            value: new Date(item.fixac_date)
+                              .toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })
+                              .replace(/\//g, '-'),
+                          },
+                          {
+                            label: 'Account:',
+                            value: item.fixprf_business_account_name,
+                          },
+                          {label: 'Debit:', value: item.fixac_debit},
+                          {label: 'Credit:', value: item.fixac_credit},
+                          {label: 'Balance:', value: item.fixac_balance},
+                        ].map(
+                          (
+                            field: {label: string; value: string | number},
+                            idx,
+                          ) => (
+                            <View
+                              key={`${index}-${idx}`}
+                              style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                              }}>
+                              <Text style={[styles.value, {marginBottom: 5}]}>
+                                {field.label}
+                              </Text>
+                              <Text style={[styles.value, {marginBottom: 5}]}>
+                                {typeof field.value === 'number'
+                                  ? field.value.toFixed(2)
+                                  : field.value}
+                              </Text>
+                            </View>
+                          ),
+                        )}
+                      </View>
                     </View>
                   </View>
-                </View>
-              ))}
+                ))
+              )}
             </View>
           </View>
         </ScrollView>
@@ -371,7 +492,10 @@ export default function FixedAccounts() {
                       }}>
                       Invoice#
                     </Text>
-                    <TextInput style={styles.productinput} />
+                    <TextInput
+                      style={[styles.productinput, {backgroundColor: 'gray'}]}
+                      editable={false}
+                    />
                   </View>
 
                   <View
@@ -390,21 +514,23 @@ export default function FixedAccounts() {
                       Account:
                     </Text>
                     <DropDownPicker
-                      items={item}
-                      open={Open}
-                      value={customerVal}
-                      setValue={setCustomerVal}
-                      setOpen={setOpen}
-                      placeholder="Select Customer"
+                      items={transformedFixedAcc}
+                      open={modalDropdownOpen}
+                      value={fixedAccValue}
+                      setValue={setFixedAccValue}
+                      setOpen={setModalDropdownOpen}
+                      placeholder="Select Account"
                       placeholderStyle={{color: '#000'}}
                       textStyle={{color: 'white'}}
                       style={[styles.dropdown, {borderColor: '#000'}]}
                       dropDownContainerStyle={{
                         backgroundColor: 'white',
                         borderColor: '#144272',
-                        width: 287,
+                        width: '90%',
+                        marginTop: 8,
+                        zIndex: 1000,
                       }}
-                      labelStyle={{color: 'white'}}
+                      labelStyle={{color: '#144272', fontWeight: 'bold'}}
                       listItemLabelStyle={{color: '#144272'}}
                       ArrowUpIconComponent={() => (
                         <Text>
@@ -416,6 +542,57 @@ export default function FixedAccounts() {
                           <Icon name="chevron-down" size={15} color="#000" />
                         </Text>
                       )}
+                      listMode="SCROLLVIEW"
+                    />
+                  </View>
+
+                  <View
+                    style={{
+                      flexDirection: 'column',
+                      alignSelf: 'center',
+                      marginTop: 10,
+                    }}>
+                    <Text
+                      style={{
+                        color: '#000',
+                        fontWeight: 'bold',
+                        fontSize: 14,
+                        marginLeft: 5,
+                      }}>
+                      Transaction Type:
+                    </Text>
+                    <DropDownPicker
+                      items={txnType}
+                      open={txnOpen}
+                      value={txnTypeValue}
+                      setValue={setTxnTypeValue}
+                      setOpen={setTxnOpen}
+                      placeholder="Select Type"
+                      placeholderStyle={{color: '#000'}}
+                      textStyle={{color: 'white'}}
+                      style={[
+                        styles.dropdown,
+                        {borderColor: '#000', zIndex: 999},
+                      ]}
+                      dropDownContainerStyle={{
+                        backgroundColor: 'white',
+                        borderColor: '#144272',
+                        width: '90%',
+                        marginTop: 8,
+                      }}
+                      labelStyle={{color: '#144272', fontWeight: 'bold'}}
+                      listItemLabelStyle={{color: '#144272'}}
+                      ArrowUpIconComponent={() => (
+                        <Text>
+                          <Icon name="chevron-up" size={15} color="#000" />
+                        </Text>
+                      )}
+                      ArrowDownIconComponent={() => (
+                        <Text>
+                          <Icon name="chevron-down" size={15} color="#000" />
+                        </Text>
+                      )}
+                      listMode="SCROLLVIEW"
                     />
                   </View>
 
@@ -441,25 +618,23 @@ export default function FixedAccounts() {
                         Date <Text style={{color: 'red'}}>*</Text>
                       </Text>
                       <TouchableOpacity
-                        onPress={() => setShowDatePicker('from')}
+                        onPress={() => setModalShowDatePicker(true)}
                         style={[styles.dateInput, {borderColor: '#000'}]}>
                         <Text style={{color: '#000'}}>
-                          {fromDate ? fromDate.toLocaleDateString() : ''}
+                          {cashAddFrom.date
+                            ? cashAddFrom.date.toLocaleDateString()
+                            : ''}
                         </Text>
                       </TouchableOpacity>
                     </View>
                   </View>
 
-                  {showDatePicker && (
+                  {modalShowDatePicker && (
                     <DateTimePicker
-                      value={
-                        showDatePicker === 'from'
-                          ? fromDate ?? new Date()
-                          : toDate ?? new Date()
-                      }
+                      value={cashAddFrom.date}
                       mode="date"
                       display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={handleDateChange}
+                      onChange={modalDateChange}
                       themeVariant="dark"
                       style={{backgroundColor: '#144272'}}
                     />
@@ -484,6 +659,8 @@ export default function FixedAccounts() {
                     <TextInput
                       style={styles.productinput}
                       keyboardType="number-pad"
+                      value={cashAddFrom.amount}
+                      onChangeText={t => cashOnChange('amount', t)}
                     />
                   </View>
 
@@ -510,6 +687,8 @@ export default function FixedAccounts() {
                       ]}
                       multiline
                       numberOfLines={4}
+                      value={cashAddFrom.desc}
+                      onChangeText={t => cashOnChange('desc', t)}
                     />
                   </View>
                 </View>
@@ -517,7 +696,9 @@ export default function FixedAccounts() {
 
               {/* Footer Button */}
               <View style={styles.modalFooter}>
-                <TouchableOpacity style={styles.submitButton}>
+                <TouchableOpacity
+                  style={styles.submitButton}
+                  onPress={addCashPayment}>
                   <Text style={styles.submitButtonText}>Add Payment</Text>
                 </TouchableOpacity>
               </View>
@@ -575,7 +756,7 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,

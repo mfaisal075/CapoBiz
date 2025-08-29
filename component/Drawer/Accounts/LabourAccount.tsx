@@ -17,6 +17,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
+import {useNavigation} from '@react-navigation/native';
 
 interface Labour {
   id: string;
@@ -44,7 +45,8 @@ interface AllLabour {
 }
 
 export default function LabourAccount() {
-  const {openDrawer} = useDrawer();
+  const {openDrawer, closeDrawer} = useDrawer();
+  const navigation = useNavigation();
   const [selectedTab, setSelectedTab] = useState('Single');
   const [Open, setOpen] = useState(false);
   const [labourVal, setLabourVal] = useState<string | ''>('');
@@ -79,44 +81,6 @@ export default function LabourAccount() {
     }
     setShowDatePicker(null);
   };
-
-  const allLabourInfo = [
-    {
-      'Sr#': 1,
-      'Labour name': 'Iqbal',
-      'Total Bill Amount': 0.0,
-      'Paid amount': 1230.0,
-      Balance: -1230.0,
-    },
-    {
-      'Sr#': 2,
-      'Labour name': 'Ali',
-      'Total Bill Amount': 0.0,
-      'Paid amount': 1500.0,
-      Balance: -1500.0,
-    },
-    {
-      'Sr#': 3,
-      'Labour name': 'Ahmed',
-      'Total Bill Amount': 0.0,
-      'Paid amount': 1000.0,
-      Balance: -1000.0,
-    },
-    {
-      'Sr#': 4,
-      'Labour name': 'Sara',
-      'Total Bill Amount': 0.0,
-      'Paid amount': 800.0,
-      Balance: -800.0,
-    },
-    {
-      'Sr#': 5,
-      'Labour name': 'Zainab',
-      'Total Bill Amount': 0.0,
-      'Paid amount': 2000.0,
-      Balance: -2000.0,
-    },
-  ];
 
   // Fetch Labour dropdown
   const fetchCustDropdown = async () => {
@@ -284,7 +248,11 @@ export default function LabourAccount() {
               style={[
                 styles.toggleBtn,
                 {borderRadius: 10, backgroundColor: '#144272'},
-              ]}>
+              ]}
+              onPress={() => {
+                closeDrawer()
+                navigation.navigate('LabourAddPayment' as never);
+              }}>
               <Text style={[styles.toggleBtnText, {color: 'white'}]}>
                 Add Payment
               </Text>

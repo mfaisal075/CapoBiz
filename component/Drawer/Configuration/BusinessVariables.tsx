@@ -10,21 +10,62 @@ import {
   FlatList,
   TextInput,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import Modal from 'react-native-modal';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import {useUser} from '../../CTX/UserContext';
+import Toast from 'react-native-toast-message';
+
+interface BusinessDetails {
+  id: number;
+  bus_name: string;
+  bus_name_ur: string;
+  bus_contact1: string;
+  bus_language: string;
+  bus_email: string;
+}
+
+interface EditBusiness {
+  id: number;
+  bus_name: string;
+  bus_name_ur: string;
+  bus_address: string;
+  bus_address_ur: string;
+  bus_contact1: string;
+  bus_contact2: string;
+  bus_contact3: string;
+  bus_email: string;
+}
+
+const initialEditBusiness: EditBusiness = {
+  id: 0,
+  bus_address: '',
+  bus_address_ur: '',
+  bus_contact1: '',
+  bus_contact2: '',
+  bus_contact3: '',
+  bus_email: '',
+  bus_name: '',
+  bus_name_ur: '',
+};
 
 export default function BusinessVariables() {
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const Info = [
-    {
-      CustomerName: 'Naeem',
-      UrduName: 'Super Itefaq',
-      Contact: '03001234567',
-      Email: '@gmail',
-      Language: 'urdu',
-    },
-  ];
+  const [busDetails, setBusDetails] = useState<BusinessDetails[]>([]);
+  const [editBus, setEditBus] = useState<EditBusiness>(initialEditBusiness);
+  const [modal, setModal] = useState('');
+  const [selectedBus, setSelectedBus] = useState<number | null>(null);
+
+  // Edit OnChange
+  const editOnChange = (field: keyof EditBusiness, value: string) => {
+    setEditBus(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   const [isModalV, setModalV] = useState(false);
   const tglModal = () => {
@@ -45,6 +86,135 @@ export default function BusinessVariables() {
   const togglebtncustomereditarea = () => {
     setbtncustomereditarea(!btncustomeraditarea);
   };
+
+  const fetchBusinesses = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcomp`);
+      setBusDetails(res.data.comp);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Business Details to Edit it
+  const editBusiness = async (id: any) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/editcomp?id=${id}&_token=${token}`,
+      );
+      setEditBus({
+        id: res.data.id,
+        bus_address: res.data.bus_address,
+        bus_address_ur: res.data.bus_address_ur,
+        bus_contact1: res.data.bus_contact1,
+        bus_contact2: res.data.bus_contact2,
+        bus_contact3: res.data.bus_contact3,
+        bus_email: res.data.bus_email,
+        bus_name: res.data.bus_name,
+        bus_name_ur: res.data.bus_name_ur,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Update Business Details
+  const updateBusiness = async () => {
+    if (
+      !editBus.bus_name.trim() ||
+      !editBus.bus_name_ur.trim() ||
+      !editBus.bus_address.trim() ||
+      !editBus.bus_address_ur.trim() ||
+      !editBus.bus_contact1.trim() ||
+      !editBus.bus_email.trim()
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please fill all required fields.',
+      });
+      return;
+    }
+
+    try {
+      const res = await axios.post(
+        `${BASE_URL}/updatecomp`,
+        {
+          comp_id: editBus.id,
+          comp_name: editBus.bus_name,
+          comp_urdu_name: editBus.bus_name_ur,
+          comp_address: editBus.bus_address,
+          comp_urdu_address: editBus.bus_address_ur,
+          comp_cont1: editBus.bus_contact1,
+          comp_cont2: editBus.bus_contact2,
+          comp_cont3: editBus.bus_contact3,
+          comp_email: editBus.bus_email,
+          logo: null,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        },
+      );
+
+      console.log('Response:', res.status, res.data);
+
+      if (res.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Updated!',
+          text2: 'Company has been updated successfully',
+          visibilityTime: 1500,
+        });
+
+        setEditBus(initialEditBusiness);
+        setModal('');
+        fetchBusinesses();
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Update failed!',
+          text2: res.data?.message || 'Unexpected response',
+        });
+      }
+    } catch (error: any) {
+      console.log('Update error:', error.response?.data || error.message);
+      Toast.show({
+        type: 'error',
+        text1: 'Error!',
+        text2: error.response?.data?.message || 'Something went wrong',
+      });
+    }
+  };
+
+  // Delete Business Details
+  const delBusiness = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/compdelete`, {
+        id: selectedBus,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.statsu === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Deleted',
+          text2: 'Company has been deleted successfully.',
+          visibilityTime: 1500,
+        });
+
+        setSelectedBus(null);
+        fetchBusinesses();
+        setModal('');
+      }
+    } catch (error) {}
+  };
+
+  useEffect(() => {
+    fetchBusinesses();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -99,7 +269,7 @@ export default function BusinessVariables() {
 
         <View>
           <FlatList
-            data={Info}
+            data={busDetails}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <ScrollView
@@ -115,7 +285,7 @@ export default function BusinessVariables() {
                         marginLeft: 5,
                         marginTop: 5,
                       }}>
-                      {item.CustomerName}
+                      {item.bus_name}
                     </Text>
 
                     <View
@@ -123,7 +293,11 @@ export default function BusinessVariables() {
                         flexDirection: 'row',
                         justifyContent: 'center',
                       }}>
-                      <TouchableOpacity onPress={toggleedit}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setModal('Edit');
+                          editBusiness(item.id);
+                        }}>
                         <Image
                           style={{
                             tintColor: '#144272',
@@ -136,7 +310,11 @@ export default function BusinessVariables() {
                         />
                       </TouchableOpacity>
 
-                      <TouchableOpacity onPress={tglModal}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setModal('Delete');
+                          setSelectedBus(item.id);
+                        }}>
                         <Image
                           style={{
                             tintColor: '#144272',
@@ -159,7 +337,7 @@ export default function BusinessVariables() {
                         justifyContent: 'space-between',
                       }}>
                       <Text style={styles.text}>Urdu Name:</Text>
-                      <Text style={styles.text}>{item.UrduName}</Text>
+                      <Text style={styles.text}>{item.bus_name_ur}</Text>
                     </View>
                     <View
                       style={{
@@ -167,7 +345,7 @@ export default function BusinessVariables() {
                         justifyContent: 'space-between',
                       }}>
                       <Text style={styles.text}>Contact:</Text>
-                      <Text style={styles.text}>{item.Contact}</Text>
+                      <Text style={styles.text}>{item.bus_contact1}</Text>
                     </View>
                     <View
                       style={{
@@ -175,7 +353,7 @@ export default function BusinessVariables() {
                         justifyContent: 'space-between',
                       }}>
                       <Text style={styles.text}>Email:</Text>
-                      <Text style={styles.text}>{item.Email}</Text>
+                      <Text style={styles.text}>{item.bus_email ?? '--'}</Text>
                     </View>
                     <View
                       style={{
@@ -186,18 +364,36 @@ export default function BusinessVariables() {
                         Language:
                       </Text>
                       <Text style={[styles.value, {marginBottom: 5}]}>
-                        {item.Language}
+                        {item.bus_language}
                       </Text>
                     </View>
                   </View>
                 </View>
               </ScrollView>
             )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  height: 300,
+                  width: '100%',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                    color: '#fff',
+                  }}>
+                  No data found in the database!
+                </Text>
+              </View>
+            }
           />
         </View>
 
         {/*delete*/}
-        <Modal isVisible={isModalV}>
+        <Modal isVisible={modal === 'Delete'}>
           <View
             style={{
               flex: 1,
@@ -242,7 +438,7 @@ export default function BusinessVariables() {
                 marginTop: 10,
                 justifyContent: 'center',
               }}>
-              <TouchableOpacity onPress={() => setModalV(!isModalV)}>
+              <TouchableOpacity onPress={() => setModal('')}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -262,7 +458,7 @@ export default function BusinessVariables() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity>
+              <TouchableOpacity onPress={delBusiness}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -284,8 +480,8 @@ export default function BusinessVariables() {
           </View>
         </Modal>
 
-        {/*edit*/}
-        <Modal isVisible={edit}>
+        {/*Edit Modal*/}
+        <Modal isVisible={modal === 'Edit'}>
           <ScrollView
             style={{
               flex: 1,
@@ -312,7 +508,11 @@ export default function BusinessVariables() {
                 }}>
                 Update Company
               </Text>
-              <TouchableOpacity onPress={() => setedit(!edit)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModal('');
+                  setEditBus(initialEditBusiness);
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -328,11 +528,15 @@ export default function BusinessVariables() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Name"
+                value={editBus.bus_name}
+                onChangeText={t => editOnChange('bus_name', t)}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Urdu Name"
+                value={editBus.bus_name_ur}
+                onChangeText={t => editOnChange('bus_name_ur', t)}
               />
             </View>
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
@@ -340,11 +544,15 @@ export default function BusinessVariables() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Address"
+                value={editBus.bus_address}
+                onChangeText={t => editOnChange('bus_address', t)}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Urdu Address"
+                value={editBus.bus_address_ur}
+                onChangeText={t => editOnChange('bus_address_ur', t)}
               />
             </View>
 
@@ -353,11 +561,19 @@ export default function BusinessVariables() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Contact 1"
+                keyboardType="numeric"
+                maxLength={11}
+                value={editBus.bus_contact1}
+                onChangeText={t => editOnChange('bus_contact1', t)}
               />
               <TextInput
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Contact 2"
+                maxLength={11}
+                keyboardType="numeric"
+                value={editBus.bus_contact2}
+                onChangeText={t => editOnChange('bus_contact2', t)}
               />
             </View>
             <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
@@ -365,34 +581,26 @@ export default function BusinessVariables() {
                 style={styles.productinput}
                 placeholderTextColor={'#144272'}
                 placeholder="Contact 3"
+                keyboardType="numeric"
+                maxLength={11}
+                value={editBus.bus_contact3}
+                onChangeText={t => editOnChange('bus_contact3', t)}
               />
-              <Text style={[styles.productinput, {color: '#144272'}]}>
-                Business Email:
-              </Text>
+            </View>
+            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
+              <TextInput
+                style={[
+                  styles.productinput,
+                  {color: '#000', backgroundColor: '#c2bfbfff'},
+                ]}
+                placeholderTextColor="#144272"
+                placeholder="Business Email"
+                value={editBus.bus_email}
+                editable={false}
+              />
             </View>
 
-            <TouchableOpacity>
-              <View
-                style={[
-                  styles.row,
-                  {
-                    marginLeft: 11,
-                    backgroundColor: '#144272',
-                    borderRadius: 10,
-                    width: 295,
-                  },
-                ]}>
-                <Text
-                  style={[
-                    styles.productinput,
-                    {color: 'white', textAlign: 'center'},
-                  ]}>
-                  Choose Logo
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity onPress={togglebtncustomereditarea}>
+            <TouchableOpacity onPress={updateBusiness}>
               <View
                 style={{
                   backgroundColor: '#144272',
@@ -413,77 +621,6 @@ export default function BusinessVariables() {
               </View>
             </TouchableOpacity>
           </ScrollView>
-        </Modal>
-
-        {/*btn*/}
-        <Modal isVisible={btncustomeraditarea}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 230,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Updated
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Company has been updated successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomereditarea(!btncustomeraditarea)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
         </Modal>
       </ImageBackground>
     </SafeAreaView>

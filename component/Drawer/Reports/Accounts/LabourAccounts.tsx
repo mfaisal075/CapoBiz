@@ -9,128 +9,54 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {RadioButton} from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
 
-type Product = {
-  sr: number;
-  Supplier: string;
-  TotalBillAmount: number;
-  TotalPaidAmount: number;
-  Balance: number;
-};
+interface Labour {
+  id: number;
+  labr_name: string;
+}
 
-type InfoType = {
-  [key: string]: Product[];
-};
+interface AllLabourList {
+  labr_name: string;
+  labrac_total_bill_amount: string;
+  labrac_paid_amount: string;
+  labrac_balance: string;
+}
+
+interface SingleLabourList {
+  id: string;
+  labrac_invoice_no: string;
+  labrac_total_bill_amount: string;
+  labrac_paid_amount: string;
+  labrac_balance: string;
+  labrac_date: string;
+}
 
 export default function LabourAccounts() {
   const {openDrawer} = useDrawer();
-
-  const Info: InfoType = {
-    'Select Labour': [
-      {
-        sr: 1,
-        Supplier: 'name',
-        TotalBillAmount: 0,
-        TotalPaidAmount: 7,
-        Balance: 99,
-      },
-    ],
-    Ali: [
-      {
-        sr: 1,
-        Supplier: 'name',
-        TotalBillAmount: 0,
-        TotalPaidAmount: 7,
-        Balance: 99,
-      },
-      {
-        sr: 2,
-        Supplier: 'name',
-        TotalBillAmount: 0,
-        TotalPaidAmount: 7,
-        Balance: 99,
-      },
-    ],
-    Ahmad: [
-      {
-        sr: 1,
-        Supplier: 'name',
-        TotalBillAmount: 0,
-        TotalPaidAmount: 7,
-        Balance: 99,
-      },
-    ],
-    Ayan: [
-      {
-        sr: 1,
-        Supplier: 'name',
-        TotalBillAmount: 0,
-        TotalPaidAmount: 7,
-        Balance: 99,
-      },
-    ],
-    Asim: [
-      {
-        sr: 1,
-        Supplier: 'name',
-        TotalBillAmount: 0,
-        TotalPaidAmount: 7,
-        Balance: 99,
-      },
-    ],
-    Aryan: [
-      {
-        sr: 1,
-        Supplier: 'name',
-        TotalBillAmount: 0,
-        TotalPaidAmount: 7,
-        Balance: 99,
-      },
-      {
-        sr: 2,
-        Supplier: 'name',
-        TotalBillAmount: 0,
-        TotalPaidAmount: 7,
-        Balance: 99,
-      },
-      {
-        sr: 3,
-        Supplier: 'name',
-        TotalBillAmount: 0,
-        TotalPaidAmount: 7,
-        Balance: 99,
-      },
-    ],
-  };
-
-  const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] =
-    useState<string>('Select Labour');
-
-  const categoryItems = [
-    {label: 'Select Labour', value: 'Select Labour'},
-    {label: 'Ali', value: 'Ali'},
-    {label: 'Ahmad', value: 'Ahmad'},
-    {label: 'Ayan', value: 'Ayan'},
-    {label: 'Asim', value: 'Asim'},
-    {label: 'Aryan', value: 'Aryan'},
-  ];
+  const [open, setOpen] = useState(false);
+  const [labValue, setLabValue] = useState('');
+  const [labourDropdown, setLabourDropdown] = useState<Labour[]>([]);
+  const transformedLab = labourDropdown.map(lab => ({
+    label: lab.labr_name,
+    value: lab.id.toString(),
+  }));
+  const [allLabourList, setAllLabourList] = useState<AllLabourList[]>([]);
+  const [singleLabourList, setSingleLabourList] = useState<SingleLabourList[]>(
+    [],
+  );
 
   const [selectionMode, setSelectionMode] = useState<
     'alllabours' | 'singlelabour' | ''
-  >('');
-
-  const totalProducts =
-    selectionMode === 'alllabours'
-      ? Object.values(Info).reduce((acc, list) => acc + list.length, 0)
-      : Info[currentCategory]?.length || 0;
-
+  >('alllabours');
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -150,6 +76,95 @@ export default function LabourAccounts() {
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
+
+  // Fetch Labour dropdown
+  const fetchLabourDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchlaboursdropdown`);
+      setLabourDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch All Labour List
+  const fetchAllLabourList = async () => {
+    try {
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+      const res = await axios.post(`${BASE_URL}/fetchlabouraccount`, {
+        from,
+        to,
+      });
+      setAllLabourList(res.data.account);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate All Labour Totals
+  const calculateAllLabourTotal = () => {
+    let totalReceivables = 0;
+    let totalReceived = 0;
+
+    allLabourList.forEach(lab => {
+      const receivable = parseFloat(lab.labrac_total_bill_amount) || 0;
+      const received = parseFloat(lab.labrac_paid_amount) || 0;
+
+      totalReceivables += receivable;
+      totalReceived += received;
+    });
+
+    return {
+      totalReceivables: totalReceivables.toFixed(2),
+      totalReceived: totalReceived.toFixed(2),
+      netReceivables: (totalReceivables - totalReceived).toFixed(2),
+    };
+  };
+
+  // Fetch Single Labour List
+  const fetchSingleLabourList = async () => {
+    if (labValue) {
+      try {
+        const from = startDate.toISOString().split('T')[0];
+        const to = endDate.toISOString().split('T')[0];
+        const res = await axios.post(`${BASE_URL}/fetchsinglelabouraccount`, {
+          labour_id: labValue,
+          from,
+          to,
+        });
+        setSingleLabourList(res.data.account);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  // Calculate Single Transporter Totals
+  const calculateSingleTransTotal = () => {
+    let totalReceivables = 0;
+    let totalReceived = 0;
+
+    singleLabourList.forEach(lab => {
+      const receivable = parseFloat(lab.labrac_total_bill_amount) || 0;
+      const received = parseFloat(lab.labrac_paid_amount) || 0;
+
+      totalReceivables += receivable;
+      totalReceived += received;
+    });
+
+    return {
+      totalReceivables: totalReceivables.toFixed(2),
+      totalReceived: totalReceived.toFixed(2),
+      netReceivables: (totalReceivables - totalReceived).toFixed(2),
+    };
+  };
+
+  useEffect(() => {
+    fetchAllLabourList();
+    fetchLabourDropdown();
+    fetchSingleLabourList();
+  }, [startDate, endDate, labValue]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -173,18 +188,12 @@ export default function LabourAccounts() {
 
           <View style={styles.headerTextContainer}>
             <Text style={{color: 'white', fontSize: 22, fontWeight: 'bold'}}>
-             Labour Accounts
+              Labour Accounts
             </Text>
           </View>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            marginLeft: 23,
-            gap: 33,
-            marginTop: 10,
-          }}>
+        <View style={styles.dateContainer}>
           <View
             style={{
               flexDirection: 'row',
@@ -258,146 +267,326 @@ export default function LabourAccounts() {
             )}
           </View>
         </View>
+
         <DropDownPicker
-          items={categoryItems}
-          open={category}
-          setOpen={setCategory}
-          value={currentCategory}
-          setValue={setCurrentCategory}
+          items={transformedLab}
+          open={open}
+          setOpen={setOpen}
+          value={labValue}
+          setValue={setLabValue}
           placeholder="Select Labour"
           disabled={selectionMode === 'alllabours'}
           placeholderStyle={{color: 'white'}}
           textStyle={{color: 'white'}}
-          arrowIconStyle={{tintColor: 'white'}}
+          ArrowUpIconComponent={() => (
+            <Text>
+              <Icon name="chevron-up" size={15} color="white" />
+            </Text>
+          )}
+          ArrowDownIconComponent={() => (
+            <Text>
+              <Icon name="chevron-down" size={15} color="white" />
+            </Text>
+          )}
           style={[
             styles.dropdown,
-            {borderColor: 'white', width: '88%', alignSelf: 'center'},
+            selectionMode === 'alllabours' && {backgroundColor: 'gray'},
           ]}
           dropDownContainerStyle={{
             backgroundColor: 'white',
             borderColor: '#144272',
-            width: '88%',
-            marginLeft: 22,
+            width: '90%',
+            marginTop: 8,
+            alignSelf: 'center',
           }}
-          labelStyle={{color: 'white'}}
+          labelStyle={{color: 'white', fontWeight: 'bold'}}
           listItemLabelStyle={{color: '#144272'}}
         />
 
-        <View style={[styles.row, {marginTop: -6, marginLeft: 20}]}>
-          <RadioButton
-            value="alllabours"
-            status={selectionMode === 'alllabours' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
+        <View style={[styles.row]}>
+          <TouchableOpacity
+            style={styles.radioBtnContainer}
             onPress={() => {
               setSelectionMode('alllabours');
-              setCurrentCategory('Select Labour');
-            }}
-          />
-          <Text style={{color: 'white', marginTop: 7, marginLeft: -5}}>
-            All Labours
-          </Text>
-          <RadioButton
-            value="singlelabour"
-            color="white"
-            uncheckedColor="white"
-            status={
-              selectionMode === 'singlelabour' ? 'checked' : 'unchecked'
-            }
+              setLabValue('');
+            }}>
+            <RadioButton
+              value="alllabours"
+              status={selectionMode === 'alllabours' ? 'checked' : 'unchecked'}
+              color="white"
+              uncheckedColor="white"
+              onPress={() => {
+                setSelectionMode('alllabours');
+                setLabValue('');
+              }}
+            />
+            <Text style={{color: 'white'}}>All Labours</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.radioBtnContainer}
             onPress={() => {
               setSelectionMode('singlelabour');
-              setCurrentCategory('');
-            }}
-          />
-          <Text style={{color: 'white', marginTop: 7, marginLeft: -5}}>
-            Single Labour
-          </Text>
+              setLabValue('');
+            }}>
+            <RadioButton
+              value="singlelabour"
+              color="white"
+              uncheckedColor="white"
+              status={
+                selectionMode === 'singlelabour' ? 'checked' : 'unchecked'
+              }
+              onPress={() => {
+                setSelectionMode('singlelabour');
+                setLabValue('');
+              }}
+            />
+            <Text style={{color: 'white'}}>Single Labour</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          {(selectionMode === 'alllabours' ||
-            (selectionMode === 'singlelabour' && currentCategory)) && (
-            <FlatList
-              data={
-                selectionMode === 'alllabours'
-                  ? Object.values(Info).flat()
-                  : Info[currentCategory] || []
-              }
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.Supplier}
+        {selectionMode === 'alllabours' && (
+          <FlatList
+            data={allLabourList}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.labr_name}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Total Bill Amount:</Text>
+                      <Text style={styles.text}>
+                        {item.labrac_total_bill_amount}
                       </Text>
                     </View>
 
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Total Bill Amount:</Text>
-                        <Text style={styles.text}>{item.TotalBillAmount}</Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Total Paid Amount:</Text>
-                        <Text style={styles.text}>{item.TotalPaidAmount}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginBottom: 5,
-                        }}>
-                        <Text style={styles.text}>Balance:</Text>
-                        <Text style={styles.text}>{item.Balance}</Text>
-                      </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Total Paid Amount:</Text>
+                      <Text style={styles.text}>{item.labrac_paid_amount}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5,
+                      }}>
+                      <Text style={styles.text}>Balance:</Text>
+                      <Text style={styles.text}>{item.labrac_balance}</Text>
                     </View>
                   </View>
                 </View>
-              )}
-            />
-          )}
+              </View>
+            )}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text
+                  style={{
+                    color: 'white',
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                  }}>
+                  No record found.
+                </Text>
+              </View>
+            }
+          />
+        )}
 
-          {selectionMode === 'singlelabour' && !currentCategory && (
-            <Text style={{color: 'white', textAlign: 'center', marginTop: 10}}>
-              Please select a category to view items.
-            </Text>
-          )}
-        </ScrollView>
+        {selectionMode === 'singlelabour' && (
+          <FlatList
+            data={singleLabourList}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.labrac_invoice_no}
+                    </Text>
+                  </View>
 
-        
-        {selectionMode !== '' && totalProducts > 0 && (
-          <View
-            style={styles.totalContainer}>
-            <Text style={styles.totalText}>Total Paid:{totalProducts}</Text>
-            <Text style={styles.totalText}>Net Payables: 8</Text>
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Total Bill Amount:</Text>
+                      <Text style={styles.text}>
+                        {item.labrac_total_bill_amount}
+                      </Text>
+                    </View>
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Total Paid Amount:</Text>
+                      <Text style={styles.text}>{item.labrac_paid_amount}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5,
+                      }}>
+                      <Text style={styles.text}>Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.labrac_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5,
+                      }}>
+                      <Text style={styles.text}>Balance:</Text>
+                      <Text style={styles.text}>{item.labrac_balance}</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text
+                  style={{
+                    color: 'white',
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                  }}>
+                  No record found.
+                </Text>
+              </View>
+            }
+          />
+        )}
+
+        {selectionMode === 'alllabours' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{allLabourList.length}</Text>
+            </View>
+            {(() => {
+              const {netReceivables, totalReceivables, totalReceived} =
+                calculateAllLabourTotal();
+
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Receivables:</Text>
+                    <Text style={styles.totalText}>{totalReceivables}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Received:</Text>
+                    <Text style={styles.totalText}>{totalReceived}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Net Receivables:</Text>
+                    <Text style={styles.totalText}>{netReceivables}</Text>
+                  </View>
+                </View>
+              );
+            })()}
           </View>
         )}
-       {selectionMode !== '' && totalProducts > 0 && (
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              padding: 3,
-            }}>
-            <Text style={styles.totalText}>Total Records:{totalProducts}</Text>
+        {selectionMode === 'singlelabour' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{singleLabourList.length}</Text>
+            </View>
+            {(() => {
+              const {netReceivables, totalReceivables, totalReceived} =
+                calculateSingleTransTotal();
 
-            <Text style={styles.totalText}>Total Payable:{totalProducts}</Text>
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Receivables:</Text>
+                    <Text style={styles.totalText}>{totalReceivables}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Received:</Text>
+                    <Text style={styles.totalText}>{totalReceived}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Net Receivables:</Text>
+                    <Text style={styles.totalText}>{netReceivables}</Text>
+                  </View>
+                </View>
+              );
+            })()}
           </View>
         )}
       </ImageBackground>
@@ -461,15 +650,18 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
+    alignSelf: 'center',
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
+    width: '90%',
+    marginTop: 10,
   },
   totalContainer: {
-    padding: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 15,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,
@@ -479,11 +671,26 @@ const styles = StyleSheet.create({
   totalText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
+    marginLeft: 8,
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    marginTop: 10,
+    width: '90%',
+    alignSelf: 'center',
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    width: '90%',
+    height: 38,
+    alignSelf: 'center',
+    gap: 33,
+    marginTop: 10,
+  },
+  radioBtnContainer: {
+    flexDirection: 'row',
+    width: '46%',
+    alignItems: 'center',
   },
 });

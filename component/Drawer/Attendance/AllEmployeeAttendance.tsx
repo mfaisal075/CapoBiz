@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import {
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
 
 type Employee = {
   id: string;
@@ -64,14 +66,25 @@ const initialData: Employee[] = [
   },
 ];
 
+interface AttendanceCart {
+  emp_id: number;
+  name: string;
+  cnic: string;
+  date: string;
+  clockin: string;
+  clockout: string;
+  att_status: string;
+}
+
 export default function AllEmployeeAttendance() {
   const {openDrawer} = useDrawer();
 
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
-  const [currentId, setCurrentId] = useState<string | null>(null);
+  const [currentId, setCurrentId] = useState<number | null>(null);
   const [mode, setMode] = useState<'clockIn' | 'clockOut'>('clockIn');
+  const [attCart, setAttCart] = useState<AttendanceCart[]>([]);
 
   const updateTime = (id: string, selectedTime: Date) => {
     const updated = employees.map(emp => {
@@ -91,9 +104,33 @@ export default function AllEmployeeAttendance() {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const [statusModalVisible, setStatusModalVisible] = useState(false);
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
     null,
   );
+
+  // Add Employee to Attendance cart
+  const addToEmpAttendanceCart = async () => {
+    try {
+      await axios.post(`${BASE_URL}/addtoEmployeesattendancecart`);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Attendance Cart Data
+  const fetchData = async () => {
+    try {
+      addToEmpAttendanceCart();
+      const res = await axios.get(`${BASE_URL}/loadcartemp`);
+      setAttCart(res.data.carsession);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -133,136 +170,128 @@ export default function AllEmployeeAttendance() {
           </TouchableOpacity>
         </View>
 
-        {dataLoaded && (
-          <FlatList
-            data={employees}
-            keyExtractor={item => item.id}
-            renderItem={({item}) => (
-              <ScrollView style={{padding: 5}}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text
-                      style={{
-                        color: '#144272',
-                        fontWeight: 'bold',
-                        marginLeft: 5,
-                        marginTop: 5,
-                      }}>
-                      {item.name}
-                    </Text>
-                  </View>
-                  <View
+        <FlatList
+          data={attCart}
+          keyExtractor={item => item.emp_id.toString()}
+          renderItem={({item}) => (
+            <ScrollView style={{padding: 5}}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
+                  <Text
                     style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
+                      color: '#144272',
+                      fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
                     }}>
-                    <Text style={[styles.text, {marginTop: 5}]}>CNIC</Text>
-                    <Text style={[styles.text, {marginTop: 5}]}>
-                      {item.cnic}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setCurrentId(item.id);
-                      setMode('clockIn');
-                      setShowPicker(true);
-                    }}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Clock In:</Text>
-                      <Text style={styles.text}>
-                        {formatTime(item.clockIn)}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      setCurrentId(item.id);
-                      setMode('clockOut');
-                      setShowPicker(true);
-                    }}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Clock Out:</Text>
-                      <Text style={styles.text}>
-                        {formatTime(item.clockOut)}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Date</Text>
-                    <Text style={styles.text}>{item.date}</Text>
-                  </View>
-
-                  {openDropdownId === item.id && (
-                    <DropDownPicker
-                      open={true}
-                      value={item.status}
-                      items={[
-                        {label: 'Present', value: 'Present'},
-                        {label: 'Absent', value: 'Absent'},
-                        {label: 'Leave', value: 'Leave'},
-                      ]}
-                      setOpen={() => setOpenDropdownId(null)}
-                      setValue={callback => {
-                        const newValue = callback(item.status);
-                        setEmployees(prev =>
-                          prev.map(emp =>
-                            emp.id === item.id
-                              ? {...emp, status: newValue}
-                              : emp,
-                          ),
-                        );
-                      }}
-                      setItems={() => {}}
-                      style={{
-                        backgroundColor: 'white',
-                      }}
-                      dropDownContainerStyle={{
-                        backgroundColor: 'white',
-                      }}
-                      textStyle={{color: '#144272'}}
-                      listItemLabelStyle={{
-                        color: '#144272',
-                      }}
-                      placeholder="Select status"
-                    />
-                  )}
-
-                  {openDropdownId !== item.id && (
-                    <TouchableOpacity
-                      onPress={() => {
-                        setSelectedEmployeeId(item.id);
-                        setStatusModalVisible(true);
-                      }}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginBottom: 5,
-                        }}>
-                        <Text style={styles.text}>Status</Text>
-                        <Text style={styles.text}>{item.status}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  )}
+                    {item.name}
+                  </Text>
                 </View>
-              </ScrollView>
-            )}
-          />
-        )}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                  }}>
+                  <Text style={[styles.text, {marginTop: 5}]}>CNIC</Text>
+                  <Text style={[styles.text, {marginTop: 5}]}>{item.cnic}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setCurrentId(item.emp_id);
+                    setMode('clockIn');
+                    setShowPicker(true);
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Clock In:</Text>
+                    <Text style={styles.text}>{item.clockin}</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setCurrentId(item.emp_id);
+                    setMode('clockOut');
+                    setShowPicker(true);
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Clock Out:</Text>
+                    <Text style={styles.text}>{item.clockout}</Text>
+                  </View>
+                </TouchableOpacity>
+
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                  }}>
+                  <Text style={styles.text}>Date</Text>
+                  <Text style={styles.text}>{item.date}</Text>
+                </View>
+
+                {openDropdownId === item.emp_id.toString() && (
+                  <DropDownPicker
+                    open={true}
+                    value={item.att_status}
+                    items={[
+                      {label: 'Present', value: 'Present'},
+                      {label: 'Absent', value: 'Absent'},
+                      {label: 'Leave', value: 'Leave'},
+                    ]}
+                    setOpen={() => setOpenDropdownId(null)}
+                    setValue={callback => {
+                      const newValue = callback(item.att_status);
+                      setEmployees(prev =>
+                        prev.map(emp =>
+                          emp.id === item.emp_id.toString()
+                            ? {...emp, status: newValue}
+                            : emp,
+                        ),
+                      );
+                    }}
+                    setItems={() => {}}
+                    style={{
+                      backgroundColor: 'white',
+                    }}
+                    dropDownContainerStyle={{
+                      backgroundColor: 'white',
+                    }}
+                    textStyle={{color: '#144272'}}
+                    listItemLabelStyle={{
+                      color: '#144272',
+                    }}
+                    placeholder="Select status"
+                  />
+                )}
+
+                {openDropdownId !== item.emp_id.toString() && (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedEmployeeId(item.emp_id);
+                      setStatusModalVisible(true);
+                    }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5,
+                      }}>
+                      <Text style={styles.text}>Status</Text>
+                      <Text style={styles.text}>{item.att_status}</Text>
+                    </View>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </ScrollView>
+          )}
+        />
 
         {showPicker && currentId && (
           <DateTimePicker
@@ -272,7 +301,7 @@ export default function AllEmployeeAttendance() {
             display={Platform.OS === 'android' ? 'spinner' : 'default'}
             onChange={(_, selectedDate) => {
               setShowPicker(false);
-              if (selectedDate) updateTime(currentId, selectedDate);
+              if (selectedDate) updateTime(currentId.toString(), selectedDate);
             }}
           />
         )}
@@ -310,7 +339,7 @@ export default function AllEmployeeAttendance() {
                 onPress={() => {
                   setEmployees(prev =>
                     prev.map(emp =>
-                      emp.id === selectedEmployeeId
+                      emp.id === selectedEmployeeId?.toString()
                         ? {...emp, status: status as Employee['status']}
                         : emp,
                     ),

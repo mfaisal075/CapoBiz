@@ -137,6 +137,7 @@ import ChequeClearance from './component/Drawer/Accounts/ChequeClearance';
 import SupplierAddPayment from './component/Drawer/Accounts/SupplierAddPayment';
 import SupplierChequeClearance from './component/Drawer/Accounts/SupplierChequeClearance';
 import TransporterAddPayment from './component/Drawer/Accounts/TransporterAddPayment';
+import LabourAddPayment from './component/Drawer/Accounts/LabourAddPayment';
 
 const Stack = createStackNavigator();
 export const navigationRef = createNavigationContainerRef();
@@ -305,6 +306,7 @@ function App(): React.JSX.Element {
             <Stack.Screen name="ChequeClearance" component={ChequeClearance} />
             <Stack.Screen name="SupplierChequeClearance" component={SupplierChequeClearance} />
             <Stack.Screen name="TransporterAddPayment" component={TransporterAddPayment} />
+            <Stack.Screen name="LabourAddPayment" component={LabourAddPayment} />
 
             {/*Sale Report*/}
             <Stack.Screen name="All User Sales" component={AllUserSale} />

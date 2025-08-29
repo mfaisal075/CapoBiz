@@ -6,103 +6,81 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {RadioButton} from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
 
-interface EmployeeInfo {
-  sr: number;
-  invoice: number;
-  customer: string;
-  date: string;
-  orderTable: number;
-  discount: number;
-  totalAmount: number;
-  profit: number;
+interface ProductDropdown {
+  id: number;
+  prod_name: string;
 }
 
-interface InfoObject {
-  [key: string]: EmployeeInfo[];
+interface Category {
+  id: number;
+  pcat_name: string;
+}
 
-  Chocolate: EmployeeInfo[];
-  Oil: EmployeeInfo[];
-  Flour: EmployeeInfo[];
-  Jelly: EmployeeInfo[];
-  'Murree Brwerry': EmployeeInfo[];
+interface Users {
+  id: number;
+  name: string;
+}
 
-  'Chilli Milli': EmployeeInfo[];
-  Cup: EmployeeInfo[];
-  'Flour E': EmployeeInfo[];
-  'Pizza Jelly': EmployeeInfo[];
-  'Kunafa Bar': EmployeeInfo[];
+interface SalesReport {
+  id: number;
+  sal_date: string;
+  sal_order_total: string;
+  sal_discount: string;
+  sal_invoice_no: string;
+  sal_profit: string;
+  cust_name: string;
+  sal_total_amount: string;
+}
+
+interface SaleSummary {
+  sald_prod_id: number;
+  sald_prod_name: string;
+  total_qty: number;
+  total_sale_value: number;
 }
 
 export default function AllUserSale() {
   const {openDrawer} = useDrawer();
-
-  const Info: InfoObject = {
-    saleReport: [
-      {
-        sr: 1,
-        invoice: 7,
-        customer: 'abc',
-        date: '8-9-6',
-        orderTable: 5,
-        discount: 8,
-        totalAmount: 67,
-        profit: 9,
-      },
-    ],
-    Chocolate: [],
-    Flour: [],
-    Jelly: [],
-    Oil: [],
-    'Murree Brwerry': [],
-    'Kunafa Bar': [],
-    'Flour E': [],
-    'Pizza Jelly': [],
-    'Chilli Milli': [],
-    Cup: [],
-  };
-
-  const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState<string>('Chocolate');
-
-  const categoryItems = [
-    {label: 'Chocolate', value: 'Chocolate'},
-    {label: 'Oil', value: 'Oil'},
-    {label: 'Flour', value: 'Flour'},
-    {label: 'Jelly', value: 'Jelly'},
-    {label: 'Murree Brwerry', value: 'Murree Brwerry'},
-  ];
-
-  const [product, setProduct] = useState(false);
-  const [currentproduct, setCurrentProduct] = useState<string>('Chilli Milli');
-
-  const productItems = [
-    {label: 'Chilli Milli', value: 'Chilli Milli'},
-    {label: 'Pizza Jelly', value: 'Pizza Jelly'},
-    {label: 'Flour E', value: 'Flour E'},
-    {label: 'Cup', value: 'Cup'},
-    {label: 'Kunafa Bar', value: 'Kunafa Bar'},
-  ];
+  const [prodDropdown, setProdDropdown] = useState<ProductDropdown[]>([]);
+  const transformedProd = prodDropdown.map(prod => ({
+    label: prod.prod_name,
+    value: prod.id.toString(),
+  }));
+  const [categoryDropdown, setCategoryDropdown] = useState<Category[]>([]);
+  const transformedCategory = categoryDropdown.map(cat => ({
+    label: cat.pcat_name,
+    value: cat.id.toString(),
+  }));
+  const [usersDropdown, setUsersDropdown] = useState<Users[]>([]);
+  const transformedUsers = usersDropdown.map(user => ({
+    label: user.name,
+    value: user.id.toString(),
+  }));
+  const [prodOpen, setProdOpen] = useState(false);
+  const [prodValue, setProdValue] = useState('');
+  const [catOpen, setCatOpen] = useState(false);
+  const [catValue, setCatValue] = useState('');
+  const [userOpen, setUserOpen] = useState(false);
+  const [userValue, setUserValue] = useState('');
+  const [salesReport, setSalesReport] = useState<SalesReport[]>([]);
+  const [salesDetailedRep, setSalesDetailedRep] = useState<SalesReport[]>([]);
+  const [salesSummary, setSalesSummary] = useState<SaleSummary[]>([]);
 
   const [selectionMode, setSelectionMode] = useState<
-    'salereport' | 'detailedsalereport' | ''
-  >('');
-
-  const totalProducts =
-  selectionMode === 'salereport' || selectionMode === 'detailedsalereport'
-    ? Object.values(Info).reduce((acc, list) => acc + list.length, 0)
-    : currentCategory
-      ? Info[currentCategory]?.length || 0
-      : 0;
+    'salereport' | 'detailedsalereport' | 'saleSummary' | ''
+  >('salereport');
 
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
@@ -123,6 +101,152 @@ export default function AllUserSale() {
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
+
+  // Product Dropdown
+  const fetchProdDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchproductsdropdown`);
+      setProdDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Category Dropdown
+  const fetchCatDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcategories`);
+      setCategoryDropdown(res.data.cat);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Users Dropdown
+  const fetchUserDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchusersdropdown`);
+      setUsersDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Sales Reports
+  const fetchSales = async () => {
+    try {
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+      const res = await axios.post(`${BASE_URL}/fetchsales`, {
+        from,
+        to,
+        category: catValue,
+        product: prodValue,
+        user_id: userValue,
+      });
+      setSalesReport(res.data.sales);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate Total Sales and Profit
+  const calculateTotalSalesProfit = () => {
+    let totalSale = 0;
+    let totalProfit = 0;
+
+    salesReport.forEach(sale => {
+      const sales = parseFloat(sale.sal_total_amount) || 0;
+      const profit = parseFloat(sale.sal_profit) || 0;
+
+      totalSale += sales;
+      totalProfit += profit;
+    });
+
+    return {
+      totalSale: totalSale.toFixed(2),
+      totalProfit: totalProfit.toFixed(2),
+    };
+  };
+
+  // Fetch Detailed Sales Reports
+  const fetchDetailedSales = async () => {
+    try {
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+      const res = await axios.post(`${BASE_URL}/fetchsaledetails`, {
+        from,
+        to,
+        category: catValue,
+        product: prodValue,
+        user_id: userValue,
+      });
+      setSalesDetailedRep(res.data.sales);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate Detailed Sales and Profit
+  const calculateDetailedSalesProfit = () => {
+    let totalSale = 0;
+    let totalProfit = 0;
+
+    salesDetailedRep.forEach(sale => {
+      const sales = parseFloat(sale.sal_total_amount) || 0;
+      const profit = parseFloat(sale.sal_profit) || 0;
+
+      totalSale += sales;
+      totalProfit += profit;
+    });
+
+    return {
+      totalSale: totalSale.toFixed(2),
+      totalProfit: totalProfit.toFixed(2),
+    };
+  };
+
+  // Fetch Sales Reports
+  const fetchSalesSummary = async () => {
+    try {
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+      const res = await axios.post(`${BASE_URL}/fetchsalesummaryreport`, {
+        from,
+        to,
+        category: catValue,
+        product: prodValue,
+        user_id: userValue,
+      });
+      setSalesSummary(res.data.salesummary);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate Total Sales
+  const calculateTotalSales = () => {
+    let totalSale = 0;
+
+    salesSummary.forEach(sale => {
+      const sales = sale.total_sale_value || 0;
+
+      totalSale += sales;
+    });
+
+    return {
+      totalSale: totalSale.toFixed(2),
+    };
+  };
+
+  useEffect(() => {
+    fetchProdDropdown();
+    fetchCatDropdown();
+    fetchUserDropdown();
+    fetchSales();
+    fetchDetailedSales();
+    fetchSalesSummary();
+  }, [startDate, endDate, userValue, prodValue, catValue]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -151,23 +275,19 @@ export default function AllUserSale() {
           </View>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            marginLeft: 23,
-            gap: 33,
-            marginTop: 10,
-          }}>
+        <View style={styles.dateContainer}>
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>From:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${startDate.toLocaleDateString()}`}
             </Text>
@@ -199,12 +319,14 @@ export default function AllUserSale() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>To:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${endDate.toLocaleDateString()}`}
             </Text>
@@ -232,54 +354,77 @@ export default function AllUserSale() {
           </View>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            marginTop: 10,
-            marginLeft: 25,
-            marginRight: 25,
-          }}>
-          <View>
+        <View style={styles.dropDownContainer}>
+          <View
+            style={{
+              width: '46%',
+              height: 38,
+            }}>
             <DropDownPicker
-              items={categoryItems}
-              open={category}
-              setOpen={setCategory}
-              value={currentCategory}
-              setValue={setCurrentCategory}
+              items={transformedCategory}
+              open={catOpen}
+              setOpen={setCatOpen}
+              value={catValue}
+              setValue={setCatValue}
               placeholder="Select Category"
               disabled={selectionMode === 'salereport'}
               placeholderStyle={{color: 'white'}}
               textStyle={{color: 'white'}}
-              arrowIconStyle={{tintColor: 'white'}}
-              style={[styles.dropdown, {borderColor: 'white', width: 146}]}
+              ArrowUpIconComponent={() => (
+                <Text>
+                  <Icon name="chevron-up" size={15} color="white" />
+                </Text>
+              )}
+              ArrowDownIconComponent={() => (
+                <Text>
+                  <Icon name="chevron-down" size={15} color="white" />
+                </Text>
+              )}
+              style={[styles.dropdown]}
               dropDownContainerStyle={{
                 backgroundColor: 'white',
                 borderColor: '#144272',
-                width: 146,
+                width: '100%',
+                marginTop: 8,
+                zIndex: 1000,
               }}
               labelStyle={{color: 'white'}}
               listItemLabelStyle={{color: '#144272'}}
             />
           </View>
 
-          <View>
+          <View
+            style={{
+              width: '46%',
+              height: 38,
+            }}>
             <DropDownPicker
-              items={productItems}
-              open={product}
-              setOpen={setProduct}
-              value={currentproduct}
-              setValue={setCurrentProduct}
+              items={transformedProd}
+              open={prodOpen}
+              setOpen={setProdOpen}
+              value={prodValue}
+              setValue={setProdValue}
               placeholder="Select Product"
               disabled={selectionMode === 'salereport'}
               placeholderStyle={{color: 'white'}}
               textStyle={{color: 'white'}}
-              arrowIconStyle={{tintColor: 'white'}}
-              style={[styles.dropdown, {borderColor: 'white', width: 130}]}
+              ArrowUpIconComponent={() => (
+                <Text>
+                  <Icon name="chevron-up" size={15} color="white" />
+                </Text>
+              )}
+              ArrowDownIconComponent={() => (
+                <Text>
+                  <Icon name="chevron-down" size={15} color="white" />
+                </Text>
+              )}
+              style={[styles.dropdown]}
               dropDownContainerStyle={{
                 backgroundColor: 'white',
                 borderColor: '#144272',
-                width: 130,
+                width: '100%',
+                marginTop: 8,
+                zIndex: 1000,
               }}
               labelStyle={{color: 'white'}}
               listItemLabelStyle={{color: '#144272'}}
@@ -287,190 +432,368 @@ export default function AllUserSale() {
           </View>
         </View>
 
-        <View
-          style={[
-            styles.row,
-            {marginTop: -6, marginLeft: 20, justifyContent: 'space-between'},
-          ]}>
-          <RadioButton
-            value="salereport"
-            status={selectionMode === 'salereport' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
-            onPress={() => {
-              setSelectionMode('salereport');
-              setCurrentCategory('Chocolate');
+        <View style={[styles.dropDownContainer, {marginTop: 10}]}>
+          <DropDownPicker
+            items={transformedUsers}
+            open={userOpen}
+            setOpen={setUserOpen}
+            value={userValue}
+            setValue={setUserValue}
+            placeholder="Select User"
+            placeholderStyle={{color: 'white'}}
+            textStyle={{color: 'white'}}
+            ArrowUpIconComponent={() => (
+              <Text>
+                <Icon name="chevron-up" size={15} color="white" />
+              </Text>
+            )}
+            ArrowDownIconComponent={() => (
+              <Text>
+                <Icon name="chevron-down" size={15} color="white" />
+              </Text>
+            )}
+            style={[styles.dropdown, {zIndex: 999}]}
+            dropDownContainerStyle={{
+              backgroundColor: 'white',
+              borderColor: '#144272',
+              width: '100%',
+              marginTop: 8,
             }}
+            labelStyle={{color: 'white'}}
+            listItemLabelStyle={{color: '#144272'}}
           />
-          <Text
-            style={{
-              color: 'white',
-              marginTop: 7,
-              marginLeft: -45,
-              marginRight: 35,
-            }}>
-            Sale Report
-          </Text>
-          <RadioButton
-            value="detailedsalereport"
-            color="white"
-            uncheckedColor="white"
-            status={
-              selectionMode === 'detailedsalereport' ? 'checked' : 'unchecked'
-            }
-            onPress={() => {
-              setSelectionMode('detailedsalereport');
-              setCurrentCategory('Chilli Milli');
-            }}
-          />
-          <Text
-            style={{
-              color: 'white',
-              marginTop: 7,
-              marginLeft: -40,
-              marginRight: 27,
-            }}>
-            Detailed Report
-          </Text>
         </View>
 
-        <ScrollView>
-          {selectionMode === 'salereport' && (
-            <FlatList
-              data={Object.values(Info).flat()}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.customer}
+        <View style={[styles.row]}>
+          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <RadioButton
+              value="salereport"
+              status={selectionMode === 'salereport' ? 'checked' : 'unchecked'}
+              color="white"
+              uncheckedColor="white"
+              onPress={() => {
+                setSelectionMode('salereport');
+                setCatValue('');
+                setUserValue('');
+                setProdValue('');
+              }}
+            />
+            <Text
+              style={{
+                color: 'white',
+              }}>
+              Sale Report
+            </Text>
+          </View>
+          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <RadioButton
+              value="detailedsalereport"
+              color="white"
+              uncheckedColor="white"
+              status={
+                selectionMode === 'detailedsalereport' ? 'checked' : 'unchecked'
+              }
+              onPress={() => {
+                setSelectionMode('detailedsalereport');
+                setCatValue('');
+                setUserValue('');
+                setProdValue('');
+              }}
+            />
+            <Text
+              style={{
+                color: 'white',
+              }}>
+              Detailed Report
+            </Text>
+          </View>
+        </View>
+        <View style={[styles.row, {marginTop: 2}]}>
+          <View style={{flexDirection: 'row', alignItems: 'center'}}>
+            <RadioButton
+              value="saleSummary"
+              color="white"
+              uncheckedColor="white"
+              status={selectionMode === 'saleSummary' ? 'checked' : 'unchecked'}
+              onPress={() => {
+                setSelectionMode('saleSummary');
+                setCatValue('');
+                setUserValue('');
+                setProdValue('');
+              }}
+            />
+            <Text
+              style={{
+                color: 'white',
+              }}>
+              Sale Summary
+            </Text>
+          </View>
+        </View>
+
+        {(selectionMode === 'salereport' ||
+          selectionMode === 'detailedsalereport') && (
+          <FlatList
+            data={
+              selectionMode === 'salereport' ? salesReport : salesDetailedRep
+            }
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.cust_name}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    {/*  Sale Report */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Invoice:</Text>
+                      <Text style={styles.text}>{item.sal_invoice_no}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.sal_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
                       </Text>
                     </View>
-                    <View style={styles.infoRow}>
-                      {/*  Sale Report */}
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Invoice:</Text>
-                        <Text style={styles.text}>{item.invoice}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Date:</Text>
-                        <Text style={styles.text}>{item.date}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Order Table:</Text>
-                        <Text style={styles.text}>{item.orderTable}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Discount:</Text>
-                        <Text style={styles.text}>{item.discount}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Total Amount:</Text>
-                        <Text style={styles.text}>{item.totalAmount}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginBottom: 5,
-                        }}>
-                        <Text style={styles.text}>Profit:</Text>
-                        <Text style={styles.text}>{item.profit}</Text>
-                      </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Order Total:</Text>
+                      <Text style={styles.text}>{item.sal_order_total}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Discount:</Text>
+                      <Text style={styles.text}>{item.sal_discount}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Total Amount:</Text>
+                      <Text style={styles.text}>{item.sal_total_amount}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5,
+                      }}>
+                      <Text style={styles.text}>Profit:</Text>
+                      <Text style={styles.text}>{item.sal_profit}</Text>
                     </View>
                   </View>
                 </View>
-              )}
-            />
-          )}
-
-          {/* Detailed Report data */}
-          {selectionMode === 'detailedsalereport' && currentCategory && (
-            <FlatList
-              data={Info[currentCategory] || []}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.customer}
-                      </Text>
+              </View>
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  height: 200,
+                  width: '100%',
+                  marginTop: 20,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No record found.
+                </Text>
+              </View>
+            }
+          />
+        )}
+        {selectionMode === 'saleSummary' && (
+          <FlatList
+            data={salesSummary}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.sald_prod_name}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    {/*  Sale Report */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Quantity:</Text>
+                      <Text style={styles.text}>{item.total_qty}</Text>
                     </View>
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Invoice:</Text>
-                        <Text style={styles.text}>{item.invoice}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Date:</Text>
-                        <Text style={styles.text}>{item.date}</Text>
-                      </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Sale Value:</Text>
+                      <Text style={styles.text}>{item.total_sale_value}</Text>
                     </View>
                   </View>
                 </View>
-              )}
-            />
-          )}
-        </ScrollView>
+              </View>
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  height: 200,
+                  width: '100%',
+                  marginTop: 20,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No record found.
+                </Text>
+              </View>
+            }
+          />
+        )}
 
-        {(selectionMode === 'salereport' && Object.values(Info).flat().length > 0) ||
-(selectionMode === 'detailedsalereport' && Info[currentCategory]?.length > 0) ? (
-  <>
-    <View style={styles.totalContainer}>
-      <Text style={styles.totalText}>Total Records: {totalProducts}</Text>
-      <Text style={styles.totalText}>Total Sales: 8</Text>
-    </View>
+        {selectionMode === 'salereport' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{salesReport.length}</Text>
+            </View>
+            {(() => {
+              const {totalProfit, totalSale} = calculateTotalSalesProfit();
 
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 3 }}>
-      <Text style={styles.totalText}>Total Sale Profit:</Text>
-      <Text style={styles.totalText}>{totalProducts}</Text>
-    </View>
-  </>
-) : null}
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Sales: </Text>
+                    <Text style={styles.totalText}>{totalSale}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Profit: </Text>
+                    <Text style={styles.totalText}>{totalProfit}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+          </View>
+        )}
+        {selectionMode === 'detailedsalereport' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{salesDetailedRep.length}</Text>
+            </View>
+            {(() => {
+              const {totalProfit, totalSale} = calculateDetailedSalesProfit();
 
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Sales: </Text>
+                    <Text style={styles.totalText}>{totalSale}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Profit: </Text>
+                    <Text style={styles.totalText}>{totalProfit}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+          </View>
+        )}
+        {selectionMode === 'saleSummary' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{salesSummary.length}</Text>
+            </View>
+            {(() => {
+              const {totalSale} = calculateTotalSales();
 
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Sales: </Text>
+                    <Text style={styles.totalText}>{totalSale}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+          </View>
+        )}
       </ImageBackground>
     </SafeAreaView>
   );
@@ -532,15 +855,16 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
+    width: '100%',
   },
   totalContainer: {
-    padding: 3,
+    paddingHorizontal: 15,
+    paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,
@@ -550,11 +874,25 @@ const styles = StyleSheet.create({
   totalText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    width: '90%',
+    alignSelf: 'center',
+    justifyContent: 'space-around',
+  },
+  dropDownContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
+    marginTop: 10,
   },
 });

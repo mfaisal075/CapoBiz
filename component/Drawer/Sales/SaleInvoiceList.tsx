@@ -18,6 +18,7 @@ import {FlatList} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
+import DropDownPicker from 'react-native-dropdown-picker';
 
 interface InvoiceList {
   id: number;
@@ -63,9 +64,15 @@ interface InvoiceSaleDetails {
   ums_name: string;
 }
 
+interface Users {
+  id: number;
+  name: string;
+}
+
 export default function SaleInvoiceList() {
-  const navigation = useNavigation();
   const {openDrawer} = useDrawer();
+  const [userOpen, setUserOpen] = useState(false);
+  const [userValue, setUserValue] = useState('');
   const [invcList, setInvcList] = useState<InvoiceList[]>([]);
   const [modalVisible, setModalVisible] = useState('');
   const [startDate, setStartDate] = useState(new Date());
@@ -77,6 +84,11 @@ export default function SaleInvoiceList() {
   const [invcSaleDetails, setInvcSaleDetails] = useState<InvoiceSaleDetails[]>(
     [],
   );
+  const [users, setUsers] = useState<Users[]>([]);
+  const transformedUsers = users.map(user => ({
+    label: user.name,
+    value: user.id.toString(),
+  }));
 
   const onStartDateChange = (
     event: DateTimePickerEvent,
@@ -92,6 +104,19 @@ export default function SaleInvoiceList() {
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const totalRecords = invcList.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const currentData = invcList.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
 
   // Fetch Sale Invoice List
   const fetchinvcLisr = async () => {
@@ -123,8 +148,19 @@ export default function SaleInvoiceList() {
     }
   };
 
+  // Fetch Users List Dropdown
+  const fetchUserDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchusersdropdown`);
+      setUsers(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
     fetchinvcLisr();
+    fetchUserDropdown();
   }, [startDate, endDate]);
 
   return (
@@ -159,181 +195,254 @@ export default function SaleInvoiceList() {
           </View>
         </View>
 
-        <ScrollView
-          style={{
-            marginBottom: 10,
-          }}>
-          <View style={styles.dateContainer}>
-            <View style={styles.dateInput}>
-              <Text style={styles.label}>From</Text>
-
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  borderRadius: 5,
-                  borderColor: 'white',
-                }}>
-                <Text style={{marginLeft: 10, color: 'white'}}>
-                  {`${startDate.toLocaleDateString()}`}
+        <View style={styles.dropDownContainer}>
+          <View
+            style={{
+              width: '100%',
+              height: 38,
+            }}>
+            <DropDownPicker
+              items={transformedUsers}
+              open={userOpen}
+              setOpen={setUserOpen}
+              value={userValue}
+              setValue={setUserValue}
+              placeholder="Select User"
+              placeholderStyle={{color: 'white'}}
+              textStyle={{color: 'white'}}
+              ArrowUpIconComponent={() => (
+                <Text>
+                  <Icon name="chevron-up" size={15} color="white" />
                 </Text>
-                <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-                  <Image
-                    style={{
-                      height: 20,
-                      width: 20,
-                      resizeMode: 'stretch',
-                      alignItems: 'center',
-                      marginLeft: 35,
-                      tintColor: 'white',
-                    }}
-                    source={require('../../../assets/calendar.png')}
-                  />
-                  {showStartDatePicker && (
-                    <DateTimePicker
-                      testID="startDatePicker"
-                      value={startDate}
-                      mode="date"
-                      is24Hour={true}
-                      display="default"
-                      onChange={onStartDateChange}
-                    />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
+              )}
+              ArrowDownIconComponent={() => (
+                <Text>
+                  <Icon name="chevron-down" size={15} color="white" />
+                </Text>
+              )}
+              style={[styles.dropdown]}
+              dropDownContainerStyle={{
+                backgroundColor: 'white',
+                borderColor: '#144272',
+                width: '100%',
+                marginTop: 8,
+                zIndex: 1000,
+              }}
+              labelStyle={{color: 'white'}}
+              listItemLabelStyle={{color: '#144272'}}
+              listMode="SCROLLVIEW"
+            />
+          </View>
+        </View>
 
-            <View style={styles.dateInput}>
-              <Text style={styles.label}>To</Text>
+        <View style={styles.dateContainer}>
+          <View style={styles.dateInput}>
+            <Text style={styles.label}>From</Text>
 
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  borderRadius: 5,
-                  borderColor: 'white',
-                }}>
-                <Text
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderRadius: 5,
+                borderColor: 'white',
+              }}>
+              <Text style={{marginLeft: 10, color: 'white'}}>
+                {`${startDate.toLocaleDateString()}`}
+              </Text>
+              <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
+                <Image
                   style={{
-                    marginLeft: 10,
-                    color: 'white',
-                  }}>
-                  {`${endDate.toLocaleDateString()}`}
-                </Text>
-                <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-                  <Image
-                    style={{
-                      height: 20,
-                      width: 20,
-                      resizeMode: 'stretch',
-                      alignItems: 'center',
-                      marginLeft: 35,
-                      tintColor: 'white',
-                    }}
-                    source={require('../../../assets/calendar.png')}
+                    height: 20,
+                    width: 20,
+                    resizeMode: 'stretch',
+                    alignItems: 'center',
+                    marginLeft: 35,
+                    tintColor: 'white',
+                  }}
+                  source={require('../../../assets/calendar.png')}
+                />
+                {showStartDatePicker && (
+                  <DateTimePicker
+                    testID="startDatePicker"
+                    value={startDate}
+                    mode="date"
+                    is24Hour={true}
+                    display="default"
+                    onChange={onStartDateChange}
                   />
-                  {showEndDatePicker && (
-                    <DateTimePicker
-                      testID="endDatePicker"
-                      value={endDate}
-                      mode="date"
-                      is24Hour={true}
-                      display="default"
-                      onChange={onEndDateChange}
-                      textColor="white"
-                      accentColor="white"
-                    />
-                  )}
-                </TouchableOpacity>
-              </View>
+                )}
+              </TouchableOpacity>
             </View>
           </View>
 
-          {/* FlatList */}
-          <FlatList
-            data={invcList}
-            keyExtractor={item => item.id.toString()}
-            renderItem={({item}) => (
-              <View style={{padding: 5}}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text
+          <View style={styles.dateInput}>
+            <Text style={styles.label}>To</Text>
+
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                borderRadius: 5,
+                borderColor: 'white',
+              }}>
+              <Text
+                style={{
+                  marginLeft: 10,
+                  color: 'white',
+                }}>
+                {`${endDate.toLocaleDateString()}`}
+              </Text>
+              <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
+                <Image
+                  style={{
+                    height: 20,
+                    width: 20,
+                    resizeMode: 'stretch',
+                    alignItems: 'center',
+                    marginLeft: 35,
+                    tintColor: 'white',
+                  }}
+                  source={require('../../../assets/calendar.png')}
+                />
+                {showEndDatePicker && (
+                  <DateTimePicker
+                    testID="endDatePicker"
+                    value={endDate}
+                    mode="date"
+                    is24Hour={true}
+                    display="default"
+                    onChange={onEndDateChange}
+                    textColor="white"
+                    accentColor="white"
+                  />
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+
+        {/* FlatList */}
+        <FlatList
+          data={currentData}
+          keyExtractor={item => item.id.toString()}
+          renderItem={({item}) => (
+            <View style={{padding: 5}}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
+                  <Text
+                    style={{
+                      color: '#144272',
+                      fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
+                    }}>
+                    {item.sal_invoice_no}
+                  </Text>
+
+                  <TouchableOpacity
+                    onPress={() => {
+                      setModalVisible('View');
+                      singleInvc(item.sal_invoice_no);
+                      setSelectedInvc(item.sal_invoice_no);
+                    }}>
+                    <Icon
+                      name="receipt"
+                      size={20}
+                      color="#144272"
                       style={{
-                        color: '#144272',
-                        fontWeight: 'bold',
-                        marginLeft: 5,
-                        marginTop: 5,
-                      }}>
-                      {item.sal_invoice_no}
+                        alignSelf: 'center',
+                        marginRight: 5,
+                      }}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <View style={styles.rowt}>
+                    <Text style={styles.text}>Date:</Text>
+                    <Text style={styles.text}>
+                      {' '}
+                      {new Date(item.sal_date)
+                        .toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                        .replace(/ /g, '-')}
                     </Text>
-
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('View');
-                        singleInvc(item.sal_invoice_no);
-                        setSelectedInvc(item.sal_invoice_no);
-                      }}>
-                      <Icon
-                        name="receipt"
-                        size={20}
-                        color="#144272"
-                        style={{
-                          alignSelf: 'center',
-                          marginRight: 5,
-                        }}
-                      />
-                    </TouchableOpacity>
                   </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.rowt}>
-                      <Text style={styles.text}>Date:</Text>
-                      <Text style={styles.text}>
-                        {' '}
-                        {new Date(item.sal_date)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-')}
-                      </Text>
-                    </View>
-                    <View style={styles.rowt}>
-                      <Text style={styles.text}>Customer:</Text>
-                      <Text style={styles.text}>{item.slcust_name}</Text>
-                    </View>
-                    <View style={styles.rowt}>
-                      <Text style={styles.text}>Invoiced By:</Text>
-                      <Text style={styles.text}>{item.name}</Text>
-                    </View>
-                    <View style={styles.rowt}>
-                      <Text style={styles.text}>Payment Method:</Text>
-                      <Text style={styles.text}>{item.sal_payment_method}</Text>
-                    </View>
-                    <View style={styles.rowt}>
-                      <Text style={styles.text}>Total Amount:</Text>
-                      <Text style={styles.text}>{item.sal_order_total}</Text>
-                    </View>
+                  <View style={styles.rowt}>
+                    <Text style={styles.text}>Customer:</Text>
+                    <Text style={styles.text}>{item.slcust_name}</Text>
+                  </View>
+                  <View style={styles.rowt}>
+                    <Text style={styles.text}>Invoiced By:</Text>
+                    <Text style={styles.text}>{item.name}</Text>
+                  </View>
+                  <View style={styles.rowt}>
+                    <Text style={styles.text}>Payment Method:</Text>
+                    <Text style={styles.text}>{item.sal_payment_method}</Text>
+                  </View>
+                  <View style={styles.rowt}>
+                    <Text style={styles.text}>Total Amount:</Text>
+                    <Text style={styles.text}>{item.sal_order_total}</Text>
                   </View>
                 </View>
               </View>
-            )}
-            scrollEnabled={false}
-            ListEmptyComponent={
-              <Text
-                style={{
-                  flex: 1,
-                  color: 'white',
-                  textAlign: 'center',
-                  justifyContent: 'center',
-                  marginTop: 20,
-                }}>
-                No record present in the database for this Date range!
+            </View>
+          )}
+          ListEmptyComponent={
+            <Text
+              style={{
+                flex: 1,
+                color: 'white',
+                textAlign: 'center',
+                justifyContent: 'center',
+                marginTop: 20,
+              }}>
+              No record present in the database for this Date range!
+            </Text>
+          }
+        />
+
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              marginBottom: 15,
+              marginTop: 5,
+            }}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
+              style={{
+                marginHorizontal: 10,
+                opacity: currentPage === 1 ? 0.5 : 1,
+              }}>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+                Prev
               </Text>
-            }
-          />
-        </ScrollView>
+            </TouchableOpacity>
+
+            <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+              Page {currentPage} of {totalPages}
+            </Text>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={{
+                marginHorizontal: 10,
+                opacity: currentPage === totalPages ? 0.5 : 1,
+              }}>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+                Next
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Invoice Modal */}
         <Modal
@@ -528,9 +637,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '100%',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
+    paddingHorizontal: 20,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 25,
   },
   dateInput: {
     flexDirection: 'row',
@@ -668,5 +777,21 @@ const styles = StyleSheet.create({
   bottomRowTxt: {
     fontSize: 12,
     fontWeight: 'bold',
+  },
+  dropDownContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
+  },
+  dropdown: {
+    borderWidth: 1,
+    borderColor: 'white',
+    minHeight: 38,
+    borderRadius: 6,
+    padding: 8,
+    marginVertical: 8,
+    backgroundColor: 'transparent',
+    width: '100%',
   },
 });

@@ -9,41 +9,38 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+interface SupplierList {
+  id: number;
+  sup_name: string;
+  sup_company_name: string;
+  sup_address: string;
+  sup_contact: string;
+  sup_email: string;
+}
 
 export default function SupplierList() {
   const {openDrawer} = useDrawer();
-  const Info = [
-    {
-      sr: '1',
-      Supplier: 'abc',
-      Company:'lpg',
-      Address: 'Daska',
-      Contact: '098765',
-      Email: '@gmail.com',
-    },
-    {
-      sr: '2',
-      Supplier: 'abc',
-      Company:'lpg',
-      Address: 'Daska',
-      Contact: '098765',
-      Email: '@gmail.com',
-    },
-    {
-        sr: '3',
-        Supplier: 'abc',
-        Company:'lpg',
-        Address: 'Daska',
-        Contact: '098765',
-        Email: '@gmail.com',
-      },
-  ];
+  const [supplierList, setSupplierList] = useState<SupplierList[]>([]);
 
-  const totalSupplier = Info.length;
+  // Fetch Supplier List
+  const fetchSuplierList = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchsuppliers`);
+      setSupplierList(res.data.suppliers);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
-  console.log('Total Suppliers:', totalSupplier);
+  useEffect(() => {
+    fetchSuplierList();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -76,15 +73,19 @@ export default function SupplierList() {
                 fontSize: 22,
                 fontWeight: 'bold',
               }}>
-           Supplier List
+              Supplier List
             </Text>
           </View>
+
+          <TouchableOpacity>
+            <Icon name="printer" size={30} color={'#fff'} />
+          </TouchableOpacity>
         </View>
 
         <ScrollView>
           <View>
             <FlatList
-              data={Info}
+              data={supplierList}
               keyExtractor={(item, index) => index.toString()}
               renderItem={({item}) => (
                 <ScrollView
@@ -100,7 +101,7 @@ export default function SupplierList() {
                           marginLeft: 5,
                           marginTop: 5,
                         }}>
-                        {item.Supplier}
+                        {item.sup_name}
                       </Text>
 
                       <View
@@ -111,13 +112,13 @@ export default function SupplierList() {
                     </View>
 
                     <View style={styles.infoRow}>
-                    <View
+                      <View
                         style={{
                           flexDirection: 'row',
                           justifyContent: 'space-between',
                         }}>
                         <Text style={styles.text}>Company:</Text>
-                        <Text style={styles.text}>{item.Company}</Text>
+                        <Text style={styles.text}>{item.sup_company_name}</Text>
                       </View>
                       <View
                         style={{
@@ -125,7 +126,7 @@ export default function SupplierList() {
                           justifyContent: 'space-between',
                         }}>
                         <Text style={styles.text}>Contact:</Text>
-                        <Text style={styles.text}>{item.Contact}</Text>
+                        <Text style={styles.text}>{item.sup_contact}</Text>
                       </View>
                       <View
                         style={{
@@ -136,7 +137,7 @@ export default function SupplierList() {
                           Email:
                         </Text>
                         <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.Email}
+                          {item.sup_email}
                         </Text>
                       </View>
                       <View
@@ -144,23 +145,44 @@ export default function SupplierList() {
                           flexDirection: 'row',
                           justifyContent: 'space-between',
                         }}>
-                        <Text style={[styles.value, {marginBottom: 5,marginTop:-5}]}>
+                        <Text
+                          style={[
+                            styles.value,
+                            {marginBottom: 5, marginTop: -5},
+                          ]}>
                           Address:
                         </Text>
-                        <Text style={[styles.value, {marginBottom: 5,marginTop:-5}]}>
-                          {item.Address}
+                        <Text
+                          style={[
+                            styles.value,
+                            {marginBottom: 5, marginTop: -5},
+                          ]}>
+                          {item.sup_address}
                         </Text>
                       </View>
                     </View>
                   </View>
                 </ScrollView>
               )}
+              ListEmptyComponent={
+                <View style={{alignItems: 'center', marginTop: 20}}>
+                  <Text
+                    style={{
+                      color: 'white',
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                    }}>
+                    No record found.
+                  </Text>
+                </View>
+              }
+              scrollEnabled={false}
             />
           </View>
         </ScrollView>
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total Supplier:</Text>
-          <Text style={styles.totalText}>{totalSupplier}</Text>
+          <Text style={styles.totalText}>{supplierList.length}</Text>
         </View>
       </ImageBackground>
     </SafeAreaView>
@@ -212,7 +234,8 @@ const styles = StyleSheet.create({
   },
 
   totalContainer: {
-    padding: 7,
+    paddingHorizontal: 15,
+    paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,

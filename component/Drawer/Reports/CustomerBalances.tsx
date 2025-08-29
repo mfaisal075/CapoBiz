@@ -8,102 +8,169 @@ import {
   Image,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import RadioForm from 'react-native-simple-radio-button';
 import DropDownPicker from 'react-native-dropdown-picker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {RadioButton} from 'react-native-paper';
 
 type TabType = 'receivables' | 'payables' | 'balances';
 
-type CustomerData = {
-  id: string;
-  CustomerBalance?: number;
-  Contact1?: number;
-  Contact2?: number;
-  Contact3?: number;
-  Address?: string;
+interface Customer {
+  id: number;
+  cust_name: string;
+  cust_fathername: string;
+}
 
-  TotalBillAmount?: number;
-  Paidamount?: number;
-  Balance?: number;
-};
+interface Areas {
+  id: number;
+  area_name: string;
+}
 
-const customers = [
-  'Naeem s/o NILL',
-  'walk_in_customer s/o Nill | NILL',
-  'Khalid s/o | NILL',
-  'a s/o | NILL',
-  'Asif Ali Zardari s/o NILL',
-];
+interface AllCustomersReceivable {
+  cust_name: string;
+  cust_address: string;
+  cust_contact: string;
+  cust_sec_contact: string;
+  cust_third_contact: string;
+  custac_balance: number;
+  Balance: number;
+}
 
-const areas = ['Gujranwala', 'Lahore'];
-
-const mockData: Record<TabType, {all: CustomerData[]; single: CustomerData[]}> =
-  {
-    receivables: {
-      all: [
-        {
-          id: '1',
-          CustomerBalance: 33,
-          Contact1: 1200,
-          Contact2: 3,
-          Contact3: 8,
-          Address: 'hhh',
-        },
-      ],
-      single: [{id: '1', TotalBillAmount: 23, Paidamount: 1200, Balance: 88}],
-    },
-    payables: {
-      all: [
-        {
-          id: '1',
-          CustomerBalance: 33,
-          Contact1: 1200,
-          Contact2: 3,
-          Contact3: 8,
-          Address: 'hhh',
-        },
-      ],
-      single: [{id: '1', TotalBillAmount: 23, Paidamount: 1200, Balance: 88}],
-    },
-    balances: {
-      all: [
-        {
-          id: '1',
-          CustomerBalance: 33,
-          Contact1: 1200,
-          Contact2: 3,
-          Contact3: 8,
-          Address: 'hhh',
-        },
-      ],
-      single: [{id: '1', TotalBillAmount: 23, Paidamount: 1200, Balance: 88}],
-    },
-  };
+interface SingleCustomersReceivable {
+  cust_name: string;
+  custac_total_bill_amount: number;
+  custac_paid_amount: number;
+  custac_balance: number;
+}
 
 export default function CustomerBalances() {
   const [selectedTab, setSelectedTab] = useState<TabType>('receivables');
-  const [selectedCustomer, setSelectedCustomer] = useState<string>('');
-  const [selectedArea, setSelectedArea] = useState<string>('');
-  const [selectedRadio, setSelectedRadio] = useState<number>(0);
-  const [data, setData] = useState<CustomerData[]>([]);
-
-  const [customerOpen, setCustomerOpen] = useState(false);
+  const [custOpen, setCustOpen] = useState(false);
+  const [custValue, setCustValue] = useState('');
   const [areaOpen, setAreaOpen] = useState(false);
+  const [areaValue, setAreaValue] = useState('');
+  const [custDropdown, setCustDropdown] = useState<Customer[]>([]);
+  const transformedCustomer = custDropdown.map(cust => ({
+    label: `${cust.cust_name} | ${cust.cust_fathername}`,
+    value: cust.id.toString(),
+  }));
+  const [areaDropdown, setAreaDropdown] = useState<Areas[]>([]);
+  const transformedAreas = areaDropdown.map(area => ({
+    label: area.area_name,
+    value: area.id.toString(),
+  }));
+  const [custReceivable, setCustReceivable] = useState<
+    AllCustomersReceivable[]
+  >([]);
 
-  const [customerItems, setCustomerItems] = useState(
-    customers.map(c => ({label: c, value: c})),
-  );
-  const [areaItems, setAreaItems] = useState(
-    areas.map(a => ({label: a, value: a})),
-  );
+  const [singleCustReceivable, setSingleCustReceivable] = useState<
+    SingleCustomersReceivable[]
+  >([]);
+
+  const [selectionMode, setSelectionMode] = useState<
+    'allCustomers' | 'singleCustomer' | ''
+  >('allCustomers');
 
   const {openDrawer} = useDrawer();
 
-  const handleLoadReport = () => {
-    const tabData = mockData[selectedTab];
-    setData(selectedRadio === 0 ? tabData.all : tabData.single);
+  // Fetch Customer Dropdown
+  const fetchCustDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcustomersdropdown`);
+      setCustDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  // Fetch Area Dropdown
+  const fetchAreaDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchareadata`);
+      setAreaDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // All Customer Receivables, Payables
+  const fetchAllCustData = async () => {
+    try {
+      if (selectedTab === 'receivables') {
+        const res = await axios.post(`${BASE_URL}/fetchallreceivale`, {
+          cust_id: custValue,
+          area_id: areaValue,
+        });
+        setCustReceivable(res.data.allcustomerreceiveable);
+      } else if (selectedTab === 'payables') {
+        const res = await axios.post(`${BASE_URL}/fetchallpayables`, {
+          cust_id: custValue,
+          payarea_id: areaValue,
+        });
+        setCustReceivable(res.data.allcustomerpayables);
+      } else if (selectedTab === 'balances') {
+        const res = await axios.post(`${BASE_URL}/fetchbalances`, {
+          cust_id: custValue,
+          balarea_id: areaValue,
+        });
+        setCustReceivable(res.data.allcustomerbalance);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Single Customer Receivables
+  const fetchSingleCustData = async () => {
+    try {
+      if (selectedTab === 'receivables') {
+        const res = await axios.post(`${BASE_URL}/fetchcustreceivable`, {
+          cust_id: custValue,
+          area_id: areaValue,
+        });
+        setSingleCustReceivable(res.data.customer_receiveable);
+      } else if (selectedTab === 'payables') {
+        const res = await axios.post(`${BASE_URL}/singlepayable`, {
+          cust_id: custValue,
+          payarea_id: areaValue,
+        });
+        setSingleCustReceivable(res.data.customer_receiveable);
+      } else if (selectedTab === 'balances') {
+        const res = await axios.post(`${BASE_URL}/fetchcustbalances`, {
+          cust_id: custValue,
+          balarea_id: areaValue,
+        });
+        setSingleCustReceivable(res.data.customer_receiveable);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate Total Receivable
+  const calculateTotalReceivable = () => {
+    let totalReceivable = 0;
+
+    custReceivable.forEach(receivable => {
+      const receivableAmount = receivable.custac_balance || 0;
+
+      totalReceivable += receivableAmount;
+    });
+
+    return {
+      totalReceivable: totalReceivable.toFixed(2),
+    };
+  };
+
+  useEffect(() => {
+    fetchCustDropdown();
+    fetchAreaDropdown();
+    fetchAllCustData();
+    fetchSingleCustData();
+  }, [custValue, areaValue]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -141,69 +208,145 @@ export default function CustomerBalances() {
           ))}
         </View>
 
-        <View style={{zIndex: 3000, marginHorizontal: 12, marginTop: 10}}>
+        <View style={styles.dropDownContainer}>
           <DropDownPicker
-            open={customerOpen}
-            value={selectedCustomer}
-            items={customerItems}
-            setOpen={setCustomerOpen}
-            setValue={setSelectedCustomer}
-            setItems={setCustomerItems}
+            items={transformedCustomer}
+            open={custOpen}
+            setOpen={setCustOpen}
+            value={custValue}
+            setValue={setCustValue}
             placeholder="Select Customer"
-            style={styles.dropdown}
+            disabled={selectionMode === 'allCustomers'}
+            placeholderStyle={{color: 'white'}}
             textStyle={{color: 'white'}}
-            dropDownContainerStyle={styles.dropdownContainer}
-            labelStyle={{color: 'white'}}
-            listItemLabelStyle={{color: '#144272'}}
-            arrowIconStyle={{tintColor: 'white'}}
-          />
-        </View>
-
-        <View style={{zIndex: 2000, marginHorizontal: 12}}>
-          <DropDownPicker
-            open={areaOpen}
-            value={selectedArea}
-            items={areaItems}
-            setOpen={setAreaOpen}
-            setValue={setSelectedArea}
-            setItems={setAreaItems}
-            placeholder="Select Area"
-            style={styles.dropdown}
-            labelStyle={{color: 'white'}}
-            textStyle={{color: 'white'}}
-            listItemLabelStyle={{color: '#144272'}}
-            arrowIconStyle={{tintColor: 'white'}}
-            dropDownContainerStyle={styles.dropdownContainer}
-          />
-        </View>
-
-        <View style={styles.form}>
-          <RadioForm
-            radio_props={[
-              {label: 'All Customers', value: 0},
-              {label: 'Single Customer', value: 1},
+            ArrowUpIconComponent={() => (
+              <Text>
+                <Icon name="chevron-up" size={15} color="white" />
+              </Text>
+            )}
+            ArrowDownIconComponent={() => (
+              <Text>
+                <Icon name="chevron-down" size={15} color="white" />
+              </Text>
+            )}
+            style={[
+              styles.dropdown,
+              selectionMode === 'allCustomers' && {
+                backgroundColor: 'gray',
+              },
             ]}
-            initial={0}
-            onPress={value => setSelectedRadio(value)}
-            buttonColor="white"
-            selectedButtonColor="white"
-            labelStyle={styles.radioLabel}
-            style={{margin: -10, marginLeft: 1}}
+            dropDownContainerStyle={{
+              backgroundColor: 'white',
+              borderColor: '#144272',
+              width: '100%',
+              marginTop: 8,
+              zIndex: 1000,
+            }}
+            labelStyle={{color: 'white'}}
+            listItemLabelStyle={{color: '#144272'}}
           />
+        </View>
 
+        <View style={styles.dropDownContainer}>
+          <DropDownPicker
+            items={transformedAreas}
+            open={areaOpen}
+            setOpen={setAreaOpen}
+            value={areaValue}
+            setValue={setAreaValue}
+            placeholder="Select Area"
+            disabled={selectionMode === 'singleCustomer'}
+            placeholderStyle={{color: 'white'}}
+            textStyle={{color: 'white'}}
+            ArrowUpIconComponent={() => (
+              <Text>
+                <Icon name="chevron-up" size={15} color="white" />
+              </Text>
+            )}
+            ArrowDownIconComponent={() => (
+              <Text>
+                <Icon name="chevron-down" size={15} color="white" />
+              </Text>
+            )}
+            style={[
+              styles.dropdown,
+              {
+                zIndex: 999,
+              },
+              selectionMode === 'singleCustomer' && {
+                backgroundColor: 'gray',
+              },
+            ]}
+            dropDownContainerStyle={{
+              backgroundColor: 'white',
+              borderColor: '#144272',
+              width: '100%',
+              marginTop: 8,
+            }}
+            labelStyle={{color: 'white'}}
+            listItemLabelStyle={{color: '#144272'}}
+          />
+        </View>
+
+        <View style={{width: '90%', alignSelf: 'center', marginTop: 10}}>
           <TouchableOpacity
-            style={styles.loadButton}
-            onPress={handleLoadReport}>
-            <Text style={styles.loadButtonText}>Load Report</Text>
+            style={{flexDirection: 'row', alignItems: 'center'}}
+            onPress={() => {
+              setSelectionMode('allCustomers');
+              setAreaValue('');
+            }}>
+            <RadioButton
+              value="allCustomers"
+              color="white"
+              uncheckedColor="white"
+              status={
+                selectionMode === 'allCustomers' ? 'checked' : 'unchecked'
+              }
+              onPress={() => {
+                setSelectionMode('allCustomers');
+                setAreaValue('');
+              }}
+            />
+            <Text
+              style={{
+                color: 'white',
+              }}>
+              All Customer Receivables
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{flexDirection: 'row', alignItems: 'center'}}
+            onPress={() => {
+              setSelectionMode('singleCustomer');
+              setCustValue('');
+            }}>
+            <RadioButton
+              value="singleCustomer"
+              color="white"
+              uncheckedColor="white"
+              status={
+                selectionMode === 'singleCustomer' ? 'checked' : 'unchecked'
+              }
+              onPress={() => {
+                setSelectionMode('singleCustomer');
+                setCustValue('');
+              }}
+            />
+            <Text
+              style={{
+                color: 'white',
+              }}>
+              Single Customer Receivables
+            </Text>
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={data}
-          keyExtractor={item => item.id}
-          contentContainerStyle={{paddingBottom: 50}}
-          renderItem={({item}) =>
-            selectedRadio === 0 ? (
+        {selectionMode === 'allCustomers' && (
+          <FlatList
+            data={custReceivable}
+            keyExtractor={(item, index) => index.toString()}
+            contentContainerStyle={{paddingBottom: 50}}
+            renderItem={({item}) => (
               <View style={styles.table}>
                 <View style={styles.tablehead}>
                   <Text
@@ -213,29 +356,67 @@ export default function CustomerBalances() {
                       marginLeft: 5,
                       marginTop: 5,
                     }}>
-                    {item.CustomerBalance}
+                    {item.cust_name}
                   </Text>
                 </View>
                 <View style={styles.infoRow}>
                   <View style={styles.row}>
+                    <Text style={styles.text}>Balance:</Text>
+                    <Text style={styles.text}>
+                      {selectedTab === 'receivables' &&
+                        item.custac_balance.toFixed(2)}
+                      {selectedTab === 'payables' || selectedTab === 'balances'
+                        ? item.Balance.toFixed(2)
+                        : '0.00'}
+                    </Text>
+                  </View>
+                  <View style={styles.row}>
                     <Text style={styles.text}>Contact 1:</Text>
-                    <Text style={styles.text}>{item.Contact1}</Text>
+                    <Text style={styles.text}>{item.cust_contact ?? '--'}</Text>
                   </View>
                   <View style={styles.row}>
                     <Text style={styles.text}>Contact 2:</Text>
-                    <Text style={styles.text}>{item.Contact2}</Text>
+                    <Text style={styles.text}>
+                      {item.cust_sec_contact ?? '--'}
+                    </Text>
                   </View>
                   <View style={styles.row}>
                     <Text style={styles.text}>Contact 3:</Text>
-                    <Text style={styles.text}>{item.Contact3}</Text>
+                    <Text style={styles.text}>
+                      {item.cust_third_contact ?? '--'}
+                    </Text>
                   </View>
-                  <View style={styles.row}>
+                  <View style={[styles.row]}>
                     <Text style={styles.text}>Address:</Text>
-                    <Text style={styles.text}>{item.Address}</Text>
+                    <Text
+                      style={[styles.text, {textAlign: 'right', width: '70%'}]}>
+                      {item.cust_address ?? '--'}
+                    </Text>
                   </View>
                 </View>
               </View>
-            ) : (
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  width: '100%',
+                  height: 300,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No data found.
+                </Text>
+              </View>
+            }
+          />
+        )}
+        {selectionMode === 'singleCustomer' && (
+          <FlatList
+            data={singleCustReceivable}
+            keyExtractor={(item, index) => index.toString()}
+            contentContainerStyle={{paddingBottom: 50}}
+            renderItem={({item}) => (
               <View style={styles.table}>
                 <View style={styles.tablehead}>
                   <Text
@@ -245,31 +426,75 @@ export default function CustomerBalances() {
                       marginLeft: 5,
                       marginTop: 5,
                     }}>
-                    {item.Balance}
+                    {item.cust_name}
                   </Text>
                 </View>
                 <View style={styles.infoRow}>
                   <View style={styles.row}>
                     <Text style={styles.text}>Total Bill Amount:</Text>
-                    <Text style={styles.text}>{item.TotalBillAmount}</Text>
+                    <Text style={styles.text}>
+                      {item.custac_total_bill_amount.toFixed(2) ?? '0.00'}
+                    </Text>
                   </View>
                   <View style={styles.row}>
                     <Text style={styles.text}>Paid Amount:</Text>
-                    <Text style={styles.text}>{item.Paidamount}</Text>
+                    <Text style={styles.text}>
+                      {item.custac_paid_amount.toFixed(2) ?? '--'}
+                    </Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.text}>Balance:</Text>
+                    <Text style={styles.text}>
+                      {item.custac_balance.toFixed(2) ?? '--'}
+                    </Text>
                   </View>
                 </View>
               </View>
-            )
-          }
-        />
-        {selectedRadio === 0 && data.length > 0 && (
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalText}>Total Records: {data.length}</Text>
-            <Text style={styles.totalText}>
-  {`Total ${selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)}:`}{' '}
-  {data.reduce((sum, item) => sum + (item.Balance || 0), 0)}
-</Text>
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  width: '100%',
+                  height: 300,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No data found.
+                </Text>
+              </View>
+            }
+          />
+        )}
 
+        {selectionMode === 'allCustomers' && selectedTab === 'receivables' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{custReceivable.length}</Text>
+            </View>
+            {(() => {
+              const {totalReceivable} = calculateTotalReceivable();
+
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Receivable: </Text>
+                    <Text style={styles.totalText}>{totalReceivable}</Text>
+                  </View>
+                </View>
+              );
+            })()}
           </View>
         )}
       </ImageBackground>
@@ -330,73 +555,31 @@ const styles = StyleSheet.create({
   activeText: {
     color: '#fff',
   },
-  form: {
-    margin: 12,
-    padding: 10,
-    borderRadius: 8,
-  },
-  label: {
-    fontWeight: '600',
-    marginBottom: 4,
-    color: 'white',
-  },
   dropdown: {
-    marginBottom: 10,
-    zIndex: 1000,
-    backgroundColor: 'transparent',
-    color: 'white',
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
-  },
-  dropdownContainer: {
-    borderColor: 'white',
-    backgroundColor: '#fff',
-    zIndex: 999,
-    color: '#144272',
-  },
-  radioLabel: {
-    fontSize: 14,
-    marginBottom: 10,
-    color: 'white',
-  },
-  loadButton: {
-    marginTop: 15,
-    backgroundColor: 'white',
-    paddingVertical: 10,
-    borderRadius: 6,
-  },
-  loadButtonText: {
-    color: '#144272',
-    textAlign: 'center',
-    fontWeight: '600',
-  },
-  reportRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#f0f0f0',
-    padding: 12,
-    marginVertical: 4,
-    marginHorizontal: 12,
-    borderRadius: 5,
+    backgroundColor: 'transparent',
+    width: '100%',
   },
   table: {
     borderWidth: 1,
     borderColor: 'white',
     alignSelf: 'center',
     height: 'auto',
-    width: 314,
-    borderRadius: 10,
+    width: '90%',
+    borderRadius: 6,
+    marginBottom: 10,
   },
   tablehead: {
     backgroundColor: 'white',
     height: 30,
     overflow: 'hidden',
-    borderTopEndRadius: 10,
-    borderTopLeftRadius: 10,
+    borderTopEndRadius: 6,
+    borderTopLeftRadius: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -415,7 +598,8 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   totalContainer: {
-    padding: 3,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,
@@ -425,6 +609,12 @@ const styles = StyleSheet.create({
   totalText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
+  },
+  dropDownContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
   },
 });

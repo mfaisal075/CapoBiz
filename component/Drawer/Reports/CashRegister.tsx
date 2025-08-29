@@ -6,32 +6,44 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-  
+  FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
-
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import {useUser} from '../../CTX/UserContext';
+
+interface Users {
+  id: number;
+  name: string;
+}
+
+interface CashRegisterData {
+  id: number;
+  name: string;
+  creg_closing_amount: string;
+  creg_cash_in_hand: string;
+  creg_opening_date: string;
+  creg_closing_date: string;
+}
 
 export default function CashRegister() {
-
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
+  const [userOpen, setUserOpen] = useState(false);
+  const [userValue, setUserValue] = useState('');
+  const [cashRegister, setCashRegister] = useState<CashRegisterData[]>([]);
+  const [usersDropdown, setUsersDropdown] = useState<Users[]>([]);
+  const transformedUsers = usersDropdown.map(user => ({
+    label: user.name,
+    value: user.id.toString(),
+  }));
 
- 
-  const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] =
-    useState<string>('Select User');
-
-  const categoryItems = [
-    {label: 'Select User', value: 'Select User'},
-    {label: 'Admin', value: 'Admin'},
-    {label: 'Manager', value: 'Manager'},
-    {label: 'Accountant', value: 'Accountant'},   
-  ];
-
- 
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -51,6 +63,35 @@ export default function CashRegister() {
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
+
+  // Fetch Users Dropdown
+  const fetchUsersDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchusers`);
+      setUsersDropdown(res.data.user);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Cash Register
+  const fetchCashRegister = async () => {
+    try {
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+      const res = await axios.get(
+        `${BASE_URL}/fetchcashregister?from=${from}&to=${to}&user=${userValue}&_token=${token}`,
+      );
+      setCashRegister(res.data.cash_register);
+    } catch (error) {
+      console.log();
+    }
+  };
+
+  useEffect(() => {
+    fetchUsersDropdown();
+    fetchCashRegister();
+  }, [userValue, startDate, endDate]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -79,23 +120,19 @@ export default function CashRegister() {
           </View>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            marginLeft: 23,
-            gap: 33,
-            marginTop: 10,
-          }}>
+        <View style={styles.dateContainer}>
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>From:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${startDate.toLocaleDateString()}`}
             </Text>
@@ -127,12 +164,14 @@ export default function CashRegister() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>To:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${endDate.toLocaleDateString()}`}
             </Text>
@@ -159,38 +198,92 @@ export default function CashRegister() {
             )}
           </View>
         </View>
-        <DropDownPicker
-          items={categoryItems}
-          open={category}
-          setOpen={setCategory}
-          value={currentCategory}
-          setValue={setCurrentCategory}
-          placeholder="Select User"
-          
-          placeholderStyle={{color: 'white'}}
-          textStyle={{color: 'white'}}
-          arrowIconStyle={{tintColor: 'white'}}
-          style={[
-            styles.dropdown,
-            {borderColor: 'white', width: '88%', alignSelf: 'center'},
-          ]}
-          dropDownContainerStyle={{
-            backgroundColor: 'white',
-            borderColor: '#144272',
-            width: '88%',
-            marginLeft: 22,
-          }}
-          labelStyle={{color: 'white'}}
-          listItemLabelStyle={{color: '#144272'}}
-        />
 
-       
-     <Text style={{
-      color:'white',textAlign:'center'
-     }}>
-      No record present in the database!
-     </Text>
-        
+        <View style={[styles.dropDownContainer]}>
+          <DropDownPicker
+            items={transformedUsers}
+            open={userOpen}
+            setOpen={setUserOpen}
+            value={userValue}
+            setValue={setUserValue}
+            placeholder="Select User"
+            placeholderStyle={{color: 'white'}}
+            textStyle={{color: 'white'}}
+            ArrowUpIconComponent={() => (
+              <Text>
+                <Icon name="chevron-up" size={15} color="white" />
+              </Text>
+            )}
+            ArrowDownIconComponent={() => (
+              <Text>
+                <Icon name="chevron-down" size={15} color="white" />
+              </Text>
+            )}
+            style={[styles.dropdown, {zIndex: 999}]}
+            dropDownContainerStyle={{
+              backgroundColor: 'white',
+              borderColor: '#144272',
+              width: '100%',
+              marginTop: 8,
+            }}
+            labelStyle={{color: 'white'}}
+            listItemLabelStyle={{color: '#144272'}}
+          />
+        </View>
+
+        <FlatList
+          data={cashRegister}
+          keyExtractor={(item, index) => index.toString()}
+          contentContainerStyle={{paddingBottom: 50}}
+          style={{marginTop: 10}}
+          renderItem={({item}) => (
+            <View style={styles.table}>
+              <View style={styles.tablehead}>
+                <Text
+                  style={{
+                    color: '#144272',
+                    fontWeight: 'bold',
+                    marginLeft: 5,
+                    marginTop: 5,
+                  }}>
+                  {item.name}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <View style={styles.row}>
+                  <Text style={styles.text}>Opening Date:</Text>
+                  <Text style={styles.text}>{item.creg_opening_date}</Text>
+                </View>
+
+                <View style={styles.row}>
+                  <Text style={styles.text}>Closing Date:</Text>
+                  <Text style={styles.text}>{item.creg_closing_date}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.text}>Opening Amount:</Text>
+                  <Text style={styles.text}>{item.creg_cash_in_hand}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.text}>Closing Amount:</Text>
+                  <Text style={styles.text}>{item.creg_closing_amount}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+          ListEmptyComponent={
+            <View
+              style={{
+                width: '100%',
+                height: 300,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+              <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                No data found.
+              </Text>
+            </View>
+          }
+        />
       </ImageBackground>
     </SafeAreaView>
   );
@@ -214,8 +307,9 @@ const styles = StyleSheet.create({
     borderColor: 'white',
     alignSelf: 'center',
     height: 'auto',
-    width: 314,
+    width: '90%',
     borderRadius: 5,
+    marginTop: 10,
   },
   tablehead: {
     height: 30,
@@ -252,12 +346,12 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
+    width: '100%',
   },
   totalContainer: {
     padding: 3,
@@ -274,7 +368,21 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    justifyContent: 'space-between',
+    marginHorizontal: 5,
+    marginVertical: 2,
+  },
+  dropDownContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
+    marginTop: 10,
   },
 });

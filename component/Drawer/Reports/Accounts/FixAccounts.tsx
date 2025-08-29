@@ -9,140 +9,59 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React, { useState } from 'react';
-import { useDrawer } from '../../../DrawerContext';
+import React, {useEffect, useState} from 'react';
+import {useDrawer} from '../../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
-import { RadioButton } from 'react-native-paper';
+import {RadioButton} from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
 
-
-interface EmployeeInfo {
-  sr: number; 
-  Description:string;
-  Invoice: number;
-  Date: string;
-  Balance: number;
-  Type?:string;
-  PaymentType?: string;
-  Credit:number;
-  Debit:number;
+interface Accounts {
+  id: number;
+  fixprf_title: string;
 }
 
-interface InfoObject {
-  [key: string]: EmployeeInfo[]; 
-  'Select Account': EmployeeInfo[];
-  'Purchase Account': EmployeeInfo[];
- 'Sales Account': EmployeeInfo[];
-'Freight Account': EmployeeInfo[];
-  'Counter Account': EmployeeInfo[];
- 
+interface AllAccountsList {
+  id: number;
+  fixac_invoice_no: string;
+  fixac_date: string;
+  fixac_payment_type: string;
+  fixac_debit: string;
+  fixac_credit: string;
+  fixac_balance: string;
+  fixac_description: string;
 }
 
 export default function FixAccounts() {
+  const {openDrawer} = useDrawer();
+  const [open, setOpen] = useState(false);
+  const [accValue, setAccValue] = useState('');
+  const [accountsDropdown, setAccountsDropdown] = useState<Accounts[]>([]);
+  const transformedAcc = accountsDropdown.map(acc => ({
+    label: acc.fixprf_title,
+    value: acc.id.toString(),
+  }));
+  const [allAccountsList, setAllAccountsList] = useState<AllAccountsList[]>([]);
+  const [singleAccountList, setSingleAccountList] = useState<AllAccountsList[]>(
+    [],
+  );
 
-  const { openDrawer } = useDrawer();
-
-
-  const Info: InfoObject = {
-    'Select Account': [
-      {
-        sr: 1,
-      Invoice:8,
-      Description:'abc',
-      Date:'00-00-00',
-      Type:'hj',
-      Credit:90,
-      Debit:8,
-      Balance:0
-      },
-    ],
-    'Purchase Account': [
-      {
-        sr: 1,
-       
-        Invoice: 66,
-        Description:'abc',
-        PaymentType:'cash',
-        Date:'00-00-00',
-    
-        Credit:90,
-        Debit:8,
-        Balance: 99,
-      },
-     
-    ],
-   
-    'Sales Account': [
-      {
-        sr: 1,
-       
-        Invoice: 66,
-        Description:'abc',
-        PaymentType:'cash',
-        Date:'00-00-00',
-    
-        Credit:90,
-        Debit:8,
-        Balance: 99,
-      },
-    ],
-    'Freight Account': [
-      {
-        sr: 1,
-       
-        Invoice: 66,
-        Description:'abc',
-        PaymentType:'cash',
-        Date:'00-00-00',
-    
-        Credit:90,
-        Debit:8,
-        Balance: 99,
-      },
-    ],
-    'Counter Account': [
-      {
-        sr: 1,
-       
-        Invoice: 66,
-        Description:'abc',
-        PaymentType:'cash',
-        Date:'00-00-00',
-    
-        Credit:90,
-        Debit:8,
-        Balance: 99,
-      },
-      
-    ],
-  };
-
-  const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState<string>('Select Account');
-
-  const categoryItems = [
-    { label: 'Select Account', value: 'Select Account' },
-    { label: 'Purchase Account', value: 'Purchase Account' },
-    { label: 'Sales Account', value: 'Sales Account' },
-    { label: 'Freight Account', value: 'Freight Account' },
-    { label: 'Counter Account', value: 'Counter Account' },
- 
-  ];
-
-  const [selectionMode, setSelectionMode] = useState<'allaccounts' | 'singleaccounts' | ''>('');
-
-  const totalProducts =
-    selectionMode === 'allaccounts'
-      ? Object.values(Info).reduce((acc, list) => acc + list.length, 0)
-      : Info[currentCategory]?.length || 0;
+  const [selectionMode, setSelectionMode] = useState<
+    'allaccounts' | 'singleaccounts' | ''
+  >('allaccounts');
 
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
-  const onStartDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+  const onStartDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
     const currentDate = selectedDate || startDate;
     setShowStartDatePicker(false);
     setStartDate(currentDate);
@@ -153,6 +72,75 @@ export default function FixAccounts() {
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
+
+  // Fetch Accounts dropdown
+  const fetchAccountsDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchfixedaccountdropdown`);
+      setAccountsDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch All Accounts List
+  const fetchAllAccountsList = async () => {
+    try {
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+      const res = await axios.post(`${BASE_URL}/fetchfixaccount`, {
+        from,
+        to,
+      });
+      setAllAccountsList(res.data.account);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate All Accounts Totals
+  const calculateAllAccountsTotal = () => {
+    let totalCredit = 0;
+    let totalDebit = 0;
+
+    allAccountsList.forEach(acc => {
+      const credit = parseFloat(acc.fixac_credit) || 0;
+      const debit = parseFloat(acc.fixac_debit) || 0;
+
+      totalCredit += credit;
+      totalDebit += debit;
+    });
+
+    return {
+      totalCredit: totalCredit.toFixed(2),
+      totalDebit: totalDebit.toFixed(2),
+      netBalance: (totalDebit - totalCredit).toFixed(2),
+    };
+  };
+
+  // Fetch Single Account List
+  const fetchSingleAccountList = async () => {
+    if (accValue) {
+      try {
+        const from = startDate.toISOString().split('T')[0];
+        const to = endDate.toISOString().split('T')[0];
+        const res = await axios.post(`${BASE_URL}/fetchsinglefixaccount`, {
+          fix_id: accValue,
+          from,
+          to,
+        });
+        setSingleAccountList(res.data.account);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchAccountsDropdown();
+    fetchAllAccountsList();
+    fetchSingleAccountList();
+  }, [startDate, endDate, accValue]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -176,18 +164,12 @@ export default function FixAccounts() {
 
           <View style={styles.headerTextContainer}>
             <Text style={{color: 'white', fontSize: 22, fontWeight: 'bold'}}>
-            Fixed Accounts
+              Fixed Accounts
             </Text>
           </View>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            marginLeft: 23,
-            gap: 33,
-            marginTop: 10,
-          }}>
+        <View style={styles.dateContainer}>
           <View
             style={{
               flexDirection: 'row',
@@ -261,180 +243,233 @@ export default function FixAccounts() {
             )}
           </View>
         </View>
+
         <DropDownPicker
-          items={categoryItems}
-          open={category}
-          setOpen={setCategory}
-          value={currentCategory}
-          setValue={setCurrentCategory}
-          placeholder="Select Accounts"
+          items={transformedAcc}
+          open={open}
+          setOpen={setOpen}
+          value={accValue}
+          setValue={setAccValue}
+          placeholder="Select Account"
           disabled={selectionMode === 'allaccounts'}
           placeholderStyle={{color: 'white'}}
           textStyle={{color: 'white'}}
-          arrowIconStyle={{tintColor: 'white'}}
+          ArrowUpIconComponent={() => (
+            <Text>
+              <Icon name="chevron-up" size={15} color="white" />
+            </Text>
+          )}
+          ArrowDownIconComponent={() => (
+            <Text>
+              <Icon name="chevron-down" size={15} color="white" />
+            </Text>
+          )}
           style={[
             styles.dropdown,
-            {borderColor: 'white', width: '88%', alignSelf: 'center'},
+            selectionMode === 'allaccounts' && {backgroundColor: 'gray'},
           ]}
           dropDownContainerStyle={{
             backgroundColor: 'white',
             borderColor: '#144272',
-            width: '88%',
-            marginLeft: 22,
+            width: '90%',
+            marginTop: 8,
+            alignSelf: 'center',
           }}
           labelStyle={{color: 'white'}}
           listItemLabelStyle={{color: '#144272'}}
         />
 
-        <View style={[styles.row, {marginTop: -6, marginLeft: 20}]}>
-          <RadioButton
-            value="allaccounts"
-            status={selectionMode === 'allaccounts' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
+        <View style={[styles.row]}>
+          <TouchableOpacity
+            style={styles.radioBtnContainer}
             onPress={() => {
               setSelectionMode('allaccounts');
-              setCurrentCategory('Select Account');
-            }}
-          />
-          <Text style={{color: 'white', marginTop: 7, marginLeft: -9}}>
-            All Fixed Accounts
-          </Text>
-          <RadioButton
-            value="singleaccounts"
-            color="white"
-            uncheckedColor="white"
-            status={
-              selectionMode === 'singleaccounts' ? 'checked' : 'unchecked'
-            }
+              setAccValue('');
+            }}>
+            <RadioButton
+              value="allaccounts"
+              status={selectionMode === 'allaccounts' ? 'checked' : 'unchecked'}
+              color="white"
+              uncheckedColor="white"
+              onPress={() => {
+                setSelectionMode('allaccounts');
+                setAccValue('');
+              }}
+            />
+            <Text style={{color: 'white'}}>All Fixed Account</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.radioBtnContainer}
             onPress={() => {
               setSelectionMode('singleaccounts');
-              setCurrentCategory('');
-            }}
-          />
-          <Text style={{color: 'white', marginTop: 7, marginLeft: -9}}>
-            Single Fixed Account
-          </Text>
+              setAccValue('');
+            }}>
+            <RadioButton
+              value="singleaccounts"
+              color="white"
+              uncheckedColor="white"
+              status={
+                selectionMode === 'singleaccounts' ? 'checked' : 'unchecked'
+              }
+              onPress={() => {
+                setSelectionMode('singleaccounts');
+                setAccValue('');
+              }}
+            />
+            <Text style={{color: 'white'}}>Single Fixed Account</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          {(selectionMode === 'allaccounts' ||
-            (selectionMode === 'singleaccounts' && currentCategory)) && (
-              <FlatList
-              data={
-                selectionMode === 'allaccounts'
-                  ? Object.values(Info).flat()  
-                  : Info[currentCategory] || []  
-                }
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text style={{color: '#144272', fontWeight: 'bold', marginLeft: 5, marginTop: 5}}>
-                        {item.Invoice}
-                      </Text>
-                    </View>
-            
-                    <View style={styles.infoRow}>
-                  
-                      {selectionMode === 'singleaccounts' ? (
-                        <>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Payment Type:</Text>
-                            <Text style={styles.text}>{item.PaymentType}</Text>
-                          </View>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Date:</Text>
-                            <Text style={styles.text}>{item.Date}</Text>
-                          </View>
-            
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Credit:</Text>
-                            <Text style={styles.text}>{item.Credit}</Text>
-                          </View>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Debit:</Text>
-                            <Text style={styles.text}>{item.Debit}</Text>
-                          </View>
-            
-          
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Balance:</Text>
-                            <Text style={styles.text}>{item.Balance}</Text>
-                          </View>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Description:</Text>
-                            <Text style={styles.text}>{item.Description}</Text>
-                          </View>
-                        </>
-                      ) : (
-                        
-                        <>
-                                                  <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Type:</Text>
-                            <Text style={styles.text}>{item.Type}</Text>
-                          </View>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Date:</Text>
-                            <Text style={styles.text}>{item.Date}</Text>
-                          </View>
-            
+        <FlatList
+          data={
+            selectionMode === 'allaccounts'
+              ? allAccountsList
+              : singleAccountList
+          }
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <View style={{padding: 5}}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
+                  <Text
+                    style={{
+                      color: '#144272',
+                      fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
+                    }}>
+                    {item.fixac_invoice_no}
+                  </Text>
+                </View>
 
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Credit:</Text>
-                            <Text style={styles.text}>{item.Credit}</Text>
-                          </View>
+                <View style={styles.infoRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Payment Type:</Text>
+                    <Text style={styles.text}>{item.fixac_payment_type}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Date:</Text>
+                    <Text style={styles.text}>
+                      {new Date(item.fixac_date)
+                        .toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                        .replace(/ /g, '-')}
+                    </Text>
+                  </View>
 
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Debit:</Text>
-                            <Text style={styles.text}>{item.Debit}</Text>
-                          </View>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5}}>
-                            <Text style={styles.text}>Balance:</Text>
-                            <Text style={styles.text}>{item.Balance}</Text>
-                          </View>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Description:</Text>
-                            <Text style={styles.text}>{item.Description}</Text>
-                          </View>
-                        </>
-                      )}
-                    </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Credit:</Text>
+                    <Text style={styles.text}>{item.fixac_credit}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Debit:</Text>
+                    <Text style={styles.text}>{item.fixac_debit}</Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Balance:</Text>
+                    <Text style={styles.text}>{item.fixac_balance}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Description:</Text>
+                    <Text
+                      style={[
+                        styles.text,
+                        {width: '60%', textAlign: 'center'},
+                      ]}>
+                      {item.fixac_description}
+                    </Text>
                   </View>
                 </View>
-              )}
-            />
-            
-            
+              </View>
+            </View>
           )}
+          ListEmptyComponent={
+            <View style={{alignItems: 'center', marginTop: 20}}>
+              <Text
+                style={{
+                  color: 'white',
+                  fontSize: 16,
+                  fontWeight: 'bold',
+                }}>
+                No record found.
+              </Text>
+            </View>
+          }
+        />
 
-          {selectionMode === 'singleaccounts' && !currentCategory && (
-            <Text style={{color: 'white', textAlign: 'center', marginTop: 10}}>
-              Please select a category to view items.
-            </Text>
-          )}
-        </ScrollView>
+        {selectionMode === 'allaccounts' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{allAccountsList.length}</Text>
+            </View>
+            {(() => {
+              const {netBalance, totalCredit, totalDebit} =
+                calculateAllAccountsTotal();
 
-        
-        {selectionMode !== '' && totalProducts > 0 && (
-          <View
-            style={styles.totalContainer}>
-                <Text style={styles.totalText}>Total Records:{totalProducts}</Text>
-
-           
-            <Text style={styles.totalText}>Total Credit: 8</Text>
-          </View>
-        )}
-       {selectionMode !== '' && totalProducts > 0 && (
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              padding: 3,
-            }}>
-           <Text style={styles.totalText}>Total Debit:{totalProducts}</Text>
-            <Text style={styles.totalText}>Net Balance:{totalProducts}</Text>
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Credit :</Text>
+                    <Text style={styles.totalText}>{totalCredit}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Debit:</Text>
+                    <Text style={styles.totalText}>{totalDebit}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Net Balance:</Text>
+                    <Text style={styles.totalText}>{netBalance}</Text>
+                  </View>
+                </View>
+              );
+            })()}
           </View>
         )}
       </ImageBackground>
@@ -498,15 +533,18 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
+    alignSelf: 'center',
+    marginTop: 10,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
+    width: '90%',
   },
   totalContainer: {
-    padding: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 15,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,
@@ -516,11 +554,26 @@ const styles = StyleSheet.create({
   totalText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
+    marginLeft: 8,
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    marginTop: 10,
+    width: '90%',
+    alignSelf: 'center',
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    width: '90%',
+    height: 38,
+    alignSelf: 'center',
+    gap: 33,
+    marginTop: 10,
+  },
+  radioBtnContainer: {
+    flexDirection: 'row',
+    width: '46%',
+    alignItems: 'center',
   },
 });

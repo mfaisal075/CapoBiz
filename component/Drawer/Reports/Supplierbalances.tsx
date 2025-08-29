@@ -8,10 +8,14 @@ import {
   Image,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import RadioForm from 'react-native-simple-radio-button';
 import DropDownPicker from 'react-native-dropdown-picker';
+import {RadioButton} from 'react-native-paper';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 type TabType = 'receivables' | 'payables' | 'balances';
 
@@ -75,26 +79,152 @@ const mockData: Record<TabType, {all: CustomerData[]; single: CustomerData[]}> =
     },
   };
 
+interface Suppliers {
+  id: number;
+  sup_name: string;
+}
+
+interface AllSupplierData {
+  sup_name: string;
+  sup_address: string;
+  sup_contact: string;
+  supac_balance: number;
+}
+
+interface SingleSupplierData {
+  sup_name: string;
+  Balance: number;
+  supac_total_bill_amount: number;
+  supac_paid_amount: number;
+}
+
 export default function SupplierBalances() {
   const [selectedTab, setSelectedTab] = useState<TabType>('receivables');
-  const [selectedCustomer, setSelectedCustomer] = useState<string>('');
-  const [selectedArea, setSelectedArea] = useState<string>('');
-  const [selectedRadio, setSelectedRadio] = useState<number>(0);
-  const [data, setData] = useState<CustomerData[]>([]);
-
-  const [customerOpen, setCustomerOpen] = useState(false);
-  const [areaOpen, setAreaOpen] = useState(false);
-
-  const [customerItems, setCustomerItems] = useState(
-    customers.map(c => ({label: c, value: c})),
+  const [suppDropdown, setSuppDropdown] = useState<Suppliers[]>([]);
+  const transformedSuppliers = suppDropdown.map(supp => ({
+    label: supp.sup_name,
+    value: supp.id.toString(),
+  }));
+  const [suppOpen, setSuppOpen] = useState(false);
+  const [suppValue, setSuppValue] = useState('');
+  const [allSuppData, setAllSuppData] = useState<AllSupplierData[]>([]);
+  const [singleSuppData, setSingleSuppData] = useState<SingleSupplierData[]>(
+    [],
   );
 
+  const [selectionMode, setSelectionMode] = useState<
+    'allSuppliers' | 'singleSupplier' | ''
+  >('allSuppliers');
   const {openDrawer} = useDrawer();
 
-  const handleLoadReport = () => {
-    const tabData = mockData[selectedTab];
-    setData(selectedRadio === 0 ? tabData.all : tabData.single);
+  // Fetch Customer Dropdown
+  const fetchCustDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchsuppliersdropdown`);
+      setSuppDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  // Fetch Supplier Receiveable, Payable & Balance
+  const fetchAllSuppData = async () => {
+    try {
+      if (selectedTab === 'receivables') {
+        const res = await axios.post(`${BASE_URL}/fetchsupplier_receiveable`, {
+          supp_id: suppValue,
+        });
+        setAllSuppData(res.data.allsupplierpayables);
+      } else if (selectedTab === 'payables') {
+        const res = await axios.post(`${BASE_URL}/fetchsupplier_payable`, {
+          supp_id: suppValue,
+        });
+        setAllSuppData(res.data.allsupplierpayables);
+      } else if (selectedTab === 'balances') {
+        const res = await axios.post(`${BASE_URL}/fetchsupplierbalance`, {
+          supp_id: suppValue,
+        });
+        setAllSuppData(res.data.allsupplierpayables);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Single Supplier Receivable, Payable, Balance
+  const fetchSingleSuppData = async () => {
+    try {
+      if (selectedTab === 'receivables') {
+        const res = await axios.post(`${BASE_URL}/singlesupplier_receiveable`, {
+          supp_id: suppValue,
+        });
+        setSingleSuppData(res.data.supplier_payable);
+      } else if (selectedTab === 'payables') {
+        const res = await axios.post(`${BASE_URL}/singlesupplier_payable`, {
+          supp_id: suppValue,
+        });
+        setSingleSuppData(res.data.supplier_payable);
+      } else if (selectedTab === 'balances') {
+        const res = await axios.post(`${BASE_URL}/singlesupplierbalance`, {
+          supp_id: suppValue,
+        });
+        setSingleSuppData(res.data.supplier_payable);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate Total Receivable
+  const calculateTotalReceivable = () => {
+    let totalReceivable = 0;
+
+    allSuppData.forEach(receivable => {
+      const receivableAmount = receivable.supac_balance || 0;
+
+      totalReceivable += receivableAmount;
+    });
+
+    return {
+      totalReceivable: totalReceivable.toFixed(2),
+    };
+  };
+
+  // Calculate Total Payable
+  const calculateTotalPayable = () => {
+    let totalPayable = 0;
+
+    allSuppData.forEach(receivable => {
+      const payableAmount = receivable.supac_balance || 0;
+
+      totalPayable += payableAmount;
+    });
+
+    return {
+      totalPayable: totalPayable.toFixed(2),
+    };
+  };
+
+  // Calculate Total Balance
+  const calculateTotalBalance = () => {
+    let totalBalance = 0;
+
+    allSuppData.forEach(balance => {
+      const balanceAmount = balance.supac_balance || 0;
+
+      totalBalance += balanceAmount;
+    });
+
+    return {
+      totalBalance: totalBalance.toFixed(2),
+    };
+  };
+
+  useEffect(() => {
+    fetchCustDropdown();
+    fetchSingleSuppData();
+    fetchAllSuppData();
+  }, [suppValue, selectedTab, selectionMode]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -132,51 +262,105 @@ export default function SupplierBalances() {
           ))}
         </View>
 
-        <View style={{zIndex: 3000, marginHorizontal: 12, marginTop: 10}}>
+        <View style={styles.dropDownContainer}>
           <DropDownPicker
-            open={customerOpen}
-            value={selectedCustomer}
-            items={customerItems}
-            setOpen={setCustomerOpen}
-            setValue={setSelectedCustomer}
-            setItems={setCustomerItems}
+            items={transformedSuppliers}
+            open={suppOpen}
+            setOpen={setSuppOpen}
+            value={suppValue}
+            setValue={setSuppValue}
             placeholder="Select Supplier"
-            style={styles.dropdown}
+            disabled={selectionMode === 'allSuppliers'}
+            placeholderStyle={{color: 'white'}}
             textStyle={{color: 'white'}}
-            dropDownContainerStyle={styles.dropdownContainer}
+            ArrowUpIconComponent={() => (
+              <Text>
+                <Icon name="chevron-up" size={15} color="white" />
+              </Text>
+            )}
+            ArrowDownIconComponent={() => (
+              <Text>
+                <Icon name="chevron-down" size={15} color="white" />
+              </Text>
+            )}
+            style={[
+              styles.dropdown,
+              selectionMode === 'allSuppliers' && {
+                backgroundColor: 'gray',
+              },
+            ]}
+            dropDownContainerStyle={{
+              backgroundColor: 'white',
+              borderColor: '#144272',
+              width: '100%',
+              marginTop: 8,
+              zIndex: 1000,
+            }}
             labelStyle={{color: 'white'}}
             listItemLabelStyle={{color: '#144272'}}
-            arrowIconStyle={{tintColor: 'white'}}
           />
         </View>
 
-        <View style={styles.form}>
-          <RadioForm
-            radio_props={[
-              {label: 'All Suppliers', value: 0},
-              {label: 'Single Supplier', value: 1},
-            ]}
-            initial={0}
-            onPress={value => setSelectedRadio(value)}
-            buttonColor="white"
-            selectedButtonColor="white"
-            labelStyle={styles.radioLabel}
-            style={{margin: -10, marginLeft: 1}}
-          />
-
+        <View style={{width: '90%', alignSelf: 'center', marginTop: 10}}>
           <TouchableOpacity
-            style={styles.loadButton}
-            onPress={handleLoadReport}>
-            <Text style={styles.loadButtonText}>Load Report</Text>
+            style={{flexDirection: 'row', alignItems: 'center'}}
+            onPress={() => {
+              setSelectionMode('allSuppliers');
+              setSuppValue('');
+            }}>
+            <RadioButton
+              value="allSuppliers"
+              color="white"
+              uncheckedColor="white"
+              status={
+                selectionMode === 'allSuppliers' ? 'checked' : 'unchecked'
+              }
+              onPress={() => {
+                setSelectionMode('allSuppliers');
+                setSuppValue('');
+              }}
+            />
+            <Text
+              style={{
+                color: 'white',
+              }}>
+              All Suppliers
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{flexDirection: 'row', alignItems: 'center'}}
+            onPress={() => {
+              setSelectionMode('singleSupplier');
+              // setCustValue('');
+            }}>
+            <RadioButton
+              value="singleSupplier"
+              color="white"
+              uncheckedColor="white"
+              status={
+                selectionMode === 'singleSupplier' ? 'checked' : 'unchecked'
+              }
+              onPress={() => {
+                setSelectionMode('singleSupplier');
+                // setCustValue('');
+              }}
+            />
+            <Text
+              style={{
+                color: 'white',
+              }}>
+              Single Customer Receivables
+            </Text>
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={data}
-          keyExtractor={item => item.id}
-          contentContainerStyle={{paddingBottom: 50}}
-          renderItem={({item}) =>
-            selectedRadio === 0 ? (
+        {selectionMode === 'allSuppliers' && (
+          <FlatList
+            data={allSuppData}
+            keyExtractor={(item, index) => index.toString()}
+            contentContainerStyle={{paddingBottom: 50}}
+            style={{marginTop: 10}}
+            renderItem={({item}) => (
               <View style={styles.table}>
                 <View style={styles.tablehead}>
                   <Text
@@ -186,26 +370,48 @@ export default function SupplierBalances() {
                       marginLeft: 5,
                       marginTop: 5,
                     }}>
-                    {item.Supplier}
+                    {item.sup_name}
                   </Text>
                 </View>
                 <View style={styles.infoRow}>
                   <View style={styles.row}>
                     <Text style={styles.text}>Contact:</Text>
-                    <Text style={styles.text}>{item.Contact}</Text>
+                    <Text style={styles.text}>{item.sup_contact}</Text>
                   </View>
 
                   <View style={styles.row}>
                     <Text style={styles.text}>Balance:</Text>
-                    <Text style={styles.text}>{item.Balance}</Text>
+                    <Text style={styles.text}>{item.supac_balance}</Text>
                   </View>
                   <View style={styles.row}>
                     <Text style={styles.text}>Address:</Text>
-                    <Text style={styles.text}>{item.Address}</Text>
+                    <Text style={styles.text}>{item.sup_address}</Text>
                   </View>
                 </View>
               </View>
-            ) : (
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  width: '100%',
+                  height: 300,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No data found.
+                </Text>
+              </View>
+            }
+          />
+        )}
+        {selectionMode === 'singleSupplier' && (
+          <FlatList
+            data={singleSuppData}
+            keyExtractor={(item, index) => index.toString()}
+            contentContainerStyle={{paddingBottom: 50}}
+            style={{marginTop: 10}}
+            renderItem={({item}) => (
               <View style={styles.table}>
                 <View style={styles.tablehead}>
                   <Text
@@ -215,31 +421,135 @@ export default function SupplierBalances() {
                       marginLeft: 5,
                       marginTop: 5,
                     }}>
-                    {item.Balance}
+                    {item.sup_name}
                   </Text>
                 </View>
                 <View style={styles.infoRow}>
                   <View style={styles.row}>
                     <Text style={styles.text}>Total Bill Amount:</Text>
-                    <Text style={styles.text}>{item.TotalBillAmount}</Text>
+                    <Text style={styles.text}>
+                      {item.supac_total_bill_amount.toFixed(2) ?? '0.00'}
+                    </Text>
                   </View>
                   <View style={styles.row}>
                     <Text style={styles.text}>Paid Amount:</Text>
-                    <Text style={styles.text}>{item.Paidamount}</Text>
+                    <Text style={styles.text}>
+                      {item.supac_paid_amount.toFixed(2) ?? '--'}
+                    </Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.text}>Balance:</Text>
+                    <Text style={styles.text}>
+                      {item.Balance.toFixed(2) ?? '--'}
+                    </Text>
                   </View>
                 </View>
               </View>
-            )
-          }
-        />
-        {selectedRadio === 0 && data.length > 0 && (
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalText}>Total Records: {data.length}</Text>
-           <Text style={styles.totalText}>
-  {`Total ${selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)}:`}{' '}
-  {data.reduce((sum, item) => sum + (item.Balance || 0), 0)}
-</Text>
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  width: '100%',
+                  height: 300,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No data found.
+                </Text>
+              </View>
+            }
+          />
+        )}
 
+        {selectionMode === 'allSuppliers' && selectedTab === 'receivables' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{allSuppData.length}</Text>
+            </View>
+            {(() => {
+              const {totalReceivable} = calculateTotalReceivable();
+
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Receivable: </Text>
+                    <Text style={styles.totalText}>{totalReceivable}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+          </View>
+        )}
+        {selectionMode === 'allSuppliers' && selectedTab === 'payables' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{allSuppData.length}</Text>
+            </View>
+            {(() => {
+              const {totalPayable} = calculateTotalPayable();
+
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Payables : </Text>
+                    <Text style={styles.totalText}>{totalPayable}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+          </View>
+        )}
+        {selectionMode === 'allSuppliers' && selectedTab === 'balances' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{allSuppData.length}</Text>
+            </View>
+            {(() => {
+              const {totalBalance} = calculateTotalBalance();
+
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Payables : </Text>
+                    <Text style={styles.totalText}>{totalBalance}</Text>
+                  </View>
+                </View>
+              );
+            })()}
           </View>
         )}
       </ImageBackground>
@@ -358,15 +668,16 @@ const styles = StyleSheet.create({
     borderColor: 'white',
     alignSelf: 'center',
     height: 'auto',
-    width: 314,
-    borderRadius: 10,
+    width: '90%',
+    borderRadius: 6,
+    marginBottom: 10,
   },
   tablehead: {
     backgroundColor: 'white',
     height: 30,
     overflow: 'hidden',
-    borderTopEndRadius: 10,
-    borderTopLeftRadius: 10,
+    borderTopEndRadius: 6,
+    borderTopLeftRadius: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -385,7 +696,8 @@ const styles = StyleSheet.create({
     marginVertical: 2,
   },
   totalContainer: {
-    padding: 3,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,
@@ -395,6 +707,12 @@ const styles = StyleSheet.create({
   totalText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
+  },
+  dropDownContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
   },
 });

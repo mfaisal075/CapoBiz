@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import Modal from 'react-native-modal';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
@@ -34,6 +33,25 @@ interface SupplierData {
   sup_address: string;
 }
 
+interface InvoiceListWith {
+  prod_id: number;
+  invoice_no: string;
+  prod_name: string;
+  prod_purchase_qty: string;
+  prod_return_qty: number;
+  prod_price: string;
+}
+
+interface InvoiceListWithout {
+  prod_id: number;
+  prod_name: string;
+  prod_upc_ean: string;
+  prod_availavble_qty: string;
+  prod_return_qty: number;
+  prod_price: string;
+  prod_fretail_price: string;
+}
+
 export default function PurchaseReturn() {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
@@ -41,7 +59,6 @@ export default function PurchaseReturn() {
     'with',
   );
   const [supData, setSupData] = useState<SupplierData | null>(null);
-  const [close, setclose] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showResults, setShowResults] = useState(false);
@@ -57,87 +74,13 @@ export default function PurchaseReturn() {
     label: `${sup.sup_name}_${sup.sup_company_name}`,
     value: sup.id.toString(),
   }));
-
-  const toggleclosebtn = () => {
-    setclose(!close);
-  };
-  const Info = [
-    {
-      ItemName: 'abc',
-      PurchaseQTY: '1',
-      ReturnQty: '4',
-      TransactionQTY: 4,
-      Price: '4',
-      totalPrice: '200',
-      total: '555',
-    },
-    {
-      ItemName: 'abc',
-      PurchaseQTY: '1',
-      ReturnQty: '4',
-      TransactionQTY: 4,
-      Price: '4',
-      totalPrice: '200',
-      total: '555',
-    },
-    {
-      ItemName: 'abc',
-      PurchaseQTY: '1',
-      ReturnQty: '4',
-      TransactionQTY: 4,
-      Price: '4',
-      totalPrice: '200',
-      total: '555',
-    },
-    {
-      ItemName: 'abc',
-      PurchaseQTY: '1',
-      ReturnQty: '4',
-      TransactionQTY: 4,
-      Price: '4',
-      totalPrice: '200',
-      total: '555',
-    },
-  ];
-
-  const without = [
-    {
-      ProductName: 'abc',
-      barcode: '123',
-      inStock: 'hj',
-      returnQTY: '3',
-      Price: '1',
-      totalPrice: '9',
-      totals: '22',
-    },
-    {
-      ProductName: 'abc',
-      barcode: '123',
-      inStock: 'hj',
-      returnQTY: '3',
-      Price: '1',
-      totalPrice: '9',
-      totals: '22',
-    },
-  ];
-  const total = Info.reduce((acc, item) => acc + parseFloat(item.total), 0);
-
-  Info.forEach(item => {
-    const qty = parseFloat(item.PurchaseQTY);
-    const Price = parseFloat(item.Price);
-    item.total = (qty * Price).toString();
-  });
-
-  const totals = without.reduce(
-    (acc, item) => acc + parseFloat(item.totals),
-    0,
+  const [withInvcList, setWithInvcList] = useState<InvoiceListWith[]>([]);
+  const [withoutInvcList, setWithoutInvcList] = useState<InvoiceListWithout[]>(
+    [],
   );
+  const [orderTotal, setOrderTotal] = useState<number>(0);
+  const [orderTotalWithout, setOrderTotalWithout] = useState<number>(0);
 
-  without.forEach(item => {
-    const qty = parseFloat(item.barcode);
-    const Price = parseFloat(item.Price);
-    item.totals = (qty * Price).toString();
-  });
   const [psupplier, setpsupplier] = useState(false);
   const [currentpsupplier, setCurrentpsupplier] = useState<string | null>('');
 
@@ -213,12 +156,15 @@ export default function PurchaseReturn() {
           },
         },
       );
+
       const data = res.data;
+
       if (res.status === 200 && data.status) {
         Toast.show({
           type: 'success',
           text1: 'Product added to cart successfully!',
         });
+        fetchInvcWith();
         setSearchTerm('');
         setShowResults(false);
       }
@@ -266,6 +212,7 @@ export default function PurchaseReturn() {
         setSearchTermWithout('');
         setShowResultsWithout(false);
         setQuantity('');
+        fetchInvcWithout();
       }
     } catch (error) {
       console.log(error);
@@ -300,11 +247,195 @@ export default function PurchaseReturn() {
     }
   };
 
+  // Fetch Return Purchase with invoice
+  const fetchInvcWith = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/loadpinvoicereturncart`);
+
+      if (res.data.cartsession) {
+        const cartItems = Object.values(res.data.cartsession).map(
+          (item: any) => ({
+            ...item,
+            total: (
+              item.prod_return_qty * parseFloat(item.prod_price)
+            ).toString(),
+          }),
+        );
+
+        setWithInvcList(cartItems);
+
+        if (res.data.order_total) {
+          setOrderTotal(res.data.order_total);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Delete Cart Item (With Invoice)
+  const delCartItem = async (id: any) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/removepurinvoicereturn?id=${id}&_token=${token}`,
+      );
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Cart item removed successfully!',
+          visibilityTime: 1500,
+        });
+
+        fetchInvcWith();
+        setOrderTotal(0);
+      }
+    } catch (error) {}
+  };
+
+  // Fetch Return Purchase without invoice
+  const fetchInvcWithout = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/loadpurchasereturncart`);
+
+      if (res.data.cartsession) {
+        const cartItems = Object.values(res.data.cartsession).map(
+          (item: any) => ({
+            ...item,
+            total: (
+              item.prod_return_qty * parseFloat(item.prod_price)
+            ).toString(),
+          }),
+        );
+
+        setWithoutInvcList(cartItems);
+
+        if (res.data.order_total) {
+          setOrderTotalWithout(res.data.order_total);
+        }
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Empty cart with invoice
+  const emptyCartWithInvc = async () => {
+    try {
+      await axios.get(`${BASE_URL}/emptypurchaseinvreturncart`);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Empty cart without invoice
+  const emptyCartWithoutInvc = async () => {
+    try {
+      await axios.get(`${BASE_URL}/emptypurchasereturncart`);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Complete Order With Invoice
+  const compOrder = async () => {
+    if (!withInvcList.length) {
+      Toast.show({
+        type: 'error',
+        text1: 'No items in cart to complete order',
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(
+        `${BASE_URL}/purchaseinvoicereturn`,
+        {
+          invoice_no: withInvcList[0]?.invoice_no,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      if (res.status === 200 && res.data.status) {
+        Toast.show({
+          type: 'success',
+          text1: 'Order completed successfully!',
+        });
+        setWithInvcList([]);
+        setOrderTotal(0);
+        emptyCartWithInvc();
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Failed to complete order',
+        });
+      }
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error completing order',
+      });
+    }
+  };
+
+  // Complete Odrer Without Invoice
+  const compOrderWithoutInvc = async () => {
+    if (!withoutInvcList.length) {
+      Toast.show({
+        type: 'error',
+        text1: 'No items in cart to complete order',
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(
+        `${BASE_URL}/completepurchasereturn`,
+        {
+          supp_id: currentpsupplier,
+          refrence_no: '',
+          date: expireDate.toISOString().split('T')[0],
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+      if (res.status === 200 && res.data.status) {
+        Toast.show({
+          type: 'success',
+          text1: 'Order completed successfully!',
+        });
+        setWithoutInvcList([]);
+        setOrderTotalWithout(0);
+        emptyCartWithoutInvc();
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Failed to complete order',
+        });
+      }
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error completing order',
+      });
+    }
+  };
+
   useEffect(() => {
     if (currentpsupplier) {
       fetchSupData();
     }
     fetchSupplierData();
+    fetchInvcWith();
+    fetchInvcWithout();
+    emptyCartWithInvc();
+    emptyCartWithoutInvc();
   }, [currentpsupplier]);
 
   return (
@@ -435,6 +566,7 @@ export default function PurchaseReturn() {
                               setSearchTerm(item.value);
                               setShowResults(false);
                               setSelectedProduct(item);
+                              fetchInvcWith();
                             }}>
                             <Text style={styles.resultText}>{item.label}</Text>
                           </TouchableOpacity>
@@ -470,77 +602,111 @@ export default function PurchaseReturn() {
                   </TouchableOpacity>
                 </View>
 
-                <View>
-                  <FlatList
-                    data={Info}
-                    keyExtractor={(item, index) => index.toString()}
-                    renderItem={({item}) => (
-                      <ScrollView
-                        style={{
-                          padding: 5,
-                        }}>
-                        <View style={styles.table}>
-                          <View style={styles.tablehead}>
-                            <Text
-                              style={{
-                                color: '#144272',
-                                fontWeight: 'bold',
-                                marginLeft: 5,
-                                marginTop: 5,
+                <FlatList
+                  data={withInvcList}
+                  keyExtractor={(item, index) => index.toString()}
+                  style={{height: '75%'}}
+                  renderItem={({item}) => (
+                    <ScrollView
+                      style={{
+                        padding: 5,
+                      }}>
+                      <View style={styles.table}>
+                        <View style={styles.tablehead}>
+                          <Text
+                            style={{
+                              color: '#144272',
+                              fontWeight: 'bold',
+                              marginLeft: 5,
+                              marginTop: 5,
+                            }}>
+                            {item.prod_name}
+                          </Text>
+
+                          <View
+                            style={{
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                            }}>
+                            <TouchableOpacity
+                              onPress={() => {
+                                delCartItem(item.prod_id);
                               }}>
-                              {item.ItemName}
-                            </Text>
-
-                            <Image
-                              style={{
-                                tintColor: '#144272',
-                                width: 15,
-                                height: 15,
-                                alignSelf: 'center',
-                                marginRight: 5,
-                              }}
-                              source={require('../../../assets/show.png')}
-                            />
-                          </View>
-
-                          <View style={styles.infoRow}>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>Purchase Quantity:</Text>
-                              <Text style={styles.txt}>{item.PurchaseQTY}</Text>
-                            </View>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>Return Quantity:</Text>
-                              <Text style={styles.txt}>{item.ReturnQty}</Text>
-                            </View>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>
-                                Transaction Quantity:
-                              </Text>
-                              <Text style={styles.txt}>
-                                {item.TransactionQTY}
-                              </Text>
-                            </View>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>Price:</Text>
-                              <Text style={styles.txt}>{item.Price}</Text>
-                            </View>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>Total Price:</Text>
-                              <Text style={styles.txt}>{item.totalPrice}</Text>
-                            </View>
+                              <Icon
+                                name="delete"
+                                size={20}
+                                color="#B22222"
+                                style={{
+                                  alignSelf: 'center',
+                                  marginRight: 5,
+                                }}
+                              />
+                            </TouchableOpacity>
                           </View>
                         </View>
-                      </ScrollView>
-                    )}
-                  />
-                </View>
+
+                        <View style={styles.infoRow}>
+                          <View style={styles.rowt}>
+                            <Text style={styles.txt}>Purchase Quantity:</Text>
+                            <Text style={styles.txt}>
+                              {item.prod_purchase_qty}
+                            </Text>
+                          </View>
+                          <View style={styles.rowt}>
+                            <Text style={styles.txt}>Return Quantity:</Text>
+                            <Text style={styles.txt}>
+                              {item.prod_return_qty}
+                            </Text>
+                          </View>
+                          <View style={styles.rowt}>
+                            <Text style={styles.txt}>
+                              Transaction Quantity:
+                            </Text>
+                            <Text style={styles.txt}>
+                              {item.prod_purchase_qty}
+                            </Text>
+                          </View>
+                          <View style={styles.rowt}>
+                            <Text style={styles.txt}>Price:</Text>
+                            <Text style={styles.txt}>{item.prod_price}</Text>
+                          </View>
+                          <View style={styles.rowt}>
+                            <Text style={styles.txt}>Total Price:</Text>
+                            <Text style={styles.txt}>
+                              {item.prod_return_qty *
+                                parseFloat(item.prod_price)}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    </ScrollView>
+                  )}
+                  ListEmptyComponent={
+                    <View
+                      style={{
+                        width: '100%',
+                        height: 300,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}>
+                      <Text
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 'bold',
+                          color: '#fff',
+                        }}>
+                        No data found in the database.
+                      </Text>
+                    </View>
+                  }
+                />
 
                 <View style={styles.totalContainer}>
                   <Text style={styles.totalText}>Total:</Text>
-                  <Text style={styles.totalText}>{total}</Text>
+                  <Text style={styles.totalText}>{orderTotal}</Text>
                 </View>
 
-                <TouchableOpacity onPress={toggleclosebtn}>
+                <TouchableOpacity onPress={compOrder}>
                   <View style={styles.completeButton}>
                     <Text
                       style={{
@@ -562,7 +728,7 @@ export default function PurchaseReturn() {
                     justifyContent: 'center',
                   }}>
                   <TextInput
-                    style={[styles.input, {width: '100%'}]}
+                    style={[styles.input, {width: '90%'}]}
                     placeholderTextColor={'white'}
                     placeholder="Search Product..."
                     value={searchTermWithout}
@@ -711,8 +877,9 @@ export default function PurchaseReturn() {
                 </View>
 
                 <FlatList
-                  data={without}
+                  data={withoutInvcList}
                   keyExtractor={(item, index) => index.toString()}
+                  style={{height: '34%'}}
                   renderItem={({item}) => (
                     <ScrollView
                       style={{
@@ -727,7 +894,7 @@ export default function PurchaseReturn() {
                               marginLeft: 5,
                               marginTop: 5,
                             }}>
-                            {item.ProductName}
+                            {item.prod_name}
                           </Text>
 
                           <Image
@@ -745,23 +912,30 @@ export default function PurchaseReturn() {
                         <View style={styles.infoRow}>
                           <View style={styles.rowt}>
                             <Text style={styles.txt}>BarCode:</Text>
-                            <Text style={styles.txt}>{item.barcode}</Text>
+                            <Text style={styles.txt}>{item.prod_upc_ean}</Text>
                           </View>
                           <View style={styles.rowt}>
                             <Text style={styles.txt}>In Stock:</Text>
-                            <Text style={styles.txt}>{item.inStock}</Text>
+                            <Text style={styles.txt}>
+                              {item.prod_availavble_qty}
+                            </Text>
                           </View>
                           <View style={styles.rowt}>
                             <Text style={styles.txt}>Return Quantity:</Text>
-                            <Text style={styles.txt}>{item.returnQTY}</Text>
+                            <Text style={styles.txt}>
+                              {item.prod_return_qty}
+                            </Text>
                           </View>
                           <View style={styles.rowt}>
                             <Text style={styles.txt}>Price:</Text>
-                            <Text style={styles.txt}>{item.Price}</Text>
+                            <Text style={styles.txt}>{item.prod_price}</Text>
                           </View>
                           <View style={styles.rowt}>
                             <Text style={styles.txt}>Total Price:</Text>
-                            <Text style={styles.txt}>{item.totalPrice}</Text>
+                            <Text style={styles.txt}>
+                              {item.prod_return_qty *
+                                parseFloat(item.prod_price)}
+                            </Text>
                           </View>
                         </View>
                       </View>
@@ -770,9 +944,10 @@ export default function PurchaseReturn() {
                 />
                 <View style={styles.totalContainer}>
                   <Text style={styles.totalText}>Total:</Text>
-                  <Text style={styles.totalText}>{totals}</Text>
+                  <Text style={styles.totalText}>{orderTotalWithout}</Text>
                 </View>
-                <TouchableOpacity onPress={toggleclosebtn}>
+
+                <TouchableOpacity onPress={compOrderWithoutInvc}>
                   <View style={styles.completeButton}>
                     <Text
                       style={{
@@ -788,75 +963,6 @@ export default function PurchaseReturn() {
             )}
           </View>
         </View>
-
-        <Modal isVisible={close}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Product has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setclose(!close)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
       </ImageBackground>
     </SafeAreaView>
   );

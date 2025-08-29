@@ -9,35 +9,39 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+interface InactiveList {
+  id: number;
+  cust_name: string;
+  cust_contact: string;
+  cust_cnic: string;
+  cust_email: string;
+  cust_address: string;
+  custtyp_name: string;
+}
 
 export default function InactiveCustomer() {
   const {openDrawer} = useDrawer();
-  const Info = [
-    {
-      sr: '1',
-      Customer: 'abc',
-      CNIC: '13',
-      Type: 'Worker',
-      Address: 'Daska',
-      Contact: '098765',
-      Email: '@gmail.com',
-    },
-    {
-        sr: '1',
-        Customer: 'abc',
-        CNIC: '13',
-        Type: 'Worker',
-        Address: 'Daska',
-        Contact: '098765',
-        Email: '@gmail.com',
-      },
-  ];
+  const [inactiveList, setInactiveList] = useState<InactiveList[]>([]);
 
-  const totalCustomer = Info.length;
+  // Fetch Inactive List
+  const fetchAreaList = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchinactivecust`);
+      setInactiveList(res.data.cust);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
-  
+  useEffect(() => {
+    fetchAreaList();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -73,12 +77,16 @@ export default function InactiveCustomer() {
               Inactive Customer
             </Text>
           </View>
+
+          <TouchableOpacity>
+            <Icon name="printer" size={30} color={'#fff'} />
+          </TouchableOpacity>
         </View>
 
         <ScrollView>
           <View>
             <FlatList
-              data={Info}
+              data={inactiveList}
               keyExtractor={(item, index) => index.toString()}
               renderItem={({item}) => (
                 <ScrollView
@@ -94,7 +102,7 @@ export default function InactiveCustomer() {
                           marginLeft: 5,
                           marginTop: 5,
                         }}>
-                        {item.Customer}
+                        {item.cust_name}
                       </Text>
 
                       <View
@@ -111,7 +119,7 @@ export default function InactiveCustomer() {
                           justifyContent: 'space-between',
                         }}>
                         <Text style={styles.text}>Type:</Text>
-                        <Text style={styles.text}>{item.Type}</Text>
+                        <Text style={styles.text}>{item.custtyp_name}</Text>
                       </View>
                       <View
                         style={{
@@ -119,7 +127,7 @@ export default function InactiveCustomer() {
                           justifyContent: 'space-between',
                         }}>
                         <Text style={styles.text}>CNIC:</Text>
-                        <Text style={styles.text}>{item.CNIC}</Text>
+                        <Text style={styles.text}>{item.cust_cnic}</Text>
                       </View>
                       <View
                         style={{
@@ -127,7 +135,7 @@ export default function InactiveCustomer() {
                           justifyContent: 'space-between',
                         }}>
                         <Text style={styles.text}>Contact:</Text>
-                        <Text style={styles.text}>{item.Contact}</Text>
+                        <Text style={styles.text}>{item.cust_contact}</Text>
                       </View>
                       <View
                         style={{
@@ -138,7 +146,7 @@ export default function InactiveCustomer() {
                           Email:
                         </Text>
                         <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.Email}
+                          {item.cust_email}
                         </Text>
                       </View>
                       <View
@@ -158,19 +166,32 @@ export default function InactiveCustomer() {
                             styles.value,
                             {marginBottom: 5, marginTop: -5},
                           ]}>
-                          {item.Address}
+                          {item.cust_address}
                         </Text>
                       </View>
                     </View>
                   </View>
                 </ScrollView>
               )}
+              ListEmptyComponent={
+                <View style={{alignItems: 'center', marginTop: 20}}>
+                  <Text
+                    style={{
+                      color: 'white',
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                    }}>
+                    No record found.
+                  </Text>
+                </View>
+              }
+              scrollEnabled={false}
             />
           </View>
         </ScrollView>
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total Customers:</Text>
-          <Text style={styles.totalText}>{totalCustomer}</Text>
+          <Text style={styles.totalText}>{inactiveList.length}</Text>
         </View>
       </ImageBackground>
     </SafeAreaView>
@@ -222,7 +243,8 @@ const styles = StyleSheet.create({
   },
 
   totalContainer: {
-    padding: 7,
+    paddingHorizontal: 15,
+    paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,

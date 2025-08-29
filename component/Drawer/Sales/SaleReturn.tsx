@@ -4,19 +4,19 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  ScrollView,
   TouchableOpacity,
   Image,
   TextInput,
   FlatList,
+  Modal,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import Modal from 'react-native-modal';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 interface CartDetails {
   name: string;
@@ -29,6 +29,48 @@ const initialCartDetails: CartDetails = {
   fatherName: '',
   name: '',
 };
+
+interface CartItems {
+  prod_id: number;
+  sold_qty: string;
+  product_name: string;
+  return_qty: number;
+  return_subqty: number;
+  price: string;
+}
+
+interface EditForm {
+  prod_id: number;
+  product_name: string;
+  sold_qty: string;
+  return_qty: number;
+  return_subqty: number;
+  price: string;
+  uom_id: number;
+  sub_uom: any;
+}
+
+const initialEditFrom: EditForm = {
+  prod_id: 0,
+  price: '',
+  product_name: '',
+  return_qty: 0,
+  return_subqty: 0,
+  sold_qty: '',
+  uom_id: 0,
+  sub_uom: null,
+};
+
+interface CartItemsWithout {
+  prod_id: number;
+  product_name: string;
+  uom_id: number;
+  sub_uom: string;
+  return_qty: string;
+  return_subqty: string;
+  sub_price: string;
+  price: string;
+}
 
 export default function SaleReturn() {
   const {token} = useUser();
@@ -47,113 +89,23 @@ export default function SaleReturn() {
   const [selectedOption, setSelectedOption] = useState<'with' | 'without'>(
     'with',
   );
-  const [close, setclose] = useState(false);
   const [qty, setQty] = useState('');
   const [subQty, setSubQty] = useState('');
-
-  const toggleclosebtn = () => {
-    setclose(!close);
-  };
-  const Info = [
-    {
-      ItemName: 'abc',
-      SoldQTY: '1',
-      ReturnQty: '4',
-      ReturnSubQty: '4',
-      TransactionQTY: 4,
-      Price: '4',
-      totalPrice: '200',
-      total: '555',
-    },
-
-    {
-      ItemName: 'abc',
-      SoldQTY: '1',
-      ReturnQty: '4',
-      ReturnSubQty: '4',
-      TransactionQTY: 4,
-      Price: '4',
-      totalPrice: '200',
-      total: '555',
-    },
-    {
-      ItemName: 'abc',
-      SoldQTY: '1',
-      ReturnQty: '4',
-      ReturnSubQty: '4',
-      TransactionQTY: 4,
-      Price: '4',
-      totalPrice: '200',
-      total: '555',
-    },
-    {
-      ItemName: 'abc',
-      SoldQTY: '1',
-      ReturnQty: '4',
-      ReturnSubQty: '4',
-      TransactionQTY: 4,
-      Price: '4',
-      totalPrice: '200',
-      total: '555',
-    },
-  ];
-
-  const without = [
-    {
-      ProductName: 'abc',
-      returnQTY: '3',
-      returnSubQTY: '3',
-      SubQTYPrice: '3',
-      Price: '1',
-      totalPrice: '9',
-      totals: '22',
-    },
-    {
-      ProductName: 'abc',
-      returnQTY: '3',
-      returnSubQTY: '3',
-      SubQTYPrice: '3',
-      Price: '1',
-      totalPrice: '9',
-      totals: '22',
-    },
-    {
-      ProductName: 'abc',
-      returnQTY: '3',
-      returnSubQTY: '3',
-      SubQTYPrice: '3',
-      Price: '1',
-      totalPrice: '9',
-      totals: '22',
-    },
-    {
-      ProductName: 'abc',
-      returnQTY: '3',
-      returnSubQTY: '3',
-      SubQTYPrice: '3',
-      Price: '1',
-      totalPrice: '9',
-      totals: '22',
-    },
-  ];
-  const total = Info.reduce((acc, item) => acc + parseFloat(item.total), 0);
-
-  Info.forEach(item => {
-    const qty = parseFloat(item.SoldQTY);
-    const Price = parseFloat(item.Price);
-    item.total = (qty * Price).toString();
-  });
-
-  const totals = without.reduce(
-    (acc, item) => acc + parseFloat(item.totals),
-    0,
+  const [cartItems, setCartItems] = useState<CartItems[]>([]);
+  const [cartItemsWithout, setCartItemsWithout] = useState<CartItemsWithout[]>(
+    [],
   );
+  const [orderTotal, setOrderTotal] = useState<number>(0);
+  const [orderTotalWithout, setOrderTotalWithout] = useState<number>(0);
+  const [modal, setModal] = useState('');
+  const [editForm, setEditForm] = useState<EditForm>(initialEditFrom);
 
-  without.forEach(item => {
-    const qty = parseFloat(item.returnQTY);
-    const Price = parseFloat(item.Price);
-    item.totals = (qty * Price).toString();
-  });
+  const editOnChange = (field: keyof EditForm, value: string) => {
+    setEditForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   // Handle Search With
   const handleSearch = async (text: string) => {
@@ -220,7 +172,6 @@ export default function SaleReturn() {
         fatherName: res.data?.fathername,
         name: res.data?.cust_name,
       });
-      console.log(res.data);
     } catch (error) {
       console.log(error);
     }
@@ -280,7 +231,8 @@ export default function SaleReturn() {
       });
 
       const data = res.data;
-      if (res.status === 200 && data.status) {
+
+      if (data.status === 200) {
         Toast.show({
           type: 'success',
           text1: 'Product added to cart successfully!',
@@ -289,11 +241,300 @@ export default function SaleReturn() {
         setShowResultsWithout(false);
         setQty('');
         setSubQty('');
+        fetchCartItemsWithout();
       }
     } catch (error) {
       console.log(error);
     }
   };
+
+  // Fetch Cart Items
+  const fetchCartItems = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/loadinvoicereturncart`);
+
+      if (res.data.cartsession) {
+        const cartItems = Object.values(res.data.cartsession).map(
+          (item: any) => ({
+            ...item,
+            total: (item.return_qty * parseFloat(item.price)).toString(),
+          }),
+        );
+
+        setCartItems(cartItems);
+
+        if (res.data.order_total) {
+          setOrderTotal(parseFloat(res.data.order_total));
+        }
+      } else {
+        setCartItems([]);
+        setOrderTotal(0);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Cart Items (Without)
+  const fetchCartItemsWithout = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/loadreturncart`);
+
+      if (res.data.cartsession) {
+        const cartItems = Object.values(res.data.cartsession).map(
+          (item: any) => ({
+            ...item,
+            total: (item.return_qty * parseFloat(item.price)).toString(),
+          }),
+        );
+
+        setCartItemsWithout(cartItems);
+
+        if (res.data.order_total) {
+          setOrderTotalWithout(parseFloat(res.data.order_total));
+        }
+      } else {
+        setCartItemsWithout([]);
+        setOrderTotalWithout(0);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Edit Cart Item
+  const getEditData = async (id: any) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/editsalewithinvoicereturn?pid=${id}&_token=${token}`,
+      );
+
+      const item = res.data[0]; // ✅ pick the first object
+
+      setEditForm({
+        price: item.price,
+        prod_id: item.prod_id,
+        sold_qty: item.sold_qty,
+        product_name: item.product_name,
+        return_qty: item.return_qty ?? 0,
+        return_subqty: item.return_subqty ?? 0,
+        uom_id: item.uom_id,
+        sub_uom: item.sub_uom,
+      });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const updateCartItem = async () => {
+    if (editForm.return_qty > parseFloat(editForm.sold_qty)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Warning',
+        text2: 'Return Quantity cannot be greater than sold quantity.',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(`${BASE_URL}/updatesalewithinvoicereturn`, {
+        pro_id: editForm.prod_id,
+        product_name: editForm.product_name,
+        sold_qty: editForm.sold_qty,
+        uom_id: editForm.uom_id,
+        sub_uom: editForm.sub_uom,
+        return_qty: editForm.return_qty,
+        return_subqty: editForm.return_subqty,
+        price: editForm.price,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Return Order Updated Successfully!',
+          visibilityTime: 1500,
+        });
+        setEditForm(initialEditFrom);
+        setModal('');
+        fetchCartItems();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Delete Cart Item
+  const delCartItem = async (id: any) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/removesaleinvoicereturn?id=${id}&_token=${token}`,
+      );
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Cart item removed successfully!',
+          visibilityTime: 1500,
+        });
+        fetchCartItems();
+        setOrderTotal(0);
+        setCartDetails(initialCartDetails);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Delete Cart Item (Without)
+  const delCartItemWithout = async (id: any) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/removesalereturn?id=${id}&_token=${token}`,
+      );
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Cart item removed successfully!',
+          visibilityTime: 1500,
+        });
+        fetchCartItemsWithout();
+        setOrderTotalWithout(0);
+        emptyCartWithoutInv();
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Empty Cart
+  const emptyCart = async () => {
+    try {
+      await axios.get(`${BASE_URL}/emptyinvoicecart`);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Empty Cart (Without Invoice)
+  const emptyCartWithoutInv = async () => {
+    try {
+      await axios.get(`${BASE_URL}/emptyreturncart`);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Complete Sale Return
+  const completeSaleReturn = async () => {
+    if (orderTotal === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Warning',
+        text2: 'Please Add some quantity to return!',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
+    try {
+      const res = await axios.post(`${BASE_URL}/productinvoicereturn`, {
+        invoice_no: selectedProduct.value,
+        cust_id: null, // check if API really expects null
+        sale_return: orderTotal,
+      });
+
+      const data = res.data;
+
+      if (data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Product has been returned successfully!',
+          visibilityTime: 1500,
+        });
+        fetchCartItems();
+        setCartDetails(initialCartDetails);
+        setOrderTotal(0);
+        emptyCart();
+      } else if (data.status === 202) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning',
+          text2: 'Please Add some quantity to return!',
+          visibilityTime: 1500,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Something went wrong while returning product!',
+        visibilityTime: 2000,
+      });
+    }
+  };
+
+  // Complete Sale Return Without Invoice
+  const completeSaleReturnWithout = async () => {
+    if (orderTotalWithout === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Warning',
+        text2: 'Please Add some quantity to return!',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
+    try {
+      const res = await axios.post(`${BASE_URL}/productreturn`, {
+        sale_return: orderTotalWithout,
+      });
+
+      const data = res.data;
+
+      if (data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Product has been returned successfully!',
+          visibilityTime: 1500,
+        });
+        fetchCartItemsWithout();
+        setOrderTotalWithout(0);
+        emptyCartWithoutInv();
+      } else if (data.status === 202) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning',
+          text2: 'Please Add some quantity to return!',
+          visibilityTime: 1500,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Something went wrong while returning product!',
+        visibilityTime: 2000,
+      });
+    }
+  };
+
+  useEffect(() => {
+    emptyCart();
+    emptyCartWithoutInv();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -399,7 +640,7 @@ export default function SaleReturn() {
 
           <View>
             {selectedOption === 'with' ? (
-              <View>
+              <View style={{flex: 1}}>
                 <View
                   style={{
                     width: '100%',
@@ -427,6 +668,7 @@ export default function SaleReturn() {
                               setSelectedProduct(item); // still update state if needed
                               addInvoice(item); // pass product directly
                               getInvoiceCart();
+                              fetchCartItems();
                             }}>
                             <Text style={styles.resultText}>{item.label}</Text>
                           </TouchableOpacity>
@@ -463,12 +705,13 @@ export default function SaleReturn() {
                   </Text>
                 </View>
 
-                <View style={{marginTop: 10}}>
+                <View>
                   <FlatList
-                    data={Info}
+                    data={cartItems}
                     keyExtractor={(item, index) => index.toString()}
+                    style={{marginTop: 10}}
                     renderItem={({item}) => (
-                      <ScrollView
+                      <View
                         style={{
                           padding: 5,
                         }}>
@@ -481,77 +724,117 @@ export default function SaleReturn() {
                                 marginLeft: 5,
                                 marginTop: 5,
                               }}>
-                              {item.ItemName}
+                              {item.product_name}
                             </Text>
 
-                            <Image
+                            <View
                               style={{
-                                tintColor: '#144272',
-                                width: 15,
-                                height: 15,
-                                alignSelf: 'center',
-                                marginRight: 5,
-                              }}
-                              source={require('../../../assets/show.png')}
-                            />
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                              }}>
+                              <TouchableOpacity
+                                onPress={() => {
+                                  getEditData(item.prod_id);
+                                  setModal('Edit');
+                                }}>
+                                <Icon
+                                  name="edit"
+                                  size={20}
+                                  color="#144272"
+                                  style={{
+                                    alignSelf: 'center',
+                                    marginRight: 10,
+                                  }}
+                                />
+                              </TouchableOpacity>
+                              <TouchableOpacity
+                                onPress={() => {
+                                  delCartItem(item.prod_id);
+                                }}>
+                                <Icon
+                                  name="delete"
+                                  size={20}
+                                  color="#B22222"
+                                  style={{
+                                    alignSelf: 'center',
+                                    marginRight: 5,
+                                  }}
+                                />
+                              </TouchableOpacity>
+                            </View>
                           </View>
 
                           <View style={styles.infoRow}>
                             <View style={styles.rowt}>
                               <Text style={styles.txt}>Sold Quantity:</Text>
-                              <Text style={styles.txt}>{item.SoldQTY}</Text>
+                              <Text style={styles.txt}>{item.sold_qty}</Text>
                             </View>
                             <View style={styles.rowt}>
                               <Text style={styles.txt}>Return Quantity:</Text>
-                              <Text style={styles.txt}>{item.ReturnQty}</Text>
+                              <Text style={styles.txt}>{item.return_qty}</Text>
                             </View>
                             <View style={styles.rowt}>
                               <Text style={styles.txt}>
                                 Return Sub Quantity:
                               </Text>
                               <Text style={styles.txt}>
-                                {item.ReturnSubQty}
+                                {item.return_subqty}
                               </Text>
                             </View>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>
-                                Transaction Quantity:
-                              </Text>
-                              <Text style={styles.txt}>
-                                {item.TransactionQTY}
-                              </Text>
-                            </View>
+
                             <View style={styles.rowt}>
                               <Text style={styles.txt}>Price:</Text>
-                              <Text style={styles.txt}>{item.Price}</Text>
+                              <Text style={styles.txt}>{item.price}</Text>
                             </View>
                             <View style={[styles.rowt, {marginBottom: 5}]}>
                               <Text style={styles.txt}>Total Price:</Text>
-                              <Text style={styles.txt}>{item.totalPrice}</Text>
+                              <Text style={styles.txt}>
+                                {item.return_qty * parseFloat(item.price)}
+                              </Text>
                             </View>
                           </View>
                         </View>
-                      </ScrollView>
+                      </View>
                     )}
+                    ListEmptyComponent={
+                      <View
+                        style={{
+                          height: 300,
+                          width: '100%',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}>
+                        <Text
+                          style={{
+                            fontSize: 16,
+                            fontWeight: 'bold',
+                            color: '#fff',
+                          }}>
+                          Cart is empty.
+                        </Text>
+                      </View>
+                    }
                   />
                 </View>
 
                 <View style={styles.totalContainer}>
-                  <Text style={styles.totalText}>Total:</Text>
-                  <Text style={styles.totalText}>{total}</Text>
-                </View>
-                <TouchableOpacity onPress={toggleclosebtn}>
-                  <View style={styles.completeButton}>
-                    <Text
-                      style={{
-                        textAlign: 'center',
-                        padding: 5,
-                        color: '#144272',
-                      }}>
-                      Complete
-                    </Text>
+                  <View>
+                    <Text style={styles.totalText}>Total:</Text>
+                    <Text style={styles.totalText}>{orderTotal}</Text>
                   </View>
-                </TouchableOpacity>
+                  <TouchableOpacity onPress={completeSaleReturn}>
+                    <View style={styles.completeButton}>
+                      <Text
+                        style={{
+                          textAlign: 'center',
+                          padding: 5,
+                          color: '#144272',
+                        }}>
+                        Complete
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                </View>
               </View>
             ) : (
               <View>
@@ -584,6 +867,7 @@ export default function SaleReturn() {
                               setSearchTermWithout(item.value);
                               setShowResultsWithout(false);
                               setSelectedProductWithout(item);
+                              fetchCartItemsWithout();
                             }}>
                             <Text style={styles.resultText}>{item.label}</Text>
                           </TouchableOpacity>
@@ -634,10 +918,10 @@ export default function SaleReturn() {
                 </View>
 
                 <FlatList
-                  data={without}
+                  data={cartItemsWithout}
                   keyExtractor={(item, index) => index.toString()}
                   renderItem={({item}) => (
-                    <ScrollView
+                    <View
                       style={{
                         padding: 5,
                       }}>
@@ -650,56 +934,92 @@ export default function SaleReturn() {
                               marginLeft: 5,
                               marginTop: 5,
                             }}>
-                            {item.ProductName}
+                            {item.product_name}
                           </Text>
 
-                          <Image
+                          <View
                             style={{
-                              tintColor: '#144272',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                            }}
-                            source={require('../../../assets/show.png')}
-                          />
+                              flexDirection: 'row',
+                              alignItems: 'center',
+                            }}>
+                            <TouchableOpacity
+                              onPress={() => {
+                                delCartItemWithout(item.prod_id);
+                              }}>
+                              <Icon
+                                name="delete"
+                                size={20}
+                                color="#B22222"
+                                style={{
+                                  alignSelf: 'center',
+                                  marginRight: 5,
+                                }}
+                              />
+                            </TouchableOpacity>
+                          </View>
                         </View>
 
                         <View style={styles.infoRow}>
                           <View style={styles.rowt}>
                             <Text style={styles.txt}>Return Quantity:</Text>
-                            <Text style={styles.txt}>{item.returnQTY}</Text>
+                            <Text style={styles.txt}>{item.return_qty}</Text>
                           </View>
                           <View style={styles.rowt}>
                             <Text style={styles.txt}>Return Sub Quantity:</Text>
-                            <Text style={styles.txt}>{item.returnSubQTY}</Text>
+                            <Text style={styles.txt}>{item.return_subqty}</Text>
                           </View>
                           <View style={styles.rowt}>
                             <Text style={styles.txt}>Sub Quantity Price:</Text>
-                            <Text style={styles.txt}>{item.SubQTYPrice}</Text>
+                            <Text style={styles.txt}>{item.sub_price}</Text>
                           </View>
                           <View style={styles.rowt}>
                             <Text style={styles.txt}>Price:</Text>
-                            <Text style={styles.txt}>{item.Price}</Text>
+                            <Text style={styles.txt}>{item.price}</Text>
                           </View>
                           <View style={styles.rowt}>
                             <Text style={[styles.txt, {marginBottom: 5}]}>
                               Total Price:
                             </Text>
                             <Text style={[styles.txt, {marginBottom: 5}]}>
-                              {item.totalPrice}
+                              {(
+                                parseFloat(item.sub_price) +
+                                parseFloat(item.price)
+                              ).toFixed(2)}
                             </Text>
                           </View>
                         </View>
                       </View>
-                    </ScrollView>
+                    </View>
                   )}
+                  ListEmptyComponent={
+                    <View
+                      style={{
+                        height: 300,
+                        width: '100%',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}>
+                      <Text
+                        style={{
+                          fontSize: 16,
+                          fontWeight: 'bold',
+                          color: '#fff',
+                        }}>
+                        Cart is empty.
+                      </Text>
+                    </View>
+                  }
                 />
                 <View style={styles.totalContainer}>
                   <Text style={styles.totalText}>Total:</Text>
-                  <Text style={styles.totalText}>{totals}</Text>
+                  <Text style={styles.totalText}>
+                    {orderTotalWithout.toFixed(2)}
+                  </Text>
                 </View>
-                <TouchableOpacity onPress={toggleclosebtn}>
+                <TouchableOpacity
+                  onPress={() => {
+                    completeSaleReturnWithout();
+                  }}>
                   <View style={styles.completeButton}>
                     <Text
                       style={{
@@ -716,70 +1036,70 @@ export default function SaleReturn() {
           </View>
         </View>
 
-        <Modal isVisible={close}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Product has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setclose(!close)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
+        {/* Edit Modal With Invoice */}
+        <Modal
+          visible={modal === 'Edit'}
+          transparent={true}
+          animationType="fade">
+          <View style={styles.overlay}>
+            <View style={styles.editModalView}>
+              <View
+                style={[
+                  styles.header,
+                  {borderBottomColor: '#144272', borderBottomWidth: 0.8},
+                ]}>
+                <Text style={styles.headerText}>Return with Invoice</Text>
+                <TouchableOpacity onPress={() => setModal('')}>
+                  <Text style={[styles.closeText, {color: '#000'}]}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={styles.editLabel}>Item name</Text>
+              <TextInput
+                style={[styles.editInput, styles.disabledInput]}
+                value={editForm.product_name}
+                editable={false}
+              />
+
+              <Text style={styles.editLabel}>
+                Sold Quantity <Text style={styles.required}>*</Text>
+              </Text>
+              <TextInput
+                style={[styles.editInput, styles.disabledInput]}
+                value={editForm.sold_qty}
+                editable={false}
+              />
+
+              <Text style={styles.editLabel}>Return Quantity</Text>
+              <TextInput
+                style={styles.editInput}
+                keyboardType="numeric"
+                value={editForm.return_qty ? String(editForm.return_qty) : ''}
+                onChangeText={t => editOnChange('return_qty', t)}
+              />
+
+              <Text style={styles.editLabel}>Return Sub Quantity</Text>
+              <TextInput
+                style={[styles.editInput, styles.disabledInput]}
+                value={
+                  editForm.return_subqty ? String(editForm.return_subqty) : '0'
+                }
+                editable={false}
+              />
+
+              <Text style={styles.editLabel}>Price</Text>
+              <TextInput
+                style={[styles.editInput, styles.disabledInput]}
+                value={editForm.price}
+                editable={false}
+              />
+
+              <TouchableOpacity
+                style={styles.button}
+                onPress={() => {
+                  updateCartItem();
+                }}>
+                <Text style={styles.buttonText}>Update Cart</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -802,19 +1122,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  section: {
-    borderColor: 'white',
-    height: 'auto',
-    borderRadius: 12,
-    elevation: 15,
-    marginBottom: 5,
-    padding: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
   input: {
     borderWidth: 1,
     borderColor: 'white',
@@ -832,11 +1139,6 @@ const styles = StyleSheet.create({
     width: '46%',
     color: '#fff',
     height: 38,
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: 'white',
   },
   addButton: {
     marginBottom: 10,
@@ -859,56 +1161,8 @@ const styles = StyleSheet.create({
     width: 80,
     alignSelf: 'center',
   },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 35,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: 285,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    justifyContent: 'space-between',
-    marginLeft: 10,
-    marginRight: 10,
-  },
-  search: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    height: 40,
-  },
-  text: {
-    marginLeft: 15,
-    color: '#144272',
-    marginRight: 15,
-  },
-  value: {
-    marginLeft: 15,
-    color: '#144272',
-    marginRight: 15,
-  },
   infoRow: {
     marginTop: 5,
-  },
-  productinput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 6,
-    padding: 8,
-  },
-  contentContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   table: {
     borderWidth: 1,
@@ -932,16 +1186,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   totalContainer: {
-    padding: 5,
+    position: 'absolute',
+    bottom: 10,
+    alignSelf: 'flex-end',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderTopColor: '#fff',
     borderTopWidth: 1,
-    borderTopColor: 'white',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    position: 'static',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    marginTop: 5,
+    width: '100%',
   },
   totalText: {
     color: 'white',
@@ -998,5 +1250,78 @@ const styles = StyleSheet.create({
   },
   resultText: {
     color: '#144272',
+  },
+  //Edit Modal Styling
+  overlay: {
+    flex: 1,
+    backgroundColor: '#00000055',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  editModalView: {
+    width: '85%',
+    height: 'auto',
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 20,
+    elevation: 5,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  editCloseText: {
+    fontSize: 20,
+    color: '#888',
+  },
+  editTitle: {
+    marginTop: 15,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  editLabel: {
+    marginTop: 15,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  required: {
+    color: 'red',
+  },
+  closeText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  editInput: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 5,
+    fontSize: 14,
+  },
+  disabledInput: {
+    backgroundColor: '#f2f2f2',
+    color: '#999',
+  },
+  label: {
+    fontWeight: 'bold',
+    fontSize: 16,
+    color: 'white',
+  },
+  button: {
+    backgroundColor: '#28a745',
+    paddingVertical: 10,
+    borderRadius: 6,
+    marginTop: 25,
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
 });

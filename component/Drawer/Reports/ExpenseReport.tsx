@@ -6,87 +6,62 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {RadioButton} from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-type Product = {
-  sr: number;
-  date: string;
-  addedby: string;
-  note: string;
-  amount: number;
-  category?: string;
-};
+interface Category {
+  id: number;
+  expc_name: string;
+}
 
-type InfoType = {
-  [key: string]: Product[];
-};
+interface ExpanseData {
+  id: number;
+  exp_date: string;
+  expc_name: string;
+  exp_addedby: string;
+  exp_desc: string;
+  exp_amount: string;
+}
+
+interface CategoryWiseExpanseData {
+  id: number;
+  exp_amount: string;
+  exp_addedby: string;
+  exp_desc: string;
+  exp_date: string;
+}
 
 export default function ExpenseReport() {
-    
   const {openDrawer} = useDrawer();
-
-  const Info: InfoType = {
-    'Select Category': [
-      {
-        sr: 1,
-        date: '0-0-0',
-        addedby: 'jhk',
-        note: 'kio',
-        amount: 9,
-        category: 'bbn',
-      },
-    ],
-    Rent: [
-      {
-        sr: 1,
-        date: '0-0-0',
-        addedby: 'rent',
-        note: 'kio',
-        amount: 9,
-      },
-    ],
-    'Internet Bill': [
-      {
-        sr: 1,
-        date: '0-0-0',
-        addedby: 'bill',
-        note: 'kio',
-        amount: 9,
-      },
-    ],
-  };
-
-  const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] =
-    useState<string>('Rent');
-
-  const categoryItems = [
-    {label: 'Rent', value: 'Rent'},
-    {label: 'Internet Bil', value: 'Internet Bill'},
-  ];
+  const [categoryDropdown, setCategoryDropdown] = useState<Category[]>([]);
+  const transformedCategory = categoryDropdown.map(cat => ({
+    label: cat.expc_name,
+    value: cat.id.toString(),
+  }));
+  const [catOpen, setCatOpen] = useState(false);
+  const [catValue, setCatValue] = useState('');
+  const [expanseData, setExpanseData] = useState<ExpanseData[]>([]);
+  const [cateWiseexpanseData, setCateWiseExpanseData] = useState<
+    CategoryWiseExpanseData[]
+  >([]);
 
   const [selectionMode, setSelectionMode] = useState<
-    'allproducts' | 'categorywiseproduct' | ''
-  >('');
-
-  const totalProducts =
-    selectionMode === 'allproducts'
-      ? Object.values(Info).reduce((acc, list) => acc + list.length, 0)
-      : Info[currentCategory]?.length || 0;
+    'allExpenses' | 'categoryWiseExpenses' | ''
+  >('allExpenses');
 
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
 
   const onStartDateChange = (
     event: DateTimePickerEvent,
@@ -102,6 +77,80 @@ export default function ExpenseReport() {
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
+
+  // Fetch Expanse Category
+  const fetchExpanseCatDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchexpensecategorydropdown`);
+      setCategoryDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Expanses
+  const fetchExpanses = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/fetchexpense`, {
+        from: startDate.toISOString().split('T')[0],
+        to: endDate.toISOString().split('T')[0],
+        cat_id: catValue,
+      });
+      setExpanseData(res.data.expense);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Category Wise Expanses
+  const fetchCateWiseExpanses = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/fetchcatexpense`, {
+        from: startDate.toISOString().split('T')[0],
+        to: endDate.toISOString().split('T')[0],
+        cat_id: catValue,
+      });
+      setCateWiseExpanseData(res.data.expense);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate All Expanse Total
+  const calculateAllExpanseTotal = () => {
+    let totalAmount = 0;
+
+    expanseData.forEach(exp => {
+      const amount = parseFloat(exp.exp_amount) || 0;
+
+      totalAmount += amount;
+    });
+
+    return {
+      totalExpanse: totalAmount.toFixed(2),
+    };
+  };
+
+  // Calculate Category Wise Expanse Total
+  const calculateCategoryExpanseTotal = () => {
+    let totalAmount = 0;
+
+    cateWiseexpanseData.forEach(exp => {
+      const amount = parseFloat(exp.exp_amount) || 0;
+
+      totalAmount += amount;
+    });
+
+    return {
+      totalExpanse: totalAmount.toFixed(2),
+    };
+  };
+
+  useEffect(() => {
+    fetchExpanseCatDropdown();
+    fetchCateWiseExpanses();
+    fetchExpanses();
+  }, [startDate, endDate, catValue]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -130,24 +179,19 @@ export default function ExpenseReport() {
           </View>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            marginLeft: 23,
-            gap: 33,
-            marginTop: 10,
-          }}>
-          {/* From Date */}
+        <View style={styles.dateContainer}>
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>From:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${startDate.toLocaleDateString()}`}
             </Text>
@@ -179,12 +223,14 @@ export default function ExpenseReport() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>To:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${endDate.toLocaleDateString()}`}
             </Text>
@@ -212,146 +258,276 @@ export default function ExpenseReport() {
           </View>
         </View>
 
-        <DropDownPicker
-          items={categoryItems}
-          open={category}
-          setOpen={setCategory}
-          value={currentCategory}
-          setValue={setCurrentCategory}
-          placeholder="Select Category"
-          disabled={selectionMode === 'allproducts'}
-          placeholderStyle={{color: 'white'}}
-          textStyle={{color: 'white'}}
-          arrowIconStyle={{tintColor: 'white'}}
-          style={[
-            styles.dropdown,
-            {borderColor: 'white', width: '88%', alignSelf: 'center'},
-          ]}
-          dropDownContainerStyle={{
-            backgroundColor: 'white',
-            borderColor: '#144272',
-            width: '88%',
-            marginLeft: 22,
-          }}
-          labelStyle={{color: 'white'}}
-          listItemLabelStyle={{color: '#144272'}}
-        />
-
-        <View style={[styles.row, {marginTop: -6, marginLeft: 20}]}>
-          <RadioButton
-            value="allproducts"
-            status={selectionMode === 'allproducts' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
-            onPress={() => {
-              setSelectionMode('allproducts');
-              setCurrentCategory('Select Category');
+        <View style={styles.dropDownContainer}>
+          <DropDownPicker
+            items={transformedCategory}
+            open={catOpen}
+            setOpen={setCatOpen}
+            value={catValue}
+            setValue={setCatValue}
+            placeholder="Select Category"
+            disabled={selectionMode === 'allExpenses'}
+            placeholderStyle={{color: 'white'}}
+            textStyle={{color: 'white'}}
+            ArrowUpIconComponent={() => (
+              <Text>
+                <Icon name="chevron-up" size={15} color="white" />
+              </Text>
+            )}
+            ArrowDownIconComponent={() => (
+              <Text>
+                <Icon name="chevron-down" size={15} color="white" />
+              </Text>
+            )}
+            style={[
+              styles.dropdown,
+              selectionMode === 'allExpenses' && {
+                backgroundColor: 'gray',
+              },
+            ]}
+            dropDownContainerStyle={{
+              backgroundColor: 'white',
+              borderColor: '#144272',
+              width: '100%',
+              marginTop: 8,
+              zIndex: 1000,
             }}
+            labelStyle={{color: 'white'}}
+            listItemLabelStyle={{color: '#144272'}}
           />
-          <Text style={{color: 'white', marginTop: 7, marginLeft: -5}}>
-            All Expenses
-          </Text>
-          <RadioButton
-            value="categorywiseproduct"
-            color="white"
-            uncheckedColor="white"
-            status={
-              selectionMode === 'categorywiseproduct' ? 'checked' : 'unchecked'
-            }
-            onPress={() => {
-              setSelectionMode('categorywiseproduct');
-              setCurrentCategory('');
-            }}
-          />
-          <Text style={{color: 'white', marginTop: 7, marginLeft: -5}}>
-            Category Wise Expense
-          </Text>
         </View>
 
-        <ScrollView>
-          {(selectionMode === 'allproducts' ||
-            (selectionMode === 'categorywiseproduct' && currentCategory)) && (
-            <FlatList
-              data={
-                selectionMode === 'allproducts'
-                  ? Info['Select Category']
-                  : Info[currentCategory] || []
+        <View style={[styles.row]}>
+          <TouchableOpacity
+            style={{flexDirection: 'row'}}
+            onPress={() => {
+              setSelectionMode('allExpenses');
+              setCategoryDropdown([]);
+            }}>
+            <RadioButton
+              value="allExpenses"
+              status={selectionMode === 'allExpenses' ? 'checked' : 'unchecked'}
+              color="white"
+              uncheckedColor="white"
+              onPress={() => {
+                setSelectionMode('allExpenses');
+                setCategoryDropdown([]);
+              }}
+            />
+            <Text style={{color: 'white', marginTop: 10}}>All Expenses</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{flexDirection: 'row'}}
+            onPress={() => {
+              setSelectionMode('categoryWiseExpenses');
+              setCategoryDropdown([]);
+            }}>
+            <RadioButton
+              value="categoryWiseExpenses"
+              color="white"
+              uncheckedColor="white"
+              status={
+                selectionMode === 'categoryWiseExpenses'
+                  ? 'checked'
+                  : 'unchecked'
               }
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.addedby}
+              onPress={() => {
+                setSelectionMode('categoryWiseExpenses');
+              }}
+            />
+            <Text style={{color: 'white', marginTop: 10}}>
+              Category Wise Expense
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {selectionMode === 'allExpenses' && (
+          <FlatList
+            data={expanseData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.exp_addedby}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Category:</Text>
+                      <Text style={styles.text}>{item.expc_name}</Text>
+                    </View>
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.exp_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
                       </Text>
                     </View>
 
-                    <View style={styles.infoRow}>
-
-                    {item.category && (
-                                              <View style={{
-                                                flexDirection: 'row',
-                                                justifyContent: 'space-between',
-                                              }}>
-                                                <Text style={styles.text}>Category:</Text>
-                                                <Text style={styles.text}>{item.category}</Text>
-                                              </View>
-                                            )}
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Date:</Text>
-                        <Text style={styles.text}>{item.date}</Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Amount:</Text>
-                        <Text style={styles.text}>{item.amount}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',marginBottom:5
-                        }}>
-                        <Text style={styles.text}>Note:</Text>
-                        <Text style={styles.text}>{item.note}</Text>
-                      </View>
-                    
-                  
-                    
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Amount:</Text>
+                      <Text style={styles.text}>{item.exp_amount}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5,
+                      }}>
+                      <Text style={styles.text}>Note:</Text>
+                      <Text style={styles.text}>{item.exp_desc}</Text>
                     </View>
                   </View>
                 </View>
-              )}
-            />
-          )}
+              </View>
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  height: 300,
+                  width: '100%',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No data found.
+                </Text>
+              </View>
+            }
+          />
+        )}
+        {selectionMode === 'categoryWiseExpenses' && (
+          <FlatList
+            data={cateWiseexpanseData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.exp_addedby}
+                    </Text>
+                  </View>
 
-          {selectionMode === 'categorywiseproduct' && !currentCategory && (
-            <Text style={{color: 'white', textAlign: 'center', marginTop: 10}}>
-              Please select a category to view items.
-            </Text>
-          )}
-        </ScrollView>
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.exp_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
+                      </Text>
+                    </View>
 
-        {selectionMode !== '' && (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Amount:</Text>
+                      <Text style={styles.text}>{item.exp_amount}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5,
+                      }}>
+                      <Text style={styles.text}>Note:</Text>
+                      <Text style={styles.text}>{item.exp_desc}</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  height: 300,
+                  width: '100%',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No data found.
+                </Text>
+              </View>
+            }
+          />
+        )}
+
+        {selectionMode === 'allExpenses' && (
           <View style={styles.totalContainer}>
-            <Text style={styles.totalText}>Total Records: {totalProducts}</Text>
             <Text style={styles.totalText}>
-              Total Expense Amount: {totalProducts}
+              Total Records: {expanseData.length}
             </Text>
+
+            {(() => {
+              const {totalExpanse} = calculateAllExpanseTotal();
+              return (
+                <Text style={styles.totalText}>
+                  Total Expense Amount: {totalExpanse}
+                </Text>
+              );
+            })()}
+          </View>
+        )}
+        {selectionMode === 'categoryWiseExpenses' && (
+          <View style={styles.totalContainer}>
+            <Text style={styles.totalText}>
+              Total Records: {cateWiseexpanseData.length}
+            </Text>
+
+            {(() => {
+              const {totalExpanse} = calculateCategoryExpanseTotal();
+              return (
+                <Text style={styles.totalText}>
+                  Total Expense Amount: {totalExpanse}
+                </Text>
+              );
+            })()}
           </View>
         )}
       </ImageBackground>
@@ -415,15 +591,16 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
+    width: '100%',
   },
   totalContainer: {
-    padding: 7,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,
@@ -433,11 +610,27 @@ const styles = StyleSheet.create({
   totalText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    marginTop: 6,
+    width: '90%',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    alignSelf: 'center',
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
+    marginTop: 10,
+  },
+  dropDownContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
   },
 });

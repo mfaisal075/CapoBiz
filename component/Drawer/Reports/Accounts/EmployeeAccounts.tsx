@@ -9,185 +9,65 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React, { useState } from 'react';
-import { useDrawer } from '../../../DrawerContext';
+import React, {useEffect, useState} from 'react';
+import {useDrawer} from '../../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
-import { RadioButton } from 'react-native-paper';
+import {RadioButton} from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import { DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
 
-
-interface EmployeeInfo {
-  sr: number;
-  Employee: string;
-  Invoice?: number;
-  TotalEarning: number;
-  TotalWithdraw: number;
-  Total?: number;
-  ProcessedBy?: string;
-  Date?: string;
-  PreBalance?: number;
-  Balance: number;
+interface Employee {
+  id: number;
+  emp_name: string;
 }
 
-interface InfoObject {
-  [key: string]: EmployeeInfo[]; 
-  'Select Employee': EmployeeInfo[];
-  Ali: EmployeeInfo[];
-  Ahmad: EmployeeInfo[];
-  Ayan: EmployeeInfo[];
-  Asim: EmployeeInfo[];
-  Aryan: EmployeeInfo[];
+interface AllEmployeeList {
+  emp_name: string;
+  empac_earning: string;
+  empac_withdraw_amount: string;
+  empac_balance: string;
+}
+
+interface SingleEmployeeList {
+  id: number;
+  empac_invoice_no: string;
+  empac_date: string;
+  empac_earning: string;
+  empac_withdraw_amount: string;
+  empac_balance: string;
+  empac_processed_by: string;
 }
 
 export default function EmployeeAccounts() {
+  const {openDrawer} = useDrawer();
+  const [open, setOpen] = useState(false);
+  const [empValue, setEmpValue] = useState('');
+  const [employeeDropdown, setEmployeeDropdown] = useState<Employee[]>([]);
+  const transformedEmp = employeeDropdown.map(emp => ({
+    label: emp.emp_name,
+    value: emp.id.toString(),
+  }));
+  const [allEmployeeList, setAllEmployeeList] = useState<AllEmployeeList[]>([]);
+  const [singleEmployeeList, setSingleEmployeeList] = useState<
+    SingleEmployeeList[]
+  >([]);
 
-  const { openDrawer } = useDrawer();
-
-
-  const Info: InfoObject = {
-    'Select Employee': [
-      {
-        sr: 1,
-        Employee: 'name',
-        TotalEarning: 0,
-        TotalWithdraw: 7,
-        Balance: 99,
-      },
-    ],
-    Ali: [
-      {
-        sr: 1,
-        Employee: 'Ali',
-        Invoice: 66,
-        TotalEarning: 0,
-        TotalWithdraw: 7,
-        Total: 9,
-        ProcessedBy: 'name',
-        Date: '18-09-23',
-        PreBalance: 99,
-        Balance: 99,
-      },
-      {
-        sr: 2,
-        Employee: 'Ali',
-        Invoice: 66,
-        TotalEarning: 0,
-        TotalWithdraw: 7,
-        Total: 9,
-        ProcessedBy: 'name',
-        Date: '18-09-23',
-        PreBalance: 99,
-        Balance: 99,
-      },
-    ],
-    Ahmad: [
-      {
-        sr: 1,
-        Employee: 'Ahmad',
-        Invoice: 66,
-        TotalEarning: 0,
-        TotalWithdraw: 7,
-        Total: 9,
-        ProcessedBy: 'name',
-        Date: '18-09-23',
-        PreBalance: 99,
-        Balance: 99,
-      },
-    ],
-    Ayan: [
-      {
-        sr: 1,
-        Employee: 'Ayan',
-        Invoice: 66,
-        TotalEarning: 0,
-        TotalWithdraw: 7,
-        Total: 9,
-        ProcessedBy: 'name',
-        Date: '18-09-23',
-        PreBalance: 99,
-        Balance: 99,
-      },
-    ],
-    Asim: [
-      {
-        sr: 1,
-        Employee: 'Asim',
-        Invoice: 66,
-        TotalEarning: 0,
-        TotalWithdraw: 7,
-        Total: 9,
-        ProcessedBy: 'name',
-        Date: '18-09-23',
-        PreBalance: 99,
-        Balance: 99,
-      },
-    ],
-    Aryan: [
-      {
-        sr: 1,
-        Employee: 'Aryan',
-        Invoice: 66,
-        TotalEarning: 0,
-        TotalWithdraw: 7,
-        Total: 9,
-        ProcessedBy: 'name',
-        Date: '18-09-23',
-        PreBalance: 99,
-        Balance: 99,
-      },
-      {
-        sr: 2,
-        Employee: 'Aryan',
-        Invoice: 66,
-        TotalEarning: 0,
-        TotalWithdraw: 7,
-        Total: 9,
-        ProcessedBy: 'name',
-        Date: '18-09-23',
-        PreBalance: 99,
-        Balance: 99,
-      },
-      {
-        sr: 3,
-        Employee: 'Aryan',
-        Invoice: 66,
-        TotalEarning: 0,
-        TotalWithdraw: 7,
-        Total: 9,
-        ProcessedBy: 'name',
-        Date: '18-09-23',
-        PreBalance: 99,
-        Balance: 99,
-      },
-    ],
-  };
-
-  const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState<string>('Select Employee');
-
-  const categoryItems = [
-    { label: 'Select Employee', value: 'Select Employee' },
-    { label: 'Ali', value: 'Ali' },
-    { label: 'Ahmad', value: 'Ahmad' },
-    { label: 'Ayan', value: 'Ayan' },
-    { label: 'Asim', value: 'Asim' },
-    { label: 'Aryan', value: 'Aryan' },
-  ];
-
-  const [selectionMode, setSelectionMode] = useState<'allemployees' | 'singleemployee' | ''>('');
-
-  const totalProducts =
-    selectionMode === 'allemployees'
-      ? Object.values(Info).reduce((acc, list) => acc + list.length, 0)
-      : Info[currentCategory]?.length || 0;
+  const [selectionMode, setSelectionMode] = useState<
+    'allemployees' | 'singleemployee' | ''
+  >('allemployees');
 
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
-  const onStartDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+  const onStartDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
     const currentDate = selectedDate || startDate;
     setShowStartDatePicker(false);
     setStartDate(currentDate);
@@ -198,6 +78,75 @@ export default function EmployeeAccounts() {
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
+
+  // Fetch Employee dropdown
+  const fetchEmployeeDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchemployeedropdown`);
+      setEmployeeDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch All Employee List
+  const fetchAllEmployeeList = async () => {
+    try {
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+      const res = await axios.post(`${BASE_URL}/fetchempaccount`, {
+        from,
+        to,
+      });
+      setAllEmployeeList(res.data.account);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate All Employee Totals
+  const calculateAllEmployeeTotal = () => {
+    let totalEarnings = 0;
+    let totalWithdraw = 0;
+
+    allEmployeeList.forEach(emp => {
+      const earning = parseFloat(emp.empac_earning) || 0;
+      const withdraw = parseFloat(emp.empac_withdraw_amount) || 0;
+
+      totalEarnings += earning;
+      totalWithdraw += withdraw;
+    });
+
+    return {
+      totalEarnings: totalEarnings.toFixed(2),
+      totalWithdraw: totalWithdraw.toFixed(2),
+      netBalance: (totalEarnings - totalWithdraw).toFixed(2),
+    };
+  };
+
+  // Fetch Single Employee List
+  const fetchSingleEmployeeList = async () => {
+    if (empValue) {
+      try {
+        const from = startDate.toISOString().split('T')[0];
+        const to = endDate.toISOString().split('T')[0];
+        const res = await axios.post(`${BASE_URL}/fetchsingleempaccount`, {
+          emp_id: empValue,
+          from,
+          to,
+        });
+        setSingleEmployeeList(res.data.account);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchAllEmployeeList();
+    fetchEmployeeDropdown();
+    fetchSingleEmployeeList();
+  }, [startDate, endDate, empValue]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -221,18 +170,12 @@ export default function EmployeeAccounts() {
 
           <View style={styles.headerTextContainer}>
             <Text style={{color: 'white', fontSize: 22, fontWeight: 'bold'}}>
-            Employee Accounts
+              Employee Accounts
             </Text>
           </View>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            marginLeft: 23,
-            gap: 33,
-            marginTop: 10,
-          }}>
+        <View style={styles.dateContainer}>
           <View
             style={{
               flexDirection: 'row',
@@ -306,175 +249,260 @@ export default function EmployeeAccounts() {
             )}
           </View>
         </View>
+
         <DropDownPicker
-          items={categoryItems}
-          open={category}
-          setOpen={setCategory}
-          value={currentCategory}
-          setValue={setCurrentCategory}
+          items={transformedEmp}
+          open={open}
+          setOpen={setOpen}
+          value={empValue}
+          setValue={setEmpValue}
           placeholder="Select Employees"
           disabled={selectionMode === 'allemployees'}
           placeholderStyle={{color: 'white'}}
           textStyle={{color: 'white'}}
-          arrowIconStyle={{tintColor: 'white'}}
+          ArrowUpIconComponent={() => (
+            <Text>
+              <Icon name="chevron-up" size={15} color="white" />
+            </Text>
+          )}
+          ArrowDownIconComponent={() => (
+            <Text>
+              <Icon name="chevron-down" size={15} color="white" />
+            </Text>
+          )}
           style={[
             styles.dropdown,
-            {borderColor: 'white', width: '88%', alignSelf: 'center'},
+            selectionMode === 'allemployees' && {backgroundColor: 'gray'},
           ]}
           dropDownContainerStyle={{
             backgroundColor: 'white',
             borderColor: '#144272',
-            width: '88%',
-            marginLeft: 22,
+            width: '90%',
+            marginTop: 8,
+            alignSelf: 'center',
           }}
           labelStyle={{color: 'white'}}
           listItemLabelStyle={{color: '#144272'}}
         />
 
-        <View style={[styles.row, {marginTop: -6, marginLeft: 20}]}>
-          <RadioButton
-            value="allemployees"
-            status={selectionMode === 'allemployees' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
+        <View style={[styles.row]}>
+          <TouchableOpacity
+            style={styles.radioBtnContainer}
             onPress={() => {
               setSelectionMode('allemployees');
-              setCurrentCategory('Select Employee');
-            }}
-          />
-          <Text style={{color: 'white', marginTop: 7, marginLeft: -5}}>
-            All Employees
-          </Text>
-          <RadioButton
-            value="singleemployee"
-            color="white"
-            uncheckedColor="white"
-            status={
-              selectionMode === 'singleemployee' ? 'checked' : 'unchecked'
-            }
+              setEmpValue('');
+            }}>
+            <RadioButton
+              value="allemployees"
+              status={
+                selectionMode === 'allemployees' ? 'checked' : 'unchecked'
+              }
+              color="white"
+              uncheckedColor="white"
+              onPress={() => {
+                setSelectionMode('allemployees');
+                setEmpValue('');
+              }}
+            />
+            <Text style={{color: 'white'}}>All Employees</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.radioBtnContainer}
             onPress={() => {
               setSelectionMode('singleemployee');
-              setCurrentCategory('');
-            }}
-          />
-          <Text style={{color: 'white', marginTop: 7, marginLeft: -5}}>
-            Single Employee
-          </Text>
+              setEmpValue('');
+            }}>
+            <RadioButton
+              value="singleemployee"
+              color="white"
+              uncheckedColor="white"
+              status={
+                selectionMode === 'singleemployee' ? 'checked' : 'unchecked'
+              }
+              onPress={() => {
+                setSelectionMode('singleemployee');
+                setEmpValue('');
+              }}
+            />
+            <Text style={{color: 'white'}}>Single Employee</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          {(selectionMode === 'allemployees' ||
-            (selectionMode === 'singleemployee' && currentCategory)) && (
-              <FlatList
-              data={
-                selectionMode === 'allemployees'
-                  ? Object.values(Info).flat()  
-                  : Info[currentCategory] || []  
-                }
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text style={{color: '#144272', fontWeight: 'bold', marginLeft: 5, marginTop: 5}}>
-                        {item.Employee}
+        {selectionMode === 'allemployees' && (
+          <FlatList
+            data={allEmployeeList}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.emp_name}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Total Earnings:</Text>
+                      <Text style={styles.text}>{item.empac_earning}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Total Withdraw:</Text>
+                      <Text style={styles.text}>
+                        {item.empac_withdraw_amount}
                       </Text>
                     </View>
-            
-                    <View style={styles.infoRow}>
-                  
-                      {selectionMode === 'singleemployee' ? (
-                        <>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Invoice:</Text>
-                            <Text style={styles.text}>{item.Invoice}</Text>
-                          </View>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Total Earning:</Text>
-                            <Text style={styles.text}>{item.TotalEarning}</Text>
-                          </View>
-            
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Total Withdraw:</Text>
-                            <Text style={styles.text}>{item.TotalWithdraw}</Text>
-                          </View>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Total:</Text>
-                            <Text style={styles.text}>{item.Total}</Text>
-                          </View>
-            
-                         
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Processed By:</Text>
-                            <Text style={styles.text}>{item.ProcessedBy}</Text>
-                          </View>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Date:</Text>
-                            <Text style={styles.text}>{item.Date}</Text>
-                          </View>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Pre Balance:</Text>
-                            <Text style={styles.text}>{item.PreBalance}</Text>
-                          </View>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Balance:</Text>
-                            <Text style={styles.text}>{item.Balance}</Text>
-                          </View>
-                        </>
-                      ) : (
-                        
-                        <>
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Total Earning:</Text>
-                            <Text style={styles.text}>{item.TotalEarning}</Text>
-                          </View>
-            
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between'}}>
-                            <Text style={styles.text}>Total Withdraw:</Text>
-                            <Text style={styles.text}>{item.TotalWithdraw}</Text>
-                          </View>
-            
-                          <View style={{flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5}}>
-                            <Text style={styles.text}>Balance:</Text>
-                            <Text style={styles.text}>{item.Balance}</Text>
-                          </View>
-                        </>
-                      )}
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Balance:</Text>
+                      <Text style={styles.text}>{item.empac_balance}</Text>
                     </View>
                   </View>
                 </View>
-              )}
-            />
-            
-            
-          )}
-
-          {selectionMode === 'singleemployee' && !currentCategory && (
-            <Text style={{color: 'white', textAlign: 'center', marginTop: 10}}>
-              Please select a category to view items.
-            </Text>
-          )}
-        </ScrollView>
-
-        
-        {selectionMode !== '' && totalProducts > 0 && (
-          <View
-            style={styles.totalContainer}>
-                <Text style={styles.totalText}>Total Records:{totalProducts}</Text>
-
-           
-            <Text style={styles.totalText}>Total Withdraw: 8</Text>
-          </View>
+              </View>
+            )}
+          />
         )}
-       {selectionMode !== '' && totalProducts > 0 && (
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              padding: 3,
-            }}>
-           <Text style={styles.totalText}>Total Earnings:{totalProducts}</Text>
-            <Text style={styles.totalText}>Net Balance:{totalProducts}</Text>
+        {selectionMode === 'singleemployee' && (
+          <FlatList
+            data={singleEmployeeList}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.empac_invoice_no}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Total Earnings:</Text>
+                      <Text style={styles.text}>{item.empac_earning}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Total Withdraw:</Text>
+                      <Text style={styles.text}>
+                        {item.empac_withdraw_amount}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Processed By:</Text>
+                      <Text style={styles.text}>{item.empac_processed_by}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.empac_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Balance:</Text>
+                      <Text style={styles.text}>{item.empac_balance}</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
+          />
+        )}
+
+        {selectionMode === 'allemployees' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{allEmployeeList.length}</Text>
+            </View>
+            {(() => {
+              const {netBalance, totalEarnings, totalWithdraw} =
+                calculateAllEmployeeTotal();
+
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Earnings :</Text>
+                    <Text style={styles.totalText}>{totalEarnings}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Withdraw:</Text>
+                    <Text style={styles.totalText}>{totalWithdraw}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Net Balance:</Text>
+                    <Text style={styles.totalText}>{netBalance}</Text>
+                  </View>
+                </View>
+              );
+            })()}
           </View>
         )}
       </ImageBackground>
@@ -538,15 +566,18 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
+    alignSelf: 'center',
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
+    width: '90%',
+    marginTop: 10,
   },
   totalContainer: {
-    padding: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 15,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,
@@ -556,11 +587,26 @@ const styles = StyleSheet.create({
   totalText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
+    marginLeft: 8,
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    marginTop: 10,
+    width: '90%',
+    alignSelf: 'center',
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    width: '90%',
+    height: 38,
+    alignSelf: 'center',
+    gap: 33,
+    marginTop: 10,
+  },
+  radioBtnContainer: {
+    flexDirection: 'row',
+    width: '46%',
+    alignItems: 'center',
   },
 });

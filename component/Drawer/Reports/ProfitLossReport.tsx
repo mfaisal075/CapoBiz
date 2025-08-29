@@ -6,21 +6,27 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+
+interface ProfitLoss {
+  expences: string;
+  profit: string;
+  salereturnprofit: string;
+}
 
 export default function ProfitLossReport() {
   const {openDrawer} = useDrawer();
-
+  const [profitLossData, setProfitLossData] = useState<ProfitLoss | null>(null);
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
 
   const onStartDateChange = (
     event: DateTimePickerEvent,
@@ -36,6 +42,23 @@ export default function ProfitLossReport() {
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
+
+  const fetchProfitLossData = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/fetchprofitloss`, {
+        from: startDate.toISOString().split('T')[0],
+        to: endDate.toISOString().split('T')[0],
+      });
+      setProfitLossData(res.data);
+      console.log(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchProfitLossData();
+  }, [startDate, endDate]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -64,24 +87,19 @@ export default function ProfitLossReport() {
           </View>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            marginLeft: 23,
-            gap: 33,
-            marginTop: 10,
-          }}>
-          {/* From Date */}
+        <View style={styles.dateContainer}>
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>From:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${startDate.toLocaleDateString()}`}
             </Text>
@@ -113,12 +131,14 @@ export default function ProfitLossReport() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>To:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${endDate.toLocaleDateString()}`}
             </Text>
@@ -146,65 +166,67 @@ export default function ProfitLossReport() {
           </View>
         </View>
 
-        <TouchableOpacity onPress={() => setDataLoaded(true)}>
+        <View style={styles.table}>
           <View
             style={{
-              height: 30,
-              width: 300,
-              backgroundColor: 'white',
-              borderRadius: 12,
-              margin: 10,
-              alignSelf: 'center',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginHorizontal: 5,
             }}>
-            <Text
-              style={{
-                textAlign: 'center',
-                color: '#144272',
-                marginTop: 5,
-              }}>
-              Load Data
+            <Text style={styles.sectionHeader}>Sale Profit:</Text>
+            <Text style={styles.section}>
+              {profitLossData
+                ? parseFloat(profitLossData.profit).toFixed(2)
+                : '0.00'}
             </Text>
           </View>
-        </TouchableOpacity>
 
-        {dataLoaded && (
-          <>
-            <View>
-              <View style={styles.table}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginHorizontal: 5,
-                  }}>
-                  <Text style={styles.sectionHeader}>Sale Profit:</Text>
-                  <Text style={styles.section}>00</Text>
-                </View>
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginHorizontal: 5,
+            }}>
+            <Text style={styles.sectionHeader}>Sale Return Profit:</Text>
+            <Text style={styles.section}>
+              {profitLossData
+                ? parseFloat(profitLossData.salereturnprofit).toFixed(2)
+                : '0.00'}
+            </Text>
+          </View>
 
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginTop: -20,
-                    marginHorizontal: 5,
-                  }}>
-                  <Text style={styles.sectionHeader}>Total Expenses:</Text>
-                  <Text style={styles.section}>00</Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginTop: -20,
-                    marginHorizontal: 5,
-                  }}>
-                  <Text style={styles.sectionHeader}>Net Profit:</Text>
-                  <Text style={styles.section}>00</Text>
-                </View>
-              </View>
-            </View>
-          </>
-        )}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginHorizontal: 5,
+            }}>
+            <Text style={styles.sectionHeader}>Sale Return Profit:</Text>
+            <Text style={styles.section}>
+              {profitLossData
+                ? parseFloat(profitLossData.expences).toFixed(2)
+                : '0.00'}
+            </Text>
+          </View>
+
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              marginHorizontal: 5,
+            }}>
+            <Text style={styles.sectionHeader}>Net Profit:</Text>
+            <Text style={styles.section}>
+              {profitLossData
+                ? (
+                    parseFloat(profitLossData.profit) -
+                    parseFloat(profitLossData.expences) -
+                    parseFloat(profitLossData.salereturnprofit)
+                  ).toFixed(2)
+                : '0.00'}
+            </Text>
+          </View>
+        </View>
       </ImageBackground>
     </SafeAreaView>
   );
@@ -229,6 +251,7 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     height: 'auto',
     width: 314,
+    marginTop: 20,
     borderRadius: 5,
   },
   tablehead: {
@@ -310,5 +333,12 @@ const styles = StyleSheet.create({
 
     textAlign: 'center',
     marginVertical: 10,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
+    marginTop: 10,
   },
 });

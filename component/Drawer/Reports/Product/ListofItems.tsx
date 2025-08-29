@@ -9,176 +9,90 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {RadioButton} from 'react-native-paper';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-type Product = {
-  sr: number;
-  Product: string;
-  Barcode: number;
-  Category: string;
-  UOM: string;
-  SubUom: string;
-  Quantity: number;
-  ReorderedQTY: number;
-  CostPrice: number;
-  SalePrice: number;
-};
 
-type InfoType = {
-  [key: string]: Product[];
-};
+interface AllProductList {
+  id: number;
+  prod_name: string;
+  prod_UPC_EAN: string;
+  prod_costprice: string;
+  prod_retailprice: string;
+  prod_qty: string;
+  prod_reorder_qty: string;
+  pcat_name: string;
+  ums_name: string;
+  prod_sub_uom: string;
+}
+
+interface Category {
+  id: number;
+  pcat_name: string;
+}
 
 export default function ListofItems() {
   const {openDrawer} = useDrawer();
+  const [allProductsList, setAllProductsList] = useState<AllProductList[]>([]);
+  const [categoryWiseList, setCategoryWiseList] = useState<AllProductList[]>(
+    [],
+  );
+  const [categoryDropdown, setCategoryDropdown] = useState<Category[]>([]);
+  const transformedCategory = categoryDropdown.map(cat => ({
+    label: cat.pcat_name,
+    value: cat.id.toString(),
+  }));
+  const [catOpen, setCatOpen] = useState(false);
+  const [catValue, setCatValue] = useState('');
 
-  const Info: InfoType = {
-    'Select Category': [
-      {
-        sr: 1,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99,
-      },
-    ],
-    Chocolate: [
-      {
-        sr: 1,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 9,
-      },
-      {
-        sr: 2,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 9,
-      },
-    ],
-    Jelly: [
-      {
-        sr: 1,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99,
-      },
-    ],
-    Oil: [
-      {
-        sr: 1,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99.0,
-      },
-    ],
-    Flour: [
-      {
-        sr: 1,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99,
-      },
-    ],
-    'Murree Brwerry': [
-      {
-        sr: 1,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99,
-      },
-      {
-        sr: 2,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99,
-      },
-      {
-        sr: 3,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99,
-      },
-    ],
-  };
-
-  const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] =
-    useState<string>('Select Category');
-
-  const categoryItems = [
-    {label: 'Select Category', value: 'Select Category'},
-    {label: 'Chocolate', value: 'Chocolate'},
-    {label: 'Jelly', value: 'Jelly'},
-    {label: 'Oil', value: 'Oil'},
-    {label: 'Flour', value: 'Flour'},
-    {label: 'Murree Brwerry', value: 'Murree Brwerry'},
-  ];
-
- 
   const [selectionMode, setSelectionMode] = useState<
     'allproducts' | 'categorywiseproduct' | ''
-  >('');
+  >('allproducts');
 
-  const totalProducts =
-    selectionMode === 'allproducts'
-      ? Object.values(Info).reduce((acc, list) => acc + list.length, 0)
-      : Info[currentCategory]?.length || 0;
+  // Fetch All Product List
+  const fetchAllProdList = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/fetchproducts`);
+      setAllProductsList(res.data.products);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Category Dropdown
+  const fetchCatDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcategories`);
+      setCategoryDropdown(res.data.cat);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Category Wise Product List
+  const fetchCatWiseList = async () => {
+    if (catValue) {
+      try {
+        const res = await axios.post(`${BASE_URL}/fetchproducts`, {
+          category: catValue,
+        });
+        setCategoryWiseList(res.data.products);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchAllProdList();
+    fetchCatDropdown();
+    fetchCatWiseList();
+  }, [catValue]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -205,176 +119,217 @@ export default function ListofItems() {
               List of Items
             </Text>
           </View>
+
+          <TouchableOpacity>
+            <Icon name="printer" size={30} color={'#fff'} />
+          </TouchableOpacity>
         </View>
 
         <DropDownPicker
-          items={categoryItems}
-          open={category}
-          setOpen={setCategory}
-          value={currentCategory}
-          setValue={setCurrentCategory}
+          items={transformedCategory}
+          open={catOpen}
+          setOpen={setCatOpen}
+          value={catValue}
+          setValue={setCatValue}
           placeholder="Select Category"
-          disabled={selectionMode === 'allproducts'} // Disable dropdown
+          disabled={selectionMode === 'allproducts'}
           placeholderStyle={{color: 'white'}}
           textStyle={{color: 'white'}}
-          arrowIconStyle={{tintColor: 'white'}}
+          ArrowUpIconComponent={() => (
+            <Text>
+              <Icon name="chevron-up" size={15} color="white" />
+            </Text>
+          )}
+          ArrowDownIconComponent={() => (
+            <Text>
+              <Icon name="chevron-down" size={15} color="white" />
+            </Text>
+          )}
           style={[
             styles.dropdown,
-            {borderColor: 'white', width: '88%', alignSelf: 'center'},
+            selectionMode === 'allproducts' && {backgroundColor: 'gray'},
           ]}
           dropDownContainerStyle={{
             backgroundColor: 'white',
             borderColor: '#144272',
-            width: '88%',
-            marginLeft: 22,
+            width: '90%',
+            alignSelf: 'center',
+            marginTop: 8,
           }}
-          labelStyle={{color: 'white'}}
+          labelStyle={{color: 'white', fontWeight: 'bold'}}
           listItemLabelStyle={{color: '#144272'}}
+          listMode="SCROLLVIEW"
         />
 
         <View style={[styles.row, {marginTop: -6, marginLeft: 20}]}>
-          <RadioButton
-            value="allproducts"
-            status={selectionMode === 'allproducts' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
+          <TouchableOpacity
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginRight: 20,
+            }}
             onPress={() => {
               setSelectionMode('allproducts');
-              setCurrentCategory('Select Category');
-            }}
-          />
-          <Text style={{color: 'white', marginTop: 7, marginLeft: -5}}>
-            All Products
-          </Text>
-          <RadioButton
-            value="categorywiseproduct"
-            color="white"
-            uncheckedColor="white"
-            status={
-              selectionMode === 'categorywiseproduct' ? 'checked' : 'unchecked'
-            }
+              setCatValue('');
+            }}>
+            <RadioButton
+              value="allproducts"
+              status={selectionMode === 'allproducts' ? 'checked' : 'unchecked'}
+              color="white"
+              uncheckedColor="white"
+              onPress={() => {
+                setSelectionMode('allproducts');
+                setCatValue('');
+              }}
+            />
+            <Text style={{color: 'white', marginLeft: -5}}>All Products</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={{flexDirection: 'row', alignItems: 'center'}}
             onPress={() => {
               setSelectionMode('categorywiseproduct');
-              setCurrentCategory('');
-            }}
-          />
-          <Text style={{color: 'white', marginTop: 7, marginLeft: -5}}>
-            Category Wise Products
-          </Text>
+              setCatValue('');
+            }}>
+            <RadioButton
+              value="categorywiseproduct"
+              status={
+                selectionMode === 'categorywiseproduct'
+                  ? 'checked'
+                  : 'unchecked'
+              }
+              color="white"
+              uncheckedColor="white"
+              onPress={() => {
+                setSelectionMode('categorywiseproduct');
+                setCatValue('');
+              }}
+            />
+            <Text style={{color: 'white', marginLeft: -5}}>
+              Category Wise Products
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <ScrollView>
-          {(selectionMode === 'allproducts' ||
-            (selectionMode === 'categorywiseproduct' && currentCategory)) && (
-            <FlatList
-              data={
-                selectionMode === 'allproducts'
-                  ? Info['Select Category']
-                  : Info[currentCategory] || []
-              }
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.Product}
-                      </Text>
+          <FlatList
+            data={
+              selectionMode === 'allproducts'
+                ? allProductsList
+                : categoryWiseList
+            }
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.prod_name}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>BarCode:</Text>
+                      <Text style={styles.text}>{item.prod_UPC_EAN}</Text>
                     </View>
 
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>BarCode:</Text>
-                        <Text style={styles.text}>{item.Barcode}</Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Category:</Text>
-                        <Text style={styles.text}>{item.Category}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>UOM:</Text>
-                        <Text style={styles.text}>{item.UOM}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>SubUOM:</Text>
-                        <Text style={styles.text}>{item.SubUom}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Quantity:</Text>
-                        <Text style={styles.text}>{item.Quantity}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Reordered Quantity:</Text>
-                        <Text style={styles.text}>{item.ReorderedQTY}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Cost Price:</Text>
-                        <Text style={styles.text}>{item.CostPrice}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginBottom: 5,
-                        }}>
-                        <Text style={styles.text}>Sale Price:</Text>
-                        <Text style={styles.text}>{item.SalePrice}</Text>
-                      </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Category:</Text>
+                      <Text style={styles.text}>{item.pcat_name}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>UOM:</Text>
+                      <Text style={styles.text}>{item.ums_name}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>SubUOM:</Text>
+                      <Text style={styles.text}>{item.prod_sub_uom}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Quantity:</Text>
+                      <Text style={styles.text}>{item.prod_qty}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Reordered Quantity:</Text>
+                      <Text style={styles.text}>
+                        {item.prod_reorder_qty ?? 'NILL'}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Cost Price:</Text>
+                      <Text style={styles.text}>{item.prod_costprice}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5,
+                      }}>
+                      <Text style={styles.text}>Sale Price:</Text>
+                      <Text style={styles.text}>{item.prod_retailprice}</Text>
                     </View>
                   </View>
                 </View>
-              )}
-            />
-          )}
-
-          {selectionMode === 'categorywiseproduct' && !currentCategory && (
-            <Text style={{color: 'white', textAlign: 'center', marginTop: 10}}>
-              Please select a category to view items.
-            </Text>
-          )}
+              </View>
+            )}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text
+                  style={{
+                    color: 'white',
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                  }}>
+                  No record found.
+                </Text>
+              </View>
+            }
+            scrollEnabled={false}
+          />
         </ScrollView>
 
-        {selectionMode !== '' && (
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalText}>Total Products:</Text>
-            <Text style={styles.totalText}>{totalProducts}</Text>
-          </View>
-        )}
+        <View style={styles.totalContainer}>
+          <Text style={styles.totalText}>Total Products:</Text>
+          <Text style={styles.totalText}>
+            {selectionMode === 'allproducts' && allProductsList.length}
+            {selectionMode === 'categorywiseproduct' && categoryWiseList.length}
+          </Text>
+        </View>
       </ImageBackground>
     </SafeAreaView>
   );
@@ -436,18 +391,19 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
+    width: '90%',
+    alignSelf: 'center',
   },
   totalContainer: {
-    padding: 7,
+    paddingHorizontal: 15,
+    paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: 'white',
-    marginTop: 5,
     flexDirection: 'row',
     justifyContent: 'space-between',
   },

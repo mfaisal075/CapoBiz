@@ -9,9 +9,13 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useUser} from '../../../CTX/UserContext';
 
 type Product = {
   CustomerName: string;
@@ -26,59 +30,61 @@ type InfoType = {
   [key: string]: Product[];
 };
 
-export default function TypeWiseCustomer() {
-  const {openDrawer} = useDrawer();
-  const [editType, seteditType] = useState(false);
-  const [currentedit, setCurrentedit] = useState<string>('Select Category');
-  const editItem = [
-    {label: 'Select Category', value: 'Select Category'},
-    {label: 'New', value: 'New'},
-    {label: 'Blue', value: 'Blue'},
-    {label: 'Standard', value: 'Standard'},
-  ];
-  const Info: InfoType = {
-    'Select Category': [
-      {
-        CustomerName: 'string',
-        CNIC: 'string',
-        Contact: 123,
-        Email: '@g',
-        Type: 'kkk',
-        Balance: 1223,
-      },
-    ],
+interface TypeDropDown {
+  id: number;
+  custtyp_name: string;
+}
 
-    New: [
-      {
-        CustomerName: 'gujranwala',
-        CNIC: 'string',
-        Contact: 123,
-        Email: '@g',
-        Type: 'kkk',
-        Balance: 1223,
-      },
-    ],
-    Blue: [
-      {
-        CustomerName: 'lahore',
-        CNIC: 'string',
-        Contact: 123,
-        Email: '@g',
-        Type: 'kkk',
-        Balance: 1223,
-      },
-    ],
-    Standard: [
-      {
-        CustomerName: 'standard',
-        CNIC: 'string',
-        Contact: 123,
-        Email: '@g',
-        Type: 'kkk',
-        Balance: 1223,
-      },
-    ],
+interface TypeWiseList {
+  id: string;
+  cust_name: string;
+  cust_contact: string;
+  cust_cnic: string;
+  cust_email: string;
+  custtyp_name: string;
+}
+
+export default function TypeWiseCustomer() {
+  const {token} = useUser();
+  const {openDrawer} = useDrawer();
+  const [currentedit, setCurrentedit] = useState<string>('Select Category');
+  const [typeDropdown, setTypeDropdown] = useState<TypeDropDown[]>([]);
+  const transformedType = typeDropdown.map(type => ({
+    label: type.custtyp_name,
+    value: type.id.toString(),
+  }));
+  const [typeOpen, setTypeOpen] = useState(false);
+  const [typeValue, setTypeValue] = useState('');
+  const [typeList, setTypeList] = useState<TypeWiseList[]>([]);
+
+  // Fetch Type dropdown
+  const fetchTypeDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchtypedata`);
+      setTypeDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  // Fetch Type Wise List
+  const fetchAreaList = async () => {
+    if (typeValue) {
+      try {
+        const res = await axios.get(
+          `${BASE_URL}/fetchcusttypereport?type=${typeValue}&_token=${token}`,
+        );
+        setTypeList(res.data.type);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchTypeDropdown();
+    fetchAreaList();
+  }, [typeValue]);
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -113,40 +119,49 @@ export default function TypeWiseCustomer() {
               Type Wise Customer
             </Text>
           </View>
+
+          <TouchableOpacity>
+            <Icon name="printer" size={30} color={'#fff'} />
+          </TouchableOpacity>
         </View>
 
         <DropDownPicker
-          items={editItem}
-          open={editType}
-          setOpen={seteditType}
-          value={currentedit}
-          setValue={setCurrentedit}
+          items={transformedType}
+          open={typeOpen}
+          setOpen={setTypeOpen}
+          value={typeValue}
+          setValue={setTypeValue}
           placeholder="Select Customer Type"
           placeholderStyle={{color: 'white'}}
           textStyle={{color: 'white'}}
-          arrowIconStyle={{tintColor: 'white'}}
-          style={[
-            styles.dropdown,
-            {
-              borderColor: 'white',
-              width: 330,
-              alignSelf: 'center',
-            },
-          ]}
+          ArrowUpIconComponent={() => (
+            <Text>
+              <Icon name="chevron-up" size={15} color="white" />
+            </Text>
+          )}
+          ArrowDownIconComponent={() => (
+            <Text>
+              <Icon name="chevron-down" size={15} color="white" />
+            </Text>
+          )}
+          style={[styles.dropdown]}
           dropDownContainerStyle={{
             backgroundColor: 'white',
             borderColor: '#144272',
-            width: 330,
+            width: '90%',
+            marginTop: 8,
             alignSelf: 'center',
           }}
           labelStyle={{color: 'white'}}
           listItemLabelStyle={{color: '#144272'}}
+          listMode="SCROLLVIEW"
         />
 
         <ScrollView>
           <FlatList
-            data={Info[currentedit] || []}
+            data={typeList}
             keyExtractor={(item, index) => index.toString()}
+            scrollEnabled={false}
             renderItem={({item}) => (
               <View style={{padding: 5}}>
                 <View style={styles.table}>
@@ -158,7 +173,7 @@ export default function TypeWiseCustomer() {
                         marginLeft: 5,
                         marginTop: 5,
                       }}>
-                      {item.CustomerName}
+                      {item.cust_name}
                     </Text>
                   </View>
                   <View style={styles.infoRow}>
@@ -168,7 +183,7 @@ export default function TypeWiseCustomer() {
                         justifyContent: 'space-between',
                       }}>
                       <Text style={styles.text}>CNIC:</Text>
-                      <Text style={styles.text}>{item.CNIC}</Text>
+                      <Text style={styles.text}>{item.cust_cnic}</Text>
                     </View>
                     <View
                       style={{
@@ -176,7 +191,7 @@ export default function TypeWiseCustomer() {
                         justifyContent: 'space-between',
                       }}>
                       <Text style={styles.text}>Contact:</Text>
-                      <Text style={styles.text}>{item.Contact}</Text>
+                      <Text style={styles.text}>{item.cust_contact}</Text>
                     </View>
                     <View
                       style={{
@@ -184,7 +199,7 @@ export default function TypeWiseCustomer() {
                         justifyContent: 'space-between',
                       }}>
                       <Text style={styles.text}>Email:</Text>
-                      <Text style={styles.text}>{item.Email}</Text>
+                      <Text style={styles.text}>{item.cust_email}</Text>
                     </View>
                     <View
                       style={{
@@ -192,21 +207,24 @@ export default function TypeWiseCustomer() {
                         justifyContent: 'space-between',
                       }}>
                       <Text style={styles.text}>Type:</Text>
-                      <Text style={styles.text}>{item.Type}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        marginBottom: 5,
-                      }}>
-                      <Text style={styles.text}>Balance:</Text>
-                      <Text style={styles.text}>{item.Balance}</Text>
+                      <Text style={styles.text}>{item.custtyp_name}</Text>
                     </View>
                   </View>
                 </View>
               </View>
             )}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text
+                  style={{
+                    color: 'white',
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                  }}>
+                  No record found.
+                </Text>
+              </View>
+            }
           />
         </ScrollView>
       </ImageBackground>
@@ -230,11 +248,13 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
+    width: '90%',
+    alignSelf: 'center',
   },
   text: {
     marginLeft: 5,

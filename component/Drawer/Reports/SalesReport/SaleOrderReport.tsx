@@ -6,93 +6,31 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-  ScrollView,
+  FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
-
-interface EmployeeInfo {
-  sr: number;
-  Invoice: number;
-  Customer?: string;
-  Date?: string;
-  OrderTotal?: number;
-  Discount?: number;
-  TotalAmount?: number;
-  Profit: number;
-
-  Product?: string;
-  returnDate?: string;
-  QTY?: number;
-  Price?: number;
-  TotalPrice?: number;
-}
-
-interface InfoObject {
-  [key: string]: EmployeeInfo[];
-
-  Cup: EmployeeInfo[];
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
+import {useUser} from '../../../CTX/UserContext';
+interface OrderList {
+  id: number;
+  salord_invoice_no: string;
+  salord_date: string;
+  order_total: string;
+  cust_name: string;
 }
 
 export default function SaleOrderReport() {
-
   const {openDrawer} = useDrawer();
-
-  const dateWiseInfo: EmployeeInfo[] = [
-    {
-      sr: 1,
-      Invoice: 101,
-      Customer: 'nm',
-      Date: '999-000-00',
-      OrderTotal: 88,
-      Discount: 99,
-      TotalAmount: 66,
-      Profit: 55,
-    },
-    {
-      sr: 2,
-      Invoice: 101,
-      Customer: 'nm',
-      Date: '999-000-00',
-      OrderTotal: 88,
-      Discount: 99,
-      TotalAmount: 66,
-      Profit: 55,
-    },
-  ];
-
-  const Info: InfoObject = {
-    Cup: [
-      {
-        sr: 1,
-        Invoice: 8,
-        Product: 'jkj',
-        returnDate: '999-0',
-        QTY: 8,
-        Price: 99,
-        TotalPrice: 77,
-        Profit: 55,
-      },
-      {
-        sr: 2,
-        Invoice: 8,
-        Product: 'jkj',
-        returnDate: '999-0',
-        QTY: 8,
-        Price: 99,
-        TotalPrice: 77,
-        Profit: 55,
-      },
-    ],
-  };
-
+  const {token} = useUser();
+  const [orderList, setOrderList] = useState<OrderList[]>([]);
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
 
   const onStartDateChange = (
     event: DateTimePickerEvent,
@@ -109,13 +47,23 @@ export default function SaleOrderReport() {
     setEndDate(currentDate);
   };
 
-  const selectionMode = 'allemployees';
-  const currentCategory = '';
+  // Fetch Order List
+  const fetchOrderList = async () => {
+    try {
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+      const res = await axios.get(
+        `${BASE_URL}/getOrderList?from=${from}&to=${to}&_token=${token}`,
+      );
+      setOrderList(res.data.orderreport);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
-  const totalProducts =
-    selectionMode === 'allemployees'
-      ? Object.values(Info).reduce((acc, list) => acc + list.length, 0)
-      : Info[currentCategory]?.length || 0;
+  useEffect(() => {
+    fetchOrderList();
+  }, [startDate, endDate]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -144,24 +92,19 @@ export default function SaleOrderReport() {
           </View>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            marginLeft: 23,
-            gap: 33,
-            marginTop: 10,
-          }}>
-          {/* From Date */}
+        <View style={styles.dateContainer}>
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>From:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${startDate.toLocaleDateString()}`}
             </Text>
@@ -193,12 +136,14 @@ export default function SaleOrderReport() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>To:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${endDate.toLocaleDateString()}`}
             </Text>
@@ -226,42 +171,62 @@ export default function SaleOrderReport() {
           </View>
         </View>
 
-        {/* Load Data Button */}
-        <TouchableOpacity onPress={() => setDataLoaded(true)}>
-          <View
-            style={{
-              height: 30,
-              width: 300,
-              backgroundColor: 'white',
-              borderRadius: 12,
-              margin: 10,
-              alignSelf: 'center',
-            }}>
-            <Text
-              style={{
-                textAlign: 'center',
-                color: '#144272',
-                marginTop: 5,
-              }}>
-              Load Data
-            </Text>
-          </View>
-        </TouchableOpacity>
-
-        {dataLoaded && (
-          <>
-            <ScrollView>
-              <Text style={styles.sectionHeader}>No record present against your search</Text>
-            </ScrollView>
-            <View
-                style={styles.totalContainer}>
-                <Text style={styles.totalText}>Total Orders:</Text>
-                <Text style={styles.totalText}>0</Text>
+        <FlatList
+          data={orderList}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <View style={{padding: 5}}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
+                  <Text style={styles.invoiceText}>
+                    {item.salord_invoice_no}
+                  </Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <View style={styles.row}>
+                    <Text style={styles.text}>Customer:</Text>
+                    <Text style={styles.text}>{item.cust_name}</Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.text}>Date:</Text>
+                    <Text style={styles.text}>
+                      {new Date(item.salord_date)
+                        .toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                        .replace(/ /g, '-')}
+                    </Text>
+                  </View>
+                  <View style={styles.row}>
+                    <Text style={styles.text}>Order Total:</Text>
+                    <Text style={styles.text}>{item.order_total}</Text>
+                  </View>
+                </View>
               </View>
-          </>
-          
-        )}
-          
+            </View>
+          )}
+          ListEmptyComponent={
+            <View
+              style={{
+                height: 200,
+                width: '100%',
+                marginTop: 20,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+              <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                No record found.
+              </Text>
+            </View>
+          }
+        />
+
+        <View style={styles.totalContainer}>
+          <Text style={styles.totalText}>Total Orders:</Text>
+          <Text style={styles.totalText}>{orderList.length}</Text>
+        </View>
       </ImageBackground>
     </SafeAreaView>
   );
@@ -331,7 +296,8 @@ const styles = StyleSheet.create({
     width: 285,
   },
   totalContainer: {
-    padding: 3,
+    paddingHorizontal: 15,
+    paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,
@@ -341,7 +307,7 @@ const styles = StyleSheet.create({
   totalText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   row: {
     flexDirection: 'row',
@@ -360,5 +326,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 5,
     marginTop: 5,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
+    marginTop: 10,
   },
 });

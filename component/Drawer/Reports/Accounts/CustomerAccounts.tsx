@@ -6,15 +6,17 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {RadioButton} from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
 
 type Product = {
   sr: number;
@@ -33,153 +35,38 @@ type InfoType = {
   [key: string]: Product[];
 };
 
+interface AllCustomerList {
+  custac_invoice_no: string;
+  custac_payment_method: string;
+  created_at: string;
+  cust_name: string;
+  custac_total_bill_amount: string;
+  custac_paid_amount: string;
+  custac_balance: string;
+}
+
+interface Customers {
+  id: number;
+  cust_name: string;
+  cust_fathername: string;
+  cust_address: string;
+}
+
 export default function CustomerAccounts() {
   const {openDrawer} = useDrawer();
-
-  const Info: InfoType = {
-    'Select Customers': [
-      {
-        sr: 1,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99,
-      },
-    ],
-    Ali: [
-      {
-        sr: 1,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 9,
-      },
-      {
-        sr: 2,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 9,
-      },
-    ],
-    Ahmad: [
-      {
-        sr: 1,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99,
-      },
-    ],
-    Ayan: [
-      {
-        sr: 1,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99.0,
-      },
-    ],
-    Asim: [
-      {
-        sr: 1,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99,
-      },
-    ],
-    Aryan: [
-      {
-        sr: 1,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99,
-      },
-      {
-        sr: 2,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99,
-      },
-      {
-        sr: 3,
-        Product: 'string',
-        Barcode: 34,
-        Category: 'oil',
-        UOM: 'string',
-        SubUom: 'string',
-        Quantity: 667,
-        ReorderedQTY: 99,
-        CostPrice: 88,
-        SalePrice: 99,
-      },
-    ],
-  };
-
-  const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] =
-    useState<string>('Select Customers');
-
-  const categoryItems = [
-    {label: 'Select Customers', value: 'Select Customers'},
-    {label: 'Ali', value: 'Ali'},
-    {label: 'Ahmad', value: 'Ahmad'},
-    {label: 'Ayan', value: 'Ayan'},
-    {label: 'Asim', value: 'Asim'},
-    {label: 'Aryan', value: 'Aryan'},
-  ];
-
+  const [open, setOpen] = useState(false);
+  const [custValue, setCustValue] = useState('');
+  const [allCustList, setAllCustList] = useState<AllCustomerList[]>([]);
+  const [singleCustList, setSingleCustList] = useState<AllCustomerList[]>([]);
+  const [custDropdown, setCustDropdown] = useState<Customers[]>([]);
+  const transformedCust = custDropdown.map(cust => ({
+    label: `${cust.cust_name} s/o ${cust.cust_fathername} | ${cust.cust_address}`,
+    value: cust.id.toString(),
+  }));
+  const [unpaidChqAmount, setUnpaidChqAmount] = useState('');
   const [selectionMode, setSelectionMode] = useState<
     'allcustomers' | 'singlecustomers' | ''
-  >('');
-
-  const totalProducts =
-    selectionMode === 'allcustomers'
-      ? Object.values(Info).reduce((acc, list) => acc + list.length, 0)
-      : Info[currentCategory]?.length || 0;
+  >('allcustomers');
 
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
@@ -200,6 +87,96 @@ export default function CustomerAccounts() {
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
+
+  // Fetch All Customer List
+  const fetchAllCustList = async () => {
+    try {
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+      const res = await axios.post(`${BASE_URL}/fetchcustaccount`, {
+        from,
+        to,
+      });
+      setAllCustList(res.data.account);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate All Customer Totals
+  const calculateAllCustTotal = () => {
+    let totalReceivables = 0;
+    let totalReceived = 0;
+
+    allCustList.forEach(cust => {
+      const receivable = parseFloat(cust.custac_total_bill_amount) || 0;
+      const received = parseFloat(cust.custac_paid_amount) || 0;
+
+      totalReceivables += receivable;
+      totalReceived += received;
+    });
+
+    return {
+      totalReceivables: totalReceivables.toFixed(2),
+      totalReceived: totalReceived.toFixed(2),
+      netReceivables: (totalReceivables - totalReceived).toFixed(2),
+    };
+  };
+
+  // Fetch Customer dropdown
+  const fetchCustDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchdropcustomer`);
+      setCustDropdown(res.data.customers);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Single Customer List
+  const fetchSingleCustList = async () => {
+    if (custValue) {
+      try {
+        const from = startDate.toISOString().split('T')[0];
+        const to = endDate.toISOString().split('T')[0];
+        const res = await axios.post(`${BASE_URL}/fetchsinglecustaccount`, {
+          customer: custValue,
+          from,
+          to,
+        });
+        setSingleCustList(res.data.account);
+        setUnpaidChqAmount(res.data.chq[0]?.chi_amount);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  // Calculate Single Customer Totals
+  const calculateSingleCustTotal = () => {
+    let totalReceivables = 0;
+    let totalReceived = 0;
+
+    singleCustList.forEach(cust => {
+      const receivable = parseFloat(cust.custac_total_bill_amount) || 0;
+      const received = parseFloat(cust.custac_paid_amount) || 0;
+
+      totalReceivables += receivable;
+      totalReceived += received;
+    });
+
+    return {
+      totalReceivables: totalReceivables.toFixed(2),
+      totalReceived: totalReceived.toFixed(2),
+      netReceivables: (totalReceivables - totalReceived).toFixed(2),
+    };
+  };
+
+  useEffect(() => {
+    fetchAllCustList();
+    fetchSingleCustList();
+    fetchCustDropdown();
+  }, [startDate, endDate, custValue]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -231,7 +208,8 @@ export default function CustomerAccounts() {
         <View
           style={{
             flexDirection: 'row',
-            marginLeft: 23,
+            width: '90%',
+            alignSelf: 'center',
             gap: 33,
             marginTop: 10,
           }}>
@@ -243,6 +221,7 @@ export default function CustomerAccounts() {
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
             }}>
             <Text style={{color: 'white'}}>From:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
@@ -308,29 +287,41 @@ export default function CustomerAccounts() {
             )}
           </View>
         </View>
+
         <DropDownPicker
-          items={categoryItems}
-          open={category}
-          setOpen={setCategory}
-          value={currentCategory}
-          setValue={setCurrentCategory}
+          items={transformedCust}
+          open={open}
+          setOpen={setOpen}
+          value={custValue}
+          setValue={setCustValue}
           placeholder="Select Customers"
           disabled={selectionMode === 'allcustomers'}
           placeholderStyle={{color: 'white'}}
           textStyle={{color: 'white'}}
-          arrowIconStyle={{tintColor: 'white'}}
+          ArrowUpIconComponent={() => (
+            <Text>
+              <Icon name="chevron-up" size={15} color="white" />
+            </Text>
+          )}
+          ArrowDownIconComponent={() => (
+            <Text>
+              <Icon name="chevron-down" size={15} color="white" />
+            </Text>
+          )}
           style={[
             styles.dropdown,
-            {borderColor: 'white', width: '88%', alignSelf: 'center'},
+            selectionMode === 'allcustomers' && {backgroundColor: 'gray'},
           ]}
           dropDownContainerStyle={{
             backgroundColor: 'white',
             borderColor: '#144272',
-            width: '88%',
-            marginLeft: 22,
+            width: '90%',
+            marginTop: 8,
+            alignSelf: 'center',
           }}
-          labelStyle={{color: 'white'}}
+          labelStyle={{color: 'white', fontWeight: 'bold'}}
           listItemLabelStyle={{color: '#144272'}}
+          listMode="SCROLLVIEW"
         />
 
         <View style={[styles.row, {marginTop: -6, marginLeft: 20}]}>
@@ -341,7 +332,7 @@ export default function CustomerAccounts() {
             uncheckedColor="white"
             onPress={() => {
               setSelectionMode('allcustomers');
-              setCurrentCategory('Select Category');
+              setCustValue('');
             }}
           />
           <Text style={{color: 'white', marginTop: 7, marginLeft: -5}}>
@@ -356,7 +347,6 @@ export default function CustomerAccounts() {
             }
             onPress={() => {
               setSelectionMode('singlecustomers');
-              setCurrentCategory('');
             }}
           />
           <Text style={{color: 'white', marginTop: 7, marginLeft: -5}}>
@@ -364,140 +354,197 @@ export default function CustomerAccounts() {
           </Text>
         </View>
 
-        <ScrollView>
-          {(selectionMode === 'allcustomers' ||
-            (selectionMode === 'singlecustomers' && currentCategory)) && (
-            <FlatList
-              data={
-                selectionMode === 'allcustomers'
-                  ? Object.values(Info).flat()
-                  : Info[currentCategory] || []
-              }
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.Product}
-                      </Text>
-                    </View>
+        <FlatList
+          data={selectionMode === 'allcustomers' ? allCustList : singleCustList}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <View style={{padding: 5}}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
+                  <Text
+                    style={{
+                      color: '#144272',
+                      fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
+                    }}>
+                    {item.custac_invoice_no}
+                  </Text>
+                </View>
 
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>BarCode:</Text>
-                        <Text style={styles.text}>{item.Barcode}</Text>
-                      </View>
+                <View style={styles.infoRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Customer:</Text>
+                    <Text style={styles.text}>{item.cust_name}</Text>
+                  </View>
 
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Category:</Text>
-                        <Text style={styles.text}>{item.Category}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>UOM:</Text>
-                        <Text style={styles.text}>{item.UOM}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>SubUOM:</Text>
-                        <Text style={styles.text}>{item.SubUom}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Quantity:</Text>
-                        <Text style={styles.text}>{item.Quantity}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Reordered Quantity:</Text>
-                        <Text style={styles.text}>{item.ReorderedQTY}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Cost Price:</Text>
-                        <Text style={styles.text}>{item.CostPrice}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginBottom: 5,
-                        }}>
-                        <Text style={styles.text}>Sale Price:</Text>
-                        <Text style={styles.text}>{item.SalePrice}</Text>
-                      </View>
-                    </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Total Amount:</Text>
+                    <Text style={styles.text}>
+                      {item.custac_total_bill_amount}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Paid Amount:</Text>
+                    <Text style={styles.text}>{item.custac_paid_amount}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Date:</Text>
+                    <Text style={styles.text}>
+                      {new Date(item.created_at)
+                        .toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                        .replace(/\//g, '-')}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Balance:</Text>
+                    <Text style={styles.text}>{item.custac_balance}</Text>
                   </View>
                 </View>
-              )}
-            />
+              </View>
+            </View>
           )}
+          ListEmptyComponent={
+            <View style={{alignItems: 'center', marginTop: 20}}>
+              <Text
+                style={{
+                  color: 'white',
+                  fontSize: 16,
+                  fontWeight: 'bold',
+                }}>
+                No record found.
+              </Text>
+            </View>
+          }
+        />
 
-          {selectionMode === 'singlecustomers' && !currentCategory && (
-            <Text style={{color: 'white', textAlign: 'center', marginTop: 10}}>
-              Please select a category to view items.
-            </Text>
-          )}
-        </ScrollView>
+        {selectionMode === 'allcustomers' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{allCustList.length}</Text>
+            </View>
+            {(() => {
+              const {netReceivables, totalReceivables, totalReceived} =
+                calculateAllCustTotal();
 
-       
-        {selectionMode !== '' && totalProducts > 0 && (
-          <View
-            style={styles.totalContainer}>
-            <Text style={styles.totalText}>Total Records:{totalProducts}</Text>
-
-            <Text style={styles.totalText}>Total Payable:{totalProducts}</Text>
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Receivables:</Text>
+                    <Text style={styles.totalText}>{totalReceivables}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Received:</Text>
+                    <Text style={styles.totalText}>{totalReceived}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Net Receivables:</Text>
+                    <Text style={styles.totalText}>{netReceivables}</Text>
+                  </View>
+                </View>
+              );
+            })()}
           </View>
         )}
-        {selectionMode !== '' && totalProducts > 0 && (
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              padding: 3,
-            }}>
-            <Text style={styles.totalText}>Total Paid:{totalProducts}</Text>
-            <Text style={styles.totalText}>Net Payables: 8</Text>
-          </View>
-        )}
-         {selectionMode === 'singlecustomers' && currentCategory && (
-          <View style={{
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            padding: 3,
-          }}>
-            <Text style={styles.totalText}>Unpaid Cheques Amount:</Text>
-            <Text style={styles.totalText}> 8</Text>
+
+        {selectionMode === 'singlecustomers' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{singleCustList.length}</Text>
+            </View>
+            {(() => {
+              const {netReceivables, totalReceivables, totalReceived} =
+                calculateSingleCustTotal();
+
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Unpaid Cheques Amount:</Text>
+                    <Text style={styles.totalText}>
+                      {unpaidChqAmount ?? '0'}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Receivables:</Text>
+                    <Text style={styles.totalText}>{totalReceivables}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Received:</Text>
+                    <Text style={styles.totalText}>{totalReceived}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Net Receivables:</Text>
+                    <Text style={styles.totalText}>{netReceivables}</Text>
+                  </View>
+                </View>
+              );
+            })()}
           </View>
         )}
       </ImageBackground>
@@ -561,15 +608,17 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
+    alignSelf: 'center',
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
+    width: '90%',
   },
   totalContainer: {
-    padding: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,
@@ -579,7 +628,8 @@ const styles = StyleSheet.create({
   totalText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
+    marginLeft: 8,
   },
   row: {
     flexDirection: 'row',

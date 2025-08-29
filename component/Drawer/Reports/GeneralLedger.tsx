@@ -6,21 +6,48 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-
+  FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import {useUser} from '../../CTX/UserContext';
+
+interface Ledger {
+  id: number;
+  cflo_party: string;
+  cflo_date: string;
+  cflo_type: string;
+  cflo_total: string;
+  cflo_cash_in: string;
+  cflo_cash_out: string;
+  cflo_balance: string;
+}
 
 export default function GeneralLedger() {
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
-
+  const [ledger, setLedger] = useState<Ledger[]>([]);
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const totalRecords = ledger.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const currentData = ledger.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
 
   const onStartDateChange = (
     event: DateTimePickerEvent,
@@ -36,6 +63,24 @@ export default function GeneralLedger() {
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
+
+  // Fetch General Ledger
+  const fetchLedger = async () => {
+    try {
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+      const res = await axios.get(
+        `${BASE_URL}/fetchledger?from=${from}&to=${to}&_token=${token}`,
+      );
+      setLedger(res.data.ledger);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchLedger();
+  }, [startDate, endDate]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -59,29 +104,24 @@ export default function GeneralLedger() {
 
           <View style={styles.headerTextContainer}>
             <Text style={{color: 'white', fontSize: 22, fontWeight: 'bold'}}>
-             General Ledger
+              General Ledger
             </Text>
           </View>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            marginLeft: 23,
-            gap: 33,
-            marginTop: 10,
-          }}>
-          {/* From Date */}
+        <View style={styles.dateContainer}>
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>From:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${startDate.toLocaleDateString()}`}
             </Text>
@@ -113,12 +153,14 @@ export default function GeneralLedger() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>To:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${endDate.toLocaleDateString()}`}
             </Text>
@@ -146,35 +188,112 @@ export default function GeneralLedger() {
           </View>
         </View>
 
-        <TouchableOpacity onPress={() => setDataLoaded(true)}>
+        <FlatList
+          data={currentData}
+          keyExtractor={(item, index) => index.toString()}
+          contentContainerStyle={{paddingBottom: 50}}
+          style={{marginTop: 10}}
+          renderItem={({item}) => (
+            <View style={styles.table}>
+              <View style={styles.tablehead}>
+                <Text
+                  style={{
+                    color: '#144272',
+                    fontWeight: 'bold',
+                    marginLeft: 5,
+                    marginTop: 5,
+                  }}>
+                  {item.cflo_party}
+                </Text>
+              </View>
+              <View style={styles.infoRow}>
+                <View style={styles.row}>
+                  <Text style={styles.text}>Date:</Text>
+                  <Text style={styles.text}>
+                    {new Date(item.cflo_date)
+                      .toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                      })
+                      .replace(/ /g, '-')}
+                  </Text>
+                </View>
+
+                <View style={styles.row}>
+                  <Text style={styles.text}>Transaction Type:</Text>
+                  <Text style={styles.text}>{item.cflo_type}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.text}>Total:</Text>
+                  <Text style={styles.text}>{item.cflo_total}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.text}>Cash In:</Text>
+                  <Text style={styles.text}>{item.cflo_cash_in}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.text}>Cash Out:</Text>
+                  <Text style={styles.text}>{item.cflo_cash_out}</Text>
+                </View>
+                <View style={styles.row}>
+                  <Text style={styles.text}>Balance:</Text>
+                  <Text style={styles.text}>{item.cflo_balance}</Text>
+                </View>
+              </View>
+            </View>
+          )}
+          ListEmptyComponent={
+            <View
+              style={{
+                width: '100%',
+                height: 300,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}>
+              <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                No data found.
+              </Text>
+            </View>
+          }
+        />
+
+        {totalRecords > 0 && (
           <View
             style={{
-              height: 30,
-              width: 300,
-              backgroundColor: 'white',
-              borderRadius: 12,
-              margin: 10,
-              alignSelf: 'center',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              marginBottom: 15,
+              marginTop: 5,
             }}>
-            <Text
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
               style={{
-                textAlign: 'center',
-                color: '#144272',
-                marginTop: 5,
+                marginHorizontal: 10,
+                opacity: currentPage === 1 ? 0.5 : 1,
               }}>
-              Load Data
-            </Text>
-          </View>
-        </TouchableOpacity>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+                Prev
+              </Text>
+            </TouchableOpacity>
 
-        {dataLoaded && (
-          <>
-           <Text style={{
-            color:'white',textAlign:'center'
-           }}>
-           No record present in database.
-           </Text>
-          </>
+            <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+              Page {currentPage} of {totalPages}
+            </Text>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={{
+                marginHorizontal: 10,
+                opacity: currentPage === totalPages ? 0.5 : 1,
+              }}>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+                Next
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </ImageBackground>
     </SafeAreaView>
@@ -199,8 +318,9 @@ const styles = StyleSheet.create({
     borderColor: 'white',
     alignSelf: 'center',
     height: 'auto',
-    width: 314,
+    width: '90%',
     borderRadius: 5,
+    marginBottom: 10,
   },
   tablehead: {
     height: 30,
@@ -219,67 +339,16 @@ const styles = StyleSheet.create({
   infoRow: {
     marginTop: 5,
   },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-  },
-  exportBtn: {
-    backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  exportText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 35,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: 285,
-  },
-  totalContainer: {
-    padding: 3,
-    borderTopWidth: 1,
-    borderTopColor: 'white',
-    marginTop: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  totalText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginVertical: 2,
   },
-  sectionHeader: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: 10,
-  },
-  invoiceText: {
-    color: '#144272',
-    fontWeight: 'bold',
-    marginLeft: 5,
-    marginTop: 5,
-  },
-  section: {
-    color: 'white',
-    fontSize: 18,
-
-    textAlign: 'center',
-    marginVertical: 10,
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
+    marginTop: 10,
   },
 });

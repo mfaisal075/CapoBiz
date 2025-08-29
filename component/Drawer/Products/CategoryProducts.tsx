@@ -10,57 +10,125 @@ import {
   FlatList,
   TextInput,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import Modal from 'react-native-modal';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import Toast from 'react-native-toast-message';
 
+interface Categories {
+  id: number;
+  pcat_name: string;
+}
 
 export default function CategoryProducts() {
-
   const {openDrawer} = useDrawer();
-  const Info = [
-    {
-      CustomerName: 'Jelly',
-    },
-    {
-      CustomerName: 'Chocolate',
-    },
-    {
-      CustomerName: 'BlueBerry',
-    },
-  ];
+  const [categories, setCategories] = useState<Categories[]>([]);
+  const [addCate, setAddCate] = useState('');
+  const [modal, setModal] = useState<string | ''>('');
+  const [selectedCate, setSelectedCate] = useState<Categories | null>(null);
+  const [editCate, setEditCate] = useState('');
 
-  const [isModalV, setModalV] = useState(false);
-  const tglModal = () => {
-    setModalV(!isModalV);
+  // Fetch Category Dropdown
+  const fetchCatDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcategories`);
+      setCategories(res.data.cat);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  {
-    /*edit*/
-  }
-  const [edit, setedit] = useState(false);
+  // Add Category
+  const addCategory = async () => {
+    if (!addCate) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please fill out field',
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(`${BASE_URL}/addcategory`, {
+        cat_name: addCate.trim(),
+      });
+      const data = res.data;
 
-  const toggleedit = () => {
-    setedit(!edit);
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success',
+          text2: 'Category has been added successfully',
+        });
+        setAddCate('');
+        fetchCatDropdown();
+        setModal('');
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const [addcategory, setaddcategory] = useState(false);
+  // Delete Category
+  const delCategory = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/catdelete`, {
+        id: selectedCate?.id,
+      });
+      const data = res.data;
 
-  const toggleaddcategory = () => {
-    setaddcategory(!addcategory);
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Deleted!',
+          text2: 'Category has been deleted successfully.',
+        });
+        fetchCatDropdown();
+        setSelectedCate(null);
+        setModal('');
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const [btncategory, setbtncategory] = useState(false);
+  // Edit Category
+  const editCategory = async () => {
+    if (!editCate) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please fill out field',
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(`${BASE_URL}/updatecategory`, {
+        cat_id: selectedCate?.id,
+        cat_name: editCate.trim(),
+      });
 
-  const togglebtncategory = () => {
-    setbtncategory(!btncategory);
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Updated!',
+          text2: 'Category has been Updated successfully',
+        });
+        fetchCatDropdown();
+        setEditCate('');
+        setSelectedCate(null);
+        setModal('');
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
-  const [editbtncategory, seteditbtncategory] = useState(false);
-
-  const toggleeditbtncategory = () => {
-    seteditbtncategory(!editbtncategory);
-  };
+  useEffect(() => {
+    fetchCatDropdown();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -96,7 +164,10 @@ export default function CategoryProducts() {
               Categories
             </Text>
           </View>
-          <TouchableOpacity onPress={toggleaddcategory}>
+          <TouchableOpacity
+            onPress={() => {
+              setModal('Add');
+            }}>
             <Image
               style={{
                 tintColor: 'white',
@@ -125,70 +196,101 @@ export default function CategoryProducts() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={Info}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: 'white',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.CustomerName}
-                      </Text>
+        <View>
+          <FlatList
+            data={categories}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <ScrollView
+                style={{
+                  padding: 5,
+                }}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: 'white',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.pcat_name}
+                    </Text>
 
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                      }}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setModal('editCategory');
+                          setEditCate(item.pcat_name);
+                          setSelectedCate({
+                            id: item.id,
+                            pcat_name: item.pcat_name,
+                          });
                         }}>
-                        <TouchableOpacity onPress={toggleedit}>
-                          <Image
-                            style={{
-                              tintColor: 'white',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginTop: 8,
-                            }}
-                            source={require('../../../assets/edit.png')}
-                          />
-                        </TouchableOpacity>
+                        <Image
+                          style={{
+                            tintColor: 'white',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginTop: 8,
+                          }}
+                          source={require('../../../assets/edit.png')}
+                        />
+                      </TouchableOpacity>
 
-                        <TouchableOpacity onPress={tglModal}>
-                          <Image
-                            style={{
-                              tintColor: 'white',
-                              width: 15,
-                              height: 15,
-                              alignSelf: 'center',
-                              marginRight: 5,
-                              marginTop: 8,
-                            }}
-                            source={require('../../../assets/delete.png')}
-                          />
-                        </TouchableOpacity>
-                      </View>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setModal('delCategory');
+                          setSelectedCate({
+                            id: item.id,
+                            pcat_name: item.pcat_name,
+                          });
+                        }}>
+                        <Image
+                          style={{
+                            tintColor: 'white',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginRight: 5,
+                            marginTop: 8,
+                          }}
+                          source={require('../../../assets/delete.png')}
+                        />
+                      </TouchableOpacity>
                     </View>
                   </View>
-                </ScrollView>
-              )}
-            />
-          </View>
-        </ScrollView>
+                </View>
+              </ScrollView>
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  width: '100%',
+                  height: 300,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                    color: '#fff',
+                  }}>
+                  No data found.
+                </Text>
+              </View>
+            }
+          />
+        </View>
 
-        {/*delete*/}
-        <Modal isVisible={isModalV}>
+        {/*Delete Category*/}
+        <Modal isVisible={modal === 'delCategory'}>
           <View
             style={{
               flex: 1,
@@ -233,7 +335,11 @@ export default function CategoryProducts() {
                 marginTop: 10,
                 justifyContent: 'center',
               }}>
-              <TouchableOpacity onPress={() => setModalV(!isModalV)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModal('');
+                  setSelectedCate(null);
+                }}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -253,7 +359,7 @@ export default function CategoryProducts() {
                 </View>
               </TouchableOpacity>
 
-              <TouchableOpacity>
+              <TouchableOpacity onPress={delCategory}>
                 <View
                   style={{
                     backgroundColor: '#144272',
@@ -275,8 +381,8 @@ export default function CategoryProducts() {
           </View>
         </Modal>
 
-        {/*edit*/}
-        <Modal isVisible={edit}>
+        {/*Edit Category*/}
+        <Modal isVisible={modal === 'editCategory'}>
           <ScrollView
             style={{
               flex: 1,
@@ -303,7 +409,12 @@ export default function CategoryProducts() {
                 }}>
                 Edit Category
               </Text>
-              <TouchableOpacity onPress={() => setedit(!edit)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModal('');
+                  setEditCate('');
+                  setSelectedCate(null);
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -319,9 +430,11 @@ export default function CategoryProducts() {
                 style={styles.search}
                 placeholderTextColor={'#144272'}
                 placeholder="Category Name"
+                value={editCate}
+                onChangeText={t => setEditCate(t)}
               />
             </View>
-            <TouchableOpacity onPress={toggleeditbtncategory}>
+            <TouchableOpacity onPress={editCategory}>
               <View
                 style={{
                   alignSelf: 'center',
@@ -343,8 +456,8 @@ export default function CategoryProducts() {
           </ScrollView>
         </Modal>
 
-        {/*add category modal*/}
-        <Modal isVisible={addcategory}>
+        {/*Add Category*/}
+        <Modal isVisible={modal === 'Add'}>
           <View
             style={{
               flex: 1,
@@ -370,7 +483,11 @@ export default function CategoryProducts() {
                 }}>
                 Add New Category
               </Text>
-              <TouchableOpacity onPress={() => setaddcategory(!addcategory)}>
+              <TouchableOpacity
+                onPress={() => {
+                  setModal('');
+                  setAddCate('');
+                }}>
                 <Image
                   style={{
                     width: 15,
@@ -385,9 +502,11 @@ export default function CategoryProducts() {
                 style={styles.search}
                 placeholderTextColor={'#144272'}
                 placeholder="Category Name"
+                value={addCate}
+                onChangeText={t => setAddCate(t)}
               />
             </View>
-            <TouchableOpacity onPress={togglebtncategory}>
+            <TouchableOpacity onPress={addCategory}>
               <View
                 style={{
                   alignSelf: 'center',
@@ -401,6 +520,8 @@ export default function CategoryProducts() {
                   style={{
                     color: 'white',
                     textAlign: 'center',
+                    fontSize: 12,
+                    fontWeight: 'bold',
                   }}>
                   Add Category
                 </Text>
@@ -408,146 +529,6 @@ export default function CategoryProducts() {
             </TouchableOpacity>
           </View>
         </Modal>
-        {/*Add btn category*/}
-        <Modal isVisible={btncategory}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Category has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setbtncategory(!btncategory)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        <Modal isVisible={editbtncategory}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Updated
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Category has been updated successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => seteditbtncategory(!editbtncategory)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
       </ImageBackground>
     </SafeAreaView>
   );
@@ -582,84 +563,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight:5
-  },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight:5
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  lastrow: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderBottomEndRadius: 10,
-    borderBottomLeftRadius: 10,
-  },
-  card: {
-    borderColor: '#144272',
-    backgroundColor: 'white',
-    height: 'auto',
-    borderRadius: 12,
-    elevation: 15,
-    marginBottom: 5,
-    padding: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    color: 'white',
-  },
-  inputSmall: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: 'white',
-  },
-  addButton: {
-    marginLeft: 8,
-    alignSelf: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 60,
-  },
-  completeButton: {
-    marginTop: 16,
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 320,
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 35,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: 285,
-  },
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -675,52 +578,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     paddingHorizontal: 10,
     height: 40,
-  },
-  productinput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 6,
-    padding: 8,
-  },
-  cardContainer: {
-    margin: 20,
-    padding: 16,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-    paddingBottom: 24,
-    marginBottom: 40,
-  },
-  customerImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: '#144272',
-  },
-  noImageText: {
-    color: '#144272',
-    fontStyle: 'italic',
-  },
-  infoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  labl: {
-    width: '68%',
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 4,
-  },
-  valu: {
-    width: '68%',
-    marginBottom: 8,
-    color: '#144272',
+    color: '#000',
   },
   headerButtons: {
     flexDirection: 'row',

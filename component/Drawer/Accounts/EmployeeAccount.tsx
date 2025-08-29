@@ -10,17 +10,55 @@ import {
   TextInput,
   KeyboardAvoidingView,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {ImageBackground} from 'react-native';
 import {TouchableOpacity} from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DropDownPicker from 'react-native-dropdown-picker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import {useUser} from '../../CTX/UserContext';
+import Toast from 'react-native-toast-message';
+
+interface Employee {
+  id: number;
+  emp_name: string;
+  emp_address: string;
+  emp_contact: string;
+  emp_cnic: string;
+}
+
+interface EmployeeDetails {
+  emp_name: string;
+  empac_balance: string;
+  empac_date: string;
+  empac_earning: string;
+  empac_emp_id: number;
+  empac_invoice_no: string;
+  empac_withdraw_amount: string;
+}
+
+interface EmployeeAddForm {
+  amount: string;
+  note: string;
+  date: Date;
+  addedBy: string;
+}
+
+const initialEmployeeAddFrom: EmployeeAddForm = {
+  amount: '',
+  date: new Date(),
+  note: '',
+  addedBy: '',
+};
 
 export default function EmployeeAccount() {
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [Open, setOpen] = useState(false);
+  const [modalDropdowOpen, setModalDropdowOpen] = useState(false);
   const [customerVal, setCustomerVal] = useState<string | ''>('');
   const [fromDate, setFromDate] = useState<Date | null>(new Date());
   const [toDate, setToDate] = useState<Date | null>(new Date());
@@ -28,6 +66,16 @@ export default function EmployeeAccount() {
     null,
   );
   const [modalVisible, setModalVisible] = useState('');
+  const [employeeDropdown, setEmployeeDropdown] = useState<Employee[]>([]);
+  const transformedEmp = employeeDropdown.map(emp => ({
+    label: emp.emp_name,
+    value: emp.id.toString(),
+  }));
+  const [empValue, setEmpValaue] = useState('');
+  const [empData, setEmpData] = useState<EmployeeDetails[]>([]);
+  const [cashAddFrom, setCashAddForm] = useState<EmployeeAddForm>(
+    initialEmployeeAddFrom,
+  );
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
@@ -45,68 +93,178 @@ export default function EmployeeAccount() {
     setShowDatePicker(null);
   };
 
-  const item = [
-    {
-      label: 'Haroon',
-      value: 'Haroon',
-    },
-    {label: 'Fakhar', value: 'Fakhar'},
-    {label: 'Naeem', value: 'Naeem'},
-    {label: 'Asghar', value: 'Asghar'},
-  ];
+  const modalDateChange = (event: any, selectedDate?: Date) => {
+    if (event.type === 'dismissed') {
+      setShowDatePicker(null);
+      return;
+    }
 
-  const Info = [
-    {
-      'Sr#': 1,
-      'Invoice #': 'EP-1',
-      'Total Earnings': 5000.0,
-      'Total WithDraw': 2000.0,
-      Balance: 3000.0,
-      'Prev Balance': 0.0,
-      Total: 3000.0,
-      Date: '09-May-2025',
-    },
-    {
-      'Sr#': 2,
-      'Invoice #': 'EP-2',
-      'Total Earnings': 7000.0,
-      'Total WithDraw': 4500.0,
-      Balance: 2500.0,
-      'Prev Balance': 3000.0,
-      Total: 5500.0,
-      Date: '10-May-2025',
-    },
-    {
-      'Sr#': 3,
-      'Invoice #': 'EP-3',
-      'Total Earnings': 3000.0,
-      'Total WithDraw': 6000.0,
-      Balance: -3000.0,
-      'Prev Balance': 5500.0,
-      Total: 2500.0,
-      Date: '11-May-2025',
-    },
-    {
-      'Sr#': 4,
-      'Invoice #': 'EP-4',
-      'Total Earnings': 10000.0,
-      'Total WithDraw': 3000.0,
-      Balance: 7000.0,
-      'Prev Balance': 2500.0,
-      Total: 9500.0,
-      Date: '12-May-2025',
-    },
-    {
-      'Sr#': 5,
-      'Invoice #': 'EP-5',
-      'Total Earnings': 2000.0,
-      'Total WithDraw': 8000.0,
-      Balance: -6000.0,
-      'Prev Balance': 9500.0,
-      Total: 3500.0,
-      Date: '13-May-2025',
-    },
-  ];
+    if (selectedDate) {
+      cashOnChange('date', selectedDate);
+    }
+    setShowDatePicker(null);
+  };
+
+  const cashOnChange = (field: keyof EmployeeAddForm, value: string | Date) => {
+    setCashAddForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+  // Fetch Employee dropdown
+  const fetchEmpDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchemployeedropdown`);
+      setEmployeeDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Fetch Employye Details
+  const fetchEmployeeDetails = async () => {
+    try {
+      const from = fromDate?.toISOString().split('T')[0];
+      const to = toDate?.toISOString().split('T')[0];
+      const res = await axios.get(
+        `${BASE_URL}/fetchemppayment?from=${from}&to=${to}&employee=${empValue}_token=${token}`,
+      );
+      setEmpData(res.data.emp);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Add Payment
+  const addPayment = async () => {
+    if (!customerVal) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please Select Employee First!',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
+    if (
+      !cashAddFrom.addedBy ||
+      !cashAddFrom.amount ||
+      !cashAddFrom.date ||
+      !cashAddFrom.note
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Fields Missing',
+        text2: 'Please filled add fields',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
+    try {
+      const res = await axios.post(`${BASE_URL}/addpayment`, {
+        emp_id: customerVal,
+        emp_earning: cashAddFrom.amount,
+        emp_acc_date: cashAddFrom.date.toISOString().split('T')[0],
+        addedby: cashAddFrom.addedBy.trim(),
+        note: cashAddFrom.note.trim(),
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Added!',
+          text2: 'Payment has been added successfully!',
+          visibilityTime: 1500,
+        });
+        setCustomerVal('');
+        setCashAddForm(initialEmployeeAddFrom);
+        setModalVisible('');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Withdraw Payment
+  const withdrawPayment = async () => {
+    if (!customerVal) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please Select Employee First!',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
+    if (
+      !cashAddFrom.addedBy ||
+      !cashAddFrom.amount ||
+      !cashAddFrom.date ||
+      !cashAddFrom.note
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Fields Missing',
+        text2: 'Please filled add fields',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
+    try {
+      const res = await axios.post(`${BASE_URL}/addpayment`, {
+        emp_id: customerVal,
+        emp_withdraw_amount: cashAddFrom.amount,
+        emp_acc_date: cashAddFrom.date.toISOString().split('T')[0],
+        addedby: cashAddFrom.addedBy.trim(),
+        note: cashAddFrom.note.trim(),
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Added!',
+          text2: 'Payment has been Withdraw successfully!',
+          visibilityTime: 1500,
+        });
+        setCustomerVal('');
+        setCashAddForm(initialEmployeeAddFrom);
+        setModalVisible('');
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate Total Earnings, withdraws, and balance
+  const calculateTotals = () => {
+    let totalEarning = 0;
+    let totalWithdraw = 0;
+
+    empData.forEach(emp => {
+      const earnings = parseFloat(emp.empac_earning) || 0;
+      const withdraws = parseFloat(emp.empac_withdraw_amount) || 0;
+
+      totalEarning += earnings;
+      totalWithdraw += withdraws;
+    });
+
+    return {
+      totalEarning: totalEarning.toFixed(2),
+      totalWithdraw: totalWithdraw.toFixed(2),
+      netBalance: (totalEarning - totalWithdraw).toFixed(2),
+    };
+  };
+
+  useEffect(() => {
+    fetchEmpDropdown();
+    fetchEmployeeDetails();
+  }, [empValue, fromDate, toDate]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -253,19 +411,20 @@ export default function EmployeeAccount() {
               Employee:
             </Text>
             <DropDownPicker
-              items={item}
+              items={transformedEmp}
               open={Open}
-              value={customerVal}
-              setValue={setCustomerVal}
+              value={empValue}
+              setValue={setEmpValaue}
               setOpen={setOpen}
-              placeholder="Select Customer"
+              placeholder="Select Employee"
               placeholderStyle={{color: 'white'}}
               textStyle={{color: 'white'}}
               style={styles.dropdown}
               dropDownContainerStyle={{
                 backgroundColor: 'white',
                 borderColor: '#144272',
-                width: 287,
+                width: '90%',
+                marginTop: 8,
               }}
               labelStyle={{color: 'white'}}
               listItemLabelStyle={{color: '#144272'}}
@@ -279,65 +438,88 @@ export default function EmployeeAccount() {
                   <Icon name="chevron-down" size={15} color="white" />
                 </Text>
               )}
+              listMode="SCROLLVIEW"
             />
           </View>
 
           {/* Invoices Cards */}
           <View style={{paddingBottom: 30}}>
             <View style={{marginTop: 20}}>
-              {Info.map((item, index) => (
-                <View key={item['Sr#']} style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item['Invoice #']}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      {[
-                        {
-                          label: 'Total Earning:',
-                          value: item['Total Earnings'],
-                        },
-                        {
-                          label: 'Total WithDraw:',
-                          value: item['Total WithDraw'],
-                        },
-                        {label: 'Balance:', value: item.Balance},
-                        {
-                          label: 'Prev Balance:',
-                          value: item['Prev Balance'],
-                        },
-                        {label: 'Total:', value: item.Total},
-                        {label: 'Date:', value: item.Date},
-                      ].map((field, idx) => (
-                        <View
-                          key={`${item['Sr#']}-${idx}`}
+              {empData.length === 0 ? (
+                <View style={{alignItems: 'center', marginTop: 20}}>
+                  <Text
+                    style={{
+                      color: 'white',
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                    }}>
+                    No record found.
+                  </Text>
+                </View>
+              ) : (
+                empData.map((item, index) => (
+                  <View key={index} style={{padding: 5}}>
+                    <View style={styles.table}>
+                      <View style={styles.tablehead}>
+                        <Text
                           style={{
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
+                            color: '#144272',
+                            fontWeight: 'bold',
+                            marginLeft: 5,
+                            marginTop: 5,
                           }}>
-                          <Text style={[styles.value, {marginBottom: 5}]}>
-                            {field.label}
-                          </Text>
-                          <Text style={[styles.value, {marginBottom: 5}]}>
-                            {typeof field.value === 'number'
-                              ? field.value.toFixed(2)
-                              : field.value}
-                          </Text>
-                        </View>
-                      ))}
+                          {item.empac_invoice_no}
+                        </Text>
+                      </View>
+
+                      <View style={styles.infoRow}>
+                        {[
+                          {
+                            label: 'Total Earning:',
+                            value: item.empac_earning,
+                          },
+                          {
+                            label: 'Total WithDraw:',
+                            value: item.empac_withdraw_amount,
+                          },
+                          {label: 'Balance:', value: item.empac_balance},
+                          {
+                            label: 'Date:',
+                            value: new Date(item.empac_date)
+                              .toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })
+                              .replace(/\//g, '-'),
+                          },
+                        ].map(
+                          (
+                            field: {label: string; value: number | string},
+                            idx,
+                          ) => (
+                            <View
+                              key={`${index}-${idx}`}
+                              style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                              }}>
+                              <Text style={[styles.value, {marginBottom: 5}]}>
+                                {field.label}
+                              </Text>
+                              <Text style={[styles.value, {marginBottom: 5}]}>
+                                {typeof field.value === 'number'
+                                  ? field.value.toFixed(2)
+                                  : field.value}
+                              </Text>
+                            </View>
+                          ),
+                        )}
+                      </View>
                     </View>
                   </View>
-                </View>
-              ))}
+                ))
+              )}
             </View>
           </View>
 
@@ -348,48 +530,57 @@ export default function EmployeeAccount() {
               paddingVertical: 20,
               paddingHorizontal: 10,
             }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                marginVertical: 5,
-                paddingHorizontal: '10%',
-              }}>
-              <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                Total Earnings:
-              </Text>
-              <Text style={[styles.text, {fontWeight: 'bold'}]}>47203.00</Text>
-            </View>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                marginVertical: 5,
-                paddingHorizontal: '10%',
-              }}>
-              <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                Total Withdraw:
-              </Text>
-              <Text style={[styles.text, {fontWeight: 'bold'}]}>47203.00</Text>
-            </View>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                marginVertical: 5,
-                paddingHorizontal: '10%',
-              }}>
-              <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                Net Balance:
-              </Text>
-              <Text style={[styles.text, {fontWeight: 'bold'}]}>0.00</Text>
-            </View>
+            {(() => {
+              const {netBalance, totalEarning, totalWithdraw} =
+                calculateTotals();
 
-            <View style={styles.btnContainer}>
-              <TouchableOpacity style={styles.btnItem}>
-                <Text style={styles.btnText}>View Details</Text>
-              </TouchableOpacity>
-            </View>
+              return (
+                <>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      marginVertical: 5,
+                      paddingHorizontal: '10%',
+                    }}>
+                    <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                      Total Earnings:
+                    </Text>
+                    <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                      {totalEarning}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      marginVertical: 5,
+                      paddingHorizontal: '10%',
+                    }}>
+                    <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                      Total Withdraw:
+                    </Text>
+                    <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                      {totalWithdraw}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      marginVertical: 5,
+                      paddingHorizontal: '10%',
+                    }}>
+                    <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                      Net Balance:
+                    </Text>
+                    <Text style={[styles.text, {fontWeight: 'bold'}]}>
+                      {netBalance}
+                    </Text>
+                  </View>
+                </>
+              );
+            })()}
           </View>
         </ScrollView>
       </ImageBackground>
@@ -412,7 +603,11 @@ export default function EmployeeAccount() {
                     : 'Add Payment'}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => setModalVisible('')}
+                  onPress={() => {
+                    setModalVisible('');
+                    setCustomerVal('');
+                    setCashAddForm(initialEmployeeAddFrom);
+                  }}
                   style={styles.closeButton}>
                   <Icon name="close" size={24} color="#333" />
                 </TouchableOpacity>
@@ -440,21 +635,22 @@ export default function EmployeeAccount() {
                       Employee:
                     </Text>
                     <DropDownPicker
-                      items={item}
-                      open={Open}
+                      items={transformedEmp}
+                      open={modalDropdowOpen}
                       value={customerVal}
                       setValue={setCustomerVal}
-                      setOpen={setOpen}
+                      setOpen={setModalDropdowOpen}
                       placeholder="Select Customer"
                       placeholderStyle={{color: '#000'}}
-                      textStyle={{color: 'white'}}
+                      textStyle={{color: '#144272'}}
                       style={[styles.dropdown, {borderColor: '#000'}]}
                       dropDownContainerStyle={{
                         backgroundColor: 'white',
                         borderColor: '#144272',
-                        width: 287,
+                        width: '90%',
+                        marginTop: 8,
                       }}
-                      labelStyle={{color: 'white'}}
+                      labelStyle={{color: '#000', fontWeight: 'bold'}}
                       listItemLabelStyle={{color: '#144272'}}
                       ArrowUpIconComponent={() => (
                         <Text>
@@ -466,6 +662,7 @@ export default function EmployeeAccount() {
                           <Icon name="chevron-down" size={15} color="#000" />
                         </Text>
                       )}
+                      listMode="SCROLLVIEW"
                     />
                   </View>
 
@@ -488,6 +685,8 @@ export default function EmployeeAccount() {
                     <TextInput
                       style={styles.productinput}
                       keyboardType="number-pad"
+                      value={cashAddFrom.amount}
+                      onChangeText={t => cashOnChange('amount', t)}
                     />
                   </View>
 
@@ -516,7 +715,9 @@ export default function EmployeeAccount() {
                         onPress={() => setShowDatePicker('from')}
                         style={[styles.dateInput, {borderColor: '#000'}]}>
                         <Text style={{color: '#000'}}>
-                          {fromDate ? fromDate.toLocaleDateString() : ''}
+                          {cashAddFrom.date
+                            ? cashAddFrom.date.toLocaleDateString()
+                            : ''}
                         </Text>
                       </TouchableOpacity>
                     </View>
@@ -524,14 +725,10 @@ export default function EmployeeAccount() {
 
                   {showDatePicker && (
                     <DateTimePicker
-                      value={
-                        showDatePicker === 'from'
-                          ? fromDate ?? new Date()
-                          : toDate ?? new Date()
-                      }
+                      value={cashAddFrom.date}
                       mode="date"
                       display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={handleDateChange}
+                      onChange={modalDateChange}
                       themeVariant="dark"
                       style={{backgroundColor: '#144272'}}
                     />
@@ -553,7 +750,11 @@ export default function EmployeeAccount() {
                       }}>
                       Added By <Text style={{color: 'red'}}>*</Text>
                     </Text>
-                    <TextInput style={styles.productinput} />
+                    <TextInput
+                      style={styles.productinput}
+                      value={cashAddFrom.addedBy}
+                      onChangeText={t => cashOnChange('addedBy', t)}
+                    />
                   </View>
 
                   <View
@@ -579,6 +780,8 @@ export default function EmployeeAccount() {
                       ]}
                       multiline
                       numberOfLines={4}
+                      value={cashAddFrom.note}
+                      onChangeText={t => cashOnChange('note', t)}
                     />
                   </View>
                 </View>
@@ -586,7 +789,12 @@ export default function EmployeeAccount() {
 
               {/* Footer Button */}
               <View style={styles.modalFooter}>
-                <TouchableOpacity style={styles.submitButton}>
+                <TouchableOpacity
+                  style={styles.submitButton}
+                  onPress={() => {
+                    modalVisible === 'Payment' && addPayment();
+                    modalVisible === 'WithDraw' && withdrawPayment();
+                  }}>
                   <Text style={styles.submitButtonText}>Add Payment</Text>
                 </TouchableOpacity>
               </View>
@@ -646,7 +854,7 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,

@@ -9,31 +9,37 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+interface CustList {
+  id: string;
+  cust_name: string;
+  cust_address: string;
+  cust_contact: string;
+  cust_email: string;
+}
 
 export default function CustomerList() {
   const {openDrawer} = useDrawer();
-  const Info = [
-    {
-      sr: '1',
-      Customer: 'abc',
-      Address: 'Daska',
-      Contact: '098765',
-      Email: '@gmail.com',
-    },
-    {
-      sr: '2',
-      Customer: 'abc',
-      Address: 'Daska',
-      Contact: '098765',
-      Email: '@gmail.com',
-    },
-  ];
+  const [custList, setCustList] = useState<CustList[]>([]);
 
-  const totalCustomers = Info.length;
+  // Fetch Customer List
+  const fetchCustList = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcustList`);
+      setCustList(res.data.customers);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
-  console.log('Total Customers:', totalCustomers);
+  useEffect(() => {
+    fetchCustList();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -69,13 +75,18 @@ export default function CustomerList() {
               Customer List
             </Text>
           </View>
+
+          <TouchableOpacity>
+            <Icon name='printer' size={30} color={'#fff'} />
+          </TouchableOpacity>
         </View>
 
         <ScrollView>
           <View>
             <FlatList
-              data={Info}
+              data={custList}
               keyExtractor={(item, index) => index.toString()}
+              scrollEnabled={false}
               renderItem={({item}) => (
                 <ScrollView
                   style={{
@@ -90,7 +101,7 @@ export default function CustomerList() {
                           marginLeft: 5,
                           marginTop: 5,
                         }}>
-                        {item.Customer}
+                        {item.cust_name}
                       </Text>
 
                       <View
@@ -107,7 +118,7 @@ export default function CustomerList() {
                           justifyContent: 'space-between',
                         }}>
                         <Text style={styles.text}>Contact:</Text>
-                        <Text style={styles.text}>{item.Contact}</Text>
+                        <Text style={styles.text}>{item.cust_contact}</Text>
                       </View>
                       <View
                         style={{
@@ -118,7 +129,7 @@ export default function CustomerList() {
                           Email:
                         </Text>
                         <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.Email}
+                          {item.cust_email}
                         </Text>
                       </View>
                       <View
@@ -130,19 +141,31 @@ export default function CustomerList() {
                           Address:
                         </Text>
                         <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.Address}
+                          {item.cust_address}
                         </Text>
                       </View>
                     </View>
                   </View>
                 </ScrollView>
               )}
+              ListEmptyComponent={
+                <View style={{alignItems: 'center', marginTop: 20}}>
+                  <Text
+                    style={{
+                      color: 'white',
+                      fontSize: 16,
+                      fontWeight: 'bold',
+                    }}>
+                    No record found.
+                  </Text>
+                </View>
+              }
             />
           </View>
         </ScrollView>
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total Customers:</Text>
-          <Text style={styles.totalText}>{totalCustomers}</Text>
+          <Text style={styles.totalText}>{custList.length}</Text>
         </View>
       </ImageBackground>
     </SafeAreaView>
@@ -194,7 +217,8 @@ const styles = StyleSheet.create({
   },
 
   totalContainer: {
-    padding: 7,
+    paddingHorizontal: 15,
+    paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,

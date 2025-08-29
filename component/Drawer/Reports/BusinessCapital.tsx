@@ -7,20 +7,39 @@ import {
   Image,
   TouchableOpacity,
   ScrollView,
-  TextInput,
-  FlatList,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
-import React, {useState} from 'react';
-import Modal from 'react-native-modal';
+import React, {useEffect, useState} from 'react';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+
+interface Capital {
+  stockvalue: number;
+  cashinhand: string;
+  customerReceiveable: number;
+  customerPayable: number;
+  supplierReceiveable: number;
+  supplierPayable: number;
+  business_capital: number;
+}
 
 export default function BusinessCapital() {
   const {openDrawer} = useDrawer();
-  const [btnproduct, setbtnproduct] = useState(false);
+  const [capital, setCapital] = useState<Capital | null>(null);
 
-  const togglebtnproduct = () => {
-    setbtnproduct(!btnproduct);
+  // Fetch Capital
+  const fetchCapital = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcapital`);
+      setCapital(res.data);
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  useEffect(() => {
+    fetchCapital();
+  }, []);
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -59,28 +78,40 @@ export default function BusinessCapital() {
           <View style={styles.section}>
             <View style={styles.inputSmall}>
               <Text style={[{color: 'white'}]}>Current Stock Value:</Text>
-              <Text style={[{color: 'white'}]}>0000</Text>
+              <Text style={[{color: 'white'}]}>
+                {capital?.stockvalue.toFixed(2) ?? '0.00'}
+              </Text>
             </View>
             <View style={styles.inputSmall}>
               <Text style={[{color: 'white'}]}>Cash In Hand:</Text>
-              <Text style={[{color: 'white'}]}>0000</Text>
+              <Text style={[{color: 'white'}]}>
+                {capital?.cashinhand ?? '0.00'}
+              </Text>
             </View>
             <View style={styles.inputSmall}>
               <Text style={{color: 'white'}}>Customer Receivables:</Text>
-              <Text style={[{color: 'white'}]}>0000</Text>
+              <Text style={[{color: 'white'}]}>
+                {capital?.customerReceiveable.toFixed(2) ?? '0.00'}
+              </Text>
             </View>
 
             <View style={styles.inputSmall}>
-              <Text style={[{color: 'white'}]}>Customer Payables:</Text>{' '}
-              <Text style={[{color: 'white'}]}>0000</Text>
+              <Text style={[{color: 'white'}]}>Customer Payables:</Text>
+              <Text style={[{color: 'white'}]}>
+                {capital?.customerPayable.toFixed(2) ?? '0.00'}
+              </Text>
             </View>
             <View style={styles.inputSmall}>
               <Text style={[{color: 'white'}]}>Supplier Receivables:</Text>
-              <Text style={[{color: 'white'}]}>0000</Text>
+              <Text style={[{color: 'white'}]}>
+                {capital?.supplierReceiveable.toFixed(2) ?? '0.00'}
+              </Text>
             </View>
             <View style={styles.inputSmall}>
               <Text style={[{color: 'white'}]}>Supplier Payables:</Text>
-              <Text style={[{color: 'white'}]}>0000</Text>
+              <Text style={[{color: 'white'}]}>
+                {capital?.supplierPayable.toFixed(2) ?? '0.00'}
+              </Text>
             </View>
 
             <View style={[styles.inputSmall, {backgroundColor: 'white'}]}>
@@ -94,7 +125,9 @@ export default function BusinessCapital() {
                 }}>
                 Business Capital:
               </Text>
-              <Text style={[{color: '#144272', fontWeight: 'bold'}]}>0000</Text>
+              <Text style={[{color: '#144272', fontWeight: 'bold'}]}>
+                {capital?.business_capital.toFixed(2) ?? '0.00'}
+              </Text>
             </View>
           </View>
         </ScrollView>

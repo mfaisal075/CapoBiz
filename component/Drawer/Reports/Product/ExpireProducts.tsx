@@ -9,42 +9,42 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+
+interface ExpiredList {
+  prod_name: string;
+  prod_expirydate: string;
+  prod_UPC_EAN: string;
+  prod_qty: string;
+  prod_reorder_qty: string;
+  prod_costprice: string;
+  prod_fretailprice: string;
+  created_at: string;
+  ums_name: string;
+  pcat_name: string;
+}
 
 export default function ExpireProducts() {
-
   const {openDrawer} = useDrawer();
-  const Info = [
-    {
-      sr: '1',
-      Product: 'Sufi',
-      Barcode: '0876',
-      Category: 'Oil',
-      UOM: '12',
-      QTY: 1,
-      ReorderQTY: 3,
-      CostPrice: 66,
-      SalePrice: 88,
-      EntryDate: '23-9-23',
-      ExpiryDate:'25-10-25'
-    },
-    {
-      sr: '2',
-      Product: 'Sufi',
-      Barcode: '0876',
-      Category: 'Oil',
-      UOM: '12',
-      QTY: 1,
-      ReorderQTY: 3,
-      CostPrice: 66,
-      SalePrice: 88,
-      EntryDate: '23-9-23',
-      ExpiryDate:'25-10-25'
-    },
-  ];
+  const [expiredList, setExpiredList] = useState<ExpiredList[]>([]);
 
-  const totalProducts = Info.length;
+  // Fetch Expired List
+  const fetchExpiredList = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchexpire`);
+      setExpiredList(res.data.products);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchExpiredList();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -77,157 +77,180 @@ export default function ExpireProducts() {
                 fontSize: 22,
                 fontWeight: 'bold',
               }}>
-           Expired Products
+              Expired Products
             </Text>
           </View>
+
+          <TouchableOpacity>
+            <Icon name="printer" size={30} color={'#fff'} />
+          </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={Info}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.Product}
-                      </Text>
+        <FlatList
+          data={expiredList}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <ScrollView
+              style={{
+                padding: 5,
+              }}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
+                  <Text
+                    style={{
+                      color: '#144272',
+                      fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
+                    }}>
+                    {item.prod_name}
+                  </Text>
 
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}></View>
-                    </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                    }}></View>
+                </View>
 
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>BarCode:</Text>
-                        <Text style={styles.text}>{item.Barcode}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Category:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.Category}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          UOM:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.UOM}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Quantity:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.QTY}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Reorder Quantity:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.ReorderQTY}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Cost Price:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.CostPrice}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Sale Price:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.SalePrice}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Entry Date:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.EntryDate}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Expiry Date:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.ExpiryDate}
-                        </Text>
-                      </View>
-                    </View>
+                <View style={styles.infoRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>BarCode:</Text>
+                    <Text style={styles.text}>{item.prod_UPC_EAN}</Text>
                   </View>
-                </ScrollView>
-              )}
-            />
-          </View>
-        </ScrollView>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Category:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.pcat_name}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>UOM:</Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.ums_name}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Quantity:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.prod_qty}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Reorder Quantity:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.prod_reorder_qty}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Cost Price:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.prod_costprice}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Sale Price:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.prod_fretailprice}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Entry Date:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {new Date(item.created_at)
+                        .toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                        .replace(/ /g, '-')}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Expiry Date:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {new Date(item.prod_expirydate)
+                        .toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                        .replace(/ /g, '-')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          )}
+          ListEmptyComponent={
+            <View style={{alignItems: 'center', marginTop: 20}}>
+              <Text
+                style={{
+                  color: 'white',
+                  fontSize: 16,
+                  fontWeight: 'bold',
+                }}>
+                No record found.
+              </Text>
+            </View>
+          }
+        />
+
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total Expired Products:</Text>
-          <Text style={styles.totalText}>{totalProducts}</Text>
+          <Text style={styles.totalText}>{expiredList.length ?? '0'}</Text>
         </View>
       </ImageBackground>
     </SafeAreaView>
@@ -279,7 +302,8 @@ const styles = StyleSheet.create({
   },
 
   totalContainer: {
-    padding: 7,
+    paddingHorizontal: 15,
+    paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,

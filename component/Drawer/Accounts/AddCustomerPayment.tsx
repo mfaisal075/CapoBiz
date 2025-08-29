@@ -17,6 +17,7 @@ import BASE_URL from '../../BASE_URL';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Toast from 'react-native-toast-message';
+import {Modal} from 'react-native';
 
 interface Customers {
   id: number;
@@ -72,6 +73,8 @@ const AddCustomerPayment = () => {
   >(null);
   const [cashType, setCashType] = useState('');
   const [cashTypeOpen, setCashTypeOpen] = useState(false);
+  const [receipt, setReceipt] = useState<any | null>(null);
+  const [chiReceipt, setChiReceipt] = useState<any | null>(null);
 
   // Cash Payment Add Form OnChange
   const cashOnChange = (field: keyof CustomerAddForm, value: string | Date) => {
@@ -89,7 +92,7 @@ const AddCustomerPayment = () => {
     }));
   };
 
-  // Date OnChnage
+  // Date OnChange
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
       setShowDatePicker(null);
@@ -108,8 +111,8 @@ const AddCustomerPayment = () => {
 
   // Payment Type
   const paymentType = [
-    {label: 'Received in Company', value: 'received_in_company'},
-    {label: 'Paid by Company', value: 'paid_by_company'},
+    {label: 'Received', value: 'Received'},
+    {label: 'Paid', value: 'Paid'},
   ];
 
   // Fetch Customer dropdown
@@ -179,6 +182,7 @@ const AddCustomerPayment = () => {
       const data = res.data;
 
       if (res.status === 200 && data.status === 200) {
+        setReceipt(data.cust_account);
         Toast.show({
           type: 'success',
           text1: 'Added!',
@@ -235,6 +239,8 @@ const AddCustomerPayment = () => {
       const data = res.data;
 
       if (res.status === 200 && data.status === 200) {
+        setChiReceipt(res.data.chq_info);
+
         Toast.show({
           type: 'success',
           text1: 'Added!',
@@ -632,6 +638,229 @@ const AddCustomerPayment = () => {
             />
           )}
         </View>
+
+        <Modal
+          visible={!!receipt}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setReceipt(null)}>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              padding: 20,
+            }}>
+            <View
+              style={{
+                backgroundColor: '#fff',
+                width: '100%',
+                borderRadius: 16,
+                padding: 20,
+                shadowColor: '#000',
+                shadowOpacity: 0.3,
+                shadowOffset: {width: 0, height: 2},
+                shadowRadius: 6,
+                elevation: 5,
+              }}>
+              {/* Header */}
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  color: '#144272',
+                  textAlign: 'center',
+                  marginBottom: 15,
+                }}>
+                🧾 Payment Receipt
+              </Text>
+
+              {/* Details */}
+              <View style={{marginBottom: 10}}>
+                <Text style={{fontWeight: '600', marginBottom: 4}}>
+                  Invoice No:{' '}
+                  <Text style={{fontWeight: '400'}}>
+                    {receipt?.custac_invoice_no}
+                  </Text>
+                </Text>
+                <Text style={{fontWeight: '600', marginBottom: 4}}>
+                  Amount:{' '}
+                  <Text style={{fontWeight: '400', color: 'green'}}>
+                    Rs. {receipt?.custac_paid_amount}
+                  </Text>
+                </Text>
+                <Text style={{fontWeight: '600', marginBottom: 4}}>
+                  Method:{' '}
+                  <Text style={{fontWeight: '400'}}>
+                    {receipt?.custac_payment_method}
+                  </Text>
+                </Text>
+                <Text style={{fontWeight: '600', marginBottom: 4}}>
+                  Type:{' '}
+                  <Text style={{fontWeight: '400'}}>
+                    {receipt?.custac_payment_type}
+                  </Text>
+                </Text>
+                <Text style={{fontWeight: '600', marginBottom: 4}}>
+                  Date:{' '}
+                  <Text style={{fontWeight: '400'}}>
+                    {receipt?.custac_date}
+                  </Text>
+                </Text>
+                <Text style={{fontWeight: '600', marginBottom: 4}}>
+                  Note:{' '}
+                  <Text style={{fontWeight: '400'}}>
+                    {receipt?.custac_note}
+                  </Text>
+                </Text>
+                <Text style={{fontWeight: '600'}}>
+                  Balance:{' '}
+                  <Text style={{fontWeight: '400', color: 'red'}}>
+                    {receipt?.custac_balance}
+                  </Text>
+                </Text>
+              </View>
+
+              {/* Divider */}
+              <View
+                style={{
+                  borderTopWidth: 1,
+                  borderColor: '#ddd',
+                  marginVertical: 10,
+                }}
+              />
+
+              {/* Close Button */}
+              <TouchableOpacity
+                onPress={() => setReceipt(null)}
+                style={{
+                  marginTop: 10,
+                  backgroundColor: '#144272',
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                }}>
+                <Text
+                  style={{
+                    color: '#fff',
+                    textAlign: 'center',
+                    fontWeight: '600',
+                  }}>
+                  Close
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Cheque Receipt */}
+        <Modal
+          visible={!!chiReceipt}
+          animationType="fade"
+          transparent={true}
+          onRequestClose={() => setChiReceipt(null)}>
+          <View
+            style={{
+              flex: 1,
+              justifyContent: 'center',
+              alignItems: 'center',
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              padding: 20,
+            }}>
+            <View
+              style={{
+                backgroundColor: '#fff',
+                width: '100%',
+                borderRadius: 16,
+                padding: 20,
+                shadowColor: '#000',
+                shadowOpacity: 0.3,
+                shadowOffset: {width: 0, height: 2},
+                shadowRadius: 6,
+                elevation: 5,
+              }}>
+              {/* Header */}
+              <Text
+                style={{
+                  fontSize: 20,
+                  fontWeight: 'bold',
+                  color: '#144272',
+                  textAlign: 'center',
+                  marginBottom: 15,
+                }}>
+                🧾 Cheque Receipt
+              </Text>
+
+              {/* Details */}
+              <View style={{marginBottom: 10}}>
+                <Text style={{fontWeight: '600', marginBottom: 4}}>
+                  Cheque No:{' '}
+                  <Text style={{fontWeight: '400'}}>
+                    {chiReceipt?.chi_amount}
+                  </Text>
+                </Text>
+                <Text style={{fontWeight: '600', marginBottom: 4}}>
+                  Date:{' '}
+                  <Text style={{fontWeight: '400'}}>
+                    {chiReceipt?.chi_date}
+                  </Text>
+                </Text>
+                <Text style={{fontWeight: '600', marginBottom: 4}}>
+                  Amount:{' '}
+                  <Text style={{fontWeight: '400', color: 'green'}}>
+                    {chiReceipt?.chi_amount}
+                  </Text>
+                </Text>
+                <Text style={{fontWeight: '600', marginBottom: 4}}>
+                  Note:{' '}
+                  <Text style={{fontWeight: '400'}}>
+                    {chiReceipt?.chi_note}
+                  </Text>
+                </Text>
+                <Text style={{fontWeight: '600', marginBottom: 4}}>
+                  Payment Method:{' '}
+                  <Text style={{fontWeight: '400'}}>
+                    {chiReceipt?.chi_payment_method}
+                  </Text>
+                </Text>
+                <Text style={{fontWeight: '600', marginBottom: 4}}>
+                  Status:{' '}
+                  <Text style={{fontWeight: '400'}}>
+                    {chiReceipt?.chi_status}
+                  </Text>
+                </Text>
+              </View>
+
+              {/* Divider */}
+              <View
+                style={{
+                  borderTopWidth: 1,
+                  borderColor: '#ddd',
+                  marginVertical: 10,
+                }}
+              />
+
+              {/* Close Button */}
+              <TouchableOpacity
+                onPress={() => setChiReceipt(null)}
+                style={{
+                  marginTop: 10,
+                  backgroundColor: '#144272',
+                  paddingVertical: 12,
+                  borderRadius: 8,
+                }}>
+                <Text
+                  style={{
+                    color: '#fff',
+                    textAlign: 'center',
+                    fontWeight: '600',
+                  }}>
+                  Close
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </ImageBackground>
     </SafeAreaView>
   );

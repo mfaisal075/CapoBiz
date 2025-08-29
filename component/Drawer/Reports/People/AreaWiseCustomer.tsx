@@ -9,67 +9,69 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useUser} from '../../../CTX/UserContext';
 
-type Product = {
-  CustomerName: string;
-  CNIC: string;
-  Contact: number;
-  Email: string;
-  Area: string;
-  Balance: number;
-};
+interface AreaDropDown {
+  id: number;
+  area_name: string;
+}
 
-type InfoType = {
-  [key: string]: Product[];
-};
+interface AreaList {
+  id: string;
+  area_name: string;
+  cust_cnic: string;
+  cust_email: string;
+  cust_contact: string;
+  cust_name: string;
+}
 
 export default function AreaWiseCustomer() {
+  const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const [customerArea, setcustomerArea] = useState(false);
-  const [currentcustomerarea, setCurrentcustomerarea] =
-    useState<string>('Select Category');
-  const customerAreaItem = [
-    {label: 'Select Category', value: 'Select Category'},
-    {label: 'Gujranwala', value: 'Gujranwala'},
-    {label: 'Lahore', value: 'Lahore'},
-  ];
+  const [areaOpen, setAreaOpen] = useState(false);
+  const [areaValue, setAreaValue] = useState('');
+  const [areaDropdown, setAreaDropdown] = useState<AreaDropDown[]>([]);
+  const transformedLabArea = areaDropdown.map(area => ({
+    label: area.area_name,
+    value: area.id.toString(),
+  }));
+  const [areaList, setAreaList] = useState<AreaList[]>([]);
 
-  const Info: InfoType = {
-    'Select Category': [
-      {
-        CustomerName: 'string',
-        CNIC: 'string',
-        Contact: 123,
-        Email: '@g',
-        Area: 'kkk',
-        Balance: 1223,
-      },
-    ],
-
-    Gujranwala: [
-      {
-        CustomerName: 'gujranwala',
-        CNIC: 'string',
-        Contact: 123,
-        Email: '@g',
-        Area: 'kkk',
-        Balance: 1223,
-      },
-    ],
-    Lahore: [
-      {
-        CustomerName: 'lahore',
-        CNIC: 'string',
-        Contact: 123,
-        Email: '@g',
-        Area: 'kkk',
-        Balance: 1223,
-      },
-    ],
+  // Fetch Area dropdown
+  const fetchAreaDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchareadata`);
+      setAreaDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  // Fetch Area Wise List
+  const fetchAreaList = async () => {
+    if (areaValue) {
+      try {
+        const res = await axios.get(
+          `${BASE_URL}/fetchcustareareport?area=${areaValue}&_token=${token}`,
+        );
+        setAreaList(res.data.area);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchAreaDropdown();
+    fetchAreaList();
+  }, [areaValue]);
+
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -104,39 +106,47 @@ export default function AreaWiseCustomer() {
               Area Wise Customer
             </Text>
           </View>
+
+          <TouchableOpacity>
+            <Icon name="printer" size={30} color={'#fff'} />
+          </TouchableOpacity>
         </View>
 
         <DropDownPicker
-          items={customerAreaItem}
-          open={customerArea}
-          setOpen={setcustomerArea}
-          value={currentcustomerarea}
-          setValue={setCurrentcustomerarea}
+          items={transformedLabArea}
+          open={areaOpen}
+          setOpen={setAreaOpen}
+          value={areaValue}
+          setValue={setAreaValue}
           placeholder="Select Customer Area"
           placeholderStyle={{color: 'white'}}
           textStyle={{color: 'white'}}
-          arrowIconStyle={{tintColor: 'white'}}
-          style={[
-            styles.dropdown,
-            {
-              borderColor: 'white',
-              width: 330,
-              alignSelf: 'center',
-            },
-          ]}
+          ArrowUpIconComponent={() => (
+            <Text>
+              <Icon name="chevron-up" size={15} color="white" />
+            </Text>
+          )}
+          ArrowDownIconComponent={() => (
+            <Text>
+              <Icon name="chevron-down" size={15} color="white" />
+            </Text>
+          )}
+          style={[styles.dropdown]}
           dropDownContainerStyle={{
             backgroundColor: 'white',
             borderColor: 'white',
-            width: 330,
+            width: '90%',
+            marginTop: 8,
             alignSelf: 'center',
           }}
-          labelStyle={{color: 'white'}}
+          labelStyle={{color: 'white', fontWeight: 'bold'}}
           listItemLabelStyle={{color: '#144272'}}
+          listMode="SCROLLVIEW"
         />
 
         <ScrollView>
           <FlatList
-            data={Info[currentcustomerarea] || []}
+            data={areaList}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={{padding: 5}}>
@@ -149,7 +159,7 @@ export default function AreaWiseCustomer() {
                         marginLeft: 5,
                         marginTop: 5,
                       }}>
-                      {item.CustomerName}
+                      {item.cust_name}
                     </Text>
                   </View>
                   <View style={styles.infoRow}>
@@ -159,7 +169,7 @@ export default function AreaWiseCustomer() {
                         justifyContent: 'space-between',
                       }}>
                       <Text style={styles.text}>CNIC:</Text>
-                      <Text style={styles.text}>{item.CNIC}</Text>
+                      <Text style={styles.text}>{item.cust_cnic}</Text>
                     </View>
                     <View
                       style={{
@@ -167,7 +177,7 @@ export default function AreaWiseCustomer() {
                         justifyContent: 'space-between',
                       }}>
                       <Text style={styles.text}>Contact:</Text>
-                      <Text style={styles.text}>{item.Contact}</Text>
+                      <Text style={styles.text}>{item.cust_contact}</Text>
                     </View>
                     <View
                       style={{
@@ -175,7 +185,7 @@ export default function AreaWiseCustomer() {
                         justifyContent: 'space-between',
                       }}>
                       <Text style={styles.text}>Email:</Text>
-                      <Text style={styles.text}>{item.Email}</Text>
+                      <Text style={styles.text}>{item.cust_email}</Text>
                     </View>
                     <View
                       style={{
@@ -183,21 +193,25 @@ export default function AreaWiseCustomer() {
                         justifyContent: 'space-between',
                       }}>
                       <Text style={styles.text}>Area:</Text>
-                      <Text style={styles.text}>{item.Area}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        marginBottom: 5,
-                      }}>
-                      <Text style={styles.text}>Balance:</Text>
-                      <Text style={styles.text}>{item.Balance}</Text>
+                      <Text style={styles.text}>{item.area_name}</Text>
                     </View>
                   </View>
                 </View>
               </View>
             )}
+            scrollEnabled={false}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text
+                  style={{
+                    color: 'white',
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                  }}>
+                  No record found.
+                </Text>
+              </View>
+            }
           />
         </ScrollView>
       </ImageBackground>
@@ -221,11 +235,13 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 39,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
+    width: '90%',
+    alignSelf: 'center',
   },
   text: {
     marginLeft: 5,

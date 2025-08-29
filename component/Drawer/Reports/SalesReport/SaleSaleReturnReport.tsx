@@ -9,90 +9,56 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import axios from 'axios';
+import BASE_URL from '../../../BASE_URL';
+import DropDownPicker from 'react-native-dropdown-picker';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-interface EmployeeInfo {
-  sr: number;
-  Invoice: number;
-  Customer?: string;
-  Date?: string;
-  OrderTotal?: number;
-  Discount?: number;
-  TotalAmount?: number;
-  Profit: number;
-
-  Product?: string;
-  returnDate?: string;
-  QTY?: number;
-  Price?: number;
-  TotalPrice?: number;
+interface Users {
+  id: number;
+  name: string;
 }
 
-interface InfoObject {
-  [key: string]: EmployeeInfo[];
+interface SaleReturnData {
+  prod_name: string;
+  salrd_invoice_no: string;
+  salrd_return_qty: string;
+  salrd_profit: string;
+  salrd_price: string;
+  salrd_total_price: string;
+  created_at: string;
+}
 
-  Cup: EmployeeInfo[];
+interface SaleData {
+  id: number;
+  sal_date: string;
+  sal_order_total: string;
+  sal_discount: string;
+  sal_invoice_no: string;
+  sal_total_amount: string;
+  sal_profit: string;
+  cust_name: string;
 }
 
 export default function SaleSaleReturnReport() {
   const {openDrawer} = useDrawer();
-
-  const dateWiseInfo: EmployeeInfo[] = [
-    {
-      sr: 1,
-      Invoice: 101,
-      Customer: 'nm',
-      Date: '999-000-00',
-      OrderTotal: 88,
-      Discount: 99,
-      TotalAmount: 66,
-      Profit: 55,
-    },
-    {
-      sr: 2,
-      Invoice: 101,
-      Customer: 'nm',
-      Date: '999-000-00',
-      OrderTotal: 88,
-      Discount: 99,
-      TotalAmount: 66,
-      Profit: 55,
-    },
-  ];
-
-  const Info: InfoObject = {
-    Cup: [
-      {
-        sr: 1,
-        Invoice: 8,
-        Product: 'jkj',
-        returnDate: '999-0',
-        QTY: 8,
-        Price: 99,
-        TotalPrice: 77,
-        Profit: 55,
-      },
-      {
-        sr: 2,
-        Invoice: 8,
-        Product: 'jkj',
-        returnDate: '999-0',
-        QTY: 8,
-        Price: 99,
-        TotalPrice: 77,
-        Profit: 55,
-      },
-    ],
-  };
-
+  const [usersDropdown, setUsersDropdown] = useState<Users[]>([]);
+  const transformedUsers = usersDropdown.map(user => ({
+    label: user.name,
+    value: user.id.toString(),
+  }));
+  const [userOpen, setUserOpen] = useState(false);
+  const [userValue, setUserValue] = useState('');
+  const [saleReturnData, setSaleReturnData] = useState<SaleReturnData[]>([]);
+  const [saleData, setSaleData] = useState<SaleData[]>([]);
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [dataLoaded, setDataLoaded] = useState(false);
 
   const onStartDateChange = (
     event: DateTimePickerEvent,
@@ -109,13 +75,68 @@ export default function SaleSaleReturnReport() {
     setEndDate(currentDate);
   };
 
-  const selectionMode = 'allemployees';
-  const currentCategory = '';
+  // Fetch Users Dropdown
+  const fetchUserDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchusersdropdown`);
+      setUsersDropdown(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
-  const totalProducts =
-    selectionMode === 'allemployees'
-      ? Object.values(Info).reduce((acc, list) => acc + list.length, 0)
-      : Info[currentCategory]?.length || 0;
+  const fetchSaleData = async () => {
+    try {
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+
+      const res = await axios.post(`${BASE_URL}/fetchsalesandreturns`, {
+        from,
+        to,
+        user_id: userValue,
+      });
+      setSaleReturnData(res.data.sales_return);
+      setSaleData(res.data.sales);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate Total Sales
+  const calculateTotalSales = () => {
+    let totalSale = 0;
+    let totalSaleProfit = 0;
+    let totalReturn = 0;
+    let totalReturnProfit = 0;
+
+    saleData.forEach(sale => {
+      const sales = parseFloat(sale.sal_total_amount) || 0;
+      const profit = parseFloat(sale.sal_profit) || 0;
+
+      totalSale += sales;
+      totalSaleProfit += profit;
+    });
+    saleReturnData.forEach(sale => {
+      const returns = parseFloat(sale.salrd_total_price) || 0;
+      const profit = parseFloat(sale.salrd_profit) || 0;
+
+      totalReturn += returns;
+      totalReturnProfit += profit;
+    });
+
+    return {
+      totalSale: totalSale.toFixed(2),
+      totalSaleProfit: totalSaleProfit.toFixed(2),
+      totalReturn: totalReturn.toFixed(2),
+      totalReturnProfit: totalReturnProfit.toFixed(2),
+      netProfit: (totalSaleProfit - totalReturnProfit).toFixed(2),
+    };
+  };
+
+  useEffect(() => {
+    fetchUserDropdown();
+    fetchSaleData();
+  }, [startDate, endDate, userValue]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -144,24 +165,19 @@ export default function SaleSaleReturnReport() {
           </View>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            marginLeft: 23,
-            gap: 33,
-            marginTop: 10,
-          }}>
-          {/* From Date */}
+        <View style={styles.dateContainer}>
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>From:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${startDate.toLocaleDateString()}`}
             </Text>
@@ -193,12 +209,14 @@ export default function SaleSaleReturnReport() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>To:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${endDate.toLocaleDateString()}`}
             </Text>
@@ -226,142 +244,222 @@ export default function SaleSaleReturnReport() {
           </View>
         </View>
 
-        {/* Load Data Button */}
-        <TouchableOpacity onPress={() => setDataLoaded(true)}>
-          <View
-            style={{
-              height: 30,
-              width: 300,
+        <View style={[styles.dropDownContainer, {marginTop: 10}]}>
+          <DropDownPicker
+            items={transformedUsers}
+            open={userOpen}
+            setOpen={setUserOpen}
+            value={userValue}
+            setValue={setUserValue}
+            placeholder="Select User"
+            placeholderStyle={{color: 'white'}}
+            textStyle={{color: 'white'}}
+            ArrowUpIconComponent={() => (
+              <Text>
+                <Icon name="chevron-up" size={15} color="white" />
+              </Text>
+            )}
+            ArrowDownIconComponent={() => (
+              <Text>
+                <Icon name="chevron-down" size={15} color="white" />
+              </Text>
+            )}
+            style={[styles.dropdown, {zIndex: 999}]}
+            dropDownContainerStyle={{
               backgroundColor: 'white',
-              borderRadius: 12,
-              margin: 10,
-              alignSelf: 'center',
-            }}>
-            <Text
-              style={{
-                textAlign: 'center',
-                color: '#144272',
-                marginTop: 5,
-              }}>
-              Load Data
-            </Text>
-          </View>
-        </TouchableOpacity>
+              borderColor: '#144272',
+              width: '100%',
+              marginTop: 8,
+            }}
+            labelStyle={{color: 'white'}}
+            listItemLabelStyle={{color: '#144272'}}
+          />
+        </View>
 
-        {dataLoaded && (
-          <>
-            <ScrollView>
-              <Text style={styles.sectionHeader}>Sale Profit</Text>
-              <FlatList
-                data={dateWiseInfo}
-                keyExtractor={(item, index) => index.toString()}
-                renderItem={({item}) => (
-                  <View style={{padding: 5}}>
-                    <View style={styles.table}>
-                      <View style={styles.tablehead}>
-                        <Text style={styles.invoiceText}>{item.Invoice}</Text>
-                      </View>
-                      <View style={styles.infoRow}>
-                        <View style={styles.row}>
-                          <Text style={styles.text}>Customer:</Text>
-                          <Text style={styles.text}>{item.Customer}</Text>
-                        </View>
-                        <View style={styles.row}>
-                          <Text style={styles.text}>Date:</Text>
-                          <Text style={styles.text}>{item.Date}</Text>
-                        </View>
-                        <View style={styles.row}>
-                          <Text style={styles.text}>Order Total:</Text>
-                          <Text style={styles.text}>{item.OrderTotal}</Text>
-                        </View>
-                        <View style={styles.row}>
-                          <Text style={styles.text}>Discount:</Text>
-                          <Text style={styles.text}>{item.Discount}</Text>
-                        </View>
-                        <View style={styles.row}>
-                          <Text style={styles.text}>Total Amount:</Text>
-                          <Text style={styles.text}>{item.TotalAmount}</Text>
-                        </View>
-                        <View style={styles.row}>
-                          <Text style={styles.text}>Profit:</Text>
-                          <Text style={styles.text}>{item.Profit}</Text>
-                        </View>
-                      </View>
+        <ScrollView>
+          <Text style={styles.sectionHeader}>Sale Profit</Text>
+          <FlatList
+            data={saleData}
+            keyExtractor={(item, index) => index.toString()}
+            scrollEnabled={false}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text style={styles.invoiceText}>
+                      {item.sal_invoice_no}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <View style={styles.row}>
+                      <Text style={styles.text}>Customer:</Text>
+                      <Text style={styles.text}>{item.cust_name}</Text>
+                    </View>
+                    <View style={styles.row}>
+                      <Text style={styles.text}>Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.sal_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
+                      </Text>
+                    </View>
+                    <View style={styles.row}>
+                      <Text style={styles.text}>Order Total:</Text>
+                      <Text style={styles.text}>{item.sal_order_total}</Text>
+                    </View>
+                    <View style={styles.row}>
+                      <Text style={styles.text}>Discount:</Text>
+                      <Text style={styles.text}>{item.sal_discount}</Text>
+                    </View>
+                    <View style={styles.row}>
+                      <Text style={styles.text}>Total Amount:</Text>
+                      <Text style={styles.text}>{item.sal_total_amount}</Text>
+                    </View>
+                    <View style={styles.row}>
+                      <Text style={styles.text}>Profit:</Text>
+                      <Text style={styles.text}>{item.sal_profit}</Text>
                     </View>
                   </View>
-                )}
-              />
+                </View>
+              </View>
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  height: 200,
+                  width: '100%',
+                  marginTop: 20,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No record found.
+                </Text>
+              </View>
+            }
+          />
 
-              <Text style={styles.sectionHeader}>Sale Return</Text>
-              <FlatList
-                data={Info['Cup']}
-                keyExtractor={(item, index) => index.toString()}
-                renderItem={({item}) => (
-                  <View style={{padding: 5}}>
-                    <View style={styles.table}>
-                      <View style={styles.tablehead}>
-                        <Text style={styles.invoiceText}>{item.Invoice}</Text>
-                      </View>
-                      <View style={styles.infoRow}>
-                        <View style={styles.row}>
-                          <Text style={styles.text}>Product:</Text>
-                          <Text style={styles.text}>{item.Product}</Text>
-                        </View>
-                        <View style={styles.row}>
-                          <Text style={styles.text}>Return Date:</Text>
-                          <Text style={styles.text}>{item.returnDate}</Text>
-                        </View>
-                        <View style={styles.row}>
-                          <Text style={styles.text}>Quantity:</Text>
-                          <Text style={styles.text}>{item.QTY}</Text>
-                        </View>
-                        <View style={styles.row}>
-                          <Text style={styles.text}>Price:</Text>
-                          <Text style={styles.text}>{item.Price}</Text>
-                        </View>
-                        <View style={styles.row}>
-                          <Text style={styles.text}>Total Price:</Text>
-                          <Text style={styles.text}>{item.TotalPrice}</Text>
-                        </View>
-                        <View style={styles.row}>
-                          <Text style={styles.text}>Profit:</Text>
-                          <Text style={styles.text}>{item.Profit}</Text>
-                        </View>
-                      </View>
+          <Text style={styles.sectionHeader}>Sale Return</Text>
+          <FlatList
+            data={saleReturnData}
+            keyExtractor={(item, index) => index.toString()}
+            scrollEnabled={false}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text style={styles.invoiceText}>
+                      {item.salrd_invoice_no}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <View style={styles.row}>
+                      <Text style={styles.text}>Product:</Text>
+                      <Text style={styles.text}>{item.prod_name}</Text>
+                    </View>
+                    <View style={styles.row}>
+                      <Text style={styles.text}>Return Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.created_at)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
+                      </Text>
+                    </View>
+                    <View style={styles.row}>
+                      <Text style={styles.text}>Quantity:</Text>
+                      <Text style={styles.text}>{item.salrd_return_qty}</Text>
+                    </View>
+                    <View style={styles.row}>
+                      <Text style={styles.text}>Price:</Text>
+                      <Text style={styles.text}>{item.salrd_price}</Text>
+                    </View>
+                    <View style={styles.row}>
+                      <Text style={styles.text}>Total Price:</Text>
+                      <Text style={styles.text}>{item.salrd_total_price}</Text>
+                    </View>
+                    <View style={styles.row}>
+                      <Text style={styles.text}>Profit:</Text>
+                      <Text style={styles.text}>{item.salrd_profit}</Text>
                     </View>
                   </View>
-                )}
-              />
+                </View>
+              </View>
+            )}
+          />
+        </ScrollView>
 
-              <View style={styles.totalContainer}>
-                <Text style={styles.totalText}>
-                  Total Sale: {Info['Cup'].length}
-                </Text>
-                <Text style={styles.totalText}>Total Sale Profit: 100</Text>
-              </View>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  padding: 3,
-                }}>
-                <Text style={styles.totalText}>
-                  Total Return: {dateWiseInfo.length}
-                </Text>
-                <Text style={styles.totalText}>Total Return Profit: 50</Text>
-              </View>
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  padding: 3,
-                }}>
-                <Text style={styles.totalText}>Total Net Profit:</Text>
-                <Text style={styles.totalText}>{100 - 50}</Text>
-              </View>
-            </ScrollView>
-          </>
-        )}
+        <View style={styles.totalContainer}>
+          {(() => {
+            const {
+              totalReturn,
+              totalReturnProfit,
+              totalSale,
+              totalSaleProfit,
+              netProfit,
+            } = calculateTotalSales();
+
+            return (
+              <>
+                <View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                    }}>
+                    <Text style={styles.totalText}>Total Sale: </Text>
+                    <Text style={styles.totalText}>{totalSale}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                    }}>
+                    <Text style={styles.totalText}>Total Return: </Text>
+                    <Text style={styles.totalText}>{totalReturn}</Text>
+                  </View>
+                </View>
+                <View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                    }}>
+                    <Text style={styles.totalText}>Total Sale Profit: </Text>
+                    <Text style={styles.totalText}>{totalSaleProfit}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'column',
+                    }}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.totalText}>
+                        Total Return Profit:{' '}
+                      </Text>
+                      <Text style={styles.totalText}>{totalReturnProfit}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.totalText}>Total Net Profit: </Text>
+                      <Text style={styles.totalText}>{netProfit}</Text>
+                    </View>
+                  </View>
+                </View>
+              </>
+            );
+          })()}
+        </View>
       </ImageBackground>
     </SafeAreaView>
   );
@@ -423,15 +521,16 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
+    width: '100%',
   },
   totalContainer: {
-    padding: 3,
+    paddingHorizontal: 15,
+    paddingVertical: 20,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,
@@ -441,7 +540,7 @@ const styles = StyleSheet.create({
   totalText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   row: {
     flexDirection: 'row',
@@ -460,5 +559,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 5,
     marginTop: 5,
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
+    marginTop: 10,
+  },
+  dropDownContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
   },
 });

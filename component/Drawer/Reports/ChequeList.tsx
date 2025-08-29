@@ -9,99 +9,43 @@ import {
   ScrollView,
   FlatList,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {RadioButton} from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
 
-type Product = {
-  sr: number;
-  Customer?: string;
-  Supplier?: string;
-  ChequeNo: number;
-  DueDate: number;
-  ClearanceDate: number;
-  Amount: number;
-};
-
-type InfoType = {
-  [key: string]: Product[];
-};
+interface CustomerChequeList {
+  id: number;
+  cust_name: string;
+  chi_number: string;
+  chi_amount: string;
+  chi_date: string;
+  chi_clear_date: string;
+}
 
 export default function CustomerAccounts() {
   const {openDrawer} = useDrawer();
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [statusValue, setStatusValue] = useState('');
+  const [custChequeList, setCustChequeList] = useState<CustomerChequeList[]>(
+    [],
+  );
 
-  const customersInfo: InfoType = {
-    Due: [
-      {
-        sr: 1,
-        Customer: 'string',
-
-        ChequeNo: 6,
-        DueDate: 8,
-        ClearanceDate: 77,
-        Amount: 99,
-      },
-    ],
-    Clear: [
-      {
-        sr: 1,
-        Customer: 'string',
-
-        ChequeNo: 6,
-        DueDate: 8,
-        ClearanceDate: 77,
-        Amount: 99,
-      },
-    ],
-  };
-
-  const suppliersInfo: InfoType = {
-    Due: [
-      {
-        sr: 1,
-
-        Supplier: 'string',
-
-        ChequeNo: 6,
-        DueDate: 8,
-        ClearanceDate: 77,
-        Amount: 99,
-      },
-    ],
-    Clear: [
-      {
-        sr: 1,
-        Supplier: 'string',
-        ChequeNo: 6,
-        DueDate: 8,
-        ClearanceDate: 77,
-        Amount: 99,
-      },
-    ],
-  };
-
-  const [category, setCategory] = useState(false);
   const [currentCategory, setCurrentCategory] = useState<string>('Due');
 
-  const categoryItems = [
+  const statusItems = [
     {label: 'Due', value: 'Due'},
-    {label: 'Clear', value: 'Clear'},
+    {label: 'Cleared', value: 'Cleared'},
   ];
 
   const [selectionMode, setSelectionMode] = useState<
-    'allcustomers' | 'singlecustomers' | ''
-  >('');
-  const currentData =
-    selectionMode === 'allcustomers'
-      ? Object.values(customersInfo).flat()
-      : selectionMode === 'singlecustomers' && currentCategory
-      ? suppliersInfo[currentCategory] || []
-      : [];
-
-  const totalProducts = currentData.length;
+    'customers' | 'suppliers' | ''
+  >('customers');
 
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
@@ -122,6 +66,39 @@ export default function CustomerAccounts() {
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
+
+  // Customers Cheque List
+  const fetchCustomerChequeList = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/fetchcheques`, {
+        from: startDate.toISOString().split('T')[0],
+        to: endDate.toISOString().split('T')[0],
+        status: statusValue,
+      });
+      setCustChequeList(res.data.cheques);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate Customers Total
+  const calculateCustChequeTotal = () => {
+    let totalAmount = 0;
+
+    custChequeList.forEach(cust => {
+      const amount = parseFloat(cust.chi_amount) || 0;
+
+      totalAmount += amount;
+    });
+
+    return {
+      totalSale: totalAmount.toFixed(2),
+    };
+  };
+
+  useEffect(() => {
+    fetchCustomerChequeList();
+  }, [startDate, endDate, statusValue]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -150,23 +127,19 @@ export default function CustomerAccounts() {
           </View>
         </View>
 
-        <View
-          style={{
-            flexDirection: 'row',
-            marginLeft: 23,
-            gap: 33,
-            marginTop: 10,
-          }}>
+        <View style={styles.dateContainer}>
           <View
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>From:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${startDate.toLocaleDateString()}`}
             </Text>
@@ -198,12 +171,14 @@ export default function CustomerAccounts() {
             style={{
               flexDirection: 'row',
               alignItems: 'center',
+              justifyContent: 'space-between',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              height: 38,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>To:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${endDate.toLocaleDateString()}`}
             </Text>
@@ -230,132 +205,163 @@ export default function CustomerAccounts() {
             )}
           </View>
         </View>
-        <DropDownPicker
-          items={categoryItems}
-          open={category}
-          setOpen={setCategory}
-          value={currentCategory}
-          setValue={setCurrentCategory}
-          placeholder="Select"
-          placeholderStyle={{color: 'white'}}
-          textStyle={{color: 'white'}}
-          arrowIconStyle={{tintColor: 'white'}}
-          style={[
-            styles.dropdown,
-            {borderColor: 'white', width: '88%', alignSelf: 'center'},
-          ]}
-          dropDownContainerStyle={{
-            backgroundColor: 'white',
-            borderColor: '#144272',
-            width: '88%',
-            marginLeft: 22,
-          }}
-          labelStyle={{color: 'white'}}
-          listItemLabelStyle={{color: '#144272'}}
-        />
 
-        <View style={[styles.row, {marginTop: -6, marginLeft: 20}]}>
-          <RadioButton
-            value="allcustomers"
-            status={selectionMode === 'allcustomers' ? 'checked' : 'unchecked'}
-            color="white"
-            uncheckedColor="white"
-            onPress={() => {
-              setSelectionMode('allcustomers');
-              setCurrentCategory('Due');
+        <View style={styles.dropDownContainer}>
+          <DropDownPicker
+            items={statusItems}
+            open={statusOpen}
+            setOpen={setStatusOpen}
+            value={statusValue}
+            setValue={setStatusValue}
+            placeholder="Select Status"
+            placeholderStyle={{color: 'white'}}
+            textStyle={{color: 'white'}}
+            ArrowUpIconComponent={() => (
+              <Text>
+                <Icon name="chevron-up" size={15} color="white" />
+              </Text>
+            )}
+            ArrowDownIconComponent={() => (
+              <Text>
+                <Icon name="chevron-down" size={15} color="white" />
+              </Text>
+            )}
+            style={[styles.dropdown]}
+            dropDownContainerStyle={{
+              backgroundColor: 'white',
+              borderColor: '#144272',
+              width: '100%',
+              marginTop: 8,
             }}
+            labelStyle={{color: 'white'}}
+            listItemLabelStyle={{color: '#144272'}}
           />
-          <Text style={{color: 'white', marginTop: 7, marginLeft: -5}}>
-            Customers
-          </Text>
-          <RadioButton
-            value="singlecustomers"
-            color="white"
-            uncheckedColor="white"
-            status={
-              selectionMode === 'singlecustomers' ? 'checked' : 'unchecked'
-            }
-            onPress={() => {
-              setSelectionMode('singlecustomers');
-              setCurrentCategory('');
-            }}
-          />
-          <Text style={{color: 'white', marginTop: 7, marginLeft: -5}}>
-            Suppliers
-          </Text>
         </View>
 
-        <ScrollView>
-          {(selectionMode === 'allcustomers' ||
-            (selectionMode === 'singlecustomers' && currentCategory)) && (
-            <FlatList
-              data={currentData}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.ChequeNo}
+        <View style={[styles.row]}>
+          <TouchableOpacity
+            style={{flexDirection: 'row', width: '40%'}}
+            onPress={() => {
+              setSelectionMode('customers');
+              setCurrentCategory('');
+            }}>
+            <RadioButton
+              value="customer"
+              status={selectionMode === 'customers' ? 'checked' : 'unchecked'}
+              color="white"
+              uncheckedColor="white"
+              onPress={() => {
+                setSelectionMode('customers');
+                setCurrentCategory('');
+              }}
+            />
+            <Text style={{color: 'white', marginTop: 7, marginLeft: 5}}>
+              Customers
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={{flexDirection: 'row', width: '40%'}}
+            onPress={() => {
+              setSelectionMode('suppliers');
+              setCurrentCategory('');
+            }}>
+            <RadioButton
+              value="supplier"
+              color="white"
+              uncheckedColor="white"
+              status={selectionMode === 'suppliers' ? 'checked' : 'unchecked'}
+              onPress={() => {
+                setSelectionMode('suppliers');
+                setCurrentCategory('');
+              }}
+            />
+            <Text style={{color: 'white', marginTop: 7, marginLeft: 5}}>
+              Suppliers
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {selectionMode === 'customers' && (
+          <FlatList
+            data={custChequeList}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.chi_number}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.RowTable}>
+                      <Text style={styles.text}>Customer:</Text>
+                      <Text style={styles.text}>{item.cust_name}</Text>
+                    </View>
+
+                    <View style={styles.RowTable}>
+                      <Text style={styles.text}>Due Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.chi_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
                       </Text>
                     </View>
 
-                    <View style={styles.infoRow}>
-                      {item.Customer && (
-                        <View style={styles.RowTable}>
-                          <Text style={styles.text}>Customer:</Text>
-                          <Text style={styles.text}>{item.Customer}</Text>
-                        </View>
-                      )}
+                    <View style={styles.RowTable}>
+                      <Text style={styles.text}>Clearance Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.chi_clear_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
+                      </Text>
+                    </View>
 
-                      {item.Supplier && (
-                        <View style={styles.RowTable}>
-                          <Text style={styles.text}>Supplier:</Text>
-                          <Text style={styles.text}>{item.Supplier}</Text>
-                        </View>
-                      )}
-
-                      <View style={styles.RowTable}>
-                        <Text style={styles.text}>Due Date:</Text>
-                        <Text style={styles.text}>{item.DueDate}</Text>
-                      </View>
-
-                      <View style={styles.RowTable}>
-                        <Text style={styles.text}>Clearance Date:</Text>
-                        <Text style={styles.text}>{item.ClearanceDate}</Text>
-                      </View>
-
-                      <View style={[styles.RowTable, {marginBottom: 5}]}>
-                        <Text style={styles.text}>Amount:</Text>
-                        <Text style={styles.text}>{item.Amount}</Text>
-                      </View>
+                    <View style={[styles.RowTable, {marginBottom: 5}]}>
+                      <Text style={styles.text}>Amount:</Text>
+                      <Text style={styles.text}>{item.chi_amount}</Text>
                     </View>
                   </View>
                 </View>
-              )}
-            />
-          )}
+              </View>
+            )}
+          />
+        )}
 
-          {selectionMode === 'singlecustomers' && !currentCategory && (
-            <Text style={{color: 'white', textAlign: 'center', marginTop: 10}}>
-              Please select a category to view items.
-            </Text>
-          )}
-        </ScrollView>
+        {selectionMode === 'suppliers' && !currentCategory && (
+          <Text style={{color: 'white', textAlign: 'center', marginTop: 10}}>
+            Please select a category to view items.
+          </Text>
+        )}
 
-        {selectionMode !== '' && totalProducts > 0 && (
+        {selectionMode === 'customers' && (
           <View style={styles.totalContainer}>
-            <Text style={styles.totalText}>Total Records:{totalProducts}</Text>
-
             <Text style={styles.totalText}>
-              Total Cheque Amount:{totalProducts}
+              Total Records:{custChequeList.length}
             </Text>
+            {(() => {
+              const {totalSale} = calculateCustChequeTotal();
+              return (
+                <Text style={styles.totalText}>
+                  Total Cheque Amount:{totalSale}
+                </Text>
+              );
+            })()}
           </View>
         )}
       </ImageBackground>
@@ -419,15 +425,16 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
     marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
+    width: '100%',
   },
   totalContainer: {
-    padding: 3,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
     borderTopWidth: 1,
     borderTopColor: 'white',
     marginTop: 5,
@@ -437,15 +444,30 @@ const styles = StyleSheet.create({
   totalText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
   row: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    width: '100%',
+    alignItems: 'center',
+    marginTop: 10,
+    justifyContent: 'space-around',
   },
   RowTable: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+  },
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
+    marginTop: 10,
+  },
+  dropDownContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '90%',
+    alignSelf: 'center',
   },
 });
