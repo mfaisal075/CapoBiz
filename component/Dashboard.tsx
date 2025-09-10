@@ -12,8 +12,10 @@ import {useNavigation} from '@react-navigation/native';
 import {ScrollView} from 'react-native-gesture-handler';
 import Modal from 'react-native-modal';
 import {useDrawer} from './DrawerContext';
+import {useUser} from './CTX/UserContext';
 
 export default function Dashboard() {
+  const {userName, userEmail} = useUser();
   const navigation = useNavigation();
   const [isModalVisible, setModalVisible] = useState(false);
 
@@ -281,6 +283,7 @@ export default function Dashboard() {
           </View>
         </ScrollView>
       </ImageBackground>
+
       <Modal
         isVisible={isModalVisible}
         onBackdropPress={toggleModal}
@@ -325,13 +328,13 @@ export default function Dashboard() {
                   color: '#144272',
                   fontWeight: 'bold',
                 }}>
-                Admin
+                {userName ?? 'User'}
               </Text>
               <Text
                 style={{
                   color: '#144272',
                 }}>
-                pos@technicmentors.com
+                {userEmail ?? '--'}
               </Text>
             </View>
           </View>

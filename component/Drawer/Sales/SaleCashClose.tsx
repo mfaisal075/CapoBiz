@@ -9,16 +9,65 @@ import {
   ScrollView,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
-import React, {useState} from 'react';
-import Modal from 'react-native-modal';
+import React, {useEffect, useState} from 'react';
+import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
+import Toast from 'react-native-toast-message';
+import {useUser} from '../../CTX/UserContext';
 
-export default function SaleCashClose() {
+interface CashClose {
+  sales_total: string;
+  cash_in_hand: string;
+  closing_amount: string;
+  cheque_total: number;
+  return_amount: string;
+}
+
+export default function SaleCashClose({navigation}: any) {
+  const {userName} = useUser();
   const {openDrawer} = useDrawer();
-  const [btnproduct, setbtnproduct] = useState(false);
+  const [cashClose, setCashClose] = useState<CashClose | null>(null);
 
-  const togglebtnproduct = () => {
-    setbtnproduct(!btnproduct);
+  // Fetch Cash close
+  const fetchData = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/poscashregister`);
+      setCashClose(res.data);
+    } catch (error) {
+      console.log(error);
+    }
   };
+
+  const cashRegister = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/closeregister`, {
+        user: userName,
+        cash_in_hand: cashClose?.cash_in_hand,
+        total_sales: cashClose?.sales_total,
+        total_cheques: cashClose?.cheque_total,
+        total_return: cashClose?.return_amount,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Success!',
+          text2: 'Cash register has been close successfully!',
+          visibilityTime: 1500,
+        });
+      }
+      navigation.navigate('Dashboard');
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -56,41 +105,59 @@ export default function SaleCashClose() {
 
           <View style={styles.section}>
             <View style={styles.inputSmall}>
-              <Text style={[{color: 'white'}]}>User:</Text>
-              <Text style={[{color: 'white'}]}>0000</Text>
+              <Text style={[{color: 'white', fontWeight: 'bold'}]}>User:</Text>
+              <Text style={[{color: 'white'}]}>{userName ?? ''}</Text>
             </View>
             <View style={styles.inputSmall}>
-              <Text style={[{color: 'white'}]}>Cash In Hand:</Text>
-              <Text style={[{color: 'white'}]}>0000</Text>
+              <Text style={[{color: 'white', fontWeight: 'bold'}]}>
+                Cash In Hand:
+              </Text>
+              <Text style={[{color: 'white'}]}>
+                {cashClose?.cash_in_hand ?? '0.00'}
+              </Text>
             </View>
             <View style={styles.inputSmall}>
-              <Text style={[{color: 'white'}]}>Total Sales:</Text>
-              <Text style={[{color: 'white'}]}>0000</Text>
+              <Text style={[{color: 'white', fontWeight: 'bold'}]}>
+                Total Sales:
+              </Text>
+              <Text style={[{color: 'white'}]}>
+                {cashClose?.sales_total ?? '0.00'}
+              </Text>
             </View>
             <View style={styles.inputSmall}>
-              <Text style={[{color: 'white'}]}>Total Return:</Text>
-              <Text style={[{color: 'white'}]}>0000</Text>
+              <Text style={[{color: 'white', fontWeight: 'bold'}]}>
+                Total Return:
+              </Text>
+              <Text style={[{color: 'white'}]}>
+                {cashClose?.return_amount ?? '0.00'}
+              </Text>
             </View>
             <View style={styles.inputSmall}>
-              <Text style={[{color: 'white'}]}>Closing Amount:</Text>
-              <Text style={[{color: 'white'}]}>0000</Text>
+              <Text style={[{color: 'white', fontWeight: 'bold'}]}>
+                Closing Amount:
+              </Text>
+              <Text style={[{color: 'white'}]}>
+                {cashClose?.closing_amount ?? '0.00'}
+              </Text>
             </View>
 
-            <TouchableOpacity onPress={togglebtnproduct}>
+            <TouchableOpacity onPress={cashRegister}>
               <View
                 style={{
-                  width: 340,
-                  height: 30,
+                  width: '100%',
+                  height: 38,
                   backgroundColor: 'white',
-                  borderRadius: 15,
-                  marginTop: 10,
-                  alignSelf: 'center',
+                  borderRadius: 8,
+                  marginTop: 15,
+                  justifyContent: 'center',
+                  alignItems: 'center',
                 }}>
                 <Text
                   style={{
                     textAlign: 'center',
                     color: '#144272',
-                    marginTop: 5,
+                    fontSize: 16,
+                    fontWeight: 'bold',
                   }}>
                   Close
                 </Text>
@@ -98,74 +165,6 @@ export default function SaleCashClose() {
             </TouchableOpacity>
           </View>
         </ScrollView>
-        <Modal isVisible={btnproduct}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Closed
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Cash Close has been closed successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setbtnproduct(!btnproduct)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
       </ImageBackground>
     </SafeAreaView>
   );
@@ -193,19 +192,6 @@ const styles = StyleSheet.create({
     padding: 10,
     justifyContent: 'center',
   },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    color: 'white',
-  },
   inputSmall: {
     flex: 1,
     borderWidth: 1,
@@ -215,14 +201,5 @@ const styles = StyleSheet.create({
     marginTop: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-
-  addButton: {
-    marginLeft: 4,
-    alignSelf: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 100,
   },
 });

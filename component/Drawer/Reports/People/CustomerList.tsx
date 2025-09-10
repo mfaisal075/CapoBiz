@@ -75,94 +75,90 @@ export default function CustomerList() {
               Customer List
             </Text>
           </View>
-
-          <TouchableOpacity>
-            <Icon name='printer' size={30} color={'#fff'} />
-          </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={custList}
-              keyExtractor={(item, index) => index.toString()}
-              scrollEnabled={false}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.cust_name}
-                      </Text>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}></View>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Contact:</Text>
-                        <Text style={styles.text}>{item.cust_contact}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Email:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.cust_email}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Address:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.cust_address}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                </ScrollView>
-              )}
-              ListEmptyComponent={
-                <View style={{alignItems: 'center', marginTop: 20}}>
+        <FlatList
+          data={custList}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <ScrollView
+              style={{
+                padding: 5,
+              }}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
                   <Text
                     style={{
-                      color: 'white',
-                      fontSize: 16,
+                      color: '#144272',
                       fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
                     }}>
-                    No record found.
+                    {item.cust_name}
                   </Text>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                    }}></View>
                 </View>
-              }
-            />
-          </View>
-        </ScrollView>
+
+                <View style={styles.infoRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Contact:</Text>
+                    <Text style={styles.text}>{item.cust_contact}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Email:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.cust_email}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'flex-start',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5, flex: 0.3}]}>
+                      Address:
+                    </Text>
+                    <Text
+                      style={[
+                        styles.value,
+                        {marginBottom: 5, flex: 0.7, textAlign: 'right'},
+                      ]}>
+                      {item.cust_address}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          )}
+          ListEmptyComponent={
+            <View style={{alignItems: 'center', marginTop: 20}}>
+              <Text
+                style={{
+                  color: 'white',
+                  fontSize: 16,
+                  fontWeight: 'bold',
+                }}>
+                No record found.
+              </Text>
+            </View>
+          }
+        />
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total Customers:</Text>
           <Text style={styles.totalText}>{custList.length}</Text>

@@ -219,110 +219,93 @@ export default function SalesReturnList() {
             </View>
           </View>
 
-          <View style={styles.headerButtons}>
-            <TouchableOpacity style={styles.exportBtn}>
-              <Text style={styles.exportText}>Copy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.exportBtn}>
-              <Text style={styles.exportText}>Export CSV</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.exportBtn}>
-              <Text style={styles.exportText}>Export Excel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.exportBtn}>
-              <Text style={styles.exportText}>Print</Text>
-            </TouchableOpacity>
-          </View>
+          <FlatList
+            data={saleReturns}
+            keyExtractor={(item, index) => index.toString()}
+            scrollEnabled={false}
+            renderItem={({item}) => (
+              <ScrollView
+                style={{
+                  padding: 5,
+                }}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.salr_return_invoice_no}
+                    </Text>
 
-          <View>
-            <FlatList
-              data={saleReturns}
-              keyExtractor={(item, index) => index.toString()}
-              scrollEnabled={false}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                      }}>
+                      <TouchableOpacity
                         style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
+                          paddingHorizontal: 10,
+                          paddingVertical: 5,
+                          borderRadius: 5,
+                          marginRight: 10,
+                        }}
+                        onPress={() => {
+                          setModalVisible('View');
+                          getOrderInvoice(item.salr_return_invoice_no);
                         }}>
-                        {item.salr_return_invoice_no}
-                      </Text>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}>
-                        <TouchableOpacity
-                          style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 5,
-                            borderRadius: 5,
-                            marginRight: 10,
-                          }}
-                          onPress={() => {
-                            setModalVisible('View');
-                            getOrderInvoice(item.salr_return_invoice_no);
-                          }}>
-                          <Icon name="receipt" size={18} color="#144272" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Date:</Text>
-                        <Text style={styles.text}>
-                          {new Date(item.created_at)
-                            .toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                            .replace(/ /g, '-')}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Return Amount:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.salr_return_amount}
-                        </Text>
-                      </View>
+                        <Icon name="receipt" size={18} color="#144272" />
+                      </TouchableOpacity>
                     </View>
                   </View>
-                </ScrollView>
-              )}
-              ListEmptyComponent={
-                <Text
-                  style={{
-                    flex: 1,
-                    color: 'white',
-                    textAlign: 'center',
-                    justifyContent: 'center',
-                  }}>
-                  No record present in the database for this Date range!
-                </Text>
-              }
-            />
-          </View>
+
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.created_at)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        Return Amount:
+                      </Text>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        {item.salr_return_amount}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+            )}
+            ListEmptyComponent={
+              <Text
+                style={{
+                  flex: 1,
+                  color: 'white',
+                  textAlign: 'center',
+                  justifyContent: 'center',
+                }}>
+                No record present in the database for this Date range!
+              </Text>
+            }
+          />
         </ScrollView>
 
         {/* View Modal */}
@@ -483,43 +466,6 @@ const styles = StyleSheet.create({
   infoRow: {
     marginTop: 5,
   },
-  lastrow: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderBottomEndRadius: 10,
-    borderBottomLeftRadius: 10,
-  },
-  card: {
-    borderColor: '#144272',
-    backgroundColor: 'white',
-    height: 'auto',
-    borderRadius: 12,
-    elevation: 15,
-    marginBottom: 5,
-    padding: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-  },
-  exportBtn: {
-    backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  exportText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-
   dateContainer: {
     flexDirection: 'row',
     width: '100%',

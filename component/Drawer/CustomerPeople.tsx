@@ -178,6 +178,19 @@ export default function CustomerPeople() {
   const [custAreaName, setCustAreaName] = useState('');
   const [modalVisible, setModalVisible] = useState('');
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const totalRecords = custData.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const currentData = custData.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
+
   // Add Customer Form On Change
   const onChange = (field: keyof AddCustomer, value: string) => {
     setAddForm(prev => ({
@@ -539,6 +552,7 @@ export default function CustomerPeople() {
             alignItems: 'center',
             padding: 5,
             justifyContent: 'space-between',
+            marginBottom: 15,
           }}>
           <TouchableOpacity onPress={openDrawer}>
             <Image
@@ -575,132 +589,124 @@ export default function CustomerPeople() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Copy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export CSV</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export Excel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Print</Text>
-          </TouchableOpacity>
-        </View>
-
         <View>
           <FlatList
-            data={custData}
+            data={currentData}
             keyExtractor={(item, index) => index.toString()}
+            style={{marginBottom: 90}}
             renderItem={({item}) => (
-              <ScrollView
-                style={{
-                  padding: 5,
-                }}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text
-                      style={{
-                        color: '#144272',
-                        fontWeight: 'bold',
-                        marginLeft: 5,
-                        marginTop: 5,
-                      }}>
-                      {item.cust_name}
-                    </Text>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
+                  <Text
+                    style={{
+                      color: '#144272',
+                      fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
+                    }}>
+                    {item.cust_name}
+                  </Text>
 
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'center',
-                      }}>
-                      <TouchableOpacity
-                        onPress={() => {
-                          toggleview();
-                          const fetchDetails = async (id: number) => {
-                            try {
-                              const res = await axios.get(
-                                `${BASE_URL}/custshow?id=${id}&_token=${token}`,
-                              );
-                              setSelectedCust([res.data]);
-                            } catch (error) {
-                              console.log(error);
-                            }
-                          };
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                    }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        toggleview();
+                        const fetchDetails = async (id: number) => {
+                          try {
+                            const res = await axios.get(
+                              `${BASE_URL}/custshow?id=${id}&_token=${token}`,
+                            );
+                            setSelectedCust([res.data]);
+                          } catch (error) {
+                            console.log(error);
+                          }
+                        };
 
-                          fetchDetails(item.id);
-                        }}>
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginRight: 5,
-                            marginTop: 9,
-                          }}
-                          source={require('../../assets/show.png')}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity onPress={() => toggleedit(item.id)}>
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginTop: 8,
-                          }}
-                          source={require('../../assets/edit.png')}
-                        />
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => {
-                          tglModal();
-                          setSelectedCustomer(item.id);
-                        }}>
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginRight: 5,
-                            marginTop: 8,
-                          }}
-                          source={require('../../assets/delete.png')}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
+                        fetchDetails(item.id);
                       }}>
-                      <Text style={styles.text}>Contact:</Text>
-                      <Text style={styles.text}>{item.cust_contact}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
+                      <Image
+                        style={{
+                          tintColor: '#144272',
+                          width: 15,
+                          height: 15,
+                          alignSelf: 'center',
+                          marginRight: 5,
+                          marginTop: 9,
+                        }}
+                        source={require('../../assets/show.png')}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => toggleedit(item.id)}>
+                      <Image
+                        style={{
+                          tintColor: '#144272',
+                          width: 15,
+                          height: 15,
+                          alignSelf: 'center',
+                          marginTop: 8,
+                        }}
+                        source={require('../../assets/edit.png')}
+                      />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        tglModal();
+                        setSelectedCustomer(item.id);
                       }}>
-                      <Text style={[styles.value, {marginBottom: 5}]}>
-                        Address:
-                      </Text>
-                      <Text style={[styles.value, {marginBottom: 5}]}>
-                        {item.cust_address}
-                      </Text>
-                    </View>
+                      <Image
+                        style={{
+                          tintColor: '#144272',
+                          width: 15,
+                          height: 15,
+                          alignSelf: 'center',
+                          marginRight: 5,
+                          marginTop: 8,
+                        }}
+                        source={require('../../assets/delete.png')}
+                      />
+                    </TouchableOpacity>
                   </View>
                 </View>
-              </ScrollView>
+
+                <View style={styles.infoRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Contact:</Text>
+                    <Text style={styles.text}>{item.cust_contact}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      width: '100%',
+                      alignItems: 'flex-start', // Align items to top
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5, flex: 0.3}]}>
+                      Address:
+                    </Text>
+                    <Text
+                      style={[
+                        styles.value,
+                        {
+                          marginBottom: 5,
+                          flex: 0.7,
+                          textAlign: 'right',
+                          flexWrap: 'wrap',
+                        },
+                      ]}>
+                      {item.cust_address}
+                    </Text>
+                  </View>
+                </View>
+              </View>
             )}
             ListEmptyComponent={
               <View style={{alignItems: 'center', marginTop: 20}}>
@@ -1259,6 +1265,7 @@ export default function CustomerPeople() {
             </TouchableOpacity>
           </View>
         </Modal>
+
         {/*add type btn*/}
         <Modal isVisible={btncustomer}>
           <View
@@ -2223,6 +2230,47 @@ export default function CustomerPeople() {
             </View>
           </View>
         </Modal>
+
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              paddingVertical: 12,
+              position: 'absolute',
+              width: '100%',
+              bottom: 0,
+            }}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
+              style={{
+                marginHorizontal: 10,
+                opacity: currentPage === 1 ? 0.5 : 1,
+              }}>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+              Page {currentPage} of {totalPages}
+            </Text>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={{
+                marginHorizontal: 10,
+                opacity: currentPage === totalPages ? 0.5 : 1,
+              }}>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+                Next
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ImageBackground>
     </SafeAreaView>
   );
@@ -2246,6 +2294,7 @@ const styles = StyleSheet.create({
     borderColor: 'white',
     alignSelf: 'center',
     height: 'auto',
+    marginBottom: 8,
     width: 314,
     borderRadius: 5,
   },
@@ -2271,60 +2320,10 @@ const styles = StyleSheet.create({
   infoRow: {
     marginTop: 5,
   },
-  lastrow: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderBottomEndRadius: 10,
-    borderBottomLeftRadius: 10,
-  },
-  card: {
-    borderColor: '#144272',
-    backgroundColor: 'white',
-    height: 'auto',
-    borderRadius: 12,
-    elevation: 15,
-    marginBottom: 5,
-    padding: 10,
-  },
   row: {
     flexDirection: 'row',
     gap: 8,
     marginTop: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    color: 'white',
-  },
-  inputSmall: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: 'white',
-  },
-  addButton: {
-    marginLeft: 8,
-    alignSelf: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 60,
-  },
-  completeButton: {
-    marginTop: 16,
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 320,
   },
   dropdown: {
     borderWidth: 1,
@@ -2398,20 +2397,5 @@ const styles = StyleSheet.create({
     width: '68%',
     marginBottom: 8,
     color: '#144272',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-  },
-  exportBtn: {
-    backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  exportText: {
-    color: 'white',
-    fontWeight: 'bold',
   },
 });

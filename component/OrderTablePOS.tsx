@@ -106,106 +106,106 @@ export default function OrderTablePOS() {
             </View>
           </View>
 
-          <View>
-            <View>
-              <FlatList
-                data={Info}
-                keyExtractor={(item, index) => index.toString()}
-                renderItem={({item}) => (
-                  <ScrollView
-                    style={{
-                      padding: 5,
-                    }}>
-                    <View style={styles.table}>
-                      <View style={styles.tablehead}>
-                        <Text
-                          style={{
-                            color: '#144272',
-                            fontWeight: 'bold',
-                            marginLeft: 5,
-                            marginTop: 5,
-                          }}>
-                          {item.ItemName}
-                        </Text>
-                        
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginRight: 5,
-                          }}
-                          source={require('../assets/show.png')}
-                        />
-                      </View>
+          <FlatList
+            data={Info}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <ScrollView
+                style={{
+                  padding: 5,
+                }}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.ItemName}
+                    </Text>
 
-                      <View style={styles.infoRow}>
-                        <View style={{
-                          flexDirection:'row',justifyContent:'space-between'
-                        }}>
-                        <Text style={styles.text}>Qty:</Text>
-                        <Text style={styles.text}>{item.QTY}</Text>
-                        </View>
-                        <View style={{
-                          flexDirection:'row',justifyContent:'space-between'
-                        }}>
-                        <Text style={styles.value}>Retail:</Text>
-                        <Text style={styles.value}>{item.Retail}</Text>
-                       </View>
-                       <View style={{
-                          flexDirection:'row',justifyContent:'space-between'
-                        }}>
-                        <Text style={styles.value}>
-                          Discount:
-                        </Text>
+                    <Image
+                      style={{
+                        tintColor: '#144272',
+                        width: 15,
+                        height: 15,
+                        alignSelf: 'center',
+                        marginRight: 5,
+                      }}
+                      source={require('../assets/show.png')}
+                    />
+                  </View>
 
-                        <Text style={styles.value}>
-                          {item.Discount}
-                        </Text>
-                        </View>
-
-                        <View style={{
-                          flexDirection:'row',justifyContent:'space-between'
-                        }}>
-                        <Text style={[styles.value,{marginBottom:5}]}>
-                          Unit Price:
-                        </Text>
-                        
-                        <Text style={[styles.value,{marginBottom:5}]}>
-                         {item.UnitPrice}
-                        </Text>
-                        </View>
-                     
-                      </View>
-
-                      <View style={styles.lastrow}>
-                        <Text
-                          style={{
-                            color: '#144272',
-                            fontWeight: 'bold',
-                            textAlign: 'center',
-                            marginTop: 5,
-                            marginLeft:5
-                          }}>
-                          Total Price: 
-                        </Text>
-                        <Text
-                          style={{
-                            color: '#144272',
-                            fontWeight: 'bold',
-                            textAlign: 'center',
-                            marginTop: 5,marginRight:5
-                          }}>
-                           {item.totalPrice}
-                        </Text>
-                      </View>
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Qty:</Text>
+                      <Text style={styles.text}>{item.QTY}</Text>
                     </View>
-                  </ScrollView>
-                )}
-              />
-            </View>
-          </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.value}>Retail:</Text>
+                      <Text style={styles.value}>{item.Retail}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.value}>Discount:</Text>
+
+                      <Text style={styles.value}>{item.Discount}</Text>
+                    </View>
+
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        Unit Price:
+                      </Text>
+
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        {item.UnitPrice}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.lastrow}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        marginTop: 5,
+                        marginLeft: 5,
+                      }}>
+                      Total Price:
+                    </Text>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                        marginTop: 5,
+                        marginRight: 5,
+                      }}>
+                      {item.totalPrice}
+                    </Text>
+                  </View>
+                </View>
+              </ScrollView>
+            )}
+          />
         </ScrollView>
       </ImageBackground>
     </SafeAreaView>
@@ -245,16 +245,15 @@ const styles = StyleSheet.create({
   text: {
     marginLeft: 5,
     color: 'white',
-    marginRight:5
+    marginRight: 5,
   },
   value: {
     marginLeft: 5,
     color: 'white',
-    marginRight:5
+    marginRight: 5,
   },
   infoRow: {
     marginTop: 5,
- 
   },
   lastrow: {
     backgroundColor: 'white',
@@ -262,17 +261,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderBottomEndRadius: 10,
     borderBottomLeftRadius: 10,
-    flexDirection:'row',
-    justifyContent:'space-between',
-    
-  },
-  card: {
-    borderColor: '#144272',
-    backgroundColor: 'white',
-    height: 'auto',
-    borderRadius: 12,
-    elevation: 15,
-    marginBottom: 5,
-    padding: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
   },
 });

@@ -573,12 +573,10 @@ export default function SaleReturn() {
           </View>
         </View>
 
-        <View
-          style={{
-            marginBottom: 10,
-          }}>
+        {/* Main Content Container */}
+        <View style={styles.mainContent}>
+          {/* Toggle Buttons */}
           <View style={{flexDirection: 'row'}}>
-            {/* Updated With Invoice Button */}
             <TouchableOpacity onPress={() => setSelectedOption('with')}>
               <View
                 style={[
@@ -599,7 +597,6 @@ export default function SaleReturn() {
               </View>
             </TouchableOpacity>
 
-            {/* Updated Without Invoice Button */}
             <TouchableOpacity onPress={() => setSelectedOption('without')}>
               <View
                 style={[
@@ -621,6 +618,7 @@ export default function SaleReturn() {
             </TouchableOpacity>
           </View>
 
+          {/* NEW INV Badge */}
           <View
             style={{
               flexDirection: 'row',
@@ -638,14 +636,12 @@ export default function SaleReturn() {
             <Text style={{color: '#fff'}}>NEW INV</Text>
           </View>
 
-          <View>
+          {/* Content Based on Selected Option */}
+          <View style={styles.contentContainer}>
             {selectedOption === 'with' ? (
-              <View style={{flex: 1}}>
-                <View
-                  style={{
-                    width: '100%',
-                    paddingHorizontal: 10,
-                  }}>
+              <>
+                {/* Search Input */}
+                <View style={{paddingHorizontal: 10}}>
                   <TextInput
                     style={[styles.input, {width: '100%'}]}
                     placeholderTextColor={'white'}
@@ -665,8 +661,8 @@ export default function SaleReturn() {
                             onPress={() => {
                               setSearchTerm(item.value);
                               setShowResults(false);
-                              setSelectedProduct(item); // still update state if needed
-                              addInvoice(item); // pass product directly
+                              setSelectedProduct(item);
+                              addInvoice(item);
                               getInvoiceCart();
                               fetchCartItems();
                             }}>
@@ -677,9 +673,9 @@ export default function SaleReturn() {
                     )}
                 </View>
 
+                {/* Customer Details */}
                 <View
                   style={{
-                    width: '100%',
                     paddingHorizontal: 10,
                     marginVertical: 10,
                     flexDirection: 'row',
@@ -695,7 +691,7 @@ export default function SaleReturn() {
                   </Text>
                 </View>
 
-                <View style={{width: '100%', paddingHorizontal: 10}}>
+                <View style={{paddingHorizontal: 10}}>
                   <Text
                     style={[
                       styles.inputSmall,
@@ -705,16 +701,14 @@ export default function SaleReturn() {
                   </Text>
                 </View>
 
-                <View>
+                {/* Cart Items List */}
+                <View style={styles.cartListContainer}>
                   <FlatList
                     data={cartItems}
                     keyExtractor={(item, index) => index.toString()}
-                    style={{marginTop: 10}}
+                    contentContainerStyle={{paddingBottom: 20}}
                     renderItem={({item}) => (
-                      <View
-                        style={{
-                          padding: 5,
-                        }}>
+                      <View style={{padding: 5}}>
                         <View style={styles.table}>
                           <View style={styles.tablehead}>
                             <Text
@@ -781,7 +775,6 @@ export default function SaleReturn() {
                                 {item.return_subqty}
                               </Text>
                             </View>
-
                             <View style={styles.rowt}>
                               <Text style={styles.txt}>Price:</Text>
                               <Text style={styles.txt}>{item.price}</Text>
@@ -797,52 +790,17 @@ export default function SaleReturn() {
                       </View>
                     )}
                     ListEmptyComponent={
-                      <View
-                        style={{
-                          height: 300,
-                          width: '100%',
-                          justifyContent: 'center',
-                          alignItems: 'center',
-                        }}>
-                        <Text
-                          style={{
-                            fontSize: 16,
-                            fontWeight: 'bold',
-                            color: '#fff',
-                          }}>
-                          Cart is empty.
-                        </Text>
+                      <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>Cart is empty.</Text>
                       </View>
                     }
                   />
                 </View>
-
-                <View style={styles.totalContainer}>
-                  <View>
-                    <Text style={styles.totalText}>Total:</Text>
-                    <Text style={styles.totalText}>{orderTotal}</Text>
-                  </View>
-                  <TouchableOpacity onPress={completeSaleReturn}>
-                    <View style={styles.completeButton}>
-                      <Text
-                        style={{
-                          textAlign: 'center',
-                          padding: 5,
-                          color: '#144272',
-                        }}>
-                        Complete
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                </View>
-              </View>
+              </>
             ) : (
-              <View>
-                <View
-                  style={{
-                    width: '100%',
-                    paddingHorizontal: 10,
-                  }}>
+              <>
+                {/* Search Product Without Invoice */}
+                <View style={{paddingHorizontal: 10}}>
                   <TextInput
                     style={[styles.input, {width: '100%'}]}
                     placeholderTextColor={'white'}
@@ -854,11 +812,7 @@ export default function SaleReturn() {
                   {searchTermWithout.length > 0 &&
                     showResultsWithout &&
                     searchResultsWithout.length > 0 && (
-                      <View
-                        style={[
-                          styles.resultsContainer,
-                          {marginHorizontal: 10},
-                        ]}>
+                      <View style={[styles.resultsContainer, {marginHorizontal: 10}]}>
                         {searchResultsWithout.map((item: any) => (
                           <TouchableOpacity
                             key={item.prod_id}
@@ -876,9 +830,9 @@ export default function SaleReturn() {
                     )}
                 </View>
 
+                {/* Quantity Inputs */}
                 <View
                   style={{
-                    width: '100%',
                     paddingHorizontal: 10,
                     justifyContent: 'space-between',
                     flexDirection: 'row',
@@ -903,13 +857,8 @@ export default function SaleReturn() {
                   />
                 </View>
 
-                <View
-                  style={{
-                    width: '100%',
-                    paddingHorizontal: 10,
-                    justifyContent: 'space-between',
-                    flexDirection: 'row',
-                  }}>
+                {/* Add Button */}
+                <View style={{paddingHorizontal: 10}}>
                   <TouchableOpacity
                     style={styles.addButton}
                     onPress={handleAddToCart}>
@@ -917,122 +866,103 @@ export default function SaleReturn() {
                   </TouchableOpacity>
                 </View>
 
-                <FlatList
-                  data={cartItemsWithout}
-                  keyExtractor={(item, index) => index.toString()}
-                  renderItem={({item}) => (
-                    <View
-                      style={{
-                        padding: 5,
-                      }}>
-                      <View style={styles.table}>
-                        <View style={styles.tablehead}>
-                          <Text
-                            style={{
-                              color: '#144272',
-                              fontWeight: 'bold',
-                              marginLeft: 5,
-                              marginTop: 5,
-                            }}>
-                            {item.product_name}
-                          </Text>
-
-                          <View
-                            style={{
-                              flexDirection: 'row',
-                              alignItems: 'center',
-                            }}>
-                            <TouchableOpacity
-                              onPress={() => {
-                                delCartItemWithout(item.prod_id);
+                {/* Cart Items List Without Invoice */}
+                <View style={styles.cartListContainer}>
+                  <FlatList
+                    data={cartItemsWithout}
+                    keyExtractor={(item, index) => index.toString()}
+                    contentContainerStyle={{paddingBottom: 20}}
+                    renderItem={({item}) => (
+                      <View style={{padding: 5}}>
+                        <View style={styles.table}>
+                          <View style={styles.tablehead}>
+                            <Text
+                              style={{
+                                color: '#144272',
+                                fontWeight: 'bold',
+                                marginLeft: 5,
+                                marginTop: 5,
                               }}>
-                              <Icon
-                                name="delete"
-                                size={20}
-                                color="#B22222"
-                                style={{
-                                  alignSelf: 'center',
-                                  marginRight: 5,
-                                }}
-                              />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
+                              {item.product_name}
+                            </Text>
 
-                        <View style={styles.infoRow}>
-                          <View style={styles.rowt}>
-                            <Text style={styles.txt}>Return Quantity:</Text>
-                            <Text style={styles.txt}>{item.return_qty}</Text>
+                            <View
+                              style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                              }}>
+                              <TouchableOpacity
+                                onPress={() => {
+                                  delCartItemWithout(item.prod_id);
+                                }}>
+                                <Icon
+                                  name="delete"
+                                  size={20}
+                                  color="#B22222"
+                                  style={{
+                                    alignSelf: 'center',
+                                    marginRight: 5,
+                                  }}
+                                />
+                              </TouchableOpacity>
+                            </View>
                           </View>
-                          <View style={styles.rowt}>
-                            <Text style={styles.txt}>Return Sub Quantity:</Text>
-                            <Text style={styles.txt}>{item.return_subqty}</Text>
-                          </View>
-                          <View style={styles.rowt}>
-                            <Text style={styles.txt}>Sub Quantity Price:</Text>
-                            <Text style={styles.txt}>{item.sub_price}</Text>
-                          </View>
-                          <View style={styles.rowt}>
-                            <Text style={styles.txt}>Price:</Text>
-                            <Text style={styles.txt}>{item.price}</Text>
-                          </View>
-                          <View style={styles.rowt}>
-                            <Text style={[styles.txt, {marginBottom: 5}]}>
-                              Total Price:
-                            </Text>
-                            <Text style={[styles.txt, {marginBottom: 5}]}>
-                              {(
-                                parseFloat(item.sub_price) +
-                                parseFloat(item.price)
-                              ).toFixed(2)}
-                            </Text>
+
+                          <View style={styles.infoRow}>
+                            <View style={styles.rowt}>
+                              <Text style={styles.txt}>Return Quantity:</Text>
+                              <Text style={styles.txt}>{item.return_qty}</Text>
+                            </View>
+                            <View style={styles.rowt}>
+                              <Text style={styles.txt}>Return Sub Quantity:</Text>
+                              <Text style={styles.txt}>{item.return_subqty}</Text>
+                            </View>
+                            <View style={styles.rowt}>
+                              <Text style={styles.txt}>Sub Quantity Price:</Text>
+                              <Text style={styles.txt}>{item.sub_price}</Text>
+                            </View>
+                            <View style={styles.rowt}>
+                              <Text style={styles.txt}>Price:</Text>
+                              <Text style={styles.txt}>{item.price}</Text>
+                            </View>
+                            <View style={styles.rowt}>
+                              <Text style={[styles.txt, {marginBottom: 5}]}>
+                                Total Price:
+                              </Text>
+                              <Text style={[styles.txt, {marginBottom: 5}]}>
+                                {(
+                                  parseFloat(item.sub_price) +
+                                  parseFloat(item.price)
+                                ).toFixed(2)}
+                              </Text>
+                            </View>
                           </View>
                         </View>
                       </View>
-                    </View>
-                  )}
-                  ListEmptyComponent={
-                    <View
-                      style={{
-                        height: 300,
-                        width: '100%',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                      }}>
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          fontWeight: 'bold',
-                          color: '#fff',
-                        }}>
-                        Cart is empty.
-                      </Text>
-                    </View>
-                  }
-                />
-                <View style={styles.totalContainer}>
-                  <Text style={styles.totalText}>Total:</Text>
-                  <Text style={styles.totalText}>
-                    {orderTotalWithout.toFixed(2)}
-                  </Text>
+                    )}
+                    ListEmptyComponent={
+                      <View style={styles.emptyContainer}>
+                        <Text style={styles.emptyText}>Cart is empty.</Text>
+                      </View>
+                    }
+                  />
                 </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    completeSaleReturnWithout();
-                  }}>
-                  <View style={styles.completeButton}>
-                    <Text
-                      style={{
-                        textAlign: 'center',
-                        padding: 5,
-                        color: '#144272',
-                      }}>
-                      Complete
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
+              </>
             )}
+          </View>
+        </View>
+
+        {/* Bottom Section - Total and Complete Button */}
+        <View style={styles.bottomSection}>
+          <View style={styles.totalContainer}>
+            <Text style={styles.totalText}>
+              Total: {selectedOption === 'with' ? orderTotal : orderTotalWithout.toFixed(2)}
+            </Text>
+            <TouchableOpacity 
+              style={styles.completeButton}
+              onPress={selectedOption === 'with' ? completeSaleReturn : completeSaleReturnWithout}>
+              <Text style={styles.completeButtonText}>Complete</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
@@ -1122,6 +1052,59 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  mainContent: {
+    flex: 1,
+    paddingBottom: 80, // Space for bottom section
+  },
+  contentContainer: {
+    flex: 1,
+  },
+  cartListContainer: {
+    flex: 1,
+    marginTop: 10,
+  },
+  bottomSection: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    borderTopColor: '#fff',
+    borderTopWidth: 1,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+  },
+  totalContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  totalText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 18,
+  },
+  completeButton: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+  },
+  completeButtonText: {
+    color: '#144272',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  emptyContainer: {
+    height: 300,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
   input: {
     borderWidth: 1,
     borderColor: 'white',
@@ -1155,12 +1138,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#144272',
   },
-  completeButton: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 80,
-    alignSelf: 'center',
-  },
   infoRow: {
     marginTop: 5,
   },
@@ -1184,21 +1161,6 @@ const styles = StyleSheet.create({
   rowt: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-  },
-  totalContainer: {
-    position: 'absolute',
-    bottom: 10,
-    alignSelf: 'flex-end',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderTopColor: '#fff',
-    borderTopWidth: 1,
-    width: '100%',
-  },
-  totalText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
   },
   txt: {
     marginLeft: 5,
@@ -1241,7 +1203,7 @@ const styles = StyleSheet.create({
     borderRadius: 5,
     zIndex: 100,
     elevation: 10,
-    maxHeight: 'auto',
+    maxHeight: 200,
   },
   resultItem: {
     padding: 10,

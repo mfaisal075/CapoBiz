@@ -13,9 +13,11 @@ import {useNavigation} from '@react-navigation/native';
 import axios from 'axios';
 import BASE_URL from './BASE_URL';
 import Toast from 'react-native-toast-message';
+import {useUser} from './CTX/UserContext';
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation();
+  const {setUserEmail, setUserName} = useUser();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [hidePassword, setHidePassword] = useState(true);
@@ -56,6 +58,10 @@ const LoginScreen: React.FC = () => {
           withCredentials: true,
         },
       );
+
+      const res = await axios.get(`${BASE_URL}/poscashregister`);
+      setUserName(res.data.authenticated_user.name);
+      setUserEmail(res.data.authenticated_user.email);
 
       const data = response.data;
 

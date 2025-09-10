@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import {useDrawer} from './DrawerContext';
 import {useNavigation} from '@react-navigation/native';
+import {useUser} from './CTX/UserContext';
 
 const icons: {[key: string]: any} = {
   Dashboard: require('../assets/dashboard.png'),
@@ -102,6 +103,7 @@ const menuData: {[key: string]: string[]} = {
 const DrawerModal = () => {
   const {menuVisible, closeDrawer} = useDrawer();
   const navigation = useNavigation();
+  const {userName, userEmail} = useUser();
   const [expandedItem, setExpandedItem] = useState<string | null>(null);
   const [expandedReportSubmenu, setExpandedReportSubmenu] = useState<
     string | null
@@ -138,31 +140,34 @@ const DrawerModal = () => {
           style={{
             backgroundColor: '#144272',
             height: 120,
+            justifyContent: 'space-between',
+            flexDirection: 'row',
+            alignItems: 'center',
+            paddingHorizontal: 15,
           }}>
           <Image
             style={{
-              width: 30,
-              height: 30,
+              width: 40,
+              height: 40,
               tintColor: 'white',
-              marginHorizontal: 25,
-              marginTop: 37,
+              borderWidth: 1.5,
+              borderRadius: 50,
+              borderColor: '#fff',
             }}
             source={require('../assets/user.png')}
           />
 
-          <Text
-            style={{
-              color: 'white',
-              fontWeight: 'bold',
-              marginHorizontal: 25,
-              fontSize: 17,
-              marginTop: 6,
-            }}>
-            Technic Mentors
-          </Text>
-          <Text style={{color: 'white', marginHorizontal: 25}}>
-            POS@technicmentors.com
-          </Text>
+          <View>
+            <Text
+              style={{
+                color: 'white',
+                fontWeight: 'bold',
+                fontSize: 16,
+              }}>
+              {userName}
+            </Text>
+            <Text style={{color: 'white'}}>{userEmail}</Text>
+          </View>
         </View>
 
         {Object.keys(menuData).map((mainItem, index) => (

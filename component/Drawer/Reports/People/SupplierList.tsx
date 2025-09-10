@@ -76,110 +76,95 @@ export default function SupplierList() {
               Supplier List
             </Text>
           </View>
-
-          <TouchableOpacity>
-            <Icon name="printer" size={30} color={'#fff'} />
-          </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={supplierList}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.sup_name}
-                      </Text>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}></View>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Company:</Text>
-                        <Text style={styles.text}>{item.sup_company_name}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Contact:</Text>
-                        <Text style={styles.text}>{item.sup_contact}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Email:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.sup_email}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text
-                          style={[
-                            styles.value,
-                            {marginBottom: 5, marginTop: -5},
-                          ]}>
-                          Address:
-                        </Text>
-                        <Text
-                          style={[
-                            styles.value,
-                            {marginBottom: 5, marginTop: -5},
-                          ]}>
-                          {item.sup_address}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                </ScrollView>
-              )}
-              ListEmptyComponent={
-                <View style={{alignItems: 'center', marginTop: 20}}>
+        <FlatList
+          data={supplierList}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <ScrollView
+              style={{
+                padding: 5,
+              }}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
                   <Text
                     style={{
-                      color: 'white',
-                      fontSize: 16,
+                      color: '#144272',
                       fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
                     }}>
-                    No record found.
+                    {item.sup_name}
                   </Text>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                    }}></View>
                 </View>
-              }
-              scrollEnabled={false}
-            />
-          </View>
-        </ScrollView>
+
+                <View style={styles.infoRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Company:</Text>
+                    <Text style={styles.text}>{item.sup_company_name}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>Contact:</Text>
+                    <Text style={styles.text}>{item.sup_contact}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Email:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.sup_email}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text
+                      style={[styles.value, {marginBottom: 5, marginTop: -5}]}>
+                      Address:
+                    </Text>
+                    <Text
+                      style={[styles.value, {marginBottom: 5, marginTop: -5}]}>
+                      {item.sup_address}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          )}
+          ListEmptyComponent={
+            <View style={{alignItems: 'center', marginTop: 20}}>
+              <Text
+                style={{
+                  color: 'white',
+                  fontSize: 16,
+                  fontWeight: 'bold',
+                }}>
+                No record found.
+              </Text>
+            </View>
+          }
+        />
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total Supplier:</Text>
           <Text style={styles.totalText}>{supplierList.length}</Text>

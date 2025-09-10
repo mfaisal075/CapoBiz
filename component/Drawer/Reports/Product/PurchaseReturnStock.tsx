@@ -107,10 +107,6 @@ export default function PurchaseReturnStock() {
               Stock Movement
             </Text>
           </View>
-
-          <TouchableOpacity>
-            <Icon name="printer" size={30} color={'#fff'} />
-          </TouchableOpacity>
         </View>
 
         <DropDownPicker

@@ -31,9 +31,19 @@ type Product = {
   ums_name: string;
 };
 
+interface Categories {
+  id: number;
+  pcat_name: string;
+}
+
 export default function CurrentStock() {
   const {openDrawer} = useDrawer();
   const [stockProducts, setStockProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Categories[]>([]);
+  const transformedCat = categories.map(cat => ({
+    label: cat.pcat_name,
+    value: cat.id.toString(),
+  }));
 
   // Calculate totals using useMemo for better performance
   const {totalCost, totalRetail} = useMemo(() => {
@@ -52,23 +62,23 @@ export default function CurrentStock() {
   }, [stockProducts]);
 
   const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] =
-    useState<string>('Select Category');
+  const [currentCategory, setCurrentCategory] = useState('');
 
-  const categoryItems = [
-    {label: 'Select Category', value: 'Select Category'},
-    {label: 'Chocolate', value: 'Chocolate'},
-    {label: 'Jelly', value: 'Jelly'},
-    {label: 'Oil', value: 'Oil'},
-    {label: 'Flour', value: 'Flour'},
-    {label: 'Murree Brwerry', value: 'Murree Brwerry'},
-  ];
+  // Fetch Category Dropdown
+  const fetchCatDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcategories`);
+      setCategories(res.data.cat);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   // Fetch Products
   const fetchStock = async () => {
     try {
       const res = await axios.post(`${BASE_URL}/loadstock`, {
-        cat_id: '',
+        cat_id: currentCategory,
       });
       setStockProducts(res.data.stock);
       console.log(res.data);
@@ -79,7 +89,8 @@ export default function CurrentStock() {
 
   useEffect(() => {
     fetchStock();
-  }, []);
+    fetchCatDropdown();
+  }, [currentCategory]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -93,6 +104,7 @@ export default function CurrentStock() {
             alignItems: 'center',
             padding: 5,
             justifyContent: 'space-between',
+            marginBottom: 15,
           }}>
           <TouchableOpacity onPress={openDrawer}>
             <Image
@@ -108,23 +120,8 @@ export default function CurrentStock() {
           </View>
         </View>
 
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Copy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export CSV</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export Excel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Print</Text>
-          </TouchableOpacity>
-        </View>
-
         <DropDownPicker
-          items={categoryItems}
+          items={transformedCat}
           open={category}
           setOpen={setCategory}
           value={currentCategory}

@@ -6,7 +6,6 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
@@ -24,12 +23,21 @@ type Product = {
   prod_fretailprice: string;
 };
 
+interface Categories {
+  id: number;
+  pcat_name: string;
+}
+
 export default function ExpiredProductStock() {
   const {openDrawer} = useDrawer();
   const [exProducts, setExProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] =
-    useState<string>('Select Category');
+  const [currentCategory, setCurrentCategory] = useState('');
+  const [categories, setCategories] = useState<Categories[]>([]);
+  const transformedCat = categories.map(cat => ({
+    label: cat.pcat_name,
+    value: cat.id.toString(),
+  }));
 
   const categoryItems = [
     {label: 'Select Category', value: 'Select Category'},
@@ -39,6 +47,16 @@ export default function ExpiredProductStock() {
     {label: 'Flour', value: 'Flour'},
     {label: 'Murree Brwerry', value: 'Murree Brwerry'},
   ];
+
+  // Fetch Category Dropdown
+  const fetchCatDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcategories`);
+      setCategories(res.data.cat);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   // Fetch Products
   const fetchExpireProd = async () => {
@@ -55,7 +73,8 @@ export default function ExpiredProductStock() {
 
   useEffect(() => {
     fetchExpireProd();
-  }, []);
+    fetchCatDropdown();
+  }, [currentCategory]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -69,6 +88,7 @@ export default function ExpiredProductStock() {
             alignItems: 'center',
             padding: 5,
             justifyContent: 'space-between',
+            marginBottom: 15,
           }}>
           <TouchableOpacity onPress={openDrawer}>
             <Image
@@ -84,23 +104,8 @@ export default function ExpiredProductStock() {
           </View>
         </View>
 
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Copy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export CSV</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export Excel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Print</Text>
-          </TouchableOpacity>
-        </View>
-
         <DropDownPicker
-          items={categoryItems}
+          items={transformedCat}
           open={category}
           setOpen={setCategory}
           value={currentCategory}
@@ -114,16 +119,12 @@ export default function ExpiredProductStock() {
           ArrowDownIconComponent={() => (
             <Icon name="keyboard-arrow-down" size={18} color="#fff" />
           )}
-          style={[
-            styles.dropdown,
-            {borderColor: 'white', width: '88%', alignSelf: 'center'},
-          ]}
+          style={[styles.dropdown]}
           dropDownContainerStyle={{
             backgroundColor: 'white',
             borderColor: '#144272',
-            width: '88.5%',
-            marginLeft: 22,
-            marginTop: 8,
+            width: '90%',
+            alignSelf: 'center',
           }}
           labelStyle={{color: 'white'}}
           listItemLabelStyle={{color: '#144272'}}
@@ -283,11 +284,12 @@ const styles = StyleSheet.create({
   dropdown: {
     borderWidth: 1,
     borderColor: 'white',
-    minHeight: 35,
+    minHeight: 38,
     borderRadius: 6,
     padding: 8,
-    marginVertical: 8,
     backgroundColor: 'transparent',
-    width: 285,
+    width: '90%',
+    alignSelf: 'center',
+    marginBottom: 12
   },
 });

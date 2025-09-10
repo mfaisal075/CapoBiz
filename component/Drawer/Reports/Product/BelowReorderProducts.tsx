@@ -79,162 +79,152 @@ export default function BelowReorderProducts() {
               Reorder Level Products
             </Text>
           </View>
-
-          <TouchableOpacity>
-            <Icon name="printer" size={30} color={'#fff'} />
-          </TouchableOpacity>
         </View>
 
-        <ScrollView>
-          <View>
-            <FlatList
-              data={reOrderList}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.prod_name}
-                      </Text>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'center',
-                        }}></View>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>BarCode:</Text>
-                        <Text style={styles.text}>{item.prod_UPC_EAN}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Category:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.pcat_name}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          UOM:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.ums_name}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Quantity:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.prod_qty}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Reorder Quantity:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.prod_reorder_qty}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Cost Price:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.prod_costprice}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Sale Price:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {item.prod_fretailprice}
-                        </Text>
-                      </View>
-
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          Entry Date:
-                        </Text>
-                        <Text style={[styles.value, {marginBottom: 5}]}>
-                          {new Date(item.created_at)
-                            .toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                            .replace(/\//g, '-')}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                </ScrollView>
-              )}
-              ListEmptyComponent={
-                <View style={{alignItems: 'center', marginTop: 20}}>
+        <FlatList
+          data={reOrderList}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <ScrollView
+              style={{
+                padding: 5,
+              }}>
+              <View style={styles.table}>
+                <View style={styles.tablehead}>
                   <Text
                     style={{
-                      color: 'white',
-                      fontSize: 16,
+                      color: '#144272',
                       fontWeight: 'bold',
+                      marginLeft: 5,
+                      marginTop: 5,
                     }}>
-                    No record found.
+                    {item.prod_name}
                   </Text>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'center',
+                    }}></View>
                 </View>
-              }
-              scrollEnabled={false}
-            />
-          </View>
-        </ScrollView>
+
+                <View style={styles.infoRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.text}>BarCode:</Text>
+                    <Text style={styles.text}>{item.prod_UPC_EAN}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Category:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.pcat_name}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>UOM:</Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.ums_name}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Quantity:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.prod_qty}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Reorder Quantity:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.prod_reorder_qty}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Cost Price:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.prod_costprice}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Sale Price:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {item.prod_fretailprice}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      Entry Date:
+                    </Text>
+                    <Text style={[styles.value, {marginBottom: 5}]}>
+                      {new Date(item.created_at)
+                        .toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                        .replace(/\//g, '-')}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            </ScrollView>
+          )}
+          ListEmptyComponent={
+            <View style={{alignItems: 'center', marginTop: 20}}>
+              <Text
+                style={{
+                  color: 'white',
+                  fontSize: 16,
+                  fontWeight: 'bold',
+                }}>
+                No record found.
+              </Text>
+            </View>
+          }
+        />
+
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total Products:</Text>
           <Text style={styles.totalText}>{reOrderList.length ?? '0'}</Text>

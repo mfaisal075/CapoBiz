@@ -143,7 +143,7 @@ export default function SingleUserSale() {
         to,
         category: catValue,
         product: prodValue,
-        user_id: userValue,
+        user: userValue,
       });
       setSalesReport(res.data.sales);
     } catch (error) {
@@ -381,7 +381,11 @@ export default function SingleUserSale() {
                   <Icon name="chevron-down" size={15} color="white" />
                 </Text>
               )}
-              style={[styles.dropdown]}
+              style={[
+                styles.dropdown,
+                (selectionMode === 'salereport' ||
+                  selectionMode === 'saleSummary') && {backgroundColor: 'gray'},
+              ]}
               dropDownContainerStyle={{
                 backgroundColor: 'white',
                 borderColor: '#144272',
@@ -419,7 +423,11 @@ export default function SingleUserSale() {
                   <Icon name="chevron-down" size={15} color="white" />
                 </Text>
               )}
-              style={[styles.dropdown]}
+              style={[
+                styles.dropdown,
+                (selectionMode === 'salereport' ||
+                  selectionMode === 'saleSummary') && {backgroundColor: 'gray'},
+              ]}
               dropDownContainerStyle={{
                 backgroundColor: 'white',
                 borderColor: '#144272',
@@ -532,105 +540,200 @@ export default function SingleUserSale() {
           </View>
         </View>
 
-        {selectionMode === 'salereport' ||
-          (selectionMode === 'detailedsalereport' && (
-            <FlatList
-              data={salesDetailedRep}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.cust_name}
+        {selectionMode === 'salereport' && (
+          <FlatList
+            data={salesDetailedRep}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.cust_name}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    {/*  Sale Report */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Invoice:</Text>
+                      <Text style={styles.text}>{item.sal_invoice_no}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.sal_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
                       </Text>
                     </View>
-                    <View style={styles.infoRow}>
-                      {/*  Sale Report */}
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Invoice:</Text>
-                        <Text style={styles.text}>{item.sal_invoice_no}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Date:</Text>
-                        <Text style={styles.text}>
-                          {new Date(item.sal_date)
-                            .toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                            .replace(/ /g, '-')}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Order Total:</Text>
-                        <Text style={styles.text}>{item.sal_order_total}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Discount:</Text>
-                        <Text style={styles.text}>{item.sal_discount}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                        }}>
-                        <Text style={styles.text}>Total Amount:</Text>
-                        <Text style={styles.text}>{item.sal_total_amount}</Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginBottom: 5,
-                        }}>
-                        <Text style={styles.text}>Profit:</Text>
-                        <Text style={styles.text}>{item.sal_profit}</Text>
-                      </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Order Total:</Text>
+                      <Text style={styles.text}>{item.sal_order_total}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Discount:</Text>
+                      <Text style={styles.text}>{item.sal_discount}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Total Amount:</Text>
+                      <Text style={styles.text}>{item.sal_total_amount}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5,
+                      }}>
+                      <Text style={styles.text}>Profit:</Text>
+                      <Text style={styles.text}>{item.sal_profit}</Text>
                     </View>
                   </View>
                 </View>
-              )}
-              ListEmptyComponent={
-                <View
-                  style={{
-                    height: 200,
-                    width: '100%',
-                    marginTop: 20,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}>
-                  <Text
-                    style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
-                    No record found.
-                  </Text>
+              </View>
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  height: 200,
+                  width: '100%',
+                  marginTop: 20,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No record found.
+                </Text>
+              </View>
+            }
+          />
+        )}
+        {selectionMode === 'detailedsalereport' && (
+          <FlatList
+            data={salesDetailedRep}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.cust_name}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    {/*  Sale Report */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Invoice:</Text>
+                      <Text style={styles.text}>{item.sal_invoice_no}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.sal_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Order Total:</Text>
+                      <Text style={styles.text}>{item.sal_order_total}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Discount:</Text>
+                      <Text style={styles.text}>{item.sal_discount}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Total Amount:</Text>
+                      <Text style={styles.text}>{item.sal_total_amount}</Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 5,
+                      }}>
+                      <Text style={styles.text}>Profit:</Text>
+                      <Text style={styles.text}>{item.sal_profit}</Text>
+                    </View>
+                  </View>
                 </View>
-              }
-            />
-          ))}
+              </View>
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  height: 200,
+                  width: '100%',
+                  marginTop: 20,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No record found.
+                </Text>
+              </View>
+            }
+          />
+        )}
         {selectionMode === 'saleSummary' && (
           <FlatList
             data={salesSummary}
@@ -750,6 +853,44 @@ export default function SingleUserSale() {
                     }}>
                     <Text style={styles.totalText}>Total Sales: </Text>
                     <Text style={styles.totalText}>{totalSale}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+          </View>
+        )}
+        {selectionMode === 'salereport' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{salesReport.length}</Text>
+            </View>
+            {(() => {
+              const {totalSale, totalProfit} = calculateTotalSalesProfit();
+
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Sales: </Text>
+                    <Text style={styles.totalText}>{totalSale}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Profit: </Text>
+                    <Text style={styles.totalText}>{totalProfit}</Text>
                   </View>
                 </View>
               );

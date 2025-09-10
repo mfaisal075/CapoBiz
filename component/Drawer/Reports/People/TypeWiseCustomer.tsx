@@ -17,19 +17,6 @@ import BASE_URL from '../../../BASE_URL';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useUser} from '../../../CTX/UserContext';
 
-type Product = {
-  CustomerName: string;
-  CNIC: string;
-  Contact: number;
-  Email: string;
-  Type: string;
-  Balance: number;
-};
-
-type InfoType = {
-  [key: string]: Product[];
-};
-
 interface TypeDropDown {
   id: number;
   custtyp_name: string;
@@ -47,7 +34,6 @@ interface TypeWiseList {
 export default function TypeWiseCustomer() {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const [currentedit, setCurrentedit] = useState<string>('Select Category');
   const [typeDropdown, setTypeDropdown] = useState<TypeDropDown[]>([]);
   const transformedType = typeDropdown.map(type => ({
     label: type.custtyp_name,
@@ -119,10 +105,6 @@ export default function TypeWiseCustomer() {
               Type Wise Customer
             </Text>
           </View>
-
-          <TouchableOpacity>
-            <Icon name="printer" size={30} color={'#fff'} />
-          </TouchableOpacity>
         </View>
 
         <DropDownPicker

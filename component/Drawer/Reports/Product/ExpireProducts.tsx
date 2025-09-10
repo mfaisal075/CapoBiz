@@ -80,10 +80,6 @@ export default function ExpireProducts() {
               Expired Products
             </Text>
           </View>
-
-          <TouchableOpacity>
-            <Icon name="printer" size={30} color={'#fff'} />
-          </TouchableOpacity>
         </View>
 
         <FlatList

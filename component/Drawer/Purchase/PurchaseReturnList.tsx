@@ -12,7 +12,6 @@ import {
 import React, {useEffect, useState} from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
-import {heightPercentageToDP as hp} from 'react-native-responsive-screen';
 import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
@@ -192,104 +191,83 @@ export default function PurchaseReturnList() {
             </View>
           </View>
 
-          <View style={styles.headerButtons}>
-            <TouchableOpacity style={styles.exportBtn}>
-              <Text style={styles.exportText}>Copy</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.exportBtn}>
-              <Text style={styles.exportText}>Export CSV</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.exportBtn}>
-              <Text style={styles.exportText}>Export Excel</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.exportBtn}>
-              <Text style={styles.exportText}>Print</Text>
-            </TouchableOpacity>
-          </View>
+          <FlatList
+            data={purchaseReturnList}
+            keyExtractor={(item, index) => index.toString()}
+            scrollEnabled={false}
+            renderItem={({item}) => (
+              <ScrollView
+                style={{
+                  padding: 5,
+                }}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.prchr_return_invoice_no}
+                    </Text>
 
-          <ScrollView>
-            <View>
-              <FlatList
-                data={purchaseReturnList}
-                keyExtractor={(item, index) => index.toString()}
-                scrollEnabled={false}
-                renderItem={({item}) => (
-                  <ScrollView
-                    style={{
-                      padding: 5,
-                    }}>
-                    <View style={styles.table}>
-                      <View style={styles.tablehead}>
-                        <Text
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'center',
+                      }}>
+                      <TouchableOpacity>
+                        <Image
                           style={{
-                            color: '#144272',
-                            fontWeight: 'bold',
-                            marginLeft: 5,
-                            marginTop: 5,
-                          }}>
-                          {item.prchr_return_invoice_no}
-                        </Text>
-
-                        <View
-                          style={{
-                            flexDirection: 'row',
-                            justifyContent: 'center',
-                          }}>
-                          <TouchableOpacity>
-                            <Image
-                              style={{
-                                tintColor: '#144272',
-                                width: 15,
-                                height: 15,
-                                alignSelf: 'center',
-                                marginRight: 5,
-                                marginTop: 9,
-                              }}
-                              source={require('../../../assets/show.png')}
-                            />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-
-                      <View style={styles.infoRow}>
-                        <View
-                          style={{
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
-                          }}>
-                          <Text style={styles.text}>Date:</Text>
-                          <Text style={styles.text}>
-                            {new Date(item.created_at)
-                              .toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                              .replace(/ /g, '-')}
-                          </Text>
-                        </View>
-                        <View
-                          style={{
-                            flexDirection: 'row',
-                            justifyContent: 'space-between',
-                          }}>
-                          <Text style={[styles.value, {marginBottom: 5}]}>
-                            Return Amount:
-                          </Text>
-                          <Text style={[styles.value, {marginBottom: 5}]}>
-                            {item.prchr_return_amount}
-                          </Text>
-                        </View>
-                      </View>
+                            tintColor: '#144272',
+                            width: 15,
+                            height: 15,
+                            alignSelf: 'center',
+                            marginRight: 5,
+                            marginTop: 9,
+                          }}
+                          source={require('../../../assets/show.png')}
+                        />
+                      </TouchableOpacity>
                     </View>
-                  </ScrollView>
-                )}
-                ListEmptyComponent={
-                  <View style={{marginTop: 20, }}></View>
-                }
-              />
-            </View>
-          </ScrollView>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.created_at)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        Return Amount:
+                      </Text>
+                      <Text style={[styles.value, {marginBottom: 5}]}>
+                        {item.prchr_return_amount}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              </ScrollView>
+            )}
+            ListEmptyComponent={<View style={{marginTop: 20}}></View>}
+          />
         </ScrollView>
       </ImageBackground>
     </SafeAreaView>
@@ -348,42 +326,6 @@ const styles = StyleSheet.create({
   },
   infoRow: {
     marginTop: 5,
-  },
-  lastrow: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderBottomEndRadius: 10,
-    borderBottomLeftRadius: 10,
-  },
-  card: {
-    borderColor: '#144272',
-    backgroundColor: 'white',
-    height: 'auto',
-    borderRadius: 12,
-    elevation: 15,
-    marginBottom: 5,
-    padding: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-  },
-  exportBtn: {
-    backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  exportText: {
-    color: 'white',
-    fontWeight: 'bold',
   },
   dateContainer: {
     flexDirection: 'row',

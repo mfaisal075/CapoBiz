@@ -17,7 +17,6 @@ import axios from 'axios';
 import BASE_URL from '../../../BASE_URL';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-
 interface AllProductList {
   id: number;
   prod_name: string;
@@ -119,10 +118,6 @@ export default function ListofItems() {
               List of Items
             </Text>
           </View>
-
-          <TouchableOpacity>
-            <Icon name="printer" size={30} color={'#fff'} />
-          </TouchableOpacity>
         </View>
 
         <DropDownPicker
@@ -211,7 +206,7 @@ export default function ListofItems() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
+        <View>
           <FlatList
             data={
               selectionMode === 'allproducts'
@@ -319,9 +314,8 @@ export default function ListofItems() {
                 </Text>
               </View>
             }
-            scrollEnabled={false}
           />
-        </ScrollView>
+        </View>
 
         <View style={styles.totalContainer}>
           <Text style={styles.totalText}>Total Products:</Text>

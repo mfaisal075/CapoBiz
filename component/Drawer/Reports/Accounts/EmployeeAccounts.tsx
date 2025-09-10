@@ -6,7 +6,6 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
@@ -39,6 +38,7 @@ interface SingleEmployeeList {
   empac_withdraw_amount: string;
   empac_balance: string;
   empac_processed_by: string;
+  pre_balance: number;
 }
 
 export default function EmployeeAccounts() {
@@ -124,6 +124,26 @@ export default function EmployeeAccounts() {
     };
   };
 
+  // Calculate Single Employee Totals
+  const calculateSingleEmployeeTotal = () => {
+    let totalEarnings = 0;
+    let totalWithdraw = 0;
+
+    singleEmployeeList.forEach(emp => {
+      const earning = parseFloat(emp.empac_earning) || 0;
+      const withdraw = parseFloat(emp.empac_withdraw_amount) || 0;
+
+      totalEarnings += earning;
+      totalWithdraw += withdraw;
+    });
+
+    return {
+      totalEarnings: totalEarnings.toFixed(2),
+      totalWithdraw: totalWithdraw.toFixed(2),
+      netBalance: (totalEarnings - totalWithdraw).toFixed(2),
+    };
+  };
+
   // Fetch Single Employee List
   const fetchSingleEmployeeList = async () => {
     if (empValue) {
@@ -179,13 +199,15 @@ export default function EmployeeAccounts() {
           <View
             style={{
               flexDirection: 'row',
+              justifyContent: 'space-between',
               alignItems: 'center',
               borderWidth: 1,
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>From:</Text>
+            <Text style={{color: 'white', fontWeight: 'bold'}}>From:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${startDate.toLocaleDateString()}`}
             </Text>
@@ -221,8 +243,10 @@ export default function EmployeeAccounts() {
               borderColor: 'white',
               borderRadius: 5,
               padding: 5,
+              justifyContent: 'space-between',
+              width: '46%',
             }}>
-            <Text style={{color: 'white'}}>To:</Text>
+            <Text style={{color: 'white', fontWeight: 'bold'}}>To:</Text>
             <Text style={{marginLeft: 10, color: 'white'}}>
               {`${endDate.toLocaleDateString()}`}
             </Text>
@@ -379,6 +403,24 @@ export default function EmployeeAccounts() {
                 </View>
               </View>
             )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  height: 150,
+                  width: '100%',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                    color: '#fff',
+                  }}>
+                  No data found in the database!
+                </Text>
+              </View>
+            }
           />
         )}
         {selectionMode === 'singleemployee' && (
@@ -451,10 +493,38 @@ export default function EmployeeAccounts() {
                       <Text style={styles.text}>Balance:</Text>
                       <Text style={styles.text}>{item.empac_balance}</Text>
                     </View>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.text}>Pre Balance:</Text>
+                      <Text style={styles.text}>
+                        {item.pre_balance.toFixed(2)}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               </View>
             )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  height: 150,
+                  width: '100%',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 'bold',
+                    color: '#fff',
+                  }}>
+                  No data found in the database!
+                </Text>
+              </View>
+            }
           />
         )}
 
@@ -470,6 +540,53 @@ export default function EmployeeAccounts() {
             {(() => {
               const {netBalance, totalEarnings, totalWithdraw} =
                 calculateAllEmployeeTotal();
+
+              return (
+                <View
+                  style={{
+                    flexDirection: 'column',
+                  }}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Earnings :</Text>
+                    <Text style={styles.totalText}>{totalEarnings}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Total Withdraw:</Text>
+                    <Text style={styles.totalText}>{totalWithdraw}</Text>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                    }}>
+                    <Text style={styles.totalText}>Net Balance:</Text>
+                    <Text style={styles.totalText}>{netBalance}</Text>
+                  </View>
+                </View>
+              );
+            })()}
+          </View>
+        )}
+        {selectionMode === 'singleemployee' && (
+          <View style={styles.totalContainer}>
+            <View
+              style={{
+                flexDirection: 'row',
+              }}>
+              <Text style={styles.totalText}>Total Records:</Text>
+              <Text style={styles.totalText}>{singleEmployeeList.length}</Text>
+            </View>
+            {(() => {
+              const {netBalance, totalEarnings, totalWithdraw} =
+                calculateSingleEmployeeTotal();
 
               return (
                 <View
@@ -601,8 +718,9 @@ const styles = StyleSheet.create({
     width: '90%',
     height: 38,
     alignSelf: 'center',
-    gap: 33,
-    marginTop: 10,
+    justifyContent: 'space-between',
+    marginTop: 12,
+    marginBottom: 5,
   },
   radioBtnContainer: {
     flexDirection: 'row',

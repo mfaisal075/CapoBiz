@@ -77,10 +77,6 @@ export default function InactiveCustomer() {
               Inactive Customer
             </Text>
           </View>
-
-          <TouchableOpacity>
-            <Icon name="printer" size={30} color={'#fff'} />
-          </TouchableOpacity>
         </View>
 
         <ScrollView>

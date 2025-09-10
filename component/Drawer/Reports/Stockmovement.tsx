@@ -268,10 +268,12 @@ export default function Stockmovement() {
                 marginHorizontal: 10,
                 opacity: currentPage === 1 ? 0.5 : 1,
               }}>
-              <Text style={{color: 'white', fontWeight: 'bold'}}>Prev</Text>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+                Prev
+              </Text>
             </TouchableOpacity>
 
-            <Text style={{color: 'white', fontWeight: 'bold'}}>
+            <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
               Page {currentPage} of {totalPages}
             </Text>
 
@@ -282,7 +284,9 @@ export default function Stockmovement() {
                 marginHorizontal: 10,
                 opacity: currentPage === totalPages ? 0.5 : 1,
               }}>
-              <Text style={{color: 'white', fontWeight: 'bold'}}>Next</Text>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+                Next
+              </Text>
             </TouchableOpacity>
           </View>
         )}

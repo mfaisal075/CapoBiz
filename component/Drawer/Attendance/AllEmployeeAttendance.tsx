@@ -5,17 +5,19 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  Platform,
   Image,
   ImageBackground,
   SafeAreaView,
   ScrollView,
 } from 'react-native';
-import DateTimePicker from '@react-native-community/datetimepicker';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import {useDrawer} from '../../DrawerContext';
-import DropDownPicker from 'react-native-dropdown-picker';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
+import Toast from 'react-native-toast-message';
+import {useUser} from '../../CTX/UserContext';
 
 type Employee = {
   id: string;
@@ -78,29 +80,13 @@ interface AttendanceCart {
 
 export default function AllEmployeeAttendance() {
   const {openDrawer} = useDrawer();
-
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [dataLoaded, setDataLoaded] = useState(false);
-  const [showPicker, setShowPicker] = useState(false);
-  const [currentId, setCurrentId] = useState<number | null>(null);
-  const [mode, setMode] = useState<'clockIn' | 'clockOut'>('clockIn');
+  const {token} = useUser();
   const [attCart, setAttCart] = useState<AttendanceCart[]>([]);
+  const [clockInPickerFor, setClockInPickerFor] = useState<number | null>(null);
+  const [clockOutPickerFor, setClockOutPickerFor] = useState<number | null>(
+    null,
+  );
 
-  const updateTime = (id: string, selectedTime: Date) => {
-    const updated = employees.map(emp => {
-      if (emp.id === id) {
-        return mode === 'clockIn'
-          ? {...emp, clockIn: selectedTime}
-          : {...emp, clockOut: selectedTime};
-      }
-      return emp;
-    });
-    setEmployees(updated);
-  };
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-  };
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const [statusModalVisible, setStatusModalVisible] = useState(false);
@@ -120,7 +106,7 @@ export default function AllEmployeeAttendance() {
   // Fetch Attendance Cart Data
   const fetchData = async () => {
     try {
-      addToEmpAttendanceCart();
+      await addToEmpAttendanceCart(); // await here
       const res = await axios.get(`${BASE_URL}/loadcartemp`);
       setAttCart(res.data.carsession);
     } catch (error) {
@@ -128,8 +114,236 @@ export default function AllEmployeeAttendance() {
     }
   };
 
+  // Rest Api
+  const handleReset = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/clearEmployeescart`);
+
+      if (res.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Reset Successful',
+          text2: 'Attendance cart has been cleared',
+          visibilityTime: 1500,
+        });
+
+        setAttCart([]);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Reset Failed',
+          text2: res.data.message || 'Could not reset cart',
+          visibilityTime: 1500,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Something went wrong while resetting',
+        visibilityTime: 1500,
+      });
+    }
+  };
+
+  // Safe converter
+  const getDateFrom12HourTime = (timeString: string) => {
+    if (!timeString) return new Date();
+
+    // Normalize: remove weird spaces and uppercase AM/PM
+    const normalized = timeString.replace(/\s+/g, ' ').trim().toUpperCase();
+
+    const parts = normalized.split(' ');
+    if (parts.length < 2) return new Date();
+
+    const [time, modifier] = parts;
+    let [hours, minutes] = time.split(':').map(Number);
+
+    if (modifier === 'PM' && hours < 12) hours += 12;
+    if (modifier === 'AM' && hours === 12) hours = 0;
+
+    return new Date(1970, 0, 1, hours, minutes);
+  };
+
+  const onClockInChangeForItem = async (
+    emp_id: number,
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    // Close the picker
+    setClockInPickerFor(null);
+
+    if (!selectedDate) return;
+
+    // Convert Date to "HH:mm" format
+    const hours = selectedDate.getHours().toString().padStart(2, '0');
+    const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+    const timeString = `${hours}:${minutes}`;
+
+    // Update local state immediately
+    setAttCart(prev =>
+      prev.map(emp =>
+        emp.emp_id === emp_id ? {...emp, clockin: timeString} : emp,
+      ),
+    );
+
+    // Call API to update backend
+    try {
+      await axios.post(`${BASE_URL}/updateattendance`, {
+        id: emp_id,
+        clockin: timeString,
+      });
+      console.log(`Clock in updated for employee ${emp_id}: ${timeString}`);
+    } catch (error) {
+      console.log('Error updating clock in:', error);
+    }
+  };
+
+  const onClockOutChangeForItem = async (
+    emp_id: number,
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    // Close the picker
+    setClockOutPickerFor(null);
+
+    if (!selectedDate) return;
+
+    // Convert Date to "HH:mm" format
+    const hours = selectedDate.getHours().toString().padStart(2, '0');
+    const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
+    const timeString = `${hours}:${minutes}`;
+
+    // Update local state immediately
+    setAttCart(prev =>
+      prev.map(emp =>
+        emp.emp_id === emp_id ? {...emp, clockout: timeString} : emp,
+      ),
+    );
+
+    // Call API to update backend
+    try {
+      await axios.post(`${BASE_URL}/updateattendanceclockout`, {
+        sid: emp_id,
+        clockout: timeString,
+      });
+      console.log(`Clock Out updated for employee ${emp_id}: ${timeString}`);
+    } catch (error) {
+      console.log('Error updating clock in:', error);
+    }
+  };
+
+  const formatTimeForDisplay = (timeString: string) => {
+    if (!timeString) return '';
+
+    let date: Date;
+
+    // Check if string is already in "HH:mm" (24-hour)
+    if (/^\d{1,2}:\d{2}$/.test(timeString)) {
+      const [hours, minutes] = timeString.split(':').map(Number);
+      date = new Date(1970, 0, 1, hours, minutes);
+    } else {
+      // Try parsing 12-hour format with AM/PM
+      date = new Date(`1970-01-01T${convert12To24(timeString)}:00`);
+    }
+
+    return date.toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  };
+
+  // Helper to convert "10:39 AM" → "10:39" in 24-hour format
+  const convert12To24 = (time12h: string) => {
+    const [time, modifier] = time12h.split(' ');
+    let [hours, minutes] = time.split(':').map(Number);
+
+    if (modifier === 'PM' && hours < 12) hours += 12;
+    if (modifier === 'AM' && hours === 12) hours = 0;
+
+    return `${hours.toString().padStart(2, '0')}:${minutes
+      .toString()
+      .padStart(2, '0')}`;
+  };
+
+  const updateAttendanceStatus = async (emp_id: number, status: string) => {
+    try {
+      // Update local state immediately
+      setAttCart(prev =>
+        prev.map(emp =>
+          emp.emp_id === emp_id ? {...emp, att_status: status} : emp,
+        ),
+      );
+
+      // Close modal
+      setStatusModalVisible(false);
+      setSelectedEmployeeId(null);
+
+      // Hit backend API
+      await axios.post(`${BASE_URL}/updateattendancestatus`, {
+        sid: emp_id,
+        att_status: status,
+      });
+
+      console.log(`Status updated for employee ${emp_id}: ${status}`);
+    } catch (error) {
+      console.log('Error updating status:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Could not update status',
+        visibilityTime: 1500,
+      });
+    }
+  };
+
+  // Complete Attendance
+  const compAttendance = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/empcompleteattendance`);
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        await axios.get(`${BASE_URL}/emptyattendancecart`);
+
+        Toast.show({
+          type: 'success',
+          text1: 'Success!',
+          text2: 'Attendance has been marked successfully!',
+          visibilityTime: 1500,
+        });
+      } else if (res.status === 200 && data.status === 203) {
+        Toast.show({
+          type: 'info',
+          text1: 'Warning!',
+          text2: 'Clock out time must be greater than clock in time.',
+          visibilityTime: 1500,
+        });
+      } else if (res.status === 200 && data.status === 201) {
+        Toast.show({
+          type: 'info',
+          text1: 'Warning!',
+          text2: 'Please Load the Employees First!',
+          visibilityTime: 1500,
+        });
+      } else if (res.status === 200 && data.status === 202) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'You Have Already Marked Attendance!',
+          visibilityTime: 1500,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
-    fetchData();
+    // fetchData();
   }, []);
 
   return (
@@ -154,8 +368,7 @@ export default function AllEmployeeAttendance() {
           <TouchableOpacity
             style={styles.loadButton}
             onPress={() => {
-              setEmployees(initialData);
-              setDataLoaded(true);
+              fetchData();
             }}>
             <Text style={styles.buttonText}>Load Employees</Text>
           </TouchableOpacity>
@@ -163,8 +376,7 @@ export default function AllEmployeeAttendance() {
           <TouchableOpacity
             style={styles.resetButton}
             onPress={() => {
-              setEmployees([]);
-              setDataLoaded(false);
+              handleReset();
             }}>
             <Text style={styles.buttonText}>Reset</Text>
           </TouchableOpacity>
@@ -195,37 +407,60 @@ export default function AllEmployeeAttendance() {
                   <Text style={[styles.text, {marginTop: 5}]}>CNIC</Text>
                   <Text style={[styles.text, {marginTop: 5}]}>{item.cnic}</Text>
                 </View>
+                {/* Clock In */}
                 <TouchableOpacity
-                  onPress={() => {
-                    setCurrentId(item.emp_id);
-                    setMode('clockIn');
-                    setShowPicker(true);
-                  }}>
+                  onPress={() => setClockInPickerFor(item.emp_id)}>
                   <View
                     style={{
                       flexDirection: 'row',
                       justifyContent: 'space-between',
                     }}>
                     <Text style={styles.text}>Clock In:</Text>
-                    <Text style={styles.text}>{item.clockin}</Text>
+                    <Text style={styles.text}>
+                      {item.clockin ? formatTimeForDisplay(item.clockin) : '—'}
+                    </Text>
                   </View>
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  onPress={() => {
-                    setCurrentId(item.emp_id);
-                    setMode('clockOut');
-                    setShowPicker(true);
-                  }}>
+                  onPress={() => setClockOutPickerFor(item.emp_id)}>
                   <View
                     style={{
                       flexDirection: 'row',
                       justifyContent: 'space-between',
                     }}>
                     <Text style={styles.text}>Clock Out:</Text>
-                    <Text style={styles.text}>{item.clockout}</Text>
+                    <Text style={styles.text}>
+                      {item.clockout
+                        ? formatTimeForDisplay(item.clockout)
+                        : '—'}
+                    </Text>
                   </View>
                 </TouchableOpacity>
+
+                {clockInPickerFor === item.emp_id && (
+                  <DateTimePicker
+                    value={getDateFrom12HourTime(item.clockin)}
+                    mode="time"
+                    is24Hour={false}
+                    display="default"
+                    onChange={(event, selectedDate) =>
+                      onClockInChangeForItem(item.emp_id, event, selectedDate)
+                    }
+                  />
+                )}
+
+                {clockOutPickerFor === item.emp_id && (
+                  <DateTimePicker
+                    value={getDateFrom12HourTime(item.clockout)}
+                    mode="time"
+                    is24Hour={false}
+                    display="default"
+                    onChange={(event, selectedDate) =>
+                      onClockOutChangeForItem(item.emp_id, event, selectedDate)
+                    }
+                  />
+                )}
 
                 <View
                   style={{
@@ -235,41 +470,6 @@ export default function AllEmployeeAttendance() {
                   <Text style={styles.text}>Date</Text>
                   <Text style={styles.text}>{item.date}</Text>
                 </View>
-
-                {openDropdownId === item.emp_id.toString() && (
-                  <DropDownPicker
-                    open={true}
-                    value={item.att_status}
-                    items={[
-                      {label: 'Present', value: 'Present'},
-                      {label: 'Absent', value: 'Absent'},
-                      {label: 'Leave', value: 'Leave'},
-                    ]}
-                    setOpen={() => setOpenDropdownId(null)}
-                    setValue={callback => {
-                      const newValue = callback(item.att_status);
-                      setEmployees(prev =>
-                        prev.map(emp =>
-                          emp.id === item.emp_id.toString()
-                            ? {...emp, status: newValue}
-                            : emp,
-                        ),
-                      );
-                    }}
-                    setItems={() => {}}
-                    style={{
-                      backgroundColor: 'white',
-                    }}
-                    dropDownContainerStyle={{
-                      backgroundColor: 'white',
-                    }}
-                    textStyle={{color: '#144272'}}
-                    listItemLabelStyle={{
-                      color: '#144272',
-                    }}
-                    placeholder="Select status"
-                  />
-                )}
 
                 {openDropdownId !== item.emp_id.toString() && (
                   <TouchableOpacity
@@ -293,20 +493,7 @@ export default function AllEmployeeAttendance() {
           )}
         />
 
-        {showPicker && currentId && (
-          <DateTimePicker
-            value={new Date()}
-            mode="time"
-            is24Hour={false}
-            display={Platform.OS === 'android' ? 'spinner' : 'default'}
-            onChange={(_, selectedDate) => {
-              setShowPicker(false);
-              if (selectedDate) updateTime(currentId.toString(), selectedDate);
-            }}
-          />
-        )}
-
-        <TouchableOpacity style={styles.submitButton}>
+        <TouchableOpacity style={styles.submitButton} onPress={compAttendance}>
           <Text style={styles.submitText}>Submit</Text>
         </TouchableOpacity>
         {statusModalVisible && (
@@ -337,15 +524,9 @@ export default function AllEmployeeAttendance() {
               <TouchableOpacity
                 key={status}
                 onPress={() => {
-                  setEmployees(prev =>
-                    prev.map(emp =>
-                      emp.id === selectedEmployeeId?.toString()
-                        ? {...emp, status: status as Employee['status']}
-                        : emp,
-                    ),
-                  );
-                  setStatusModalVisible(false);
-                  setSelectedEmployeeId(null);
+                  if (selectedEmployeeId !== null) {
+                    updateAttendanceStatus(selectedEmployeeId, status);
+                  }
                 }}
                 style={{
                   paddingVertical: 10,
@@ -424,22 +605,10 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#144272',
   },
-  row: {
-    marginBottom: 16,
-    backgroundColor: '#f0f0f0',
-    padding: 12,
-    borderRadius: 8,
-    marginHorizontal: 10,
-  },
   text: {
     marginLeft: 5,
     color: 'white',
     marginRight: 5,
-  },
-  picker: {
-    height: 50,
-    width: '100%',
-    marginTop: -6,
   },
   timeBox: {
     color: 'white',
@@ -476,5 +645,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     backgroundColor: 'white',
+  },
+  productinput: {
+    flexDirection: 'row',
+    height: 38,
+    width: '46%',
+    borderWidth: 1,
+    borderColor: '#144272',
+    borderRadius: 6,
+    padding: 8,
+    justifyContent: 'space-between',
   },
 });

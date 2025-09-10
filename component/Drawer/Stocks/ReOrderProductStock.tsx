@@ -6,7 +6,6 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
@@ -26,22 +25,31 @@ type Product = {
   prod_retailprice: string;
 };
 
+interface Categories {
+  id: number;
+  pcat_name: string;
+}
+
 export default function ReOrderProductStock() {
   const {openDrawer} = useDrawer();
   const [products, setProducts] = useState<Product[]>([]);
-
   const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] =
-    useState<string>('Select Category');
+  const [currentCategory, setCurrentCategory] = useState('');
+  const [categories, setCategories] = useState<Categories[]>([]);
+  const transformedCat = categories.map(cat => ({
+    label: cat.pcat_name,
+    value: cat.id.toString(),
+  }));
 
-  const categoryItems = [
-    {label: 'Select Category', value: 'Select Category'},
-    {label: 'Chocolate', value: 'Chocolate'},
-    {label: 'Jelly', value: 'Jelly'},
-    {label: 'Oil', value: 'Oil'},
-    {label: 'Flour', value: 'Flour'},
-    {label: 'Murree Brwerry', value: 'Murree Brwerry'},
-  ];
+  // Fetch Category Dropdown
+  const fetchCatDropdown = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchcategories`);
+      setCategories(res.data.cat);
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   const fetchProd = async () => {
     try {
@@ -56,7 +64,8 @@ export default function ReOrderProductStock() {
 
   useEffect(() => {
     fetchProd();
-  }, []);
+    fetchCatDropdown();
+  }, [currentCategory]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -70,6 +79,7 @@ export default function ReOrderProductStock() {
             alignItems: 'center',
             padding: 5,
             justifyContent: 'space-between',
+            marginBottom: 15,
           }}>
           <TouchableOpacity onPress={openDrawer}>
             <Image
@@ -85,23 +95,8 @@ export default function ReOrderProductStock() {
           </View>
         </View>
 
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Copy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export CSV</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export Excel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Print</Text>
-          </TouchableOpacity>
-        </View>
-
         <DropDownPicker
-          items={categoryItems}
+          items={transformedCat}
           open={category}
           setOpen={setCategory}
           value={currentCategory}

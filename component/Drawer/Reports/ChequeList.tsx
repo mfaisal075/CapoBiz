@@ -6,7 +6,6 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
@@ -28,11 +27,23 @@ interface CustomerChequeList {
   chi_clear_date: string;
 }
 
+interface SupplierChequeList {
+  id: number;
+  sup_name: string;
+  chi_number: string;
+  chi_amount: string;
+  chi_date: string;
+  chi_clear_date: string;
+}
+
 export default function CustomerAccounts() {
   const {openDrawer} = useDrawer();
   const [statusOpen, setStatusOpen] = useState(false);
   const [statusValue, setStatusValue] = useState('');
   const [custChequeList, setCustChequeList] = useState<CustomerChequeList[]>(
+    [],
+  );
+  const [suppChequeList, setSuppChequeList] = useState<SupplierChequeList[]>(
     [],
   );
 
@@ -81,6 +92,19 @@ export default function CustomerAccounts() {
     }
   };
 
+  const fetchSupplierChequeList = async () => {
+    try {
+      const res = await axios.post(`${BASE_URL}/fetchsuppliercheques`, {
+        from: startDate.toISOString().split('T')[0],
+        to: endDate.toISOString().split('T')[0],
+        status: statusValue,
+      });
+      setSuppChequeList(res.data.cheques);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   // Calculate Customers Total
   const calculateCustChequeTotal = () => {
     let totalAmount = 0;
@@ -96,8 +120,24 @@ export default function CustomerAccounts() {
     };
   };
 
+  // Calculate Supplier Total
+  const calculateSuppChequeTotal = () => {
+    let totalAmount = 0;
+
+    suppChequeList.forEach(supp => {
+      const amount = parseFloat(supp.chi_amount) || 0;
+
+      totalAmount += amount;
+    });
+
+    return {
+      totalSale: totalAmount.toFixed(2),
+    };
+  };
+
   useEffect(() => {
     fetchCustomerChequeList();
+    fetchSupplierChequeList();
   }, [startDate, endDate, statusValue]);
 
   return (
@@ -322,13 +362,15 @@ export default function CustomerAccounts() {
                     <View style={styles.RowTable}>
                       <Text style={styles.text}>Clearance Date:</Text>
                       <Text style={styles.text}>
-                        {new Date(item.chi_clear_date)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-')}
+                        {item.chi_clear_date
+                          ? new Date(item.chi_clear_date)
+                              .toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })
+                              .replace(/ /g, '-')
+                          : 'Not Cleared'}
                       </Text>
                     </View>
 
@@ -340,13 +382,97 @@ export default function CustomerAccounts() {
                 </View>
               </View>
             )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  height: 150,
+                  width: '100%',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No data found in the database!
+                </Text>
+              </View>
+            }
           />
         )}
 
-        {selectionMode === 'suppliers' && !currentCategory && (
-          <Text style={{color: 'white', textAlign: 'center', marginTop: 10}}>
-            Please select a category to view items.
-          </Text>
+        {selectionMode === 'suppliers' && (
+          <FlatList
+            data={suppChequeList}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={{padding: 5}}>
+                <View style={styles.table}>
+                  <View style={styles.tablehead}>
+                    <Text
+                      style={{
+                        color: '#144272',
+                        fontWeight: 'bold',
+                        marginLeft: 5,
+                        marginTop: 5,
+                      }}>
+                      {item.chi_number}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.RowTable}>
+                      <Text style={styles.text}>Supplier:</Text>
+                      <Text style={styles.text}>{item.sup_name}</Text>
+                    </View>
+
+                    <View style={styles.RowTable}>
+                      <Text style={styles.text}>Due Date:</Text>
+                      <Text style={styles.text}>
+                        {new Date(item.chi_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
+                      </Text>
+                    </View>
+
+                    <View style={styles.RowTable}>
+                      <Text style={styles.text}>Clearance Date:</Text>
+                      <Text style={styles.text}>
+                        {item.chi_clear_date
+                          ? new Date(item.chi_clear_date)
+                              .toLocaleDateString('en-GB', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })
+                              .replace(/ /g, '-')
+                          : 'Not Cleared'}
+                      </Text>
+                    </View>
+
+                    <View style={[styles.RowTable, {marginBottom: 5}]}>
+                      <Text style={styles.text}>Amount:</Text>
+                      <Text style={styles.text}>{item.chi_amount}</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            )}
+            ListEmptyComponent={
+              <View
+                style={{
+                  height: 150,
+                  width: '100%',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                }}>
+                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
+                  No data found in the database!
+                </Text>
+              </View>
+            }
+          />
         )}
 
         {selectionMode === 'customers' && (
@@ -356,6 +482,21 @@ export default function CustomerAccounts() {
             </Text>
             {(() => {
               const {totalSale} = calculateCustChequeTotal();
+              return (
+                <Text style={styles.totalText}>
+                  Total Cheque Amount:{totalSale}
+                </Text>
+              );
+            })()}
+          </View>
+        )}
+        {selectionMode === 'suppliers' && (
+          <View style={styles.totalContainer}>
+            <Text style={styles.totalText}>
+              Total Records:{suppChequeList.length}
+            </Text>
+            {(() => {
+              const {totalSale} = calculateSuppChequeTotal();
               return (
                 <Text style={styles.totalText}>
                   Total Cheque Amount:{totalSale}

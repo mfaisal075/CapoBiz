@@ -176,6 +176,7 @@ export default function ExpenseCategories() {
             alignItems: 'center',
             padding: 5,
             justifyContent: 'space-between',
+            marginBottom: 15,
           }}>
           <TouchableOpacity onPress={openDrawer}>
             <Image
@@ -209,21 +210,6 @@ export default function ExpenseCategories() {
               }}
               source={require('../../../assets/add.png')}
             />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Copy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export CSV</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export Excel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Print</Text>
           </TouchableOpacity>
         </View>
 

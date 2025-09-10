@@ -4,6 +4,10 @@ import axios from 'axios';
 
 interface UserContextProps {
   token: string | null;
+  userName: string | '';
+  setUserName: (userName: string | '') => void;
+  userEmail: string | '';
+  setUserEmail: (userEmail: string | '') => void;
   setToken: (token: string | null) => void;
   refreshAddToCart: () => Promise<void>;
 }
@@ -12,6 +16,8 @@ const UserContext = createContext<UserContextProps | undefined>(undefined);
 
 export const UserProvider: React.FC<{children: ReactNode}> = ({children}) => {
   const [token, setToken] = useState<string | null>(null);
+  const [userName, setUserName] = useState('');
+  const [userEmail, setUserEmail] = useState('');
 
   const refreshAddToCart = async () => {
     if (!token) return;
@@ -30,6 +36,10 @@ export const UserProvider: React.FC<{children: ReactNode}> = ({children}) => {
       value={{
         token,
         setToken,
+        userName,
+        setUserName,
+        userEmail,
+        setUserEmail,
         refreshAddToCart,
       }}>
       {children}

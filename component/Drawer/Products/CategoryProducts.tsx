@@ -30,6 +30,19 @@ export default function CategoryProducts() {
   const [selectedCate, setSelectedCate] = useState<Categories | null>(null);
   const [editCate, setEditCate] = useState('');
 
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const totalRecords = categories.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const currentData = categories.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
+
   // Fetch Category Dropdown
   const fetchCatDropdown = async () => {
     try {
@@ -142,6 +155,7 @@ export default function CategoryProducts() {
             alignItems: 'center',
             padding: 5,
             justifyContent: 'space-between',
+            marginBottom: 15,
           }}>
           <TouchableOpacity onPress={openDrawer}>
             <Image
@@ -181,27 +195,12 @@ export default function CategoryProducts() {
           </TouchableOpacity>
         </View>
 
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Copy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export CSV</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export Excel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Print</Text>
-          </TouchableOpacity>
-        </View>
-
         <View>
           <FlatList
-            data={categories}
+            data={currentData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <ScrollView
+              <View
                 style={{
                   padding: 5,
                 }}>
@@ -266,7 +265,7 @@ export default function CategoryProducts() {
                     </View>
                   </View>
                 </View>
-              </ScrollView>
+              </View>
             )}
             ListEmptyComponent={
               <View
@@ -529,6 +528,47 @@ export default function CategoryProducts() {
             </TouchableOpacity>
           </View>
         </Modal>
+
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'center',
+              marginBottom: 12,
+              position: 'absolute',
+              bottom: 5,
+              left: 100,
+            }}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
+              style={{
+                marginHorizontal: 10,
+                opacity: currentPage === 1 ? 0.5 : 1,
+              }}>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+              Page {currentPage} of {totalPages}
+            </Text>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={{
+                marginHorizontal: 10,
+                opacity: currentPage === totalPages ? 0.5 : 1,
+              }}>
+              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+                Next
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ImageBackground>
     </SafeAreaView>
   );
@@ -579,20 +619,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     height: 40,
     color: '#000',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-  },
-  exportBtn: {
-    backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  exportText: {
-    color: 'white',
-    fontWeight: 'bold',
   },
 });
