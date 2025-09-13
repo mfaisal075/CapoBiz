@@ -9,17 +9,18 @@ import {
   ScrollView,
   FlatList,
   TextInput,
+  Modal,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
-import Modal from 'react-native-modal';
 import {Checkbox, RadioButton} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import {useUser} from '../CTX/UserContext';
 import Toast from 'react-native-toast-message';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import LottieView from 'lottie-react-native';
 
 interface Employee {
   id: number;
@@ -127,7 +128,6 @@ export default function EmployeesPeople() {
   const [viewEmp, setViewEmp] = useState<EmployeeView[]>([]);
   const [modalVisible, setModalVisible] = useState('');
   const [selectedEmp, setSelectedEmp] = useState<number | null>(null);
-  const [btncustomerarea, setbtncustomerarea] = useState(false);
   const [addForm, setAddForm] = useState<AddEmployeeForm>(initialAddEmployee);
   const [enableBal, setEnableBal] = useState<string[]>([]);
   const [editForm, setEditForm] = useState<EditEmployee>(initialEditEmployee);
@@ -170,8 +170,6 @@ export default function EmployeesPeople() {
   const [Worker, setWorker] = useState<'Worker' | 'other'>('Worker');
   const [editWorker, setEditWorker] = useState<'Worker' | 'other'>('Worker');
 
-  const [btncustomeraditarea, setbtncustomereditarea] = useState(false);
-
   // Fetch Employee
   const fetchEmployees = async () => {
     try {
@@ -210,6 +208,9 @@ export default function EmployeesPeople() {
 
   // Add Employee
   const addEmployee = async () => {
+    const nameRegex = /^[A-Za-z ]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     if (
       !addForm.emp_name.trim() ||
       !addForm.fathername.trim() ||
@@ -222,6 +223,36 @@ export default function EmployeesPeople() {
         type: 'error',
         text1: 'Missing Fields',
         text2: 'Please fill all required fields.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    if (!nameRegex.test(addForm.emp_name.trim())) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Name',
+        text2: 'Customer name should only contain letters and spaces.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    if (!nameRegex.test(addForm.fathername.trim())) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Father Name',
+        text2: 'Father name should only contain letters and spaces.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    if (!emailRegex.test(addForm.email.trim())) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Email',
+        text2: 'Please enter a valid email address.',
         visibilityTime: 2000,
       });
       return;
@@ -290,6 +321,9 @@ export default function EmployeesPeople() {
 
   // Edit Employee
   const editEmployee = async () => {
+    const nameRegex = /^[A-Za-z ]+$/;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     // Validation - ensure required fields aren't empty
     if (
       !editForm.emp_name?.trim() ||
@@ -303,6 +337,36 @@ export default function EmployeesPeople() {
         type: 'error',
         text1: 'Missing Fields',
         text2: 'Please fill all required fields.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    if (!nameRegex.test(editForm.emp_name.trim())) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Name',
+        text2: 'Customer name should only contain letters and spaces.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    if (!nameRegex.test(editForm.emp_fathername.trim())) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Father Name',
+        text2: 'Father name should only contain letters and spaces.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    if (!emailRegex.test(editForm.emp_email.trim())) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Email',
+        text2: 'Please enter a valid email address.',
         visibilityTime: 2000,
       });
       return;
@@ -375,194 +439,156 @@ export default function EmployeesPeople() {
         source={require('../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-            marginBottom: 15,
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Employees
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Employees</Text>
           </View>
-          <TouchableOpacity onPress={() => setModalVisible('AddEmp')}>
-            <Image
-              style={{
-                tintColor: 'white',
-                width: 18,
-                height: 18,
-                alignSelf: 'center',
-                marginRight: 5,
-              }}
-              source={require('../../assets/add.png')}
-            />
+
+          <TouchableOpacity
+            onPress={() => setModalVisible('AddEmp')}
+            style={[styles.headerBtn]}>
+            <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
         <View>
           <FlatList
             data={currentData}
-            style={{marginBottom: 90}}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <ScrollView
-                style={{
-                  padding: 5,
-                }}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text
-                      style={{
-                        color: '#144272',
-                        fontWeight: 'bold',
-                        marginLeft: 5,
-                        marginTop: 5,
-                      }}>
-                      {item.emp_name}
+              <View style={styles.card}>
+                <View style={styles.headerRow}>
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.emp_name?.charAt(0) || 'E'}
                     </Text>
+                  </View>
 
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'center',
+                  <View style={{flex: 1}}>
+                    <Text style={styles.name}>{item.emp_name}</Text>
+                    <Text style={styles.subText}>
+                      {item.emp_contact || 'No contact'}
+                    </Text>
+                  </View>
+
+                  {/* Actions */}
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('View Employee');
+                        const fetchDetails = async (id: number) => {
+                          try {
+                            const res = await axios.get(
+                              `${BASE_URL}/employeesshow?id=${id}&_token=${token}`,
+                            );
+                            setViewEmp([res.data]);
+                          } catch (error) {
+                            console.log(error);
+                          }
+                        };
+                        fetchDetails(item.id);
                       }}>
-                      <TouchableOpacity
-                        onPress={() => {
-                          setModalVisible('View Employee');
-                          const fetchDetails = async (id: number) => {
-                            try {
-                              const res = await axios.get(
-                                `${BASE_URL}/employeesshow?id=${id}&_token=${token}`,
-                              );
-                              setViewEmp([res.data]);
-                            } catch (error) {
-                              console.log(error);
-                            }
-                          };
+                      <Icon
+                        style={styles.actionIcon}
+                        name="eye"
+                        size={20}
+                        color={'#144272'}
+                      />
+                    </TouchableOpacity>
 
-                          fetchDetails(item.id);
-                        }}>
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginRight: 5,
-                            marginTop: 9,
-                          }}
-                          source={require('../../assets/show.png')}
-                        />
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        onPress={() => {
-                          setModalVisible('EditEmp');
-                          const fetchEditData = async (id: number) => {
-                            try {
-                              const res = await axios.get(
-                                `${BASE_URL}/editemployee?id=${id}&_token=${token}`,
-                              );
-                              setEditForm(res.data);
-                            } catch (error) {
-                              console.log(error);
-                            }
-                          };
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('EditEmp');
+                        const fetchEditData = async (id: number) => {
+                          try {
+                            const res = await axios.get(
+                              `${BASE_URL}/editemployee?id=${id}&_token=${token}`,
+                            );
+                            setEditForm(res.data);
+                          } catch (error) {
+                            console.log(error);
+                          }
+                        };
+                        fetchEditData(item.id);
+                      }}>
+                      <Icon
+                        style={styles.actionIcon}
+                        name="pencil"
+                        size={20}
+                        color={'#144272'}
+                      />
+                    </TouchableOpacity>
 
-                          fetchEditData(item.id);
-                        }}>
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginTop: 8,
-                          }}
-                          source={require('../../assets/edit.png')}
-                        />
-                      </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('EmpDelete');
+                        setSelectedEmp(item.id);
+                      }}>
+                      <Icon
+                        style={styles.actionIcon}
+                        name="delete"
+                        size={20}
+                        color={'#144272'}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
-                      <TouchableOpacity
-                        onPress={() => {
-                          setModalVisible('EmpDelete');
-                          setSelectedEmp(item.id);
-                        }}>
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginRight: 5,
-                            marginTop: 8,
-                          }}
-                          source={require('../../assets/delete.png')}
-                        />
-                      </TouchableOpacity>
-                    </View>
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <Icon
+                      name="email"
+                      size={20}
+                      color={'#144272'}
+                      style={styles.infoIcon}
+                    />
+                    <Text style={styles.infoText}>
+                      {item.emp_email || 'N/A'}
+                    </Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Email:</Text>
-                      <Text style={styles.text}>{item.emp_email ?? 'N/A'}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Contact:</Text>
-                      <Text style={styles.text}>
-                        {item.emp_contact ?? 'N/A'}
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>CNIC:</Text>
-                      <Text style={styles.text}>{item.emp_cnic ?? 'N/A'}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={[styles.value, {marginBottom: 5}]}>
-                        Address:
-                      </Text>
-                      <Text style={[styles.value, {marginBottom: 5}]}>
-                        {item.emp_address ?? 'N/A'}
-                      </Text>
-                    </View>
+                    <Icon
+                      name="phone"
+                      size={20}
+                      color={'#144272'}
+                      style={styles.infoIcon}
+                    />
+                    <Text style={styles.infoText}>
+                      {item.emp_contact || 'N/A'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Icon
+                      name="card-account-details"
+                      size={20}
+                      color={'#144272'}
+                      style={styles.infoIcon}
+                    />
+                    <Text style={styles.infoText}>
+                      {item.emp_cnic || 'N/A'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Icon
+                      name="map-marker"
+                      size={20}
+                      color={'#144272'}
+                      style={styles.infoIcon}
+                    />
+                    <Text style={styles.infoText}>
+                      {item.emp_address || 'N/A'}
+                    </Text>
                   </View>
                 </View>
-              </ScrollView>
+              </View>
             )}
             ListEmptyComponent={
               <View style={{alignItems: 'center', marginTop: 20}}>
@@ -571,1191 +597,748 @@ export default function EmployeesPeople() {
                 </Text>
               </View>
             }
+            contentContainerStyle={{paddingBottom: 110}}
+            showsVerticalScrollIndicator={false}
           />
         </View>
 
         {/*Add Employee*/}
-        <Modal isVisible={modalVisible === 'AddEmp'}>
-          <ScrollView
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 620,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Add New Employee
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('');
-                  setAddForm(initialAddEmployee);
-                  setEnableBal([]);
-                  setWorker('Worker');
-                }}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
+        <Modal
+          visible={modalVisible === 'AddEmp'}
+          transparent
+          animationType="slide">
+          <View style={styles.addEmployeeModalOverlay}>
+            <ScrollView style={styles.addEmployeeModalContainer}>
+              <View style={styles.addEmployeeHeader}>
+                <Text style={styles.addEmployeeTitle}>Add New Employee</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setModalVisible('');
+                    setAddForm(initialAddEmployee);
+                    setEnableBal([]);
+                    setWorker('Worker');
                   }}
-                  source={require('../../assets/cross.png')}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Employee Name"
-                value={addForm.emp_name}
-                onChangeText={t => onChange('emp_name', t)}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Father Name"
-                value={addForm.fathername}
-                onChangeText={t => onChange('fathername', t)}
-              />
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Email"
-                value={addForm.email}
-                onChangeText={t => onChange('email', t)}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Address"
-                value={addForm.address}
-                onChangeText={t => onChange('address', t)}
-              />
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact"
-                value={addForm.contact}
-                keyboardType="phone-pad"
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  onChange('contact', cleaned);
-                }}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="CNIC"
-                value={addForm.cnic}
-                keyboardType="number-pad"
-                maxLength={15}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 5 digits
-                  if (cleaned.length > 5) {
-                    cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                  }
-                  // Insert another dash after 7 more digits (total 13 digits: 5-7-1)
-                  if (cleaned.length > 13) {
-                    cleaned =
-                      cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                  }
-                  // Limit to 15 characters (including dashes)
-                  if (cleaned.length > 15) {
-                    cleaned = cleaned.slice(0, 15);
-                  }
-                  onChange('cnic', cleaned);
-                }}
-              />
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact Person One"
-                value={addForm.contact_person_one}
-                keyboardType="phone-pad"
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  onChange('contact_person_one', cleaned);
-                }}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact Person Two"
-                value={addForm.contact_person_two}
-                keyboardType="phone-pad"
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  onChange('contact_person_two', cleaned);
-                }}
-              />
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 2"
-                value={addForm.sec_contact}
-                keyboardType="phone-pad"
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  onChange('sec_contact', cleaned);
-                }}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 3"
-                keyboardType="numeric"
-                value={addForm.third_contact}
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  onChange('third_contact', cleaned);
-                }}
-              />
-            </View>
-
-            <View
-              style={{
-                flexDirection: 'row',
-              }}>
-              <TouchableOpacity
-                style={{
-                  marginTop: 10,
-                  flexDirection: 'row',
-                  marginLeft: 6,
-                  marginRight: 50,
-                  alignItems: 'center',
-                }}
-                onPress={() => setWorker('Worker')}
-                activeOpacity={0.7}>
-                <RadioButton
-                  value="Worker"
-                  status={Worker === 'Worker' ? 'checked' : 'unchecked'}
-                  color="#144272"
-                  uncheckedColor="#144272"
-                  onPress={() => setWorker('Worker')}
-                />
-                <Text
-                  style={{
-                    color: '#144272',
-                    marginTop: 7,
-                    marginLeft: -5,
-                  }}>
-                  Worker
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  marginTop: 10,
-                  flexDirection: 'row',
-                  marginLeft: 28,
-                  alignItems: 'center',
-                }}
-                onPress={() => setWorker('other')}
-                activeOpacity={0.7}>
-                <RadioButton
-                  value="other"
-                  status={Worker === 'other' ? 'checked' : 'unchecked'}
-                  color="#144272"
-                  uncheckedColor="#144272"
-                  onPress={() => setWorker('other')}
-                />
-                <Text
-                  style={{
-                    color: '#144272',
-                    marginTop: 7,
-                    marginLeft: -5,
-                  }}>
-                  Other
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {Worker === 'other' && (
-              <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-                <TextInput
-                  style={styles.productinput}
-                  placeholderTextColor={'#144272'}
-                  placeholder="Other"
-                  keyboardType="default"
-                  value={addForm.employeetype}
-                  onChangeText={t => onChange('employeetype', t)}
-                />
+                  style={styles.addEmployeeCloseBtn}>
+                  <Icon name="close" size={20} color="#144272" />
+                </TouchableOpacity>
               </View>
-            )}
 
-            <View
-              style={[
-                styles.row,
-                {
-                  marginLeft: 7,
-                  marginRight: 10,
-                  justifyContent: 'flex-start',
-                  zIndex: 999,
-                },
-              ]}>
-              <TouchableOpacity
-                style={{flexDirection: 'row', alignItems: 'center'}}
-                activeOpacity={0.7}
-                onPress={() => {
-                  const newOptions = enableBal.includes('on')
-                    ? enableBal.filter(opt => opt !== 'on')
-                    : [...enableBal, 'on'];
-                  setEnableBal(newOptions);
-                }}>
-                <Checkbox.Android
-                  status={enableBal.includes('on') ? 'checked' : 'unchecked'}
-                  color="#144272"
-                  uncheckedColor="#144272"
-                />
-                <Text style={{color: '#144272', marginLeft: 8}}>
-                  Enable Opening Balance
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Opening balance"
-                keyboardType="numeric"
-                value={addForm.opening_balance}
-                onChangeText={t => onChange('opening_balance', t)}
-                editable={enableBal.includes('on')}
-              />
-            </View>
-
-            <View
-              style={{
-                flexDirection: 'row',
-                marginLeft: 8,
-                marginRight: 10,
-                zIndex: 999,
-              }}>
-              <DropDownPicker
-                items={paymentTypeItem}
-                open={paymentType}
-                setOpen={setpaymentType}
-                value={current}
-                setValue={setcurrentpaymentType}
-                placeholder="Payment Type"
-                placeholderStyle={{color: '#144272'}}
-                textStyle={{color: '#144272'}}
-                ArrowUpIconComponent={() => (
-                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
-                )}
-                style={[
-                  styles.dropdown,
-                  {
-                    borderColor: '#144272',
-                    width: '100%',
-                    marginLeft: 0,
-                    height: 40,
-                    backgroundColor: enableBal.includes('on')
-                      ? 'transparent'
-                      : '#e0e0e0',
-                  },
-                ]}
-                dropDownContainerStyle={{
-                  backgroundColor: 'white',
-                  borderColor: '#144272',
-                  width: '100%',
-                }}
-                labelStyle={{color: '#144272'}}
-                listItemLabelStyle={{color: '#144272'}}
-                disabled={!enableBal.includes('on')}
-                listMode="SCROLLVIEW"
-              />
-            </View>
-
-            <View
-              style={[
-                styles.row,
-                {marginLeft: 7, marginRight: 10, marginTop: -1},
-              ]}>
-              <TextInput
-                style={[
-                  styles.productinput,
-                  {
-                    color: '#144272',
-                    backgroundColor:
-                      current === 'recievable'
-                        ? 'gray'
-                        : current === 'payable'
-                        ? 'gray'
-                        : enableBal.includes('on')
-                        ? 'gray'
-                        : '#e0e0e0',
-                  },
-                ]}
-                placeholder={
-                  current === 'recievable'
-                    ? 'Debit Amount'
-                    : current === 'payable'
-                    ? 'Credit Amount'
-                    : 'Balance'
-                }
-                editable={
-                  current === 'recievable'
-                    ? false
-                    : current === 'payable'
-                    ? false
-                    : enableBal.includes('on')
-                }
-              />
-            </View>
-
-            <TouchableOpacity onPress={() => addEmployee()}>
-              <View
-                style={{
-                  backgroundColor: '#144272',
-                  height: 30,
-                  width: 120,
-                  margin: 10,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignSelf: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Add Employee
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </Modal>
-
-        {/*btn employee*/}
-        <Modal isVisible={btncustomerarea}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Added
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Employee has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomerarea(!btncustomerarea)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
+              <View style={styles.addEmployeeForm}>
+                {/* Row 1 */}
+                <View style={styles.addEmployeeRow}>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>Employee Name *</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholderTextColor="#999"
+                      placeholder="Enter employee name"
+                      value={addForm.emp_name}
+                      onChangeText={t => onChange('emp_name', t)}
+                    />
+                  </View>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>Father Name</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholderTextColor="#999"
+                      placeholder="Enter father name"
+                      value={addForm.fathername}
+                      onChangeText={t => onChange('fathername', t)}
+                    />
+                  </View>
                 </View>
-              </TouchableOpacity>
-            </View>
+
+                {/* Row 2 */}
+                <View style={styles.addEmployeeRow}>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>Email</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholderTextColor="#999"
+                      placeholder="example@mail.com"
+                      value={addForm.email}
+                      onChangeText={t => onChange('email', t)}
+                    />
+                  </View>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>Address</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholderTextColor="#999"
+                      placeholder="Enter address"
+                      value={addForm.address}
+                      onChangeText={t => onChange('address', t)}
+                    />
+                  </View>
+                </View>
+
+                {/* Row 3 */}
+                <View style={styles.addEmployeeRow}>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>Contact *</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholderTextColor="#999"
+                      placeholder="0300-1234567"
+                      value={addForm.contact}
+                      keyboardType="phone-pad"
+                      maxLength={12}
+                      onChangeText={t => {
+                        let cleaned = t.replace(/[^0-9]/g, ''); // keep only digits
+                        if (cleaned.length > 4) {
+                          cleaned =
+                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                        }
+                        if (cleaned.length > 12) {
+                          cleaned = cleaned.slice(0, 12);
+                        }
+                        onChange('contact', cleaned);
+                      }}
+                    />
+                  </View>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>CNIC</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholderTextColor="#999"
+                      placeholder="12345-1234567-1"
+                      value={addForm.cnic}
+                      keyboardType="numeric"
+                      maxLength={15}
+                      onChangeText={t => {
+                        let cleaned = t.replace(/[^0-9-]/g, '');
+                        cleaned = cleaned.replace(/-/g, '');
+                        if (cleaned.length > 5)
+                          cleaned =
+                            cleaned.slice(0, 5) + '-' + cleaned.slice(5);
+                        if (cleaned.length > 13)
+                          cleaned =
+                            cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
+                        if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
+                        onChange('cnic', cleaned);
+                      }}
+                    />
+                  </View>
+                </View>
+
+                {/* Extra Contacts */}
+                <View style={styles.addEmployeeRow}>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>
+                      Contact Person One
+                    </Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholder="0300-1234567"
+                      value={addForm.contact_person_one}
+                      keyboardType="phone-pad"
+                      maxLength={12}
+                      onChangeText={t => {
+                        let cleaned = t.replace(/[^0-9-]/g, '');
+                        cleaned = cleaned.replace(/-/g, '');
+                        if (cleaned.length > 4)
+                          cleaned =
+                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                        onChange('contact_person_one', cleaned);
+                      }}
+                    />
+                  </View>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>
+                      Contact Person Two
+                    </Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholder="0300-1234567"
+                      value={addForm.contact_person_two}
+                      keyboardType="phone-pad"
+                      maxLength={12}
+                      onChangeText={t => {
+                        let cleaned = t.replace(/[^0-9-]/g, '');
+                        cleaned = cleaned.replace(/-/g, '');
+                        if (cleaned.length > 4)
+                          cleaned =
+                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                        onChange('contact_person_two', cleaned);
+                      }}
+                    />
+                  </View>
+                </View>
+
+                {/* Worker / Other */}
+                <View style={styles.addEmployeeFullRow}>
+                  <Text style={styles.addEmployeeLabel}>Employee Type</Text>
+                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                    <RadioButton
+                      value="Worker"
+                      status={Worker === 'Worker' ? 'checked' : 'unchecked'}
+                      color="#144272"
+                      onPress={() => setWorker('Worker')}
+                    />
+                    <Text style={styles.addEmployeeRadioText}>Worker</Text>
+
+                    <RadioButton
+                      value="other"
+                      status={Worker === 'other' ? 'checked' : 'unchecked'}
+                      color="#144272"
+                      onPress={() => setWorker('other')}
+                    />
+                    <Text style={styles.addEmployeeRadioText}>Other</Text>
+                  </View>
+
+                  {Worker === 'other' && (
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholder="Enter type"
+                      value={addForm.employeetype}
+                      onChangeText={t => onChange('employeetype', t)}
+                    />
+                  )}
+                </View>
+
+                {/* Opening Balance */}
+                <View style={{marginBottom: 15}}>
+                  <TouchableOpacity
+                    style={{flexDirection: 'row', alignItems: 'center'}}
+                    onPress={() => {
+                      const newOptions = enableBal.includes('on')
+                        ? enableBal.filter(opt => opt !== 'on')
+                        : [...enableBal, 'on'];
+                      setEnableBal(newOptions);
+                    }}>
+                    <Checkbox.Android
+                      status={
+                        enableBal.includes('on') ? 'checked' : 'unchecked'
+                      }
+                      color="#144272"
+                      uncheckedColor="#144272"
+                    />
+                    <Text style={[styles.addEmployeeLabel, {marginLeft: 8}]}>
+                      Enable Opening Balance
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {enableBal.includes('on') && (
+                  <>
+                    <View style={styles.addEmployeeFullRow}>
+                      <Text style={styles.addEmployeeLabel}>
+                        Opening Balance
+                      </Text>
+                      <TextInput
+                        style={styles.addEmployeeInput}
+                        placeholder="Enter opening balance"
+                        keyboardType="numeric"
+                        value={addForm.opening_balance}
+                        onChangeText={t => onChange('opening_balance', t)}
+                      />
+                    </View>
+
+                    <View style={styles.addEmployeeDropdownRow}>
+                      <Text style={styles.addEmployeeLabel}>Payment Type</Text>
+                      <DropDownPicker
+                        items={paymentTypeItem}
+                        open={paymentType}
+                        setOpen={setpaymentType}
+                        value={current}
+                        setValue={setcurrentpaymentType}
+                        placeholder="Select payment type"
+                        style={styles.addEmployeeDropdown}
+                        dropDownContainerStyle={
+                          styles.addEmployeeDropdownContainer
+                        }
+                        textStyle={styles.addEmployeeDropdownText}
+                        placeholderStyle={styles.addEmployeeDropdownPlaceholder}
+                        listMode="SCROLLVIEW"
+                        disabled={!enableBal.includes('on')}
+                      />
+                    </View>
+                  </>
+                )}
+
+                {/* Submit */}
+                <TouchableOpacity
+                  style={styles.addEmployeeSubmitBtn}
+                  onPress={addEmployee}>
+                  <Icon name="account-plus-outline" size={20} color="white" />
+                  <Text style={styles.addEmployeeSubmitText}>Add Employee</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+            <Toast />
           </View>
         </Modal>
 
         {/*Epmloyee Delete*/}
-        <Modal isVisible={modalVisible === 'EmpDelete'}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: 'auto',
-              maxHeight: 220,
-              borderRadius: 5,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../assets/info.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Are you sure?
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              You won't be able to revert this record!
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('');
-                  setSelectedEmp(null);
-                }}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 100,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
+        <Modal
+          visible={modalVisible === 'EmpDelete'}
+          transparent
+          animationType="fade">
+          <View style={styles.addEmployeeModalOverlay}>
+            <View style={styles.deleteModalContainer}>
+              <View style={styles.delAnim}>
+                <LottieView
+                  style={{flex: 1}}
+                  source={require('../../assets/warning.json')}
+                  autoPlay
+                  loop={false}
+                />
+              </View>
+
+              {/* Title */}
+              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
+
+              {/* Subtitle */}
+              <Text style={styles.deleteModalMessage}>
+                You won’t be able to revert this record!
+              </Text>
+
+              {/* Buttons */}
+              <View style={styles.deleteModalActions}>
+                <TouchableOpacity
+                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
+                  onPress={() => setModalVisible('')}>
+                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
                     Cancel
                   </Text>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
 
-              <TouchableOpacity onPress={delEmployee}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 100,
-                    height: 30,
-                    padding: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    Yes, delete it
-                  </Text>
-                </View>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
+                  onPress={delEmployee}>
+                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
 
         {/*Edit Employee*/}
-        <Modal isVisible={modalVisible === 'EditEmp'}>
-          <ScrollView
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 480,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Edit Employee
-              </Text>
-              <TouchableOpacity onPress={() => setModalVisible('')}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
-                  }}
-                  source={require('../../assets/cross.png')}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Customer Name"
-                value={editForm.emp_name}
-                onChangeText={t => editOnchange('emp_name', t)}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Father Name"
-                value={editForm.emp_fathername}
-                onChangeText={t => editOnchange('emp_fathername', t)}
-              />
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Email"
-                value={editForm.emp_email}
-                onChangeText={t => editOnchange('emp_email', t)}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Address"
-                value={editForm.emp_address}
-                onChangeText={t => editOnchange('emp_address', t)}
-              />
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact"
-                value={editForm.emp_contact}
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  editOnchange('emp_contact', cleaned);
-                }}
-                keyboardType="number-pad"
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="CNIC"
-                value={editForm.emp_cnic}
-                maxLength={15}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 5 digits
-                  if (cleaned.length > 5) {
-                    cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                  }
-                  // Insert another dash after 7 more digits (total 13 digits: 5-7-1)
-                  if (cleaned.length > 13) {
-                    cleaned =
-                      cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                  }
-                  // Limit to 15 characters (including dashes)
-                  if (cleaned.length > 15) {
-                    cleaned = cleaned.slice(0, 15);
-                  }
-                  editOnchange('emp_cnic', cleaned);
-                }}
-                keyboardType="numeric"
-              />
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact Person One"
-                value={editForm.emp_contact_person_one}
-                keyboardType="phone-pad"
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  editOnchange('emp_contact_person_one', cleaned);
-                }}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact Person Two"
-                value={editForm.emp_contact_person_two}
-                keyboardType="phone-pad"
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  editOnchange('emp_contact_person_two', cleaned);
-                }}
-              />
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 2"
-                value={editForm.emp_sec_contact}
-                keyboardType="phone-pad"
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  editOnchange('emp_sec_contact', cleaned);
-                }}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 3"
-                keyboardType="numeric"
-                value={editForm.emp_third_contact}
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  editOnchange('emp_third_contact', cleaned);
-                }}
-              />
-            </View>
-
-            <View
-              style={{
-                flexDirection: 'row',
-              }}>
-              <TouchableOpacity
-                style={{
-                  marginTop: 10,
-                  flexDirection: 'row',
-                  marginLeft: 6,
-                  marginRight: 50,
-                  alignItems: 'center',
-                }}
-                onPress={() => setEditWorker('Worker')}
-                activeOpacity={0.7}>
-                <RadioButton
-                  value="Worker"
-                  status={editWorker === 'Worker' ? 'checked' : 'unchecked'}
-                  color="#144272"
-                  uncheckedColor="#144272"
-                  onPress={() => setEditWorker('Worker')}
-                />
-                <Text
-                  style={{
-                    color: '#144272',
-                    marginTop: 7,
-                    marginLeft: -5,
-                  }}>
-                  Worker
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={{
-                  marginTop: 10,
-                  flexDirection: 'row',
-                  marginLeft: 28,
-                  alignItems: 'center',
-                }}
-                onPress={() => setEditWorker('other')}
-                activeOpacity={0.7}>
-                <RadioButton
-                  value="other"
-                  status={editWorker === 'other' ? 'checked' : 'unchecked'}
-                  color="#144272"
-                  uncheckedColor="#144272"
-                  onPress={() => setEditWorker('other')}
-                />
-                <Text
-                  style={{
-                    color: '#144272',
-                    marginTop: 7,
-                    marginLeft: -5,
-                  }}>
-                  Other
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {editWorker === 'other' && (
-              <View style={[styles.row, {marginLeft: 7, marginRight: 10}]}>
-                <TextInput
-                  style={styles.productinput}
-                  placeholderTextColor={'#144272'}
-                  placeholder="Other"
-                  keyboardType="default"
-                  value={editForm.emp_type}
-                  onChangeText={t => editOnchange('emp_type', t)}
-                />
+        <Modal
+          visible={modalVisible === 'EditEmp'}
+          transparent
+          animationType="slide">
+          <View style={styles.addEmployeeModalOverlay}>
+            <ScrollView style={styles.addEmployeeModalContainer}>
+              {/* Header */}
+              <View style={styles.addEmployeeHeader}>
+                <Text style={styles.addEmployeeTitle}>Edit Employee</Text>
+                <TouchableOpacity
+                  onPress={() => setModalVisible('')}
+                  style={styles.addEmployeeCloseBtn}>
+                  <Icon name="close" size={20} color="#144272" />
+                </TouchableOpacity>
               </View>
-            )}
 
-            <TouchableOpacity onPress={editEmployee}>
-              <View
-                style={{
-                  backgroundColor: '#144272',
-                  paddingHorizontal: 15,
-                  paddingVertical: 10,
-                  margin: 10,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignSelf: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Update Employee
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </Modal>
+              {/* Form */}
+              <View style={styles.addEmployeeForm}>
+                {/* Row 1 */}
+                <View style={styles.addEmployeeRow}>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>Employee Name *</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholder="Enter employee name"
+                      placeholderTextColor="#999"
+                      value={editForm.emp_name}
+                      onChangeText={t => editOnchange('emp_name', t)}
+                    />
+                  </View>
 
-        {/*btn customer*/}
-        <Modal isVisible={btncustomeraditarea}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 220,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../assets/tick.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Updated
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              Employee has been added successfully
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => setbtncustomereditarea(!btncustomeraditarea)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 50,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    OK
-                  </Text>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>Father Name</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholder="Enter father name"
+                      placeholderTextColor="#999"
+                      value={editForm.emp_fathername}
+                      onChangeText={t => editOnchange('emp_fathername', t)}
+                    />
+                  </View>
                 </View>
-              </TouchableOpacity>
-            </View>
+
+                {/* Row 2 */}
+                <View style={styles.addEmployeeRow}>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>Email</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholder="employee@example.com"
+                      placeholderTextColor="#999"
+                      value={editForm.emp_email}
+                      onChangeText={t => editOnchange('emp_email', t)}
+                      keyboardType="email-address"
+                    />
+                  </View>
+
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>Address</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholder="Enter address"
+                      placeholderTextColor="#999"
+                      value={editForm.emp_address}
+                      onChangeText={t => editOnchange('emp_address', t)}
+                    />
+                  </View>
+                </View>
+
+                {/* Row 3 */}
+                <View style={styles.addEmployeeRow}>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>Contact</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholder="0300-1234567"
+                      placeholderTextColor="#999"
+                      value={editForm.emp_contact}
+                      maxLength={12}
+                      keyboardType="phone-pad"
+                      onChangeText={t => {
+                        let cleaned = t.replace(/[^0-9]/g, '');
+                        if (cleaned.length > 4)
+                          cleaned =
+                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                        editOnchange('emp_contact', cleaned);
+                      }}
+                    />
+                  </View>
+
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>CNIC</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholder="12345-1234567-1"
+                      placeholderTextColor="#999"
+                      value={editForm.emp_cnic}
+                      maxLength={15}
+                      keyboardType="number-pad"
+                      onChangeText={t => {
+                        let cleaned = t.replace(/[^0-9]/g, '');
+                        if (cleaned.length > 5)
+                          cleaned =
+                            cleaned.slice(0, 5) + '-' + cleaned.slice(5);
+                        if (cleaned.length > 13)
+                          cleaned =
+                            cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
+                        if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
+                        editOnchange('emp_cnic', cleaned);
+                      }}
+                    />
+                  </View>
+                </View>
+
+                {/* Row 4 */}
+                <View style={styles.addEmployeeRow}>
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>
+                      Contact Person One
+                    </Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholder="0300-xxxxxxx"
+                      placeholderTextColor="#999"
+                      value={editForm.emp_contact_person_one}
+                      maxLength={12}
+                      keyboardType="phone-pad"
+                      onChangeText={t => {
+                        let cleaned = t.replace(/[^0-9]/g, '');
+                        if (cleaned.length > 4)
+                          cleaned =
+                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                        editOnchange('emp_contact_person_one', cleaned);
+                      }}
+                    />
+                  </View>
+
+                  <View style={styles.addEmployeeField}>
+                    <Text style={styles.addEmployeeLabel}>
+                      Contact Person Two
+                    </Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholder="0300-xxxxxxx"
+                      placeholderTextColor="#999"
+                      value={editForm.emp_contact_person_two}
+                      maxLength={12}
+                      keyboardType="phone-pad"
+                      onChangeText={t => {
+                        let cleaned = t.replace(/[^0-9]/g, '');
+                        if (cleaned.length > 4)
+                          cleaned =
+                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                        editOnchange('emp_contact_person_two', cleaned);
+                      }}
+                    />
+                  </View>
+                </View>
+
+                {/* Worker Type */}
+                <View style={{flexDirection: 'row', marginBottom: 15}}>
+                  <TouchableOpacity
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginRight: 30,
+                    }}
+                    onPress={() => setEditWorker('Worker')}
+                    activeOpacity={0.7}>
+                    <RadioButton
+                      value="Worker"
+                      status={editWorker === 'Worker' ? 'checked' : 'unchecked'}
+                      color="#144272"
+                      uncheckedColor="#144272"
+                      onPress={() => setEditWorker('Worker')}
+                    />
+                    <Text style={{color: '#144272'}}>Worker</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{flexDirection: 'row', alignItems: 'center'}}
+                    onPress={() => setEditWorker('other')}
+                    activeOpacity={0.7}>
+                    <RadioButton
+                      value="other"
+                      status={editWorker === 'other' ? 'checked' : 'unchecked'}
+                      color="#144272"
+                      uncheckedColor="#144272"
+                      onPress={() => setEditWorker('other')}
+                    />
+                    <Text style={{color: '#144272'}}>Other</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {editWorker === 'other' && (
+                  <View style={styles.addEmployeeFullRow}>
+                    <Text style={styles.addEmployeeLabel}>Other</Text>
+                    <TextInput
+                      style={styles.addEmployeeInput}
+                      placeholder="Specify type"
+                      placeholderTextColor="#999"
+                      value={editForm.emp_type}
+                      onChangeText={t => editOnchange('emp_type', t)}
+                    />
+                  </View>
+                )}
+
+                {/* Submit */}
+                <TouchableOpacity
+                  style={styles.addEmployeeSubmitBtn}
+                  onPress={editEmployee}>
+                  <Icon name="account-edit" size={20} color="white" />
+                  <Text style={styles.addEmployeeSubmitText}>
+                    Update Employee
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+            <Toast />
           </View>
         </Modal>
 
         {/*Employee View Modal*/}
-        <Modal isVisible={modalVisible === 'View Employee'}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 500,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Employee's Detail
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('');
-                  setViewEmp([]);
-                }}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
+        <Modal
+          visible={modalVisible === 'View Employee'}
+          transparent
+          animationType="slide">
+          <View style={styles.addEmployeeModalOverlay}>
+            <ScrollView style={styles.addEmployeeModalContainer}>
+              {/* Header */}
+              <View style={styles.addEmployeeHeader}>
+                <Text style={styles.addEmployeeTitle}>Employee Details</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setModalVisible('');
+                    setViewEmp([]);
                   }}
-                  source={require('../../assets/cross.png')}
-                />
-              </TouchableOpacity>
-            </View>
+                  style={styles.addEmployeeCloseBtn}>
+                  <Icon name="close" size={20} color="#144272" />
+                </TouchableOpacity>
+              </View>
 
-            <View>
-              <FlatList
-                data={viewEmp}
-                keyExtractor={(item, index) => index.toString()}
-                renderItem={({item}) => (
-                  <ScrollView
-                    style={{
-                      padding: 5,
-                    }}>
-                    <View style={styles.table}>
-                      <View style={[styles.cardContainer]}>
-                        <View style={{alignItems: 'center', marginBottom: 16}}>
-                          {item.emp_image ? (
-                            <Image
-                              source={{uri: item.emp_image}}
-                              style={styles.customerImage}
-                              resizeMode="cover"
-                            />
-                          ) : (
-                            <Text style={styles.noImageText}>
-                              No Image Provided
-                            </Text>
-                          )}
-                        </View>
-
-                        <View style={styles.infoGrid}>
-                          <Text style={styles.labl}>Employee Name:</Text>
-                          <Text style={styles.valu}>{item.emp_name}</Text>
-
-                          <Text style={styles.labl}>Father Name:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_fathername ?? 'N/A'}
-                          </Text>
-
-                          <Text style={styles.labl}>Contact:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_contact ?? 'N/A'}
-                          </Text>
-
-                          <Text style={styles.labl}>Email:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_email ?? 'N/A'}
-                          </Text>
-
-                          <Text style={styles.labl}>Second Contact:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_sec_contact ?? 'N/A'}
-                          </Text>
-
-                          <Text style={styles.labl}>Third Contact:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_third_contact ?? 'N/A'}
-                          </Text>
-
-                          <Text style={styles.labl}>Contact Person One:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_contact_person_one ?? 'N/A'}
-                          </Text>
-
-                          <Text style={styles.labl}>Contact Person Two:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_contact_person_two ?? 'N/A'}
-                          </Text>
-
-                          <Text style={styles.labl}>CNIC:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_cnic ?? 'N/A'}
-                          </Text>
-
-                          <Text style={styles.labl}>Address:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_address ?? 'N/A'}
-                          </Text>
-
-                          <Text style={styles.labl}>Employee Type:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_type ?? 'N/A'}
-                          </Text>
-
-                          <Text style={styles.labl}>Opening Balance:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_opening_balance ?? 'N/A'}
-                          </Text>
-
-                          <Text style={styles.labl}>Payment Type:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_payment_type ?? 'N/A'}
-                          </Text>
-
-                          <Text style={styles.labl}>Transaction Type:</Text>
-                          <Text style={styles.valu}>
-                            {item.emp_transaction_type ?? 'N/A'}
-                          </Text>
-                        </View>
+              {viewEmp.length > 0 && (
+                <View style={styles.customerDetailsWrapper}>
+                  {/* Profile Image */}
+                  <View style={styles.customerImageWrapper}>
+                    {viewEmp[0].emp_image ? (
+                      <Image
+                        source={{uri: viewEmp[0].emp_image}}
+                        style={styles.customerImage}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View style={styles.customerNoImage}>
+                        <Icon name="account" size={40} color="#999" />
+                        <Text style={styles.customerNoImageText}>No Image</Text>
                       </View>
+                    )}
+                  </View>
+
+                  {/* Info Box */}
+                  <View style={styles.customerInfoBox}>
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>
+                        Employee Name
+                      </Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_name}
+                      </Text>
                     </View>
-                  </ScrollView>
-                )}
-              />
-            </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>Father Name</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_fathername ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>Contact</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_contact ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>Email</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_email ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>
+                        Second Contact
+                      </Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_sec_contact ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>
+                        Third Contact
+                      </Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_third_contact ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>
+                        Contact Person One
+                      </Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_contact_person_one ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>
+                        Contact Person Two
+                      </Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_contact_person_two ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>CNIC</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_cnic ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>Address</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_address ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>
+                        Employee Type
+                      </Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_type ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>
+                        Opening Balance
+                      </Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_opening_balance ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>Payment Type</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_payment_type ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>
+                        Transaction Type
+                      </Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewEmp[0]?.emp_transaction_type ?? 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+            </ScrollView>
           </View>
         </Modal>
 
         {/* Pagination Controls */}
         {totalRecords > 0 && (
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'center',
-              paddingVertical: 12,
-              position: 'absolute',
-              width: '100%',
-              bottom: 0,
-            }}>
+          <View style={styles.paginationContainer}>
             <TouchableOpacity
               disabled={currentPage === 1}
               onPress={() => setCurrentPage(prev => prev - 1)}
-              style={{
-                marginHorizontal: 10,
-                opacity: currentPage === 1 ? 0.5 : 1,
-              }}>
-              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
                 Prev
               </Text>
             </TouchableOpacity>
 
-            <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
-              Page {currentPage} of {totalPages}
-            </Text>
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
+              </Text>
+            </View>
 
             <TouchableOpacity
               disabled={currentPage === totalPages}
               onPress={() => setCurrentPage(prev => prev + 1)}
-              style={{
-                marginHorizontal: 10,
-                opacity: currentPage === totalPages ? 0.5 : 1,
-              }}>
-              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
                 Next
               </Text>
             </TouchableOpacity>
@@ -1771,77 +1354,330 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   background: {
     flex: 1,
   },
-  headerTextContainer: {
+
+  // Add Modal Styling
+  addEmployeeModalOverlay: {
     flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    alignItems: 'center',
+    paddingHorizontal: 20,
   },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
+  addEmployeeModalContainer: {
     backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
+    borderRadius: 15,
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  addEmployeeHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
+  addEmployeeTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#144272',
   },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
+  addEmployeeCloseBtn: {
+    padding: 5,
   },
-  infoRow: {
-    marginTop: 5,
+  addEmployeeForm: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
   },
-  row: {
+  addEmployeeRow: {
     flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+    justifyContent: 'space-between',
+    marginBottom: 15,
   },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 35,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: 285,
-  },
-  productinput: {
+  addEmployeeField: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 6,
-    padding: 8,
+    marginHorizontal: 5,
   },
-  cardContainer: {
-    margin: 20,
-    padding: 16,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
+  addEmployeeFullRow: {
+    marginBottom: 15,
+  },
+  addEmployeeLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#144272',
+    marginBottom: 5,
+  },
+  addEmployeeInput: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    height: 45,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    color: '#333',
+    backgroundColor: '#f9f9f9',
+  },
+  addEmployeeRadioText: {
+    color: '#144272',
+    fontSize: 14,
+    marginRight: 15,
+  },
+  addEmployeeDropdownRow: {
+    marginBottom: 15,
+  },
+  addEmployeeDropdown: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    backgroundColor: '#f9f9f9',
+    minHeight: 42,
+    zIndex: 999,
+  },
+  addEmployeeDropdownContainer: {
+    backgroundColor: 'white',
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    zIndex: 1000,
+    maxHeight: 160,
+  },
+  addEmployeeDropdownText: {
+    color: '#333',
+    fontSize: 14,
+  },
+  addEmployeeDropdownPlaceholder: {
+    color: '#999',
+    fontSize: 14,
+  },
+  addEmployeeSubmitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#144272',
+    borderRadius: 10,
+    paddingVertical: 15,
+    marginTop: 20,
+  },
+  addEmployeeSubmitText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+
+  // FlatList Styling
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    padding: 14,
+    marginVertical: 8,
     shadowColor: '#000',
     shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#144272',
+  },
+  subText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionIcon: {
+    width: 20,
+    height: 20,
+    marginHorizontal: 4,
+  },
+  infoBox: {
+    marginTop: 10,
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 10,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  infoIcon: {
+    marginRight: 8,
+  },
+  infoText: {
+    flex: 1,
+    color: '#333',
+    fontSize: 13,
+  },
+
+  // Pagination Component
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#144272',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
     shadowRadius: 4,
-    elevation: 4,
-    paddingBottom: 24,
-    marginBottom: 40,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
+  },
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    paddingHorizontal: 10,
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
+  },
+
+  //Delete Modal
+  deleteModalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+    width: '85%',
+    alignSelf: 'center',
+  },
+  deleteModalIcon: {
+    width: 60,
+    height: 60,
+    tintColor: '#144272',
+    marginBottom: 15,
+  },
+  deleteModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#144272',
+    marginBottom: 8,
+  },
+  deleteModalMessage: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  deleteModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  deleteModalBtn: {
+    flex: 1,
+    marginHorizontal: 5,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  deleteModalBtnText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  delAnim: {
+    width: 120,
+    height: 120,
+    marginBottom: 15,
+  },
+
+  // View Modal Styling
+  customerDetailsWrapper: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  customerImageWrapper: {
+    marginBottom: 20,
   },
   customerImage: {
     width: 100,
@@ -1850,24 +1686,42 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#144272',
   },
-  noImageText: {
-    color: '#144272',
-    fontStyle: 'italic',
+  customerNoImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#f0f0f0',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
-  infoGrid: {
+  customerNoImageText: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+  },
+  customerInfoBox: {
+    width: '100%',
+    marginTop: 10,
+  },
+  customerInfoRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    marginBottom: 12,
+    borderBottomWidth: 0.5,
+    borderBottomColor: '#e0e0e0',
+    paddingBottom: 6,
   },
-  labl: {
-    width: '68%',
-    fontWeight: 'bold',
+  customerInfoLabel: {
+    fontSize: 14,
+    fontWeight: '600',
     color: '#144272',
-    marginBottom: 4,
   },
-  valu: {
-    width: '68%',
-    marginBottom: 8,
-    color: '#144272',
+  customerInfoValue: {
+    fontSize: 14,
+    color: '#333',
+    flexShrink: 1,
+    textAlign: 'right',
   },
 });

@@ -304,9 +304,18 @@ function App(): React.JSX.Element {
             />
             <Stack.Screen name="Fix Accounts" component={FixAccounts} />
             <Stack.Screen name="ChequeClearance" component={ChequeClearance} />
-            <Stack.Screen name="SupplierChequeClearance" component={SupplierChequeClearance} />
-            <Stack.Screen name="TransporterAddPayment" component={TransporterAddPayment} />
-            <Stack.Screen name="LabourAddPayment" component={LabourAddPayment} />
+            <Stack.Screen
+              name="SupplierChequeClearance"
+              component={SupplierChequeClearance}
+            />
+            <Stack.Screen
+              name="TransporterAddPayment"
+              component={TransporterAddPayment}
+            />
+            <Stack.Screen
+              name="LabourAddPayment"
+              component={LabourAddPayment}
+            />
 
             {/*Sale Report*/}
             <Stack.Screen name="All User Sales" component={AllUserSale} />

@@ -2,365 +2,226 @@ import {
   StyleSheet,
   Text,
   SafeAreaView,
-  ImageBackground,
   View,
   TouchableOpacity,
   Image,
+  Dimensions,
 } from 'react-native';
-import React, {useState} from 'react';
-import {useNavigation} from '@react-navigation/native';
+import React, {useEffect, useState} from 'react';
+import {useNavigation, NavigationProp} from '@react-navigation/native';
 import {ScrollView} from 'react-native-gesture-handler';
 import Modal from 'react-native-modal';
 import {useDrawer} from './DrawerContext';
 import {useUser} from './CTX/UserContext';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import axios from 'axios';
+import BASE_URL from './BASE_URL';
 
-export default function Dashboard() {
+const {width} = Dimensions.get('window');
+
+// Type definitions
+interface StatItem {
+  title: string;
+  value: string | number;
+  icon: any;
+  color: string;
+  lightColor: string;
+}
+
+type RootStackParamList = {
+  Login: undefined;
+};
+
+type DashboardNavigationProp = NavigationProp<RootStackParamList>;
+
+interface DashboardData {
+  customer: number;
+  suppliers: number;
+  employees: number;
+  product: number;
+  currentstockqty: number;
+  currentstocksubqty: number;
+  expenseamount: number;
+  sale: number;
+  purchase: number;
+  current_month_sale: number;
+}
+
+export default function Dashboard(): JSX.Element {
   const {userName, userEmail} = useUser();
-  const navigation = useNavigation();
+  const navigation = useNavigation<DashboardNavigationProp>();
   const [isModalVisible, setModalVisible] = useState(false);
+  const {openDrawer} = useDrawer();
+  const [dashboadData, setDashboadData] = useState<DashboardData | null>(null);
 
   const toggleModal = () => {
     setModalVisible(!isModalVisible);
   };
-  const {openDrawer} = useDrawer();
+
+  const fetchData = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/dashboaddata`);
+      setDashboadData(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  // POS Dashboard Stats (static for now)
+  const stats: StatItem[] = [
+    {
+      title: 'Customers',
+      value: dashboadData?.customer ?? 0,
+      icon: 'account-group',
+      color: '#3B82F6',
+      lightColor: '#EFF6FF',
+    },
+    {
+      title: 'Suppliers',
+      value: dashboadData?.suppliers ?? 0,
+      icon: 'truck',
+      color: '#10B981',
+      lightColor: '#ECFDF5',
+    },
+    {
+      title: 'Employees',
+      value: dashboadData?.employees ?? 0,
+      icon: 'account-tie',
+      color: '#8B5CF6',
+      lightColor: '#F3E8FF',
+    },
+    {
+      title: 'Current Stock',
+      value: `${dashboadData?.currentstockqty ?? 0} - ${
+        dashboadData?.currentstocksubqty ?? 0
+      }`,
+      icon: 'warehouse',
+      color: '#F59E0B',
+      lightColor: '#FFFBEB',
+    },
+    {
+      title: 'Products',
+      value: dashboadData?.product ?? 0,
+      icon: 'package-variant',
+      color: '#6366F1',
+      lightColor: '#EEF2FF',
+    },
+    {
+      title: 'Sale Invoices',
+      value: dashboadData?.sale ?? 0,
+      icon: 'file-document',
+      color: '#EF4444',
+      lightColor: '#FEE2E2',
+    },
+    {
+      title: 'Purchases',
+      value: dashboadData?.purchase ?? 0,
+      icon: 'cart-arrow-down',
+      color: '#06B6D4',
+      lightColor: '#ECFEFF',
+    },
+    {
+      title: 'Expenses',
+      value: `Rs. ${dashboadData?.expenseamount ?? 0}`,
+      icon: 'cash-multiple',
+      color: '#D97706',
+      lightColor: '#FEF3C7',
+    },
+  ];
+
+  const renderStatCard = (item: StatItem, index: number) => (
+    <View key={index} style={[styles.card, {backgroundColor: item.lightColor}]}>
+      <View style={[styles.iconContainer, {backgroundColor: item.color}]}>
+        <Icon name={item.icon} size={20} color="white" />
+      </View>
+      <Text style={styles.cardValue}>{item.value}</Text>
+      <Text style={styles.cardTitle}>{item.title}</Text>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
-        <ScrollView
-          style={{
-            marginBottom: 10,
-          }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 10,
-              justifyContent: 'space-between',
-            }}>
-            <TouchableOpacity onPress={openDrawer}>
-              <Image
-                source={require('../assets/menu.png')}
-                style={{
-                  width: 40,
-                  height: 40,
-                  tintColor: 'white',
-                  marginLeft: 5,
-                }}
-              />
-            </TouchableOpacity>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              CapoBiz
-            </Text>
-            <TouchableOpacity onPress={toggleModal}>
-              <Image
-                source={require('../assets/user.png')}
-                style={{
-                  width: 30,
-                  height: 30,
-                  tintColor: 'white',
-                  marginRight: 5,
-                }}
-              />
-            </TouchableOpacity>
-          </View>
-          {/*cards*/}
-
-          <View style={styles.card}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginTop: 15,
-              }}>
-              <Image
-                style={{
-                  width: 50,
-                  height: 50,
-                  tintColor: 'white',
-                  alignSelf: 'center',
-                  marginRight: 10,
-                  marginLeft: 10,
-                }}
-                source={require('../assets/customer.png')}
-              />
-              <View>
-                <Text
-                  style={{
-                    marginRight: 40,
-                    color: 'white',
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                  }}>
-                  Customers
-                </Text>
-                <Text
-                  style={{
-                    marginRight: 40,
-                    color: 'white',
-                    fontSize: 14,
-                    fontWeight: 'bold',
-                  }}>
-                  12
-                </Text>
-              </View>
-            </View>
-          </View>
-          <View style={styles.card}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginTop: 15,
-              }}>
-              <Image
-                style={{
-                  width: 50,
-                  height: 50,
-                  tintColor: 'white',
-                  alignSelf: 'center',
-                  marginRight: 10,
-                  marginLeft: 10,
-                }}
-                source={require('../assets/product.png')}
-              />
-              <View>
-                <Text
-                  style={{
-                    marginRight: 40,
-                    color: 'white',
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                  }}>
-                  Products
-                </Text>
-                <Text
-                  style={{
-                    marginRight: 40,
-                    color: 'white',
-                    fontSize: 14,
-                    fontWeight: 'bold',
-                  }}>
-                  20
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginTop: 15,
-              }}>
-              <Image
-                style={{
-                  width: 50,
-                  height: 50,
-                  tintColor: 'white',
-                  alignSelf: 'center',
-                  marginRight: 5,
-                  marginLeft: 5,
-                }}
-                source={require('../assets/sale.png')}
-              />
-              <View>
-                <Text
-                  style={{
-                    marginRight: 40,
-                    color: 'white',
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                  }}>
-                  Sale Invoices
-                </Text>
-                <Text
-                  style={{
-                    marginRight: 40,
-                    color: 'white',
-                    fontSize: 14,
-                    fontWeight: 'bold',
-                  }}>
-                  40
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.card}>
-            <View
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                marginTop: 15,
-              }}>
-              <Image
-                style={{
-                  width: 50,
-                  height: 50,
-                  tintColor: 'white',
-                  alignSelf: 'center',
-                  marginRight: 10,
-                  marginLeft: 10,
-                }}
-                source={require('../assets/purchase.png')}
-              />
-              <View>
-                <Text
-                  style={{
-                    marginRight: 40,
-                    color: 'white',
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                  }}>
-                  Purchases
-                </Text>
-                <Text
-                  style={{
-                    marginRight: 40,
-                    color: 'white',
-                    fontSize: 14,
-                    fontWeight: 'bold',
-                  }}>
-                  70
-                </Text>
-              </View>
-            </View>
-          </View>
-
-          {/*graphs*/}
-          <View style={styles.graph}>
-            <Text
-              style={{
-                textAlign: 'center',
-                fontSize: 20,
-                marginTop: 20,
-                color: 'white',
-                fontWeight: 'bold',
-              }}>
-              Monthly Sale Report
-            </Text>
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity onPress={openDrawer} style={styles.headerButton}>
+          <View style={styles.profileBadge}>
             <Image
-              style={{
-                width: 270,
-                height: 180,
-                marginTop: 20,
-                alignSelf: 'center',
-              }}
-              source={require('../assets/barchart.png')}
+              source={require('../assets/menu.png')}
+              style={styles.headerIcon}
+              tintColor="white"
             />
           </View>
+        </TouchableOpacity>
 
-          <View style={styles.graph}>
-            <Text
-              style={{
-                textAlign: 'center',
-                fontSize: 20,
-                marginTop: 20,
-                color: 'white',
-                fontWeight: 'bold',
-              }}>
-              Purchase Report
-            </Text>
+        <View style={styles.headerCenter}>
+          <Text style={styles.headerTitle}>CapoBiz POS</Text>
+          <Text style={styles.headerSubtitle}>Main Store • Online</Text>
+        </View>
+
+        <TouchableOpacity onPress={toggleModal} style={styles.headerButton}>
+          <View style={styles.profileBadge}>
             <Image
-              style={{
-                width: 270,
-                height: 180,
-                marginTop: 20,
-                alignSelf: 'center',
-              }}
-              source={require('../assets/barchart.png')}
+              source={require('../assets/user.png')}
+              style={styles.headerIcon}
+              tintColor="white"
             />
           </View>
-        </ScrollView>
-      </ImageBackground>
+        </TouchableOpacity>
+      </View>
 
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* Welcome Section */}
+        <View style={styles.statusSection}>
+          <Text style={styles.welcomeText}>
+            Welcome back, {userName || 'Manager'}!
+          </Text>
+          <Text style={styles.dateText}>
+            {new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'short',
+              day: 'numeric',
+            })}
+          </Text>
+        </View>
+
+        {/* Dashboard Stats */}
+        <View style={styles.statsGrid}>
+          {stats.map((item, index) => renderStatCard(item, index))}
+        </View>
+      </ScrollView>
+
+      {/* User Modal */}
       <Modal
         isVisible={isModalVisible}
         onBackdropPress={toggleModal}
-        backdropOpacity={0.3}
-        animationIn="fadeIn"
-        animationOut="fadeOut"
-        style={{margin: 0, position: 'absolute', top: '8%', right: 10}}>
-        <View
-          style={{
-            backgroundColor: 'white',
-            borderRadius: 12,
-            width: 250,
-            padding: 10,
-            shadowColor: '#000',
-            shadowOffset: {width: 0, height: 2},
-            shadowOpacity: 0.25,
-            shadowRadius: 3.84,
-            elevation: 5,
-          }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              marginTop: 10,
-            }}>
-            <Image
-              style={{
-                width: 45,
-                height: 45,
-                marginRight: 10,
-
-                tintColor: '#144272',
-              }}
-              source={require('../assets/user.png')}
-            />
-
-            <View
-              style={{
-                marginTop: 2,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                }}>
-                {userName ?? 'User'}
-              </Text>
-              <Text
-                style={{
-                  color: '#144272',
-                }}>
-                {userEmail ?? '--'}
+        backdropOpacity={0.4}
+        animationIn="slideInRight"
+        animationOut="slideOutRight"
+        style={styles.modalStyle}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <View style={styles.userAvatarContainer}>
+              <Image
+                style={styles.userAvatar}
+                source={require('../assets/user.png')}
+                tintColor="#1E40AF"
+              />
+            </View>
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{userName ?? 'Store Manager'}</Text>
+              <Text style={styles.userEmail}>
+                {userEmail ?? 'manager@capobiz.com'}
               </Text>
             </View>
           </View>
-
           <TouchableOpacity
-            onPress={() => navigation.navigate('Login' as never)}>
-            <View
-              style={{
-                backgroundColor: '#144272',
-                width: '95%',
-                alignSelf: 'center',
-                marginTop: 10,
-                borderRadius: 5,
-                height: 25,
-                marginBottom: 10,
-              }}>
-              <Text
-                style={{
-                  color: 'white',
-                  textAlign: 'center',
-                  fontWeight: 'bold',
-                  marginTop: 2,
-                }}>
-                Log Out
-              </Text>
-            </View>
+            style={styles.logoutButton}
+            onPress={() => navigation.navigate('Login')}>
+            <Text style={styles.logoutText}>Sign Out</Text>
           </TouchableOpacity>
         </View>
       </Modal>
@@ -371,49 +232,150 @@ export default function Dashboard() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#F8FAFC',
   },
-  background: {
-    flex: 1,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1E40AF',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+  },
+  headerButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerIcon: {
+    width: 24,
+    height: 24,
+  },
+  headerCenter: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  headerSubtitle: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  profileBadge: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusSection: {
+    padding: 20,
+  },
+  welcomeText: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  dateText: {
+    marginTop: 4,
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingBottom: 24,
   },
   card: {
-    width: '93%',
-    height: 80,
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 10,
-    alignSelf: 'center',
-    marginTop: 5,
+    width: (width - 60) / 2,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    alignItems: 'flex-start',
+    elevation: 2,
   },
-  graph: {
-    width: '93%',
-    height: 250,
-    alignSelf: 'center',
-    marginTop: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'white',
+  iconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
   },
-  menuItem: {
-    fontSize: 16,
-    color: '#144272',
-    marginVertical: 8,
-    fontWeight: '600',
-    marginHorizontal: 25,
+  cardIcon: {
+    width: 20,
+    height: 20,
   },
-  menuTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: '#144272',
+  cardValue: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#1F2937',
   },
-  menuModal: {
+  cardTitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginTop: 4,
+  },
+  modalStyle: {
     margin: 0,
     justifyContent: 'flex-start',
-    alignItems: 'flex-start',
+    alignItems: 'flex-end',
+    paddingTop: 80,
+    paddingRight: 10,
   },
-  menuContent: {
-    width: 260,
-    flex: 1,
+  modalContent: {
     backgroundColor: 'white',
+    borderRadius: 16,
+    width: 260,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+  },
+  userAvatarContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#EFF6FF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 15,
+  },
+  userAvatar: {
+    width: 24,
+    height: 24,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  userEmail: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  logoutButton: {
+    margin: 20,
+    backgroundColor: '#DC2626',
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  logoutText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

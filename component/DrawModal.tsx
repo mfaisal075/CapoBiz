@@ -7,10 +7,15 @@ import {
   StyleSheet,
   View,
   Image,
+  Dimensions,
+  Animated,
 } from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
 import {useDrawer} from './DrawerContext';
 import {useNavigation} from '@react-navigation/native';
 import {useUser} from './CTX/UserContext';
+
+const {width, height} = Dimensions.get('window');
 
 const icons: {[key: string]: any} = {
   Dashboard: require('../assets/dashboard.png'),
@@ -32,7 +37,6 @@ const icons: {[key: string]: any} = {
 const menuData: {[key: string]: string[]} = {
   Dashboard: [],
   'Point of Sale': [],
-
   People: [
     'Customer',
     'Suppliers',
@@ -100,6 +104,41 @@ const menuData: {[key: string]: string[]} = {
   ],
 };
 
+const reportSubScreens: Record<string, string[]> = {
+  People: [
+    'Customer List',
+    'Area Wise Customer',
+    'Type Wise Customer',
+    'Inactive Customer',
+    'Supplier List',
+    'Employee List',
+  ],
+  Products: [
+    'List Of Items',
+    'Below Reorder Products',
+    'Expire Product',
+    'Purchase/Return Stock',
+    'Purchase Order Stock',
+  ],
+  Accounts: [
+    'Customer Accounts',
+    'Supplier Accounts',
+    'Transporter Accounts',
+    'Labour Accounts',
+    'Employee Accounts',
+    'Fix Accounts',
+  ],
+  'Sales Reports': [
+    'All User Sales',
+    'Single User Sales',
+    'Sale Return Report',
+    'Sale & Sale Return Report',
+    'Sale Order Reports',
+    'Daily Sales Reports',
+    'Single User Daily Sales',
+  ],
+};
+
 const DrawerModal = () => {
   const {menuVisible, closeDrawer} = useDrawer();
   const navigation = useNavigation();
@@ -128,238 +167,436 @@ const DrawerModal = () => {
     setExpandedReportSubmenu(prev => (prev === sub ? null : sub));
   };
 
+  const renderMenuItem = (mainItem: string, index: number) => {
+    const isExpanded = expandedItem === mainItem;
+    const hasSubmenu = menuData[mainItem].length > 0;
+
+    return (
+      <View key={index} style={styles.menuItemContainer}>
+        <TouchableOpacity
+          style={[
+            styles.menuRow,
+            isExpanded && styles.menuRowExpanded
+          ]}
+          onPress={() => handleMainPress(mainItem)}
+          activeOpacity={0.7}>
+          <View style={styles.menuItemContent}>
+            <View style={[
+              styles.iconContainer,
+              isExpanded && styles.iconContainerExpanded
+            ]}>
+              {icons[mainItem] && (
+                <Image 
+                  source={icons[mainItem]} 
+                  style={[
+                    styles.icon,
+                    isExpanded && styles.iconExpanded
+                  ]} 
+                />
+              )}
+            </View>
+            <Text style={[
+              styles.menuItemText,
+              isExpanded && styles.menuItemTextExpanded
+            ]}>
+              {mainItem}
+            </Text>
+            {hasSubmenu && (
+              <View style={styles.expandIcon}>
+                <Text style={[
+                  styles.expandIconText,
+                  isExpanded && styles.expandIconTextExpanded
+                ]}>
+                  {isExpanded ? '−' : '+'}
+                </Text>
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+
+        {/* Submenu Items */}
+        {isExpanded && mainItem !== 'Reports' && (
+          <View style={styles.submenuContainer}>
+            {menuData[mainItem].map((subItem, subIndex) => (
+              <TouchableOpacity
+                key={subIndex}
+                style={styles.submenuItem}
+                onPress={() => handleSubPress(subItem)}
+                activeOpacity={0.7}>
+                <View style={styles.submenuItemContent}>
+                  <View style={styles.submenuDot} />
+                  <Text style={styles.submenuText}>{subItem}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+
+        {/* Special Reports Submenu */}
+        {mainItem === 'Reports' && isExpanded && (
+          <View style={styles.submenuContainer}>
+            {['People', 'Products', 'Accounts', 'Sales Reports'].map((sub, idx) => (
+              <View key={idx}>
+                <TouchableOpacity
+                  style={styles.submenuItem}
+                  onPress={() => handleReportSubmenuPress(sub)}
+                  activeOpacity={0.7}>
+                  <View style={styles.submenuItemContent}>
+                    <View style={styles.submenuDot} />
+                    <Text style={styles.submenuText}>{sub}</Text>
+                    <View style={styles.expandIcon}>
+                      <Text style={styles.miniExpandIcon}>
+                        {expandedReportSubmenu === sub ? '−' : '+'}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+                
+                {expandedReportSubmenu === sub && (
+                  <View style={styles.subSubmenuContainer}>
+                    {reportSubScreens[sub].map((screen, sIdx) => (
+                      <TouchableOpacity
+                        key={sIdx}
+                        style={styles.subSubmenuItem}
+                        onPress={() => handleSubPress(screen)}
+                        activeOpacity={0.7}>
+                        <View style={styles.subSubmenuContent}>
+                          <View style={styles.subSubmenuDot} />
+                          <Text style={styles.subSubmenuText}>{screen}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
+              </View>
+            ))}
+
+            {/* Direct Report Items */}
+            {[
+              'Cheque List',
+              'Profit Loss Report',
+              'Expense Report',
+              'Business Capital',
+              'Customer Balances',
+              'Supplier Balances',
+              'Cash Register',
+              'Trade',
+              'General Ledger',
+              'Day Book',
+              'Stock Movement',
+            ].map((item, i) => (
+              <TouchableOpacity
+                key={i}
+                style={styles.submenuItem}
+                onPress={() => handleSubPress(item)}
+                activeOpacity={0.7}>
+                <View style={styles.submenuItemContent}>
+                  <View style={styles.submenuDot} />
+                  <Text style={styles.submenuText}>{item}</Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+      </View>
+    );
+  };
+
   return (
     <Modal
       isVisible={menuVisible}
       onBackdropPress={closeDrawer}
       animationIn="slideInLeft"
       animationOut="slideOutLeft"
+      animationInTiming={300}
+      animationOutTiming={250}
+      backdropOpacity={0.5}
       style={styles.menuModal}>
-      <ScrollView style={styles.menuContent}>
-        <View
-          style={{
-            backgroundColor: '#144272',
-            height: 120,
-            justifyContent: 'space-between',
-            flexDirection: 'row',
-            alignItems: 'center',
-            paddingHorizontal: 15,
-          }}>
-          <Image
-            style={{
-              width: 40,
-              height: 40,
-              tintColor: 'white',
-              borderWidth: 1.5,
-              borderRadius: 50,
-              borderColor: '#fff',
-            }}
-            source={require('../assets/user.png')}
-          />
-
-          <View>
-            <Text
-              style={{
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: 16,
-              }}>
-              {userName}
-            </Text>
-            <Text style={{color: 'white'}}>{userEmail}</Text>
+      <View style={styles.drawerContainer}>
+        {/* Header Section */}
+        <LinearGradient
+          colors={['#144272', '#1e5799', '#205295']}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <View style={styles.userAvatarContainer}>
+              <LinearGradient
+                colors={['rgba(255,255,255,0.2)', 'rgba(255,255,255,0.1)']}
+                style={styles.userAvatar}>
+                <Image
+                  style={styles.userAvatarImage}
+                  source={require('../assets/user.png')}
+                />
+              </LinearGradient>
+            </View>
+            <View style={styles.userInfo}>
+              <Text style={styles.userName}>{userName || 'User Name'}</Text>
+              <Text style={styles.userEmail}>{userEmail || 'user@example.com'}</Text>
+            </View>
           </View>
-        </View>
+          <View style={styles.headerDivider} />
+        </LinearGradient>
 
-        {Object.keys(menuData).map((mainItem, index) => (
-          <View key={index}>
-            <TouchableOpacity
-              style={styles.menuRow}
-              onPress={() => handleMainPress(mainItem)}>
-              {icons[mainItem] && (
-                <Image source={icons[mainItem]} style={styles.icon} />
-              )}
-              <Text style={styles.menuItem}>{mainItem}</Text>
-            </TouchableOpacity>
-
-            {expandedItem === mainItem &&
-              mainItem !== 'Reports' &&
-              menuData[mainItem].map((subItem, subIndex) => (
-                <TouchableOpacity
-                  key={subIndex}
-                  onPress={() => handleSubPress(subItem)}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      marginHorizontal: 60,
-                    }}>
-                    <Image
-                      style={{width: 10, height: 10, marginTop: 10}}
-                      source={require('../assets/handarrow.png')}
-                    />
-                    <Text style={styles.subMenuItem}>{subItem}</Text>
-                  </View>
-                </TouchableOpacity>
-              ))}
-
-            {mainItem === 'Reports' && expandedItem === 'Reports' && (
-              <View style={styles.subMenu}>
-                {['People', 'Products', 'Accounts', 'Sales Reports'].map(
-                  (sub, idx) => (
-                    <View key={idx}>
-                      <TouchableOpacity
-                        onPress={() => handleReportSubmenuPress(sub)}>
-                        <View
-                          style={{
-                            flexDirection: 'row',
-                            marginHorizontal: 60,
-                          }}>
-                          <Image
-                            style={{width: 10, height: 10, marginTop: 10}}
-                            source={require('../assets/handarrow.png')}
-                          />
-                          <Text style={styles.subMenuItem}>{sub}</Text>
-                        </View>
-                      </TouchableOpacity>
-                      {expandedReportSubmenu === sub && (
-                        <View style={styles.subSubMenu}>
-                          {reportSubScreens[sub].map((screen, sIdx) => (
-                            <TouchableOpacity
-                              key={sIdx}
-                              onPress={() => handleSubPress(screen)}>
-                              <Text style={styles.subSubMenuItem}>
-                                {'>'} {screen}
-                              </Text>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                  ),
-                )}
-
-                {[
-                  'Cheque List',
-                  'Profit Loss Report',
-                  'Expense Report',
-                  'Business Capital',
-                  'Customer Balances',
-                  'Supplier Balances',
-                  'Cash Register',
-                  'Trades',
-                  'General Ledger',
-                  'Day Book',
-                  'Stock Movement',
-                ].map((item, i) => (
-                  <TouchableOpacity
-                    key={i}
-                    onPress={() => handleSubPress(item)}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        marginHorizontal: 60,
-                      }}>
-                      <Image
-                        style={{width: 10, height: 10, marginTop: 10}}
-                        source={require('../assets/handarrow.png')}
-                      />
-                      <Text style={styles.subMenuItem}>{item}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </View>
+        {/* Menu Content */}
+        <ScrollView 
+          style={styles.menuContent}
+          showsVerticalScrollIndicator={false}
+          bounces={false}>
+          <View style={styles.menuList}>
+            {Object.keys(menuData).map((mainItem, index) => 
+              renderMenuItem(mainItem, index)
             )}
           </View>
-        ))}
-      </ScrollView>
+        </ScrollView>
+
+        {/* Footer */}
+        <View style={styles.footer}>
+          <TouchableOpacity 
+            style={styles.closeButton}
+            onPress={closeDrawer}
+            activeOpacity={0.7}>
+            <LinearGradient
+              colors={['#f8f9fa', '#e9ecef']}
+              style={styles.closeButtonGradient}>
+              <Text style={styles.closeButtonText}>Close Menu</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+      </View>
     </Modal>
   );
 };
 
-const reportSubScreens: Record<string, string[]> = {
-  People: [
-    'Customer List',
-    'Area Wise Customer',
-    'Type Wise Customer',
-    'Inactive Customer',
-    'Supplier List',
-    'Employee List',
-  ],
-  Products: [
-    'List Of Items',
-    'Below Reorder Products',
-    'Expire Product',
-    'Purchase/Return Stock',
-    'Purchase Order Stock',
-  ],
-  Accounts: [
-    'Customer Accounts',
-    'Supplier Accounts',
-    'Transporter Accounts',
-    'Labour Accounts',
-    'Employee Accounts',
-    'Fix Accounts',
-  ],
-
-  'Sales Reports': [
-    'All User Sales',
-    'Single User Sales',
-    'Sale Return Report',
-    'Sale & Sale Return Report',
-    'Sale Order Reports',
-    'Daily Sales Reports',
-    'Single User Daily Sales',
-  ],
-};
-
-export default DrawerModal;
-
 const styles = StyleSheet.create({
-  menuItem: {
-    fontSize: 16,
-    color: '#144272',
-    marginVertical: 3,
-    marginHorizontal: 25,
-  },
-  subMenuItem: {
-    fontSize: 14,
-    color: '#144272',
-    marginVertical: 5,
-    marginHorizontal: 4,
-  },
-  subSubMenu: {
-    paddingLeft: 15,
-  },
-  subSubMenuItem: {
-    fontSize: 13,
-    color: '#144272',
-    marginVertical: 5,
-    marginHorizontal: 40,
-  },
   menuModal: {
     margin: 0,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
   },
-  menuContent: {
-    width: 260,
-    flex: 1,
-    backgroundColor: 'white',
+  drawerContainer: {
+    width: width * 0.75,
+    height: height,
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: {width: 5, height: 0},
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 20,
   },
-  subMenu: {
-    paddingLeft: 15,
+  
+  // Header Styles
+  headerContainer: {
+    paddingTop: 50,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
   },
-  menuRow: {
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginHorizontal: 25,
-    marginVertical: 8,
+  },
+  userAvatarContainer: {
+    marginRight: 15,
+  },
+  userAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  userAvatarImage: {
+    width: 30,
+    height: 30,
+    tintColor: 'white',
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  userEmail: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+  },
+  headerDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    marginTop: 15,
   },
 
+  // Menu Content
+  menuContent: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  menuList: {
+    paddingVertical: 10,
+  },
+
+  // Menu Items
+  menuItemContainer: {
+    marginBottom: 2,
+  },
+  menuRow: {
+    marginHorizontal: 10,
+    marginVertical: 2,
+    borderRadius: 12,
+    backgroundColor: 'white',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  menuRowExpanded: {
+    backgroundColor: '#144272',
+    shadowOpacity: 0.15,
+    elevation: 4,
+  },
+  menuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+  },
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#f1f3f4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  iconContainerExpanded: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
   icon: {
-    width: 18,
-    height: 18,
-    marginRight: -15,
-    resizeMode: 'contain',
+    width: 22,
+    height: 22,
     tintColor: '#144272',
   },
+  iconExpanded: {
+    tintColor: 'white',
+  },
+  menuItemText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#2c3e50',
+    fontWeight: '500',
+  },
+  menuItemTextExpanded: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  expandIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#e9ecef',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  expandIconText: {
+    fontSize: 16,
+    color: '#144272',
+    fontWeight: 'bold',
+  },
+  expandIconTextExpanded: {
+    color: '#144272',
+  },
+
+  // Submenu Styles
+  submenuContainer: {
+    backgroundColor: '#f8f9fa',
+    marginHorizontal: 10,
+    marginBottom: 5,
+    borderRadius: 12,
+    paddingVertical: 8,
+  },
+  submenuItem: {
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+  },
+  submenuItemContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  submenuDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#144272',
+    marginRight: 12,
+    marginLeft: 25,
+  },
+  submenuText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#495057',
+    fontWeight: '500',
+  },
+  miniExpandIcon: {
+    fontSize: 12,
+    color: '#6c757d',
+    fontWeight: 'bold',
+  },
+
+  // Sub-submenu Styles
+  subSubmenuContainer: {
+    paddingLeft: 20,
+    marginTop: 5,
+  },
+  subSubmenuItem: {
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+  },
+  subSubmenuContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  subSubmenuDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#6c757d',
+    marginRight: 10,
+    marginLeft: 35,
+  },
+  subSubmenuText: {
+    fontSize: 13,
+    color: '#6c757d',
+    fontWeight: '400',
+  },
+
+  // Footer
+  footer: {
+    padding: 15,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#e9ecef',
+  },
+  closeButton: {
+    borderRadius: 10,
+    overflow: 'hidden',
+  },
+  closeButtonGradient: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#dee2e6',
+    borderRadius: 10,
+  },
+  closeButtonText: {
+    color: '#495057',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 });
+
+export default DrawerModal;

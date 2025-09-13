@@ -59,6 +59,7 @@ const LoginScreen: React.FC = () => {
         },
       );
 
+      // Only proceed with the second request if login was successful
       const res = await axios.get(`${BASE_URL}/poscashregister`);
       setUserName(res.data.authenticated_user.name);
       setUserEmail(res.data.authenticated_user.email);
@@ -106,9 +107,59 @@ const LoginScreen: React.FC = () => {
         console.log('Unexpected response:', data);
       }
 
-      console.log('Reponse: ', data);
-    } catch (error) {
+      console.log('Response: ', data);
+    } catch (error: any) {
       console.log('Error: ', error);
+
+      // Handle different types of errors
+      if (error.response) {
+        // Server responded with error status
+        const status = error.response.status;
+
+        if (status === 401) {
+          Toast.show({
+            type: 'error',
+            text1: 'Login failed',
+            text2: 'Invalid username or password',
+            autoHide: true,
+            visibilityTime: 2500,
+          });
+        } else if (status >= 500) {
+          Toast.show({
+            type: 'error',
+            text1: 'Server Error',
+            text2: 'Please try again later',
+            autoHide: true,
+            visibilityTime: 2500,
+          });
+        } else {
+          Toast.show({
+            type: 'error',
+            text1: 'Login Error',
+            text2: 'Something went wrong. Please try again.',
+            autoHide: true,
+            visibilityTime: 2500,
+          });
+        }
+      } else if (error.request) {
+        // Network error
+        Toast.show({
+          type: 'error',
+          text1: 'Network Error',
+          text2: 'Please check your internet connection',
+          autoHide: true,
+          visibilityTime: 2500,
+        });
+      } else {
+        // Other error
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Something went wrong. Please try again.',
+          autoHide: true,
+          visibilityTime: 2500,
+        });
+      }
     }
   };
 

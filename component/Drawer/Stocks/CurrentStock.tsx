@@ -6,7 +6,6 @@ import {
   ImageBackground,
   Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
 } from 'react-native';
 import React, {useEffect, useState, useMemo} from 'react';
@@ -81,7 +80,6 @@ export default function CurrentStock() {
         cat_id: currentCategory,
       });
       setStockProducts(res.data.stock);
-      console.log(res.data);
     } catch (error) {
       console.log(error);
     }
