@@ -211,14 +211,7 @@ export default function EmployeesPeople() {
     const nameRegex = /^[A-Za-z ]+$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (
-      !addForm.emp_name.trim() ||
-      !addForm.fathername.trim() ||
-      !addForm.contact.trim() ||
-      !addForm.email.trim() ||
-      !addForm.address.trim() ||
-      !addForm.cnic.trim()
-    ) {
+    if (!addForm.emp_name.trim()) {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
@@ -238,7 +231,7 @@ export default function EmployeesPeople() {
       return;
     }
 
-    if (!nameRegex.test(addForm.fathername.trim())) {
+    if (addForm.fathername && !nameRegex.test(addForm.fathername.trim())) {
       Toast.show({
         type: 'error',
         text1: 'Invalid Father Name',
@@ -248,7 +241,7 @@ export default function EmployeesPeople() {
       return;
     }
 
-    if (!emailRegex.test(addForm.email.trim())) {
+    if (addForm.email && !emailRegex.test(addForm.email.trim())) {
       Toast.show({
         type: 'error',
         text1: 'Invalid Email',
@@ -305,7 +298,7 @@ export default function EmployeesPeople() {
           type: 'success',
           text1: 'Added!',
           text2: 'Employee has been Added successfully',
-          visibilityTime: 1500,
+          visibilityTime: 2000,
         });
         fetchEmployees();
         setAddForm(initialAddEmployee);
@@ -313,6 +306,34 @@ export default function EmployeesPeople() {
         setcurrentpaymentType('');
         setModalVisible('');
         setWorker('Worker');
+      } else if (res.status === 200 && data.status === 404) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Email already exist.Please enter another.',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 405) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Contact Number already exist.Please enter another.',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 409) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'CNIC already exists!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 203) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Please select payment type first!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -324,15 +345,13 @@ export default function EmployeesPeople() {
     const nameRegex = /^[A-Za-z ]+$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    // Validation - ensure required fields aren't empty
-    if (
-      !editForm.emp_name?.trim() ||
-      !editForm.emp_fathername?.trim() ||
-      !editForm.emp_contact?.trim() ||
-      !editForm.emp_email?.trim() ||
-      !editForm.emp_address?.trim() ||
-      !editForm.emp_cnic?.trim()
-    ) {
+    const name = (editForm.emp_name ?? '').trim();
+    const fatherName = (editForm.emp_fathername ?? '').trim();
+    const email = (editForm.emp_email ?? '').trim();
+    const address = (editForm.emp_address ?? '').trim();
+
+    // Validation
+    if (!name) {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
@@ -342,7 +361,7 @@ export default function EmployeesPeople() {
       return;
     }
 
-    if (!nameRegex.test(editForm.emp_name.trim())) {
+    if (!nameRegex.test(name)) {
       Toast.show({
         type: 'error',
         text1: 'Invalid Name',
@@ -352,7 +371,7 @@ export default function EmployeesPeople() {
       return;
     }
 
-    if (!nameRegex.test(editForm.emp_fathername.trim())) {
+    if (fatherName && !nameRegex.test(fatherName)) {
       Toast.show({
         type: 'error',
         text1: 'Invalid Father Name',
@@ -362,7 +381,7 @@ export default function EmployeesPeople() {
       return;
     }
 
-    if (!emailRegex.test(editForm.emp_email.trim())) {
+    if (email && !emailRegex.test(email)) {
       Toast.show({
         type: 'error',
         text1: 'Invalid Email',
@@ -373,7 +392,6 @@ export default function EmployeesPeople() {
     }
 
     try {
-      // Determine employee type
       let empType;
       if (editWorker.includes('Worker')) {
         empType = 'Worker';
@@ -381,35 +399,56 @@ export default function EmployeesPeople() {
         empType = editForm.emp_type;
       }
 
-      const playload = {
+      const payload = {
         emp_id: editForm.id,
-        emp_name: editForm.emp_name.trim(),
-        fathername: editForm.emp_fathername.trim(),
-        contact: editForm.emp_contact,
-        cnic: editForm.emp_cnic,
-        contact_person_one: editForm.emp_contact_person_one,
-        contact_person_two: editForm.emp_contact_person_two,
-        sec_contact: editForm.emp_sec_contact,
-        third_contact: editForm.emp_third_contact,
-        email: editForm.emp_email,
-        address: editForm.emp_address.trim(),
+        emp_name: name,
+        fathername: fatherName,
+        contact: editForm.emp_contact ?? '',
+        cnic: editForm.emp_cnic ?? '',
+        contact_person_one: editForm.emp_contact_person_one ?? '',
+        contact_person_two: editForm.emp_contact_person_two ?? '',
+        sec_contact: editForm.emp_sec_contact ?? '',
+        third_contact: editForm.emp_third_contact ?? '',
+        email,
+        address,
         emp_type: empType,
       };
-      const res = await axios.post(`${BASE_URL}/updateemployee`, playload);
+
+      const res = await axios.post(`${BASE_URL}/updateemployee`, payload);
 
       if (res.status === 200 && res.data.status === 200) {
         Toast.show({
           type: 'success',
-          text1: 'Updated!', // Changed from "Added!"
+          text1: 'Updated!',
           text2: 'Employee has been updated successfully',
           visibilityTime: 1500,
         });
         fetchEmployees();
         setEditForm(initialEditEmployee);
-        setModalVisible(''); // Close modal properly
+        setModalVisible('');
         setEditWorker('Worker');
+      } else if (res.status === 200 && res.data.status === 202) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Contact number already exist!',
+          visibilityTime: 1500,
+        });
+      } else if (res.status === 200 && res.data.status === 204) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Email already exist!',
+          visibilityTime: 1500,
+        });
+      } else if (res.status === 200 && res.data.status === 203) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'CNIC already exist!',
+          visibilityTime: 1500,
+        });
       } else {
-        // Handle non-200 status responses
         Toast.show({
           type: 'error',
           text1: 'Update Failed',
@@ -419,7 +458,6 @@ export default function EmployeesPeople() {
       }
     } catch (error: any) {
       console.error('Update Error:', error);
-      // Show actual error message to user
       Toast.show({
         type: 'error',
         text1: 'Update Failed',
@@ -675,7 +713,7 @@ export default function EmployeesPeople() {
                 {/* Row 3 */}
                 <View style={styles.addEmployeeRow}>
                   <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>Contact *</Text>
+                    <Text style={styles.addEmployeeLabel}>Contact</Text>
                     <TextInput
                       style={styles.addEmployeeInput}
                       placeholderTextColor="#999"
@@ -1497,13 +1535,15 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,
-    padding: 14,
     marginVertical: 8,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 6,
     shadowOffset: {width: 0, height: 3},
     elevation: 5,
+    marginHorizontal: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   headerRow: {
     flexDirection: 'row',
@@ -1627,7 +1667,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 10,
-    width: '85%',
+    width: '100%',
     alignSelf: 'center',
   },
   deleteModalIcon: {

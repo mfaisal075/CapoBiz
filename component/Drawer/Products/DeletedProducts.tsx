@@ -4,15 +4,17 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
+  Modal,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import LottieView from 'lottie-react-native';
+import Toast from 'react-native-toast-message';
 
 interface Products {
   id: number;
@@ -28,6 +30,8 @@ interface Products {
 export default function DeletedProducts() {
   const {openDrawer} = useDrawer();
   const [delProducts, setDelProducts] = useState<Products[]>([]);
+  const [selectedProd, setSelectedProd] = useState<any | null>(null);
+  const [modalVisible, setModalVisible] = useState('');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,6 +56,36 @@ export default function DeletedProducts() {
     }
   };
 
+  // Activate Product
+  const activateProd = async () => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/activateProduct/${selectedProd}`,
+      );
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Activated!',
+          text2: 'Product has been activated successfully.',
+          visibilityTime: 1500,
+        });
+        fetchProds();
+        setModalVisible('');
+        setSelectedProd(null);
+      }
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: `${error}`,
+      });
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
     fetchProds();
   }, []);
@@ -62,173 +96,192 @@ export default function DeletedProducts() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-            marginBottom: 15,
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Deleted Products
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>UOMs</Text>
           </View>
+
+          <TouchableOpacity
+            onPress={() => {}}
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}>
+            <Icon name="plus" size={24} color="transparent" />
+          </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={currentData}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({item}) => (
-            <ScrollView
-              style={{
-                padding: 5,
-              }}>
-              <View style={styles.table}>
-                <View style={styles.tablehead}>
-                  <Text
-                    style={{
-                      color: '#144272',
-                      fontWeight: 'bold',
-                      marginLeft: 5,
-                      marginTop: 5,
-                    }}>
-                    {item.prod_name}
-                  </Text>
-
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'center',
-                    }}>
-                    <Image
-                      style={{
-                        tintColor: '#144272',
-                        width: 15,
-                        height: 15,
-                        alignSelf: 'center',
-                        marginRight: 5,
-                        marginTop: 2,
-                      }}
-                      source={require('../../../assets/tick.png')}
-                    />
-                  </View>
-                </View>
-                <View style={styles.infoRow}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Barcode:</Text>
-                    <Text style={styles.text}>{item.prod_UPC_EAN}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Category:</Text>
-                    <Text style={styles.text}>{item.pcat_name}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Cost:</Text>
-                    <Text style={styles.text}>{item.prod_costprice}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Retail Price:</Text>
-                    <Text style={styles.text}>{item.prod_retailprice}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Quantity:</Text>
-                    <Text style={styles.text}>{item?.prod_qty ?? '0'}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={[styles.value, {marginBottom: 5}]}>
-                      Expiry:
+        <View>
+          <FlatList
+            data={currentData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={styles.card}>
+                {/* Header Row with Avatar + Product Name */}
+                <View style={styles.headerRow}>
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.prod_name?.charAt(0) || 'P'}
                     </Text>
-                    <Text style={[styles.value, {marginBottom: 5}]}>
+                  </View>
+                  <View style={{flex: 1}}>
+                    <Text style={styles.name}>{item.prod_name}</Text>
+                    <Text style={styles.subText}>
+                      {item.pcat_name || 'No category'}
+                    </Text>
+                  </View>
+
+                  {/* Status Icon (Tick for deleted products) */}
+                  <TouchableOpacity
+                    style={styles.actionRow}
+                    onPress={() => {
+                      setModalVisible('Activate');
+                      setSelectedProd(item.id);
+                    }}>
+                    <Icon
+                      style={styles.actionIcon}
+                      name="check-circle"
+                      size={25}
+                      color={'green'}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                {/* Info Section */}
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoText}>Barcode:</Text>
+                    <Text style={styles.infoValue}>
+                      {item.prod_UPC_EAN || 'N/A'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoText}>Cost:</Text>
+                    <Text style={styles.infoValue}>{item.prod_costprice}</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoText}>Retail Price:</Text>
+                    <Text style={styles.infoValue}>
+                      {item.prod_retailprice}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoText}>Quantity:</Text>
+                    <Text style={styles.infoValue}>
+                      {item?.prod_qty ?? '0'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoText}>Expiry:</Text>
+                    <Text style={styles.infoValue}>
                       {item?.prod_expirydate ?? 'No expiry date'}
                     </Text>
                   </View>
                 </View>
               </View>
-            </ScrollView>
-          )}
-          ListEmptyComponent={
-            <View style={{alignItems: 'center', marginTop: 20}}>
-              <Text style={{color: '#fff', fontSize: 14}}>
-                No Deleted Product found.
+            )}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>
+                  No Deleted Product found.
+                </Text>
+              </View>
+            }
+            contentContainerStyle={{paddingBottom: 110}}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+
+        {/* Activate Modal */}
+        <Modal
+          visible={modalVisible === 'Activate'}
+          transparent
+          animationType="fade">
+          <View style={styles.activateModalOverlay}>
+            <View style={styles.deleteModalContainer}>
+              <View style={styles.delAnim}>
+                <LottieView
+                  style={{flex: 1}}
+                  source={require('../../../assets/warning.json')}
+                  autoPlay
+                  loop={false}
+                />
+              </View>
+
+              {/* Title */}
+              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
+
+              {/* Subtitle */}
+              <Text style={styles.deleteModalMessage}>
+                Do you really want to activate this product ?
               </Text>
+
+              {/* Buttons */}
+              <View style={styles.deleteModalActions}>
+                <TouchableOpacity
+                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
+                  onPress={() => setModalVisible('')}>
+                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.deleteModalBtn, {backgroundColor: 'green'}]}>
+                  <Text
+                    style={styles.deleteModalBtnText}
+                    onPress={activateProd}>
+                    Yes, Activate it!
+                  </Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          }
-        />
+          </View>
+        </Modal>
 
         {/* Pagination Controls */}
         {totalRecords > 0 && (
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'center',
-              marginBottom: 12,
-            }}>
+          <View style={styles.paginationContainer}>
             <TouchableOpacity
               disabled={currentPage === 1}
               onPress={() => setCurrentPage(prev => prev - 1)}
-              style={{
-                marginHorizontal: 10,
-                opacity: currentPage === 1 ? 0.5 : 1,
-              }}>
-              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
                 Prev
               </Text>
             </TouchableOpacity>
 
-            <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
-              Page {currentPage} of {totalPages}
-            </Text>
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
+              </Text>
+            </View>
 
             <TouchableOpacity
               disabled={currentPage === totalPages}
               onPress={() => setCurrentPage(prev => prev + 1)}
-              style={{
-                marginHorizontal: 10,
-                opacity: currentPage === totalPages ? 0.5 : 1,
-              }}>
-              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
                 Next
               </Text>
             </TouchableOpacity>
@@ -244,42 +297,216 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   background: {
     flex: 1,
   },
-  headerTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
+
+  // Flat List styling
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    marginHorizontal: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  headerRow: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#144272',
+  },
+  subText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  actionRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
   },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
+  actionIcon: {
+    tintColor: '#144272',
+    width: 25,
+    height: 25,
+    marginHorizontal: 4,
   },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
+  infoBox: {
+    marginTop: 10,
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 10,
   },
   infoRow: {
-    marginTop: 5,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  infoText: {
+    color: '#144272',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  infoValue: {
+    color: '#333',
+    fontSize: 13,
+  },
+
+  //Delete Modal
+  deleteModalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  deleteModalIcon: {
+    width: 60,
+    height: 60,
+    tintColor: '#144272',
+    marginBottom: 15,
+  },
+  deleteModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#144272',
+    marginBottom: 8,
+  },
+  deleteModalMessage: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  deleteModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  deleteModalBtn: {
+    flex: 1,
+    marginHorizontal: 5,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  deleteModalBtnText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  delAnim: {
+    width: 120,
+    height: 120,
+    marginBottom: 15,
+  },
+  activateModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+
+  // Pagination Component
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#144272',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
+  },
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    paddingHorizontal: 10,
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
   },
 });

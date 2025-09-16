@@ -220,11 +220,11 @@ export default function TransporterPeople() {
     const nameRegex = /^[A-Za-z ]+$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!addForm.contact || !addForm.trans_name || !addForm.email) {
+    if (!addForm.trans_name) {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
-        text2: 'Please fill all fields and select a role before updating.',
+        text2: 'Field names with * are Mandatory',
         visibilityTime: 1500,
       });
       return;
@@ -240,7 +240,7 @@ export default function TransporterPeople() {
       return;
     }
 
-    if (!emailRegex.test(addForm.email.trim())) {
+    if (addForm.email && !emailRegex.test(addForm.email.trim())) {
       Toast.show({
         type: 'error',
         text1: 'Invalid Email',
@@ -283,7 +283,7 @@ export default function TransporterPeople() {
           type: 'success',
           text1: 'Added!',
           text2: 'Transporter has been Added successfully',
-          visibilityTime: 1500,
+          visibilityTime: 2000,
         });
 
         setAddForm(initialAddForm);
@@ -291,6 +291,41 @@ export default function TransporterPeople() {
         setEnableBal([]);
         handleFetchData();
         setcustomer(false);
+      } else if (res.status === 200 && data.status === 404) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Email already exist!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 405) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Contact already exist!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 409) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'CNIC already exist!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 406) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'NTN No. already exist!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 203) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Please select payment type first!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -328,21 +363,21 @@ export default function TransporterPeople() {
     const nameRegex = /^[A-Za-z ]+$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (
-      !editForm.trans_name ||
-      !editForm.trans_contact ||
-      !editForm.trans_email
-    ) {
+    const transName = (editForm.trans_name ?? '').trim();
+    const transEmail = (editForm.trans_email ?? '').trim();
+    const transAddress = (editForm.trans_address ?? '').trim();
+
+    if (!transName) {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
-        text2: 'Please fill all fields and select a role before updating.',
+        text2: 'Field names with * are Mandatory',
         visibilityTime: 1500,
       });
       return;
     }
 
-    if (!nameRegex.test(editForm.trans_name.trim())) {
+    if (!nameRegex.test(transName)) {
       Toast.show({
         type: 'error',
         text1: 'Invalid Name',
@@ -352,7 +387,7 @@ export default function TransporterPeople() {
       return;
     }
 
-    if (!emailRegex.test(editForm.trans_email.trim())) {
+    if (transEmail && !emailRegex.test(transEmail)) {
       Toast.show({
         type: 'error',
         text1: 'Invalid Email',
@@ -361,18 +396,19 @@ export default function TransporterPeople() {
       });
       return;
     }
+
     try {
       const res = await axios.post(`${BASE_URL}/updateTransporter`, {
         transporter_id: selectedTransporter,
-        trans_name: editForm.trans_name.trim(),
-        cnic: editForm.trans_cnic,
-        contact: editForm.trans_contact,
-        email: editForm.trans_email,
-        contact_person_one: editForm.trans_contact_person_one,
-        sec_contact: editForm.trans_sec_contact,
-        contact_person_two: editForm.trans_contact_person_two,
-        third_contact: editForm.trans_third_contact,
-        address: editForm.trans_address.trim(),
+        trans_name: transName,
+        cnic: editForm.trans_cnic ?? '',
+        contact: editForm.trans_contact ?? '',
+        email: transEmail,
+        contact_person_one: editForm.trans_contact_person_one ?? '',
+        sec_contact: editForm.trans_sec_contact ?? '',
+        contact_person_two: editForm.trans_contact_person_two ?? '',
+        third_contact: editForm.trans_third_contact ?? '',
+        address: transAddress,
       });
 
       const data = res.data;
@@ -381,17 +417,44 @@ export default function TransporterPeople() {
         Toast.show({
           type: 'success',
           text1: 'Updated!',
-          text2: 'Transporter has been Updated successfully!',
-          visibilityTime: 1500,
+          text2: 'Transporter has been updated successfully!',
+          visibilityTime: 2000,
         });
 
         setEditForm(initialEditForm);
         setSelectedTransporter(null);
         handleFetchData();
         setedit(false);
+      } else if (res.status === 200 && data.status === 202) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Contact number already exist',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 204) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Email already exist',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 205) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'CNIC already exist',
+          visibilityTime: 2000,
+        });
       }
-    } catch (error) {
-      console.log(error);
+    } catch (error: any) {
+      console.log('Update Error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Update Failed',
+        text2: error.response?.data?.message || error.message,
+        visibilityTime: 3000,
+      });
     }
   };
 
@@ -599,7 +662,7 @@ export default function TransporterPeople() {
                     />
                   </View>
                   <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact *</Text>
+                    <Text style={styles.addCustomerLabel}>Contact</Text>
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholderTextColor="#999"
@@ -1331,13 +1394,15 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,
-    padding: 14,
     marginVertical: 8,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 6,
     shadowOffset: {width: 0, height: 3},
     elevation: 5,
+    marginHorizontal: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   headerRow: {
     flexDirection: 'row',
@@ -1577,7 +1642,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 10,
-    width: '85%',
+    width: '100%',
     alignSelf: 'center',
   },
   deleteModalIcon: {

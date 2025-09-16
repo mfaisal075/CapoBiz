@@ -21,6 +21,7 @@ import {useUser} from '../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
+import successAnimation from '../../assets/success.json';
 
 interface EditCustomer {
   id: number;
@@ -329,17 +330,12 @@ export default function CustomerPeople() {
   // Add Customer
   const addCustomer = async () => {
     const nameRegex = /^[A-Za-z ]+$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (
-      !addForm.name.trim() ||
-      !addForm.contact.trim() ||
-      !addForm.email.trim()
-    ) {
+    if (!addForm.name.trim()) {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
-        text2: 'Please fill all required fields.',
+        text2: 'Field names with * are Mandatory',
         visibilityTime: 2000,
       });
       return;
@@ -355,7 +351,10 @@ export default function CustomerPeople() {
       return;
     }
 
-    if (!nameRegex.test(addForm.father_name.trim())) {
+    if (
+      addForm.father_name && // only check if field has some value
+      !nameRegex.test(addForm.father_name.trim())
+    ) {
       Toast.show({
         type: 'error',
         text1: 'Invalid Father Name',
@@ -365,14 +364,17 @@ export default function CustomerPeople() {
       return;
     }
 
-    if (!emailRegex.test(addForm.email.trim())) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Email',
-        text2: 'Please enter a valid email address.',
-        visibilityTime: 2000,
-      });
-      return;
+    if (addForm.email && addForm.email.trim() !== '') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(addForm.email.trim())) {
+        Toast.show({
+          type: 'error',
+          text1: 'Invalid Email',
+          text2: 'Please enter a valid email address.',
+          visibilityTime: 2000,
+        });
+        return;
+      }
     }
 
     try {
@@ -420,6 +422,13 @@ export default function CustomerPeople() {
         setEnableBal([]);
         setcurrentpaymentType('');
         setcustomer(false);
+      } else if (res.status === 200 && data.status === 203) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Please select payment type first!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log();
@@ -431,7 +440,11 @@ export default function CustomerPeople() {
     const nameRegex = /^[A-Za-z ]+$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-    if (!nameRegex.test(editForm.cust_name.trim())) {
+    const name = editForm.cust_name?.trim() || '';
+    const fatherName = editForm.cust_fathername?.trim() || '';
+    const email = editForm.cust_email?.trim() || '';
+
+    if (!nameRegex.test(name)) {
       Toast.show({
         type: 'error',
         text1: 'Invalid Name',
@@ -441,10 +454,7 @@ export default function CustomerPeople() {
       return;
     }
 
-    if (
-      editForm.cust_fathername &&
-      !nameRegex.test(editForm.cust_fathername.trim())
-    ) {
+    if (fatherName && !nameRegex.test(fatherName)) {
       Toast.show({
         type: 'error',
         text1: 'Invalid Father Name',
@@ -454,7 +464,7 @@ export default function CustomerPeople() {
       return;
     }
 
-    if (!emailRegex.test(editForm.cust_email.trim())) {
+    if (email && !emailRegex.test(email)) {
       Toast.show({
         type: 'error',
         text1: 'Invalid Email',
@@ -464,15 +474,11 @@ export default function CustomerPeople() {
       return;
     }
 
-    if (
-      !editForm.cust_name.trim() ||
-      !editForm.cust_contact.trim() ||
-      !editForm.cust_email.trim()
-    ) {
+    if (!name) {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
-        text2: 'Please fill all required fields.',
+        text2: 'Field names with * are Mandatory',
         visibilityTime: 2000,
       });
       return;
@@ -481,16 +487,16 @@ export default function CustomerPeople() {
     try {
       const res = await axios.post(`${BASE_URL}/updatecustomer`, {
         cust_id: editForm.id,
-        cust_name: editForm.cust_name.trim(),
-        fathername: editForm.cust_fathername.trim(),
-        email: editForm.cust_email.trim(),
-        contact: editForm.cust_contact.trim(),
-        contact_person_one: editForm.cust_contact_person_one,
-        sec_contact: editForm.cust_sec_contact,
-        contact_person_two: editForm.cust_contact_person_two,
-        third_contact: editForm.cust_third_contact,
-        cnic: editForm.cust_cnic,
-        address: editForm.cust_address,
+        cust_name: name,
+        fathername: fatherName,
+        email: email,
+        contact: editForm.cust_contact?.trim() || '',
+        contact_person_one: editForm.cust_contact_person_one || '',
+        sec_contact: editForm.cust_sec_contact || '',
+        contact_person_two: editForm.cust_contact_person_two || '',
+        third_contact: editForm.cust_third_contact || '',
+        cnic: editForm.cust_cnic || '',
+        address: editForm.cust_address || '',
         cust_type: currentEdit,
         cust_area: custEditArea,
       });
@@ -500,8 +506,8 @@ export default function CustomerPeople() {
       if (res.status === 200 && data.status === 200) {
         Toast.show({
           type: 'success',
-          text1: 'Added!',
-          text2: 'Customer record has been Updated successfully',
+          text1: 'Updated!',
+          text2: 'Customer record has been updated successfully',
           visibilityTime: 1500,
         });
         fetchCustomers();
@@ -509,6 +515,27 @@ export default function CustomerPeople() {
         setCurrentEdit('');
         setCustEditArea('');
         setedit(!edit);
+      } else if (res.status === 200 && data.status === 202) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Contact number already exist!',
+          visibilityTime: 1500,
+        });
+      } else if (res.status === 200 && data.status === 203) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'CNIC number already exist!',
+          visibilityTime: 1500,
+        });
+      } else if (res.status === 200 && data.status === 204) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Email already exist!',
+          visibilityTime: 1500,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -692,7 +719,7 @@ export default function CustomerPeople() {
 
                 <View style={styles.addCustomerRow}>
                   <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact *</Text>
+                    <Text style={styles.addCustomerLabel}>Contact</Text>
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholderTextColor="#999"
@@ -725,7 +752,7 @@ export default function CustomerPeople() {
                 </View>
 
                 <View style={styles.addCustomerFullRow}>
-                  <Text style={styles.addCustomerLabel}>Address *</Text>
+                  <Text style={styles.addCustomerLabel}>Address</Text>
                   <TextInput
                     style={styles.addCustomerInput}
                     placeholderTextColor="#999"
@@ -823,7 +850,6 @@ export default function CustomerPeople() {
                   </View>
                 </View>
 
-                {/* ====== NEW Balance Section ====== */}
                 <View style={{marginBottom: 15}}>
                   <TouchableOpacity
                     style={{flexDirection: 'row', alignItems: 'center'}}
@@ -1035,7 +1061,7 @@ export default function CustomerPeople() {
 
                 <View style={styles.addCustomerRow}>
                   <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact *</Text>
+                    <Text style={styles.addCustomerLabel}>Contact</Text>
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholder="0300-1234567"
@@ -1464,13 +1490,15 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,
-    padding: 14,
     marginVertical: 8,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 6,
     shadowOffset: {width: 0, height: 3},
     elevation: 5,
+    marginHorizontal: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
   },
   headerRow: {
     flexDirection: 'row',
@@ -1710,7 +1738,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 10,
-    width: '85%',
+    width: '100%',
     alignSelf: 'center',
   },
   deleteModalIcon: {

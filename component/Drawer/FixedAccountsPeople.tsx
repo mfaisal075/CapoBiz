@@ -4,23 +4,24 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
   ScrollView,
   FlatList,
+  Modal,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
-import Modal from 'react-native-modal';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import {useUser} from '../CTX/UserContext';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 interface Profiles {
   id: number;
   fixprf_business_account_name: string;
   fixprf_title: string;
   fixprf_mobile: string;
+  fixprf_business_address: string;
 }
 
 interface ViewProfile {
@@ -41,6 +42,7 @@ export default function FixedAccountsPeople() {
   const [profiles, setProfiles] = useState<Profiles[]>([]);
   const [modalVisible, setModalVisible] = useState('');
   const [viewProfile, setViewProfile] = useState<ViewProfile[]>([]);
+  const [showSuccess, setShowSuccess] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -74,63 +76,51 @@ export default function FixedAccountsPeople() {
         source={require('../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-            marginBottom: 15,
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Fixed Accounts
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Fixed Accounts</Text>
           </View>
+
+          <TouchableOpacity
+            onPress={() => {}}
+            disabled
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}>
+            <Icon name="plus" size={24} color="transparent" />
+          </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={currentData}
-          style={{marginBottom: 90}}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({item}) => (
-            <ScrollView
-              style={{
-                padding: 5,
-              }}>
-              <View style={styles.table}>
-                <View style={styles.tablehead}>
-                  <Text
-                    style={{
-                      color: '#144272',
-                      fontWeight: 'bold',
-                      marginLeft: 5,
-                      marginTop: 5,
-                    }}>
-                    {item.fixprf_business_account_name}
-                  </Text>
+        <View>
+          <FlatList
+            data={currentData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={styles.card}>
+                {/* Header Row (Avatar + Name + Actions) */}
+                <View style={styles.headerRow}>
+                  {/* Avatar */}
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.fixprf_business_account_name?.charAt(0) || 'U'}
+                    </Text>
+                  </View>
 
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'center',
-                    }}>
+                  {/* Name + Title */}
+                  <View style={{flex: 1}}>
+                    <Text style={styles.name}>
+                      {item.fixprf_business_account_name || 'N/A'}
+                    </Text>
+                    <Text style={styles.subText}>
+                      {item.fixprf_title || 'No title'}
+                    </Text>
+                  </View>
+
+                  {/* Actions */}
+                  <View style={styles.actionRow}>
+                    {/* View */}
                     <TouchableOpacity
                       onPress={() => {
                         setModalVisible('ViewProfile');
@@ -144,186 +134,185 @@ export default function FixedAccountsPeople() {
                             console.log(error);
                           }
                         };
-
                         fetchProfileData(item.id);
                       }}>
-                      <Image
-                        style={{
-                          tintColor: '#144272',
-                          width: 15,
-                          height: 15,
-                          alignSelf: 'center',
-                          marginRight: 5,
-                          marginTop: 9,
-                        }}
-                        source={require('../../assets/show.png')}
+                      <Icon
+                        style={styles.actionIcon}
+                        name="eye"
+                        size={20}
+                        color={'#144272'}
                       />
                     </TouchableOpacity>
                   </View>
                 </View>
 
-                <View style={styles.infoRow}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Title:</Text>
-                    <Text style={styles.text}>{item.fixprf_title}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={[styles.text, {marginBottom: 5}]}>
-                      Contact:
+                {/* Info Section */}
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <Icon
+                      name="phone"
+                      size={20}
+                      color={'#144272'}
+                      style={styles.infoIcon}
+                    />
+                    <Text style={styles.infoText}>
+                      {item.fixprf_mobile || '--'}
                     </Text>
-                    <Text style={[styles.text, {marginBottom: 5}]}>
-                      {item.fixprf_mobile}
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <Icon
+                      name="map-marker"
+                      size={20}
+                      color={'#144272'}
+                      style={styles.infoIcon}
+                    />
+                    <Text style={styles.infoText}>
+                      {item.fixprf_business_address || '--'}
                     </Text>
                   </View>
                 </View>
               </View>
-            </ScrollView>
-          )}
-          ListEmptyComponent={
-            <View style={{alignItems: 'center', marginTop: 20}}>
-              <Text style={{color: '#fff', fontSize: 14}}>
-                No Account found.
-              </Text>
-            </View>
-          }
-        />
+            )}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>
+                  No Account found.
+                </Text>
+              </View>
+            }
+            contentContainerStyle={{paddingBottom: 110}}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
 
-        {/*view modal*/}
-        <Modal isVisible={modalVisible === 'ViewProfile'}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 480,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Expense Profile Detail
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('');
-                  setViewProfile([]);
-                }}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
+        {/* Expense Profile View Modal */}
+        <Modal
+          visible={modalVisible === 'ViewProfile'}
+          transparent
+          animationType="slide">
+          <View style={styles.addCustomerModalOverlay}>
+            <ScrollView style={styles.addCustomerModalContainer}>
+              {/* Header */}
+              <View style={styles.addCustomerHeader}>
+                <Text style={styles.addCustomerTitle}>
+                  Expense Profile Details
+                </Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setModalVisible('');
+                    setViewProfile([]);
                   }}
-                  source={require('../../assets/cross.png')}
-                />
-              </TouchableOpacity>
-            </View>
+                  style={styles.addCustomerCloseBtn}>
+                  <Icon name="close" size={20} color="#144272" />
+                </TouchableOpacity>
+              </View>
 
-            <FlatList
-              data={viewProfile}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={[styles.cardContainer]}>
-                      <View style={styles.infoGrid}>
-                        <Text style={styles.labl}>Name:</Text>
-                        <Text style={styles.valu}>
-                          {item.fixprf_business_account_name}
-                        </Text>
-
-                        <Text style={styles.labl}>Title:</Text>
-                        <Text style={styles.valu}>{item.fixprf_title}</Text>
-
-                        <Text style={styles.labl}>Contact:</Text>
-                        <Text style={styles.valu}>{item.fixprf_mobile}</Text>
-
-                        <Text style={styles.labl}>Area:</Text>
-                        <Text style={styles.valu}>
-                          {item.fixprf_area_id ?? 'N/A'}
-                        </Text>
-
-                        <Text style={styles.labl}>District:</Text>
-                        <Text style={styles.valu}>
-                          {item.fixprf_district ?? 'N/A'}
-                        </Text>
-
-                        <Text style={styles.labl}>Tehsil:</Text>
-                        <Text style={styles.valu}>
-                          {item.fixprf_tehsil ?? 'N/A'}
-                        </Text>
-
-                        <Text style={styles.labl}>Address:</Text>
-                        <Text style={styles.valu}>
-                          {item.fixprf_business_address ?? 'N/A'}
-                        </Text>
-                      </View>
+              {viewProfile.length > 0 && (
+                <View style={styles.customerDetailsWrapper}>
+                  {/* Optional Profile Image */}
+                  <View style={styles.customerImageWrapper}>
+                    <View style={styles.customerNoImage}>
+                      <Icon name="account" size={40} color="#999" />
+                      <Text style={styles.customerNoImageText}>No Image</Text>
                     </View>
                   </View>
-                </ScrollView>
+
+                  {/* Info Fields */}
+                  <View style={styles.customerInfoBox}>
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>Name</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewProfile[0]?.fixprf_business_account_name ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>Title</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewProfile[0]?.fixprf_title ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>Contact</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewProfile[0]?.fixprf_mobile ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>Area</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewProfile[0]?.fixprf_area_id ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>District</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewProfile[0]?.fixprf_district ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>Tehsil</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewProfile[0]?.fixprf_tehsil ?? 'N/A'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.customerInfoRow}>
+                      <Text style={styles.customerInfoLabel}>Address</Text>
+                      <Text style={styles.customerInfoValue}>
+                        {viewProfile[0]?.fixprf_business_address ?? 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
               )}
-            />
+            </ScrollView>
           </View>
         </Modal>
 
         {/* Pagination Controls */}
         {totalRecords > 0 && (
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'center',
-              paddingVertical: 12,
-              position: 'absolute',
-              width: '100%',
-              bottom: 0,
-            }}>
+          <View style={styles.paginationContainer}>
             <TouchableOpacity
               disabled={currentPage === 1}
               onPress={() => setCurrentPage(prev => prev - 1)}
-              style={{
-                marginHorizontal: 10,
-                opacity: currentPage === 1 ? 0.5 : 1,
-              }}>
-              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
                 Prev
               </Text>
             </TouchableOpacity>
 
-            <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
-              Page {currentPage} of {totalPages}
-            </Text>
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
+              </Text>
+            </View>
 
             <TouchableOpacity
               disabled={currentPage === totalPages}
               onPress={() => setCurrentPage(prev => prev + 1)}
-              style={{
-                marginHorizontal: 10,
-                opacity: currentPage === totalPages ? 0.5 : 1,
-              }}>
-              <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
                 Next
               </Text>
             </TouchableOpacity>
@@ -339,65 +328,234 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   background: {
     flex: 1,
   },
-  headerTextContainer: {
+
+  // FlatList Styling
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    marginHorizontal: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#144272',
+  },
+  subText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionIcon: {
+    tintColor: '#144272',
+    width: 20,
+    height: 20,
+    marginHorizontal: 4,
+  },
+  infoBox: {
+    marginTop: 10,
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 10,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  infoIcon: {
+    width: 18,
+    height: 18,
+    tintColor: '#144272',
+    marginRight: 8,
+  },
+  infoText: {
     flex: 1,
+    color: '#333',
+    fontSize: 13,
+  },
+
+  // Pagination Component
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#144272',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
+  },
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    paddingHorizontal: 10,
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
+  },
+
+  addCustomerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  cardContainer: {
-    margin: 20,
-    padding: 16,
-    backgroundColor: '#f8f9fa',
+  addCustomerModalContainer: {
+    backgroundColor: '#fff',
     borderRadius: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-    paddingBottom: 24,
-    marginBottom: 40,
+    width: '95%',
+    maxHeight: '85%',
+    padding: 15,
+    elevation: 5,
   },
-  infoGrid: {
+  addCustomerHeader: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    paddingBottom: 8,
   },
-  labl: {
-    width: '68%',
+  addCustomerTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#144272',
-    marginBottom: 4,
   },
-  valu: {
-    width: '68%',
-    marginBottom: 8,
+  addCustomerCloseBtn: {
+    padding: 5,
+  },
+  customerDetailsWrapper: {
+    alignItems: 'center',
+  },
+  customerImageWrapper: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  customerNoImage: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  customerNoImageText: {
+    fontSize: 12,
+    color: '#888',
+    marginTop: 5,
+  },
+  customerInfoBox: {
+    width: '100%',
+  },
+  customerInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  customerInfoLabel: {
+    fontSize: 14,
+    fontWeight: 'bold',
     color: '#144272',
+  },
+  customerInfoValue: {
+    fontSize: 14,
+    color: '#333',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
 });

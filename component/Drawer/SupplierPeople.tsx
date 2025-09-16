@@ -132,7 +132,7 @@ export default function SupplierPeople() {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [addForm, setAddForm] = useState<AddSupplier>(initialAddSupplier);
   const [enableBal, setEnableBal] = useState<string[]>([]);
-  const [viewModalArea, setViewModalArea] = useState('');
+  const [viewModalArea, setViewModalArea] = useState<any>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -221,7 +221,7 @@ export default function SupplierPeople() {
         ? res.data.supp
         : [res.data.supp];
 
-      setViewModalArea(res.data.area.area_name);
+      setViewModalArea(res.data.area);
       setShowSupplierData(data);
       setview(!view);
     } catch (error) {
@@ -233,16 +233,21 @@ export default function SupplierPeople() {
   const handleAddSupplier = async () => {
     const nameRegex = /^[A-Za-z ]+$/;
 
-    if (
-      !addForm.comp_name ||
-      !addForm.supp_name ||
-      !addForm.contact ||
-      !addForm.address
-    ) {
+    if (!addForm.comp_name || !addForm.supp_name) {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
-        text2: 'Please fill all fields and select a role before updating.',
+        text2: 'Field names with * are mandatory',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
+    if (addForm.supp_name.length < 3) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Supplier name must be at least 3 characters.',
         visibilityTime: 1500,
       });
       return;
@@ -256,6 +261,19 @@ export default function SupplierPeople() {
         visibilityTime: 2000,
       });
       return;
+    }
+
+    if (addForm.email && addForm.email.trim() !== '') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(addForm.email.trim())) {
+        Toast.show({
+          type: 'error',
+          text1: 'Invalid Email',
+          text2: 'Please enter a valid email address.',
+          visibilityTime: 2000,
+        });
+        return;
+      }
     }
 
     try {
@@ -291,7 +309,7 @@ export default function SupplierPeople() {
           type: 'success',
           text1: 'Added!',
           text2: 'Supplier has been Added successfully',
-          visibilityTime: 1500,
+          visibilityTime: 2000,
         });
         setAddForm(initialAddSupplier);
         setSelectedOptions([]);
@@ -300,6 +318,27 @@ export default function SupplierPeople() {
         setcurrentpaymentType('');
         handleFetchData();
         setcustomer(false);
+      } else if (res.status === 200 && data.status === 201) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Email already exist!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 202) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Contact already exist!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 206) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Please select payment type first!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -336,12 +375,7 @@ export default function SupplierPeople() {
   const handleUpdateSupplier = async () => {
     const nameRegex = /^[A-Za-z ]+$/;
 
-    if (
-      !editForm.sup_address ||
-      !editForm.sup_name ||
-      !editForm.sup_address ||
-      !editForm.sup_contact
-    ) {
+    if (!editForm.sup_address || !editForm.sup_name) {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
@@ -350,6 +384,17 @@ export default function SupplierPeople() {
       });
       return;
     }
+
+    if (editForm.sup_name.length < 3) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Supplier name must be at least 3 characters.',
+        visibilityTime: 15,
+      });
+      return;
+    }
+
     if (!nameRegex.test(editForm.sup_name.trim())) {
       Toast.show({
         type: 'error',
@@ -359,6 +404,20 @@ export default function SupplierPeople() {
       });
       return;
     }
+
+    if (editForm.sup_email && editForm.sup_email.trim() !== '') {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(editForm.sup_email.trim())) {
+        Toast.show({
+          type: 'error',
+          text1: 'Invalid Email',
+          text2: 'Please enter a valid email address.',
+          visibilityTime: 2000,
+        });
+        return;
+      }
+    }
+
     try {
       const res = await axios.post(`${BASE_URL}/updatesupplier`, {
         supp_id: selectedSupplier,
@@ -381,7 +440,7 @@ export default function SupplierPeople() {
           type: 'success',
           text1: 'Updated!',
           text2: 'Supplier has been Updated successfully!',
-          visibilityTime: 1500,
+          visibilityTime: 2000,
         });
 
         setEditForm(initialEditSupplier);
@@ -391,6 +450,20 @@ export default function SupplierPeople() {
         setAreaValue('');
         handleFetchData();
         setedit(false);
+      } else if (res.status === 200 && data.status === 202) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Contact number already exist!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 204) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Email already exist!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -648,7 +721,20 @@ export default function SupplierPeople() {
                     />
                   </View>
                   <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 1 *</Text>
+                    <Text style={styles.addCustomerLabel}>Email</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      placeholder="example@gmail.com"
+                      value={addForm.email}
+                      onChangeText={text => handleAddInputChange('email', text)}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.addCustomerRow}>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Contact 1</Text>
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholderTextColor="#999"
@@ -667,10 +753,6 @@ export default function SupplierPeople() {
                       }}
                     />
                   </View>
-                </View>
-
-                {/* Contact 2 + Contact 3 */}
-                <View style={styles.addCustomerRow}>
                   <View style={styles.addCustomerField}>
                     <Text style={styles.addCustomerLabel}>Contact 2</Text>
                     <TextInput
@@ -691,6 +773,10 @@ export default function SupplierPeople() {
                       }}
                     />
                   </View>
+                </View>
+
+                {/* Contact 2 + Contact 3 */}
+                <View style={styles.addCustomerRow}>
                   <View style={styles.addCustomerField}>
                     <Text style={styles.addCustomerLabel}>Contact 3</Text>
                     <TextInput
@@ -711,19 +797,21 @@ export default function SupplierPeople() {
                       }}
                     />
                   </View>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Address</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      placeholder="Enter address"
+                      value={addForm.address}
+                      onChangeText={text =>
+                        handleAddInputChange('address', text)
+                      }
+                    />
+                  </View>
                 </View>
 
                 {/* Address */}
-                <View style={styles.addCustomerFullRow}>
-                  <Text style={styles.addCustomerLabel}>Address *</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter address"
-                    value={addForm.address}
-                    onChangeText={text => handleAddInputChange('address', text)}
-                  />
-                </View>
 
                 {/* Supplier Area */}
                 <View style={styles.addCustomerDropdownRow}>
@@ -961,16 +1049,31 @@ export default function SupplierPeople() {
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholderTextColor="#999"
-                      placeholder="supplier@example.com"
+                      placeholder="Supplier Name"
                       value={editForm.sup_name}
+                      onChangeText={text =>
+                        handleEditInputChange('sup_name', text)
+                      }
+                    />
+                  </View>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Email</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      placeholder="supplier@example.com"
+                      value={editForm.sup_email}
                       keyboardType="email-address"
                       onChangeText={text =>
                         handleEditInputChange('sup_email', text)
                       }
                     />
                   </View>
+                </View>
+
+                <View style={styles.addCustomerRow}>
                   <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact *</Text>
+                    <Text style={styles.addCustomerLabel}>Contact</Text>
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholderTextColor="#999"
@@ -989,10 +1092,6 @@ export default function SupplierPeople() {
                       }}
                     />
                   </View>
-                </View>
-
-                {/* Contact 2 + Contact 3 */}
-                <View style={styles.addCustomerRow}>
                   <View style={styles.addCustomerField}>
                     <Text style={styles.addCustomerLabel}>Contact 2</Text>
                     <TextInput
@@ -1002,8 +1101,8 @@ export default function SupplierPeople() {
                       keyboardType="phone-pad"
                       value={editForm.sup_sec_contact}
                       maxLength={12}
-                      onChangeText={text => {
-                        let cleaned = text.replace(/[^0-9-]/g, '');
+                      onChangeText={t => {
+                        let cleaned = t.replace(/[^0-9-]/g, '');
                         cleaned = cleaned.replace(/-/g, '');
                         if (cleaned.length > 4)
                           cleaned =
@@ -1013,6 +1112,10 @@ export default function SupplierPeople() {
                       }}
                     />
                   </View>
+                </View>
+
+                {/* Contact 2 + Contact 3 */}
+                <View style={styles.addCustomerRow}>
                   <View style={styles.addCustomerField}>
                     <Text style={styles.addCustomerLabel}>Contact 3</Text>
                     <TextInput
@@ -1033,20 +1136,18 @@ export default function SupplierPeople() {
                       }}
                     />
                   </View>
-                </View>
-
-                {/* Address */}
-                <View style={styles.addCustomerFullRow}>
-                  <Text style={styles.addCustomerLabel}>Address</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter address"
-                    value={editForm.sup_address}
-                    onChangeText={text =>
-                      handleEditInputChange('sup_address', text)
-                    }
-                  />
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Address</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      placeholder="Enter address"
+                      value={editForm.sup_address}
+                      onChangeText={text =>
+                        handleEditInputChange('sup_address', text)
+                      }
+                    />
+                  </View>
                 </View>
 
                 {/* Supplier Area */}
@@ -1082,6 +1183,7 @@ export default function SupplierPeople() {
                 </TouchableOpacity>
               </View>
             </ScrollView>
+            <Toast />
           </View>
         </Modal>
 
@@ -1178,7 +1280,7 @@ export default function SupplierPeople() {
                         Supplier Area
                       </Text>
                       <Text style={styles.customerInfoValue}>
-                        {viewModalArea ?? 'N/A'}
+                        {viewModalArea?.area_name ?? 'N/A'}
                       </Text>
                     </View>
 
@@ -1603,7 +1705,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 10,
-    width: '85%',
+    width: '100%',
     alignSelf: 'center',
   },
   deleteModalIcon: {
