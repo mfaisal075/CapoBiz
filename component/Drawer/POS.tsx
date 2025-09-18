@@ -1989,7 +1989,7 @@ const styles = StyleSheet.create({
   // Search Results
   searchResultsOverlay: {
     position: 'absolute',
-    top: 140,
+    top: 180,
     left: 15,
     right: 15,
     backgroundColor: 'white',
@@ -2548,12 +2548,12 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   cartTotalLabel: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#144272',
   },
   cartTotalValue: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: 'bold',
     color: '#4CAF50',
   },

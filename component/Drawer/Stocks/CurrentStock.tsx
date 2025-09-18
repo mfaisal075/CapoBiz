@@ -4,7 +4,6 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
   FlatList,
 } from 'react-native';
@@ -39,12 +38,26 @@ export default function CurrentStock() {
   const {openDrawer} = useDrawer();
   const [stockProducts, setStockProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Categories[]>([]);
+  const [category, setCategory] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState('');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+  const totalRecords = stockProducts.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  const currentData = stockProducts.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
+
   const transformedCat = categories.map(cat => ({
     label: cat.pcat_name,
     value: cat.id.toString(),
   }));
 
-  // Calculate totals using useMemo for better performance
+  // Totals
   const {totalCost, totalRetail} = useMemo(() => {
     return stockProducts.reduce(
       (totals, item) => {
@@ -59,9 +72,6 @@ export default function CurrentStock() {
       {totalCost: 0, totalRetail: 0},
     );
   }, [stockProducts]);
-
-  const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState('');
 
   // Fetch Category Dropdown
   const fetchCatDropdown = async () => {
@@ -80,6 +90,7 @@ export default function CurrentStock() {
         cat_id: currentCategory,
       });
       setStockProducts(res.data.stock);
+      setCurrentPage(1);
     } catch (error) {
       console.log(error);
     }
@@ -96,138 +107,99 @@ export default function CurrentStock() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-            marginBottom: 15,
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{width: 30, height: 30, tintColor: 'white'}}
-            />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
-
-          <View style={styles.headerTextContainer}>
-            <Text style={{color: 'white', fontSize: 22, fontWeight: 'bold'}}>
-              Current Stock
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Current Stock</Text>
+          </View>
+          <View style={[styles.headerBtn, {backgroundColor: 'transparent'}]}>
+            <Icon name="filter-list" size={24} color="transparent" />
           </View>
         </View>
 
-        <DropDownPicker
-          items={transformedCat}
-          open={category}
-          setOpen={setCategory}
-          value={currentCategory}
-          setValue={setCurrentCategory}
-          placeholder="Select Category"
-          placeholderStyle={{color: 'white'}}
-          textStyle={{color: 'white'}}
-          ArrowUpIconComponent={() => (
-            <Icon name="keyboard-arrow-up" size={18} color="#fff" />
-          )}
-          ArrowDownIconComponent={() => (
-            <Icon name="keyboard-arrow-down" size={18} color="#fff" />
-          )}
-          style={[
-            styles.dropdown,
-            {borderColor: 'white', width: '88%', alignSelf: 'center'},
-          ]}
-          dropDownContainerStyle={{
-            backgroundColor: 'white',
-            borderColor: '#144272',
-            width: '88.5%',
-            marginLeft: 22,
-            marginTop: 8,
-          }}
-          labelStyle={{color: 'white'}}
-          listItemLabelStyle={{color: '#144272'}}
-        />
+        {/* Filter */}
+        <View style={{paddingHorizontal: 15, marginVertical: 8}}>
+          <DropDownPicker
+            items={transformedCat}
+            open={category}
+            setOpen={setCategory}
+            value={currentCategory}
+            setValue={setCurrentCategory}
+            placeholder="Select Category"
+            placeholderStyle={{color: '#666'}}
+            textStyle={{color: '#144272'}}
+            ArrowUpIconComponent={() => (
+              <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+            )}
+            ArrowDownIconComponent={() => (
+              <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+            )}
+            style={styles.dropdown}
+            dropDownContainerStyle={styles.dropDownContainer}
+          />
+        </View>
 
+        {/* Product List */}
         <FlatList
-          data={stockProducts}
+          data={currentData}
           keyExtractor={(item, index) => index.toString()}
           renderItem={({item}) => {
-            // Calculate per-item totals
             const qty = parseFloat(item.prod_qty) || 0;
+            const subQty = parseFloat(item.prod_sub_qty) || '';
             const costPrice = parseFloat(item.prod_costprice) || 0;
             const retailPrice = parseFloat(item.prod_fretailprice) || 0;
-
             const itemTotalCost = qty * costPrice;
             const itemTotalRetail = qty * retailPrice;
 
             return (
-              <View style={{padding: 5}}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text
-                      style={{
-                        color: '#144272',
-                        fontWeight: 'bold',
-                        marginLeft: 5,
-                        marginTop: 5,
-                      }}>
-                      {item.prod_name}
+              <View style={styles.card}>
+                {/* Header Row */}
+                <View style={styles.headerRow}>
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.prod_name?.charAt(0) || 'P'}
+                    </Text>
+                  </View>
+                  <View style={{flex: 1}}>
+                    <Text style={styles.name}>{item.prod_name}</Text>
+                    <Text style={styles.subText}>
+                      {item.pcat_name || 'No category'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Info */}
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoText}>Quantity:</Text>
+                    <Text style={styles.infoValue}>{`${qty}${
+                      subQty ? `-${subQty}` : ''
+                    }`}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoText}>Cost Price:</Text>
+                    <Text style={styles.infoValue}>{costPrice.toFixed(2)}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoText}>Total Cost:</Text>
+                    <Text style={styles.infoValue}>
+                      {itemTotalCost.toFixed(2)}
                     </Text>
                   </View>
                   <View style={styles.infoRow}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Category:</Text>
-                      <Text style={styles.text}>{item.pcat_name}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Quantity:</Text>
-                      <Text style={styles.text}>{qty.toFixed(2)}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Cost Price:</Text>
-                      <Text style={styles.text}>{costPrice.toFixed(2)}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Total Cost:</Text>
-                      <Text style={styles.text}>
-                        {itemTotalCost.toFixed(2)}
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Retail Price:</Text>
-                      <Text style={styles.text}>{retailPrice.toFixed(2)}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        marginBottom: 5,
-                      }}>
-                      <Text style={styles.text}>Total Retail:</Text>
-                      <Text style={styles.text}>
-                        {itemTotalRetail.toFixed(2)}
-                      </Text>
-                    </View>
+                    <Text style={styles.infoText}>Retail Price:</Text>
+                    <Text style={styles.infoValue}>
+                      {retailPrice.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoText}>Total Retail:</Text>
+                    <Text style={styles.infoValue}>
+                      {itemTotalRetail.toFixed(2)}
+                    </Text>
                   </View>
                 </View>
               </View>
@@ -238,16 +210,63 @@ export default function CurrentStock() {
               <Text style={{color: '#fff', fontSize: 14}}>No Stock found.</Text>
             </View>
           }
+          contentContainerStyle={{paddingBottom: 120}}
         />
 
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalText}>
-            Total Cost: {totalCost.toFixed(2)}
-          </Text>
-          <Text style={styles.totalText}>
-            Total Retail: {totalRetail.toFixed(2)}
-          </Text>
-        </View>
+        {/* Bottom Bar: Totals + Pagination */}
+        {totalRecords > 0 && (
+          <View style={styles.bottomBar}>
+            {/* Totals */}
+            <View>
+              <Text style={styles.totalText}>
+                Total Cost: {totalCost.toFixed(2)}
+              </Text>
+              <Text style={styles.totalText}>
+                Total Retail: {totalRetail.toFixed(2)}
+              </Text>
+            </View>
+
+            {/* Pagination */}
+            <View style={styles.paginationRow}>
+              <TouchableOpacity
+                disabled={currentPage === 1}
+                onPress={() => setCurrentPage(prev => prev - 1)}
+                style={[
+                  styles.pageButton,
+                  currentPage === 1 && styles.pageButtonDisabled,
+                ]}>
+                <Text
+                  style={[
+                    styles.pageButtonText,
+                    currentPage === 1 && styles.pageButtonTextDisabled,
+                  ]}>
+                  Prev
+                </Text>
+              </TouchableOpacity>
+
+              <Text style={styles.pageIndicator}>
+                <Text style={styles.pageCurrent}>{currentPage}</Text> /{' '}
+                {totalPages}
+              </Text>
+
+              <TouchableOpacity
+                disabled={currentPage === totalPages}
+                onPress={() => setCurrentPage(prev => prev + 1)}
+                style={[
+                  styles.pageButton,
+                  currentPage === totalPages && styles.pageButtonDisabled,
+                ]}>
+                <Text
+                  style={[
+                    styles.pageButtonText,
+                    currentPage === totalPages && styles.pageButtonTextDisabled,
+                  ]}>
+                  Next
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
       </ImageBackground>
     </SafeAreaView>
   );
@@ -261,72 +280,154 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
-  headerTextContainer: {
+
+  // Header
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerCenter: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
   },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-  },
-  text: {
-    marginLeft: 5,
+  headerTitle: {
     color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-  },
-  exportBtn: {
-    backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  exportText: {
-    color: 'white',
+    fontSize: 20,
     fontWeight: 'bold',
   },
+
+  // Dropdown
   dropdown: {
     borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 35,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: 285,
+    borderColor: '#144272',
+    minHeight: 40,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    backgroundColor: '#fff',
   },
-  totalContainer: {
-    padding: 7,
-    borderTopWidth: 1,
-    borderTopColor: 'white',
-    marginTop: 5,
+  dropDownContainer: {
+    backgroundColor: '#fff',
+    borderColor: '#144272',
+  },
+
+  // Card
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    marginHorizontal: 10,
+    padding: 12,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#144272',
+  },
+  subText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  infoBox: {
+    marginTop: 10,
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 10,
+  },
+  infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  infoText: {
+    color: '#144272',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  infoValue: {
+    color: '#333',
+    fontSize: 13,
+  },
+
+  // Bottom bar (Totals + Pagination)
+  bottomBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    backgroundColor: '#144272',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
   },
   totalText: {
     color: 'white',
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
+  },
+  paginationRow: {
+    width: '55%',
+    flexDirection: 'row',
+    justifyContent: 'space-evenly',
+    alignItems: 'center',
+  },
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 5,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    marginHorizontal: 4,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
   },
 });
