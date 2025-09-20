@@ -4,7 +4,6 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
   ScrollView,
 } from 'react-native';
@@ -14,6 +13,7 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 interface CashClose {
   sales_total: string;
@@ -74,97 +74,116 @@ export default function SaleCashClose({navigation}: any) {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <ScrollView
-          style={{
-            marginBottom: 10,
-          }}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              padding: 5,
-              justifyContent: 'space-between',
-            }}>
-            <TouchableOpacity onPress={openDrawer}>
-              <Image
-                source={require('../../../assets/menu.png')}
-                style={{width: 30, height: 30, tintColor: 'white'}}
-              />
-            </TouchableOpacity>
-            <View style={styles.headerTextContainer}>
-              <Text
-                style={{
-                  color: 'white',
-                  fontSize: 22,
-                  fontWeight: 'bold',
-                }}>
-                Cash Close
-              </Text>
-            </View>
+        {/* Modern Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
+          </TouchableOpacity>
+
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.headerTitle}>Cash Close</Text>
           </View>
 
-          <View style={styles.section}>
-            <View style={styles.inputSmall}>
-              <Text style={[{color: 'white', fontWeight: 'bold'}]}>User:</Text>
-              <Text style={[{color: 'white'}]}>{userName ?? ''}</Text>
-            </View>
-            <View style={styles.inputSmall}>
-              <Text style={[{color: 'white', fontWeight: 'bold'}]}>
-                Cash In Hand:
-              </Text>
-              <Text style={[{color: 'white'}]}>
-                {cashClose?.cash_in_hand ?? '0.00'}
-              </Text>
-            </View>
-            <View style={styles.inputSmall}>
-              <Text style={[{color: 'white', fontWeight: 'bold'}]}>
-                Total Sales:
-              </Text>
-              <Text style={[{color: 'white'}]}>
-                {cashClose?.sales_total ?? '0.00'}
-              </Text>
-            </View>
-            <View style={styles.inputSmall}>
-              <Text style={[{color: 'white', fontWeight: 'bold'}]}>
-                Total Return:
-              </Text>
-              <Text style={[{color: 'white'}]}>
-                {cashClose?.return_amount ?? '0.00'}
-              </Text>
-            </View>
-            <View style={styles.inputSmall}>
-              <Text style={[{color: 'white', fontWeight: 'bold'}]}>
-                Closing Amount:
-              </Text>
-              <Text style={[{color: 'white'}]}>
-                {cashClose?.closing_amount ?? '0.00'}
-              </Text>
-            </View>
+          <TouchableOpacity
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
+            onPress={() => {}}
+            disabled>
+            <Icon name="account-balance-wallet" size={24} color="transparent" />
+          </TouchableOpacity>
+        </View>
 
-            <TouchableOpacity onPress={cashRegister}>
-              <View
-                style={{
-                  width: '100%',
-                  height: 38,
-                  backgroundColor: 'white',
-                  borderRadius: 8,
-                  marginTop: 15,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                <Text
-                  style={{
-                    textAlign: 'center',
-                    color: '#144272',
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                  }}>
-                  Close
+        <ScrollView style={styles.scrollContainer}>
+          {/* Cash Summary Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Cash Summary</Text>
+
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryLabelContainer}>
+                  <Icon
+                    name="person"
+                    size={20}
+                    color="#fff"
+                    style={styles.summaryIcon}
+                  />
+                  <Text style={styles.summaryLabel}>User:</Text>
+                </View>
+                <Text style={styles.summaryValue}>{userName ?? 'N/A'}</Text>
+              </View>
+
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryLabelContainer}>
+                  <Icon
+                    name="account-balance-wallet"
+                    size={20}
+                    color="#fff"
+                    style={styles.summaryIcon}
+                  />
+                  <Text style={styles.summaryLabel}>Cash In Hand:</Text>
+                </View>
+                <Text style={styles.summaryValue}>
+                  PKR {cashClose?.cash_in_hand ?? '0.00'}
                 </Text>
               </View>
+
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryLabelContainer}>
+                  <Icon
+                    name="trending-up"
+                    size={20}
+                    color="#fff"
+                    style={styles.summaryIcon}
+                  />
+                  <Text style={styles.summaryLabel}>Total Sales:</Text>
+                </View>
+                <Text style={styles.summaryValue}>
+                  PKR {cashClose?.sales_total ?? '0.00'}
+                </Text>
+              </View>
+
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryLabelContainer}>
+                  <Icon
+                    name="trending-down"
+                    size={20}
+                    color="#fff"
+                    style={styles.summaryIcon}
+                  />
+                  <Text style={styles.summaryLabel}>Total Return:</Text>
+                </View>
+                <Text style={styles.summaryValue}>
+                  PKR {cashClose?.return_amount ?? '0.00'}
+                </Text>
+              </View>
+
+              <View style={[styles.summaryRow, styles.totalRow]}>
+                <View style={styles.summaryLabelContainer}>
+                  <Icon
+                    name="account-balance"
+                    size={20}
+                    color="#4CAF50"
+                    style={styles.summaryIcon}
+                  />
+                  <Text style={[styles.summaryLabel, styles.totalLabel]}>
+                    Closing Amount:
+                  </Text>
+                </View>
+                <Text style={[styles.summaryValue, styles.totalValue]}>
+                  PKR {cashClose?.closing_amount ?? '0.00'}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity style={styles.closeButton} onPress={cashRegister}>
+              <Icon name="lock" size={20} color="white" />
+              <Text style={styles.closeButtonText}>Close Register</Text>
             </TouchableOpacity>
           </View>
+
+          <View style={{height: 100}} />
         </ScrollView>
+
+        <Toast />
       </ImageBackground>
     </SafeAreaView>
   );
@@ -173,33 +192,119 @@ export default function SaleCashClose({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
   },
   background: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   headerTextContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
   },
-  section: {
-    borderColor: 'white',
-    height: 'auto',
-    borderRadius: 12,
-    elevation: 15,
-    marginBottom: -13,
-    padding: 10,
-    justifyContent: 'center',
-  },
-  inputSmall: {
+  scrollContainer: {
     flex: 1,
+    paddingHorizontal: 16,
+  },
+  section: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
     borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 10,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 16,
+  },
+  summaryCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingVertical: 4,
+  },
+  summaryLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  summaryIcon: {
+    marginRight: 8,
+  },
+  summaryLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  summaryValue: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'right',
+  },
+  totalRow: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+    paddingTop: 12,
+    marginTop: 8,
+    marginBottom: 0,
+  },
+  totalLabel: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  totalValue: {
+    color: '#4CAF50',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    marginTop: 20,
+    shadowColor: '#4CAF50',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  closeButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });

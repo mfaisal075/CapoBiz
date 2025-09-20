@@ -5,12 +5,13 @@ import {
   SafeAreaView,
   ImageBackground,
   TouchableOpacity,
-  Image,
   TextInput,
   FlatList,
   Modal,
+  ScrollView,
+  Animated,
 } from 'react-native';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
@@ -100,6 +101,25 @@ export default function SaleReturn() {
   const [modal, setModal] = useState('');
   const [editForm, setEditForm] = useState<EditForm>(initialEditFrom);
 
+  // Cart Animation
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+
+  // Cart animation effect
+  const animateCartIcon = () => {
+    Animated.sequence([
+      Animated.timing(bounceAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bounceAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const editOnChange = (field: keyof EditForm, value: string) => {
     setEditForm(prev => ({
       ...prev,
@@ -140,7 +160,7 @@ export default function SaleReturn() {
       const res = await axios.post(
         `${BASE_URL}/addtoinvoicecart`,
         {
-          search_invoice: product.value, // use passed product
+          search_invoice: product.value,
         },
         {
           headers: {
@@ -157,6 +177,9 @@ export default function SaleReturn() {
         });
         setSearchTerm('');
         setShowResults(false);
+        getInvoiceCart();
+        fetchCartItems();
+        animateCartIcon();
       }
     } catch (error) {
       console.error(error);
@@ -242,6 +265,7 @@ export default function SaleReturn() {
         setQty('');
         setSubQty('');
         fetchCartItemsWithout();
+        animateCartIcon();
       }
     } catch (error) {
       console.log(error);
@@ -309,7 +333,7 @@ export default function SaleReturn() {
         `${BASE_URL}/editsalewithinvoicereturn?pid=${id}&_token=${token}`,
       );
 
-      const item = res.data[0]; // ✅ pick the first object
+      const item = res.data[0];
 
       setEditForm({
         price: item.price,
@@ -446,8 +470,8 @@ export default function SaleReturn() {
 
     try {
       const res = await axios.post(`${BASE_URL}/productinvoicereturn`, {
-        invoice_no: selectedProduct.value,
-        cust_id: null, // check if API really expects null
+        invoice_no: selectedProduct?.value,
+        cust_id: null,
         sale_return: orderTotal,
       });
 
@@ -534,6 +558,8 @@ export default function SaleReturn() {
   useEffect(() => {
     emptyCart();
     emptyCartWithoutInv();
+    fetchCartItems();
+    fetchCartItemsWithout();
   }, []);
 
   return (
@@ -542,429 +568,498 @@ export default function SaleReturn() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        {/* Topbar */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
           <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Sale Return
-            </Text>
+            <Text style={styles.headerTitle}>Sale Return</Text>
           </View>
+
+          <TouchableOpacity
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
+            onPress={() => {}}
+            disabled>
+            <Icon name="shopping-cart" size={24} color="transparent" />
+          </TouchableOpacity>
         </View>
 
-        {/* Main Content Container */}
-        <View style={styles.mainContent}>
-          {/* Toggle Buttons */}
-          <View style={{flexDirection: 'row'}}>
-            <TouchableOpacity onPress={() => setSelectedOption('with')}>
-              <View
+        <ScrollView
+          style={styles.scrollContainer}
+          showsVerticalScrollIndicator={false}
+          nestedScrollEnabled>
+          {/* Toggle Section */}
+          <View style={styles.section}>
+            <View style={styles.toggleContainer}>
+              <TouchableOpacity
                 style={[
                   styles.toggleButton,
-                  selectedOption === 'with'
-                    ? styles.selectedButton
-                    : styles.unselectedButton,
-                ]}>
+                  selectedOption === 'with' && styles.toggleButtonActive,
+                ]}
+                onPress={() => setSelectedOption('with')}>
                 <Text
                   style={[
                     styles.toggleButtonText,
-                    selectedOption === 'with'
-                      ? styles.selectedText
-                      : styles.unselectedText,
+                    selectedOption === 'with' && styles.toggleButtonTextActive,
                   ]}>
                   Return With Invoice
                 </Text>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => setSelectedOption('without')}>
-              <View
+              <TouchableOpacity
                 style={[
                   styles.toggleButton,
-                  selectedOption === 'without'
-                    ? styles.selectedButton
-                    : styles.unselectedButton,
-                ]}>
+                  selectedOption === 'without' && styles.toggleButtonActive,
+                ]}
+                onPress={() => setSelectedOption('without')}>
                 <Text
                   style={[
                     styles.toggleButtonText,
-                    selectedOption === 'without'
-                      ? styles.selectedText
-                      : styles.unselectedText,
+                    selectedOption === 'without' &&
+                      styles.toggleButtonTextActive,
                   ]}>
                   Return Without Invoice
                 </Text>
-              </View>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.newInvoiceBadge}>
+              <Text style={styles.newInvoiceText}>NEW INV</Text>
+            </View>
           </View>
 
-          {/* NEW INV Badge */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignSelf: 'flex-end',
-              borderWidth: 1,
-              borderRadius: 10,
-              paddingHorizontal: 10,
-              paddingVertical: 8,
-              borderColor: '#fff',
-              marginHorizontal: 8,
-              width: '30%',
-              backgroundColor: 'gray',
-              marginVertical: 5,
-            }}>
-            <Text style={{color: '#fff'}}>NEW INV</Text>
-          </View>
+          {selectedOption === 'with' ? (
+            <View>
+              {/* Search Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Search Invoice</Text>
 
-          {/* Content Based on Selected Option */}
-          <View style={styles.contentContainer}>
-            {selectedOption === 'with' ? (
-              <>
-                {/* Search Input */}
-                <View style={{paddingHorizontal: 10}}>
-                  <TextInput
-                    style={[styles.input, {width: '100%'}]}
-                    placeholderTextColor={'white'}
-                    placeholder="Search Invoice..."
-                    value={searchTerm}
-                    onChangeText={handleSearch}
-                  />
-
-                  {searchTerm.length > 0 &&
-                    showResults &&
-                    searchResults.length > 0 && (
-                      <View style={styles.resultsContainer}>
-                        {searchResults.map((item: any) => (
-                          <TouchableOpacity
-                            key={item.prod_id}
-                            style={styles.resultItem}
-                            onPress={() => {
-                              setSearchTerm(item.value);
-                              setShowResults(false);
-                              setSelectedProduct(item);
-                              addInvoice(item);
-                              getInvoiceCart();
-                              fetchCartItems();
-                            }}>
-                            <Text style={styles.resultText}>{item.label}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    )}
+                <View style={styles.searchContainer}>
+                  <View style={styles.searchInputWrapper}>
+                    <Icon
+                      name="search"
+                      size={20}
+                      color="rgba(255,255,255,0.7)"
+                      style={styles.searchIcon}
+                    />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholderTextColor="rgba(255,255,255,0.7)"
+                      placeholder="Search Invoice..."
+                      value={searchTerm}
+                      onChangeText={handleSearch}
+                    />
+                    <TouchableOpacity
+                      onPress={() => addInvoice(selectedProduct)}>
+                      <Icon name="add" size={24} color="white" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
                 {/* Customer Details */}
-                <View
-                  style={{
-                    paddingHorizontal: 10,
-                    marginVertical: 10,
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                  }}>
-                  <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                    {cartDetails.name ? cartDetails.name : 'Name'}
-                  </Text>
-                  <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                    {cartDetails.fatherName
-                      ? cartDetails.fatherName
-                      : 'Father Name'}
-                  </Text>
-                </View>
+                {(cartDetails.name ||
+                  cartDetails.fatherName ||
+                  cartDetails.address) && (
+                  <View style={styles.customerDetailsContainer}>
+                    <Text style={styles.customerDetailsTitle}>
+                      Customer Details
+                    </Text>
+                    <View style={styles.customerInfo}>
+                      <View style={styles.customerCard}>
+                        <Text style={styles.customerLabel}>Customer Name</Text>
+                        <Text style={styles.customerValue}>
+                          {cartDetails.name || 'Not specified'}
+                        </Text>
+                      </View>
+                      <View style={styles.customerCard}>
+                        <Text style={styles.customerLabel}>Father Name</Text>
+                        <Text style={styles.customerValue}>
+                          {cartDetails.fatherName || 'Not specified'}
+                        </Text>
+                      </View>
+                      <View style={styles.customerCard}>
+                        <Text style={styles.customerLabel}>Address</Text>
+                        <Text style={styles.customerValue}>
+                          {cartDetails.address || 'Not specified'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                )}
+              </View>
 
-                <View style={{paddingHorizontal: 10}}>
-                  <Text
-                    style={[
-                      styles.inputSmall,
-                      {width: '100%', backgroundColor: 'gray'},
-                    ]}>
-                    {cartDetails.address ? cartDetails.address : 'Address'}
-                  </Text>
-                </View>
+              {/* Cart Items */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Return Items</Text>
 
-                {/* Cart Items List */}
-                <View style={styles.cartListContainer}>
+                {cartItems.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Icon
+                      name="receipt"
+                      size={40}
+                      color="rgba(255,255,255,0.5)"
+                    />
+                    <Text style={styles.emptyText}>
+                      No items added for return
+                    </Text>
+                  </View>
+                ) : (
                   <FlatList
                     data={cartItems}
                     keyExtractor={(item, index) => index.toString()}
-                    contentContainerStyle={{paddingBottom: 20}}
+                    scrollEnabled={false}
                     renderItem={({item}) => (
-                      <View style={{padding: 5}}>
-                        <View style={styles.table}>
-                          <View style={styles.tablehead}>
-                            <Text
-                              style={{
-                                color: '#144272',
-                                fontWeight: 'bold',
-                                marginLeft: 5,
-                                marginTop: 5,
-                              }}>
-                              {item.product_name}
-                            </Text>
-
-                            <View
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                              }}>
-                              <TouchableOpacity
-                                onPress={() => {
-                                  getEditData(item.prod_id);
-                                  setModal('Edit');
-                                }}>
-                                <Icon
-                                  name="edit"
-                                  size={20}
-                                  color="#144272"
-                                  style={{
-                                    alignSelf: 'center',
-                                    marginRight: 10,
-                                  }}
-                                />
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                onPress={() => {
-                                  delCartItem(item.prod_id);
-                                }}>
-                                <Icon
-                                  name="delete"
-                                  size={20}
-                                  color="#B22222"
-                                  style={{
-                                    alignSelf: 'center',
-                                    marginRight: 5,
-                                  }}
-                                />
-                              </TouchableOpacity>
-                            </View>
+                      <View style={styles.withCartItemContainer}>
+                        <View style={styles.withCartItemHeader}>
+                          <Text
+                            style={styles.withCartProductName}
+                            numberOfLines={2}>
+                            {item.product_name}
+                          </Text>
+                          <View style={styles.itemActions}>
+                            <TouchableOpacity
+                              onPress={() => {
+                                getEditData(item.prod_id);
+                                setModal('Edit');
+                              }}
+                              style={styles.actionBtn}>
+                              <Icon name="edit" size={20} color="white" />
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => delCartItem(item.prod_id)}
+                              style={styles.actionBtn}>
+                              <Icon name="delete" size={20} color="#FF5252" />
+                            </TouchableOpacity>
                           </View>
+                        </View>
 
-                          <View style={styles.infoRow}>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>Sold Quantity:</Text>
-                              <Text style={styles.txt}>{item.sold_qty}</Text>
-                            </View>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>Return Quantity:</Text>
-                              <Text style={styles.txt}>{item.return_qty}</Text>
-                            </View>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>
-                                Return Sub Quantity:
-                              </Text>
-                              <Text style={styles.txt}>
-                                {item.return_subqty}
-                              </Text>
-                            </View>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>Price:</Text>
-                              <Text style={styles.txt}>{item.price}</Text>
-                            </View>
-                            <View style={[styles.rowt, {marginBottom: 5}]}>
-                              <Text style={styles.txt}>Total Price:</Text>
-                              <Text style={styles.txt}>
-                                {item.return_qty * parseFloat(item.price)}
-                              </Text>
-                            </View>
+                        <View style={styles.withCartItemDetails}>
+                          <View style={styles.withDetailRow}>
+                            <Text style={styles.withDetailLabel}>
+                              Sold Qty:
+                            </Text>
+                            <Text style={styles.detailValue}>
+                              {item.sold_qty}
+                            </Text>
+                          </View>
+                          <View style={styles.withDetailRow}>
+                            <Text style={styles.withDetailLabel}>
+                              Return Qty:
+                            </Text>
+                            <Text style={styles.detailValue}>
+                              {item.return_qty}
+                            </Text>
+                          </View>
+                          <View style={styles.withDetailRow}>
+                            <Text style={styles.withDetailLabel}>
+                              Return Sub Qty:
+                            </Text>
+                            <Text style={styles.detailValue}>
+                              {item.return_subqty}
+                            </Text>
+                          </View>
+                          <View style={styles.withDetailRow}>
+                            <Text style={styles.withDetailLabel}>Price:</Text>
+                            <Text style={styles.detailValue}>
+                              PKR {item.price}
+                            </Text>
+                          </View>
+                          <View style={styles.withDetailRow}>
+                            <Text style={styles.withDetailLabel}>Total:</Text>
+                            <Text style={styles.detailValue}>
+                              PKR{' '}
+                              {(
+                                item.return_qty * parseFloat(item.price)
+                              ).toFixed(2)}
+                            </Text>
                           </View>
                         </View>
                       </View>
                     )}
-                    ListEmptyComponent={
-                      <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>Cart is empty.</Text>
-                      </View>
-                    }
                   />
+                )}
+
+                {cartItems.length > 0 && (
+                  <View style={styles.totalContainer}>
+                    <Text style={styles.totalLabel}>Total:</Text>
+                    <Text style={styles.totalValue}>
+                      PKR {orderTotal.toFixed(2)}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+              {/* Complete Button */}
+              <TouchableOpacity
+                style={[
+                  styles.checkoutBtn,
+                  cartItems.length === 0 && styles.checkoutBtnDisabled,
+                ]}
+                onPress={completeSaleReturn}
+                disabled={cartItems.length === 0}>
+                <Icon name="shopping-cart-checkout" size={20} color="white" />
+                <Text style={styles.checkoutBtnText}>Complete Return</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View>
+              {/* Search Section Without Invoice */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Search Product</Text>
+
+                <View style={styles.searchContainer}>
+                  <View style={styles.searchInputWrapper}>
+                    <Icon
+                      name="search"
+                      size={20}
+                      color="rgba(255,255,255,0.7)"
+                      style={styles.searchIcon}
+                    />
+                    <TextInput
+                      style={styles.searchInput}
+                      placeholderTextColor="rgba(255,255,255,0.7)"
+                      placeholder="Search Product..."
+                      value={searchTermWithout}
+                      onChangeText={handleSearchWithout}
+                    />
+                  </View>
                 </View>
-              </>
+
+                <View style={styles.formRow}>
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Quantity</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholderTextColor="rgba(255,255,255,0.7)"
+                      placeholder="Enter quantity"
+                      value={qty}
+                      onChangeText={setQty}
+                      keyboardType="numeric"
+                    />
+                  </View>
+
+                  <View style={styles.inputGroup}>
+                    <Text style={styles.inputLabel}>Sub Quantity</Text>
+                    <TextInput
+                      style={styles.input}
+                      placeholderTextColor="rgba(255,255,255,0.7)"
+                      placeholder="Enter sub quantity"
+                      value={subQty}
+                      onChangeText={setSubQty}
+                      keyboardType="numeric"
+                    />
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={styles.addToCartButton}
+                  onPress={handleAddToCart}>
+                  <Icon
+                    name="add"
+                    size={20}
+                    color="#144272"
+                    style={{marginRight: 8}}
+                  />
+                  <Text style={styles.addToCartText}>Add Product</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Complete Button Without Invoice */}
+              <TouchableOpacity
+                style={[
+                  styles.checkoutBtn,
+                  cartItemsWithout.length === 0 && styles.checkoutBtnDisabled,
+                ]}
+                onPress={completeSaleReturnWithout}
+                disabled={cartItemsWithout.length === 0}>
+                <Icon name="shopping-cart-checkout" size={20} color="white" />
+                <Text style={styles.checkoutBtnText}>Complete Return</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
+          <View style={{height: 100}} />
+        </ScrollView>
+
+        {/* Search Results Overlay */}
+        {searchTerm.length > 0 && showResults && searchResults.length > 0 && (
+          <View style={styles.searchResultsOverlay}>
+            <FlatList
+              data={searchResults}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({item}) => (
+                <TouchableOpacity
+                  key={item.prod_id}
+                  style={styles.resultItem}
+                  onPress={() => {
+                    setSearchTerm(item.value);
+                    setSelectedProduct(item);
+                    setShowResults(false);
+                    getInvoiceCart();
+                    fetchCartItems();
+                  }}>
+                  <Text style={styles.resultText}>
+                    {item.label.replace(/\n/g, ' ')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
+
+        {/* Search Results Overlay Without */}
+        {searchTermWithout.length > 0 &&
+          showResultsWithout &&
+          searchResultsWithout.length > 0 && (
+            <View style={styles.searchResultsOverlay}>
+              <FlatList
+                data={searchResultsWithout}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={({item}) => (
+                  <TouchableOpacity
+                    key={item.prod_id}
+                    style={styles.resultItem}
+                    onPress={() => {
+                      setSearchTermWithout(item.value);
+                      setSelectedProductWithout(item);
+                      setShowResultsWithout(false);
+                      fetchCartItemsWithout();
+                    }}>
+                    <Text style={styles.resultText}>
+                      {item.label.replace(/\n/g, ' ')}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              />
+            </View>
+          )}
+
+        {/* Floating Cart Button */}
+        {selectedOption === 'without' && (
+          <Animated.View
+            style={[
+              styles.floatingCartContainer,
+              {
+                transform: [
+                  {
+                    scale: bounceAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 1.2],
+                    }),
+                  },
+                ],
+              },
+            ]}>
+            <TouchableOpacity
+              style={styles.floatingCartBtn}
+              onPress={() => setModal('Cart')}>
+              <Icon name="shopping-cart" size={24} color="white" />
+              {cartItemsWithout.length > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>
+                    {cartItemsWithout.length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </Animated.View>
+        )}
+
+        {/* Cart Modal */}
+        <Modal
+          visible={modal === 'Cart'}
+          animationType="slide"
+          transparent={false}>
+          <SafeAreaView style={styles.cartModalContainer}>
+            {/* Header */}
+            <View style={styles.cartModalHeader}>
+              <TouchableOpacity
+                onPress={() => setModal('')}
+                style={styles.cartModalCloseBtn}>
+                <Icon name="arrow-back" size={24} color="#144272" />
+              </TouchableOpacity>
+              <Text style={styles.cartModalTitle}>Shopping Cart</Text>
+              <Text style={styles.cartItemCount}>
+                {cartItemsWithout.length} items
+              </Text>
+            </View>
+
+            {/* Empty Cart */}
+            {cartItemsWithout.length === 0 ? (
+              <View style={styles.emptyCartContainer}>
+                <Icon name="shopping-cart" size={80} color="#ccc" />
+                <Text style={styles.emptyCartText}>Your cart is empty</Text>
+                <Text style={styles.emptyCartSubtext}>
+                  Add some products to get started
+                </Text>
+              </View>
             ) : (
               <>
-                {/* Search Product Without Invoice */}
-                <View style={{paddingHorizontal: 10}}>
-                  <TextInput
-                    style={[styles.input, {width: '100%'}]}
-                    placeholderTextColor={'white'}
-                    placeholder="Search Product..."
-                    value={searchTermWithout}
-                    onChangeText={handleSearchWithout}
-                  />
-
-                  {searchTermWithout.length > 0 &&
-                    showResultsWithout &&
-                    searchResultsWithout.length > 0 && (
-                      <View style={[styles.resultsContainer, {marginHorizontal: 10}]}>
-                        {searchResultsWithout.map((item: any) => (
-                          <TouchableOpacity
-                            key={item.prod_id}
-                            style={styles.resultItem}
-                            onPress={() => {
-                              setSearchTermWithout(item.value);
-                              setShowResultsWithout(false);
-                              setSelectedProductWithout(item);
-                              fetchCartItemsWithout();
-                            }}>
-                            <Text style={styles.resultText}>{item.label}</Text>
-                          </TouchableOpacity>
-                        ))}
+                {/* Cart List */}
+                <FlatList
+                  data={cartItemsWithout}
+                  keyExtractor={item => item.prod_id.toString()}
+                  style={styles.cartList}
+                  contentContainerStyle={styles.cartListContent}
+                  renderItem={({item}) => (
+                    <View style={styles.cartItemContainer}>
+                      <View style={styles.cartItemHeader}>
+                        <Text style={styles.cartProductName} numberOfLines={2}>
+                          {item.product_name}
+                        </Text>
+                        <Text style={styles.quantityValue}>
+                          {item.return_qty}
+                        </Text>
                       </View>
-                    )}
-                </View>
 
-                {/* Quantity Inputs */}
-                <View
-                  style={{
-                    paddingHorizontal: 10,
-                    justifyContent: 'space-between',
-                    flexDirection: 'row',
-                    marginVertical: 10,
-                  }}>
-                  <TextInput
-                    style={styles.inputSmall}
-                    placeholderTextColor={'white'}
-                    placeholder="Quantity"
-                    keyboardType="numeric"
-                    value={qty}
-                    onChangeText={t => setQty(t)}
-                  />
+                      <View style={styles.cartItemDetails}>
+                        <Text style={styles.detailText}>PKR {item.price}</Text>
+                        <Text style={styles.detailTextPrice}>
+                          PKR{' '}
+                          {(
+                            parseFloat(item.sub_price) + parseFloat(item.price)
+                          ).toFixed(2)}
+                        </Text>
+                      </View>
 
-                  <TextInput
-                    style={styles.inputSmall}
-                    placeholderTextColor={'white'}
-                    placeholder="Sub Quantity"
-                    keyboardType="numeric"
-                    value={subQty}
-                    onChangeText={t => setSubQty(t)}
-                  />
-                </View>
+                      <View style={styles.cartItemDetails}>
+                        <Text style={styles.detailText}>
+                          Sub Price: PKR {item.sub_price}
+                        </Text>
+                        <TouchableOpacity
+                          onPress={() => delCartItemWithout(item.prod_id)}
+                          style={styles.deleteBtn}>
+                          <Icon name="delete" size={20} color="#FF5252" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                />
 
-                {/* Add Button */}
-                <View style={{paddingHorizontal: 10}}>
+                {/* Summary Footer */}
+                <View style={styles.cartSummaryContainer}>
+                  <View style={styles.cartTotalRow}>
+                    <Text style={styles.cartTotalLabel}>Total Amount:</Text>
+                    <Text style={styles.cartTotalValue}>
+                      PKR {orderTotalWithout.toFixed(2)}
+                    </Text>
+                  </View>
                   <TouchableOpacity
-                    style={styles.addButton}
-                    onPress={handleAddToCart}>
-                    <Text style={styles.addButtonText}>Add</Text>
+                    style={styles.proceedBtn}
+                    onPress={() => {
+                      setModal('');
+                    }}>
+                    <Text style={styles.proceedBtnText}>
+                      Proceed to Checkout
+                    </Text>
                   </TouchableOpacity>
-                </View>
-
-                {/* Cart Items List Without Invoice */}
-                <View style={styles.cartListContainer}>
-                  <FlatList
-                    data={cartItemsWithout}
-                    keyExtractor={(item, index) => index.toString()}
-                    contentContainerStyle={{paddingBottom: 20}}
-                    renderItem={({item}) => (
-                      <View style={{padding: 5}}>
-                        <View style={styles.table}>
-                          <View style={styles.tablehead}>
-                            <Text
-                              style={{
-                                color: '#144272',
-                                fontWeight: 'bold',
-                                marginLeft: 5,
-                                marginTop: 5,
-                              }}>
-                              {item.product_name}
-                            </Text>
-
-                            <View
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                              }}>
-                              <TouchableOpacity
-                                onPress={() => {
-                                  delCartItemWithout(item.prod_id);
-                                }}>
-                                <Icon
-                                  name="delete"
-                                  size={20}
-                                  color="#B22222"
-                                  style={{
-                                    alignSelf: 'center',
-                                    marginRight: 5,
-                                  }}
-                                />
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-
-                          <View style={styles.infoRow}>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>Return Quantity:</Text>
-                              <Text style={styles.txt}>{item.return_qty}</Text>
-                            </View>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>Return Sub Quantity:</Text>
-                              <Text style={styles.txt}>{item.return_subqty}</Text>
-                            </View>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>Sub Quantity Price:</Text>
-                              <Text style={styles.txt}>{item.sub_price}</Text>
-                            </View>
-                            <View style={styles.rowt}>
-                              <Text style={styles.txt}>Price:</Text>
-                              <Text style={styles.txt}>{item.price}</Text>
-                            </View>
-                            <View style={styles.rowt}>
-                              <Text style={[styles.txt, {marginBottom: 5}]}>
-                                Total Price:
-                              </Text>
-                              <Text style={[styles.txt, {marginBottom: 5}]}>
-                                {(
-                                  parseFloat(item.sub_price) +
-                                  parseFloat(item.price)
-                                ).toFixed(2)}
-                              </Text>
-                            </View>
-                          </View>
-                        </View>
-                      </View>
-                    )}
-                    ListEmptyComponent={
-                      <View style={styles.emptyContainer}>
-                        <Text style={styles.emptyText}>Cart is empty.</Text>
-                      </View>
-                    }
-                  />
                 </View>
               </>
             )}
-          </View>
-        </View>
-
-        {/* Bottom Section - Total and Complete Button */}
-        <View style={styles.bottomSection}>
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalText}>
-              Total: {selectedOption === 'with' ? orderTotal : orderTotalWithout.toFixed(2)}
-            </Text>
-            <TouchableOpacity 
-              style={styles.completeButton}
-              onPress={selectedOption === 'with' ? completeSaleReturn : completeSaleReturnWithout}>
-              <Text style={styles.completeButtonText}>Complete</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          </SafeAreaView>
+        </Modal>
 
         {/* Edit Modal With Invoice */}
         <Modal
@@ -973,67 +1068,86 @@ export default function SaleReturn() {
           animationType="fade">
           <View style={styles.overlay}>
             <View style={styles.editModalView}>
-              <View
-                style={[
-                  styles.header,
-                  {borderBottomColor: '#144272', borderBottomWidth: 0.8},
-                ]}>
-                <Text style={styles.headerText}>Return with Invoice</Text>
+              <View style={styles.editModalHeader}>
+                <Text style={styles.editModalTitle}>Edit Return Item</Text>
                 <TouchableOpacity onPress={() => setModal('')}>
-                  <Text style={[styles.closeText, {color: '#000'}]}>✕</Text>
+                  <Icon name="close" size={24} color="#666" />
                 </TouchableOpacity>
               </View>
 
-              <Text style={styles.editLabel}>Item name</Text>
-              <TextInput
-                style={[styles.editInput, styles.disabledInput]}
-                value={editForm.product_name}
-                editable={false}
-              />
+              <ScrollView style={styles.editModalContent}>
+                <View style={styles.editFormGroup}>
+                  <Text style={styles.editLabel}>Item Name</Text>
+                  <TextInput
+                    style={[styles.editInput, styles.disabledInput]}
+                    value={editForm.product_name}
+                    editable={false}
+                  />
+                </View>
 
-              <Text style={styles.editLabel}>
-                Sold Quantity <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={[styles.editInput, styles.disabledInput]}
-                value={editForm.sold_qty}
-                editable={false}
-              />
+                <View style={styles.editFormGroup}>
+                  <Text style={styles.editLabel}>
+                    Sold Quantity <Text style={styles.required}>*</Text>
+                  </Text>
+                  <TextInput
+                    style={[styles.editInput, styles.disabledInput]}
+                    value={editForm.sold_qty}
+                    editable={false}
+                  />
+                </View>
 
-              <Text style={styles.editLabel}>Return Quantity</Text>
-              <TextInput
-                style={styles.editInput}
-                keyboardType="numeric"
-                value={editForm.return_qty ? String(editForm.return_qty) : ''}
-                onChangeText={t => editOnChange('return_qty', t)}
-              />
+                <View style={styles.editFormGroup}>
+                  <Text style={styles.editLabel}>Return Quantity</Text>
+                  <TextInput
+                    style={styles.editInput}
+                    keyboardType="numeric"
+                    value={
+                      editForm.return_qty ? String(editForm.return_qty) : ''
+                    }
+                    onChangeText={t => editOnChange('return_qty', t)}
+                    placeholder="Enter return quantity"
+                  />
+                </View>
 
-              <Text style={styles.editLabel}>Return Sub Quantity</Text>
-              <TextInput
-                style={[styles.editInput, styles.disabledInput]}
-                value={
-                  editForm.return_subqty ? String(editForm.return_subqty) : '0'
-                }
-                editable={false}
-              />
+                <View style={styles.editFormGroup}>
+                  <Text style={styles.editLabel}>Return Sub Quantity</Text>
+                  <TextInput
+                    style={[styles.editInput, styles.disabledInput]}
+                    value={
+                      editForm.return_subqty
+                        ? String(editForm.return_subqty)
+                        : '0'
+                    }
+                    editable={false}
+                  />
+                </View>
 
-              <Text style={styles.editLabel}>Price</Text>
-              <TextInput
-                style={[styles.editInput, styles.disabledInput]}
-                value={editForm.price}
-                editable={false}
-              />
+                <View style={styles.editFormGroup}>
+                  <Text style={styles.editLabel}>Price</Text>
+                  <TextInput
+                    style={[styles.editInput, styles.disabledInput]}
+                    value={editForm.price}
+                    editable={false}
+                  />
+                </View>
 
-              <TouchableOpacity
-                style={styles.button}
-                onPress={() => {
-                  updateCartItem();
-                }}>
-                <Text style={styles.buttonText}>Update Cart</Text>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.updateButton}
+                  onPress={updateCartItem}>
+                  <Icon
+                    name="update"
+                    size={20}
+                    color="white"
+                    style={{marginRight: 8}}
+                  />
+                  <Text style={styles.updateButtonText}>Update Cart</Text>
+                </TouchableOpacity>
+              </ScrollView>
             </View>
           </View>
         </Modal>
+
+        <Toast />
       </ImageBackground>
     </SafeAreaView>
   );
@@ -1042,248 +1156,547 @@ export default function SaleReturn() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
   },
   background: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   headerTextContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
   },
-  mainContent: {
+  scrollContainer: {
     flex: 1,
-    paddingBottom: 80, // Space for bottom section
+    paddingHorizontal: 16,
   },
-  contentContainer: {
+  section: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 16,
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  toggleButton: {
     flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'white',
+    alignItems: 'center',
+    marginHorizontal: 5,
   },
-  cartListContainer: {
+  toggleButtonActive: {
+    backgroundColor: 'white',
+  },
+  toggleButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  toggleButtonTextActive: {
+    color: '#144272',
+  },
+  newInvoiceBadge: {
+    alignSelf: 'flex-end',
+    backgroundColor: 'gray',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'white',
+  },
+  newInvoiceText: {
+    color: 'white',
+    fontSize: 12,
+  },
+  searchContainer: {
+    marginBottom: 16,
+    position: 'relative',
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
     flex: 1,
-    marginTop: 10,
+    color: 'white',
+    fontSize: 16,
+    paddingVertical: 12,
   },
-  bottomSection: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    borderTopColor: '#fff',
-    borderTopWidth: 1,
-    paddingVertical: 15,
+  customerDetailsContainer: {
+    marginTop: 16,
+  },
+  customerDetailsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 12,
+  },
+  customerInfo: {
+    marginTop: 8,
+  },
+  customerCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  customerLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  customerValue: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  formRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  inputGroup: {
+    width: '48%',
+  },
+  inputLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    color: 'white',
+    fontSize: 16,
+  },
+  addToCartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingVertical: 12,
     paddingHorizontal: 20,
+  },
+  addToCartText: {
+    color: '#144272',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  withCartItemContainer: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  withCartItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  withCartProductName: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    flex: 1,
+    marginRight: 10,
+  },
+  itemActions: {
+    flexDirection: 'row',
+  },
+  actionBtn: {
+    padding: 8,
+    marginLeft: 8,
+    borderRadius: 6,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  withCartItemDetails: {
+    marginTop: 8,
+  },
+  withDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  withDetailLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  detailValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
   },
   totalContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
   },
-  totalText: {
+  totalLabel: {
     color: 'white',
-    fontWeight: 'bold',
     fontSize: 18,
-  },
-  completeButton: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  completeButtonText: {
-    color: '#144272',
     fontWeight: 'bold',
-    fontSize: 16,
+  },
+  totalValue: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   emptyContainer: {
-    height: 300,
-    width: '100%',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
   },
   emptyText: {
+    color: 'rgba(255,255,255,0.7)',
     fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
+    marginTop: 10,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    color: 'white',
-    height: 38,
-  },
-  inputSmall: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    width: '46%',
-    color: '#fff',
-    height: 38,
-  },
-  addButton: {
-    marginBottom: 10,
-    alignSelf: 'center',
-    justifyContent: 'center',
+  checkoutBtn: {
+    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    width: '100%',
-    height: 38,
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: 'bold',
-    color: '#144272',
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 10,
-  },
-  tablehead: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 10,
-    borderTopLeftRadius: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  rowt: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  txt: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  toggleButton: {
-    margin: 10,
-    alignSelf: 'center',
     justifyContent: 'center',
-    borderRadius: 10,
-    height: 30,
-    borderWidth: 1,
-    borderColor: 'white',
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    marginVertical: 16,
+    shadowColor: '#4CAF50',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  selectedButton: {
-    backgroundColor: 'white',
-    borderColor: '#144272',
+  checkoutBtnDisabled: {
+    backgroundColor: 'rgba(76, 175, 80, 0.5)',
   },
-  unselectedButton: {
-    backgroundColor: 'transparent',
-  },
-  toggleButtonText: {
-    textAlign: 'center',
-    fontWeight: 'bold',
-    marginHorizontal: 5,
-  },
-  selectedText: {
-    color: '#144272',
-  },
-  unselectedText: {
+  checkoutBtnText: {
     color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
-  resultsContainer: {
+  searchResultsOverlay: {
     position: 'absolute',
-    top: 50,
-    left: 0,
-    right: 0,
+    top: 340,
+    left: 20,
     backgroundColor: 'white',
-    borderRadius: 5,
-    zIndex: 100,
+    borderRadius: 10,
+    zIndex: 1000,
     elevation: 10,
     maxHeight: 200,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    width: '90%',
   },
   resultItem: {
-    padding: 10,
+    padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderBottomColor: '#f0f0f0',
   },
   resultText: {
     color: '#144272',
+    fontSize: 14,
   },
-  //Edit Modal Styling
+  floatingCartContainer: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    zIndex: 1000,
+  },
+  floatingCartBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#144272',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#FF5252',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  cartBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+
+  // Cart Modal
+  cartModalContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  cartModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  cartModalCloseBtn: {
+    padding: 5,
+  },
+  cartModalTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#144272',
+    textAlign: 'center',
+  },
+  cartItemCount: {
+    fontSize: 14,
+    color: '#666',
+  },
+  emptyCartContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCartText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 10,
+  },
+  emptyCartSubtext: {
+    fontSize: 14,
+    color: '#777',
+    marginTop: 4,
+  },
+  cartList: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  cartListContent: {},
+  cartItemContainer: {
+    backgroundColor: '#fff',
+    marginHorizontal: 15,
+    marginVertical: 8,
+    borderRadius: 10,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cartItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  cartProductName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#144272',
+    flex: 1,
+  },
+  quantityValue: {
+    marginHorizontal: 15,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#144272',
+    minWidth: 30,
+    textAlign: 'center',
+  },
+  cartItemDetails: {
+    marginTop: 4,
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailText: {
+    fontSize: 13,
+    color: '#444',
+    marginBottom: 2,
+  },
+  detailTextPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  deleteBtn: {
+    padding: 5,
+  },
+  cartSummaryContainer: {
+    padding: 20,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  cartTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  cartTotalLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#144272',
+  },
+  cartTotalValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  proceedBtn: {
+    backgroundColor: '#144272',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  proceedBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  // Edit Modal Styling
   overlay: {
     flex: 1,
-    backgroundColor: '#00000055',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   editModalView: {
-    width: '85%',
-    height: 'auto',
+    width: '90%',
+    maxHeight: '80%',
     backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 20,
-    elevation: 5,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 10,
   },
-  header: {
+  editModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: '#f8f9fa',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
-  headerText: {
+  editModalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#144272',
   },
-  editCloseText: {
-    fontSize: 20,
-    color: '#888',
+  editModalContent: {
+    padding: 20,
   },
-  editTitle: {
-    marginTop: 15,
-    fontSize: 16,
-    fontWeight: '600',
+  editFormGroup: {
+    marginBottom: 16,
   },
   editLabel: {
-    marginTop: 15,
     fontSize: 14,
     fontWeight: '500',
+    color: '#333',
+    marginBottom: 6,
   },
   required: {
-    color: 'red',
-  },
-  closeText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: '#FF5252',
   },
   editInput: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 10,
-    marginTop: 5,
-    fontSize: 14,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: '#333',
   },
   disabledInput: {
-    backgroundColor: '#f2f2f2',
-    color: '#999',
+    backgroundColor: '#f5f5f5',
+    color: '#666',
   },
-  label: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: 'white',
-  },
-  button: {
-    backgroundColor: '#28a745',
-    paddingVertical: 10,
-    borderRadius: 6,
-    marginTop: 25,
+  updateButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+    paddingVertical: 12,
+    marginTop: 20,
   },
-  buttonText: {
-    color: '#fff',
-    fontWeight: '600',
+  updateButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });

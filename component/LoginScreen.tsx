@@ -17,7 +17,13 @@ import {useUser} from './CTX/UserContext';
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation();
-  const {setUserEmail, setUserName} = useUser();
+  const {
+    setUserEmail,
+    setUserName,
+    setBussName,
+    setBussAddress,
+    setBussContact,
+  } = useUser();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [hidePassword, setHidePassword] = useState(true);
@@ -61,8 +67,16 @@ const LoginScreen: React.FC = () => {
 
       // Only proceed with the second request if login was successful
       const res = await axios.get(`${BASE_URL}/poscashregister`);
-      setUserName(res.data.authenticated_user.name);
-      setUserEmail(res.data.authenticated_user.email);
+
+      setUserName(res.data?.authenticated_user?.name ?? '');
+      setUserEmail(res.data?.authenticated_user?.email ?? '');
+
+      // Getting bussiness details
+      const bus = await axios.get(`${BASE_URL}/dashboaddata`);
+
+      setBussName(bus.data?.businessdata?.bus_name ?? '');
+      setBussAddress(bus.data?.businessdata?.bus_address ?? '');
+      setBussContact(bus.data?.businessdata?.bus_contact1 ?? '');
 
       const data = response.data;
 

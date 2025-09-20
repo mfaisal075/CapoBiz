@@ -87,8 +87,23 @@ export default function UOMProducts() {
         setModalVisible('');
         setSelectedUmo(null);
         fetchUoms();
+      } else if (res.status === 200 && data.status === 201) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This UOM already exist!',
+          visibilityTime: 2000,
+        });
       }
-    } catch (error) {}
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error!',
+        text2: `${error}`,
+        visibilityTime: 2000,
+      });
+      console.log(error);
+    }
   };
 
   // Delete Umo
@@ -145,8 +160,22 @@ export default function UOMProducts() {
         fetchUoms();
         setUmoName('');
         setModalVisible('');
+      } else if (res.status === 200 && data.status === 201) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'UOM already exist!',
+          visibilityTime: 2000,
+        });
       }
-    } catch (error) {}
+    } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error!',
+        text2: `${error}`,
+      });
+      console.log(error);
+    }
   };
 
   useEffect(() => {

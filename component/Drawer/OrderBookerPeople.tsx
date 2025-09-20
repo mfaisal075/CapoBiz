@@ -519,33 +519,42 @@ export default function OrderBookerPeople() {
                 {/* Info Section */}
                 <View style={styles.infoBox}>
                   <View style={styles.infoRow}>
-                    <Icon
-                      name="phone"
-                      size={20}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.infoText}>{item.contact || '--'}</Text>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="phone"
+                        size={18}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Contact</Text>
+                    </View>
+                    <Text style={styles.valueText}>{item.contact || '--'}</Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Icon
-                      name="id-card"
-                      size={20}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.infoText}>{item.cnic || '--'}</Text>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="id-card"
+                        size={18}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>CNIC</Text>
+                    </View>
+                    <Text style={styles.valueText}>{item.cnic || '--'}</Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Icon
-                      name="mail"
-                      size={20}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.infoText}>{item.email || '--'}</Text>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="mail"
+                        size={18}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Email</Text>
+                    </View>
+                    <Text style={styles.valueText}>{item.email || '--'}</Text>
                   </View>
                 </View>
               </View>
@@ -1091,21 +1100,38 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 10,
   },
+  infoText: {
+    flex: 1,
+    color: '#333',
+    fontSize: 13,
+  },
   infoRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
   },
   infoIcon: {
     width: 18,
     height: 18,
     tintColor: '#144272',
-    marginRight: 8,
+    marginRight: 6,
   },
-  infoText: {
-    flex: 1,
-    color: '#333',
+  labelText: {
     fontSize: 13,
+    color: '#144272',
+    fontWeight: '600',
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
 
   // Pagination Component

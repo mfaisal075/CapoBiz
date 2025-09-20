@@ -250,7 +250,9 @@ export default function PurchaseOrder() {
     if (!currentsupplier) {
       Toast.show({
         type: 'error',
-        text1: 'Please select a supplier',
+        text1: 'Warning!',
+        text2: 'Please select a supplier!',
+        visibilityTime: 2000,
       });
       return;
     }
@@ -268,7 +270,7 @@ export default function PurchaseOrder() {
         },
       );
 
-      if (res.data.status) {
+      if (res.status === 200 && res.data.status === 200) {
         Toast.show({
           type: 'success',
           text1: 'Order placed successfully!',
@@ -287,6 +289,13 @@ export default function PurchaseOrder() {
           headers: {Authorization: `Bearer ${token}`},
         });
         navigation.navigate('Purchase Order List' as never);
+      } else if (res.status === 200 && res.data.status === 404) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Cart is empty,please add some products!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);

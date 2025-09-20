@@ -4,19 +4,18 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
   ScrollView,
   TextInput,
   FlatList,
+  Modal,
+  Animated,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
-import Modal from 'react-native-modal';
-import {Checkbox} from 'react-native-paper';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
@@ -91,99 +90,31 @@ interface CheckoutDetails {
   payable: string;
 }
 
-interface AddCustomer {
-  name: string;
-  father_name: string;
-  contact: string;
-  email: string;
-  contact_person_one: string;
-  sec_contact: string;
-  contact_person_two: string;
-  third_contact: string;
-  cnic: string;
-  address: string;
-  opening_balance: string;
-  transfer_type: string;
-  transaction_type: string;
-}
-
-const initialAddCustomer: AddCustomer = {
-  name: '',
-  father_name: '',
-  contact: '',
-  email: '',
-  contact_person_one: '',
-  sec_contact: '',
-  contact_person_two: '',
-  third_contact: '',
-  cnic: '',
-  address: '',
-  opening_balance: '',
-  transfer_type: '',
-  transaction_type: '',
-};
-
-interface TypeData {
-  id: string;
-  custtyp_name: string;
-  custtyp_status: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface AreaData {
-  id: string;
-  area_name: string;
-  area_status: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface AddSupplier {
-  alsocust: string;
-  comp_name: string;
-  agencyname: string;
-  supp_name: string;
-  contact: string;
-  sec_contact: string;
-  third_contact: string;
-  email: string;
-  address: string;
-  supp_area: string;
-  opening_balancechechboc: string;
-  opening_balance: string;
-  transfer_type: string;
-  transaction_type: string;
-}
-
-const initialAddSupplier: AddSupplier = {
-  address: '',
-  agencyname: '',
-  alsocust: '',
-  comp_name: '',
-  contact: '',
-  email: '',
-  opening_balance: '',
-  opening_balancechechboc: '',
-  sec_contact: '',
-  supp_area: '',
-  supp_name: '',
-  third_contact: '',
-  transfer_type: '',
-  transaction_type: '',
-};
-
-interface SupplierArea {
-  id: string;
-  area_name: string;
-}
-
 export default function Trade() {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showResults, setShowResults] = useState(false);
+
+  // Cart Animation
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+
+  // Cart animation effect
+  const animateCartIcon = () => {
+    Animated.sequence([
+      Animated.timing(bounceAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bounceAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
   const [prodDetails, setProdDetails] = useState<ProductDetails>(
     initialProductDetails,
   );
@@ -212,41 +143,6 @@ export default function Trade() {
   const [paidAmount, setPaidAmount] = useState('');
   const [refNumber, setRefNumber] = useState('');
   const [modalVisible, setModalVisible] = useState('');
-  const [addForm, setAddForm] = useState<AddCustomer>(initialAddCustomer);
-  const [types, setTypes] = useState<TypeData[]>([]);
-  const [areaData, setAreaData] = useState<AreaData[]>([]);
-  const [custType, setCustType] = useState<string | null>('');
-  const [custTypeOpen, setCustTypeOpen] = useState(false);
-  const transformedTypes = types.map(item => ({
-    label: item.custtyp_name,
-    value: item.id,
-  }));
-  const [custArea, setCustArea] = useState<string | null>('');
-  const [custAreaOpen, setCustAreaOpen] = useState(false);
-  const transformedAreas = areaData.map(item => ({
-    label: item.area_name,
-    value: item.id,
-  }));
-  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
-  const [supAddForm, setSupAddForm] = useState<AddSupplier>(initialAddSupplier);
-  const [areaOpen, setAreaOpen] = useState(false);
-  const [areaValue, setAreaValue] = useState('');
-
-  // Add Supplier Form onChange
-  const handleAddInputChange = (field: keyof AddSupplier, value: string) => {
-    setSupAddForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  // Add Customer Form On Change
-  const onChange = (field: keyof AddCustomer, value: string) => {
-    setAddForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
 
   // Product Details onChange
   const detailsOnChange = (field: keyof ProductDetails, value: string) => {
@@ -330,6 +226,7 @@ export default function Trade() {
         setSelectedProduct([]);
         setSearchTerm('');
         fetchCartItems();
+        animateCartIcon();
       }
     } catch (error) {
       console.log(error);
@@ -486,6 +383,8 @@ export default function Trade() {
         setRefNumber('');
         setSupValue('');
         setCustValue('');
+        setSelectedSup(initialSelectedSup);
+        setSelectedCust(initialSelectedCust);
       } else if (res.status === 200 && data.status === 409) {
         Toast.show({
           type: 'info',
@@ -499,148 +398,12 @@ export default function Trade() {
     }
   };
 
-  // Fetch Type
-  const fetchType = async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/fetchtypedata`);
-      setTypes(res.data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  // Fetch Area
-  const fetchAreas = async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/fetchareadata`);
-      setAreaData(res.data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  // Add Customer
-  const addCustomer = async () => {
-    if (
-      !addForm.name.trim() ||
-      !addForm.contact.trim() ||
-      !addForm.address.trim()
-    ) {
-      Toast.show({
-        type: 'error',
-        text1: 'Missing Fields',
-        text2: 'Please fill all required fields.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-    try {
-      const res = await axios.post(`${BASE_URL}/addcustomer`, {
-        cust_name: addForm.name.trim(),
-        fathername: addForm.father_name.trim(),
-        contact: addForm.contact.trim(),
-        email: addForm.email.trim(),
-        sec_contact: addForm.sec_contact,
-        third_contact: addForm.third_contact,
-        cnic: addForm.cnic.trim(),
-        address: addForm.address.trim(),
-        cust_type: custType,
-        cust_area: custArea,
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Added!',
-          text2: 'Customer has been Added successfully',
-          visibilityTime: 1500,
-        });
-        fetchCustomers();
-        setAddForm(initialAddCustomer);
-        setCustArea('');
-        setCustType('');
-        setModalVisible('');
-      }
-    } catch (error) {
-      console.log();
-    }
-  };
-
-  // Fetch Supplier Dropdown Area
-  const handleFetchAreas = async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/fetchareadata`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      setAreaData(res.data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  // Add Supplier
-  const handleAddSupplier = async () => {
-    if (
-      !supAddForm.comp_name ||
-      !supAddForm.supp_name ||
-      !supAddForm.contact ||
-      !supAddForm.address
-    ) {
-      Toast.show({
-        type: 'error',
-        text1: 'Missing Fields',
-        text2: 'Please fill all fields and select a role before updating.',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-    try {
-      const res = await axios.post(`${BASE_URL}/addsupplier`, {
-        comp_name: supAddForm.comp_name.trim(),
-        agencyname: supAddForm.agencyname,
-        supp_name: supAddForm.supp_name.trim(),
-        contact: supAddForm.contact,
-        sec_contact: supAddForm.sec_contact,
-        third_contact: supAddForm.third_contact,
-        email: supAddForm.email.trim(),
-        address: supAddForm.address.trim(),
-        supp_area: areaValue,
-        alsocust: selectedOptions.includes('on') ? 'on' : '',
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Added!',
-          text2: 'Supplier has been Added successfully',
-          visibilityTime: 1500,
-        });
-        setSupAddForm(initialAddSupplier);
-        setSelectedOptions([]);
-        setAreaValue('');
-        fetchSupplier();
-        setModalVisible('');
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
   useEffect(() => {
     fetchCartItems();
     fetchCustomers();
     fetchSupplier();
-    fetchAreas();
-    handleFetchAreas();
     fetchCustData();
     fetchSupData();
-    fetchType();
   }, [custValue, supValue]);
 
   return (
@@ -649,944 +412,515 @@ export default function Trade() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        {/* Topbar */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{width: 30, height: 30, tintColor: 'white'}}
-            />
+        {/* Modern Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
+
           <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Trading
-            </Text>
-          </View>
-        </View>
-
-        <ScrollView
-          style={{
-            marginBottom: 10,
-          }}>
-          <View style={styles.section}>
-            <View style={styles.row}>
-              <TextInput
-                style={[styles.input]}
-                placeholderTextColor={'white'}
-                placeholder="Search Product..."
-                value={searchTerm}
-                onChangeText={handleSearch}
-              />
-
-              {/* Search Result Container */}
-              {searchTerm.length > 0 &&
-                showResults &&
-                searchResults.length > 0 && (
-                  <View style={styles.resultsContainer}>
-                    {searchResults.map((item: any) => (
-                      <TouchableOpacity
-                        key={item.prod_id}
-                        style={styles.resultItem}
-                        onPress={() => {
-                          setSearchTerm(item.value);
-                          setProdDetails({
-                            barCode: item.value,
-                            costPrice: item.prod_costprice,
-                            name: item.prod_name,
-                            qty: '',
-                            salePrice: item.prod_price,
-                          });
-                          setSelectedProduct(item);
-                          setShowResults(false);
-                        }}>
-                        <Text style={styles.resultText}>{item.label}</Text>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-            </View>
-
-            <View style={styles.row}>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                {prodDetails.name ? prodDetails.name : 'Item Name'}
-              </Text>
-
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                {prodDetails.barCode ? prodDetails.barCode : 'BarCode'}
-              </Text>
-            </View>
-
-            <View style={styles.row}>
-              <TextInput
-                style={styles.inputSmall}
-                placeholderTextColor={'white'}
-                placeholder="Sale Price"
-                keyboardType="numeric"
-                value={prodDetails.salePrice}
-                onChangeText={t => detailsOnChange('salePrice', t)}
-              />
-              <TextInput
-                style={styles.inputSmall}
-                placeholderTextColor={'white'}
-                placeholder="Cost Price"
-                keyboardType="numeric"
-                value={prodDetails.costPrice}
-                onChangeText={t => detailsOnChange('costPrice', t)}
-              />
-            </View>
-
-            <View style={styles.row}>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor={'white'}
-                placeholder="Quantity"
-                keyboardType="numeric"
-                value={prodDetails.qty}
-                onChangeText={t => detailsOnChange('qty', t)}
-              />
-            </View>
-
-            <TouchableOpacity style={styles.addButton} onPress={handleStore}>
-              <Text
-                style={{
-                  color: '#144272',
-                  textAlign: 'center',
-                  fontSize: 14,
-                  fontWeight: 'bold',
-                }}>
-                Submit
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.section}>
-            <View style={styles.row}>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                Invoice No
-              </Text>
-
-              <TextInput
-                style={styles.inputSmall}
-                placeholder="Reference No"
-                placeholderTextColor={'white'}
-                value={refNumber}
-                onChangeText={t => setRefNumber(t)}
-              />
-            </View>
-
-            <View style={styles.row}>
-              <DropDownPicker
-                items={transformedSup}
-                open={supOpen}
-                setOpen={setSupOpen}
-                value={supValue}
-                setValue={setSupValue}
-                placeholder="Select Supplier"
-                placeholderStyle={{color: 'white'}}
-                textStyle={{color: 'white'}}
-                ArrowUpIconComponent={() => (
-                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
-                )}
-                style={[styles.dropdown]}
-                dropDownContainerStyle={{
-                  backgroundColor: 'white',
-                  borderColor: '#144272',
-                  width: '90%',
-                  marginTop: 8,
-                  maxHeight: 130,
-                }}
-                labelStyle={{color: 'white'}}
-                listItemLabelStyle={{color: '#144272'}}
-                listMode="SCROLLVIEW"
-              />
-
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('AddSupplier');
-                }}
-                style={{marginLeft: -19}}>
-                <Image
-                  style={{
-                    tintColor: 'white',
-                    width: 18,
-                    height: 18,
-                    alignSelf: 'center',
-                  }}
-                  source={require('../../../assets/add.png')}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.row}>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                {selectedSup.name ? selectedSup.name : 'Supplier Name'}
-              </Text>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                {selectedSup.compnayName
-                  ? selectedSup.compnayName
-                  : 'Company Name'}
-              </Text>
-            </View>
-
-            <View style={styles.row}>
-              <Text style={[styles.input, {backgroundColor: 'gray'}]}>
-                {selectedSup.address ? selectedSup.address : 'Address'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <View style={styles.row}>
-              <DropDownPicker
-                items={transformedCust}
-                open={custOpen}
-                setOpen={setCustOpen}
-                value={custValue}
-                setValue={setCustValue}
-                placeholder="Select Customer"
-                placeholderStyle={{color: 'white'}}
-                textStyle={{color: 'white'}}
-                ArrowUpIconComponent={() => (
-                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
-                )}
-                style={styles.dropdown}
-                dropDownContainerStyle={{
-                  backgroundColor: 'white',
-                  borderColor: '#144272',
-                  width: '90%',
-                  marginTop: 8,
-                  maxHeight: 130,
-                }}
-                labelStyle={{color: 'white'}}
-                listItemLabelStyle={{color: '#144272'}}
-                listMode="SCROLLVIEW"
-              />
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('AddCustomer');
-                }}
-                style={{marginLeft: -19}}>
-                <Image
-                  style={{
-                    tintColor: 'white',
-                    width: 18,
-                    height: 18,
-                    alignSelf: 'center',
-                  }}
-                  source={require('../../../assets/add.png')}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.row}>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                {selectedCust.name ? selectedCust.name : 'Customer Name'}
-              </Text>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                {selectedCust.fatherName
-                  ? selectedCust.fatherName
-                  : 'Father Name'}
-              </Text>
-            </View>
-
-            <View style={styles.row}>
-              <Text style={[styles.input, {backgroundColor: 'gray'}]}>
-                {selectedCust.address ? selectedCust.address : 'Address'}
-              </Text>
-            </View>
-          </View>
-
-          <View>
-            <FlatList
-              data={cartItems}
-              keyExtractor={(item, index) => index.toString()}
-              scrollEnabled={false}
-              renderItem={({item}) => (
-                <ScrollView
-                  style={{
-                    padding: 5,
-                  }}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.prod_name}
-                      </Text>
-
-                      <TouchableOpacity onPress={() => handleDelete(item.id)}>
-                        <Icon
-                          name="delete"
-                          size={20}
-                          color="#e57373"
-                          style={{
-                            marginRight: 10,
-                            marginTop: 5,
-                            alignSelf: 'center',
-                          }}
-                        />
-                      </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.rowt}>
-                        <Text style={styles.text}>Cost Price:</Text>
-                        <Text style={styles.text}>
-                          {item.tmptrd_cost_price}
-                        </Text>
-                      </View>
-                      <View style={styles.rowt}>
-                        <Text style={styles.text}>Sale Price:</Text>
-                        <Text style={styles.text}>
-                          {item.tmptrd_sale_price}
-                        </Text>
-                      </View>
-                      <View style={styles.rowt}>
-                        <Text style={styles.text}>Quantity:</Text>
-                        <Text style={styles.text}>{item.tmptrd_qty}</Text>
-                      </View>
-                      <View style={styles.rowt}>
-                        <Text style={[styles.text, {marginBottom: 5}]}>
-                          SubTotal:
-                        </Text>
-                        <Text style={[styles.text, {marginBottom: 5}]}>
-                          {item.tmptrd_sub_total}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                </ScrollView>
-              )}
-              ListEmptyComponent={
-                <View
-                  style={{
-                    height: 100,
-                    width: '100%',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}>
-                  <Text
-                    style={{
-                      color: '#fff',
-                      fontWeight: 'bold',
-                      fontSize: 16,
-                    }}>
-                    No items found in cart.
-                  </Text>
-                </View>
-              }
-            />
-          </View>
-
-          <View style={styles.section}>
-            <View style={styles.row}>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                Cost Price: {checkoutDetails?.costtotal ?? '0.00'}
-              </Text>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                Sale Price: {checkoutDetails?.saletotal ?? '0.00'}
-              </Text>
-            </View>
-
-            <View style={styles.row}>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                <Text style={{fontWeight: 'bold'}}>Profit/Loss:</Text>{' '}
-                {checkoutDetails?.profitandloss ?? '0.00'}
-              </Text>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                Payable: {checkoutDetails?.payable ?? '0.00'}
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <View style={styles.row}>
-              <TextInput
-                style={styles.inputSmall}
-                placeholder="Paid"
-                placeholderTextColor={'white'}
-                keyboardType="numeric"
-                value={paidAmount}
-                onChangeText={t => setPaidAmount(t)}
-              />
-
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  borderTopWidth: 1,
-                  borderBottomWidth: 1,
-                  width: '46%',
-                  borderRightWidth: 1,
-                  borderLeftWidth: 1,
-                  borderRadius: 5,
-                  borderColor: 'white',
-                  height: 38,
-                }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    borderRadius: 5,
-                    borderColor: 'white',
-                    paddingHorizontal: 10,
-                  }}>
-                  <Text style={{color: 'white'}}>
-                    {`${orderDate.toLocaleDateString()}`}
-                  </Text>
-
-                  <TouchableOpacity
-                    onPress={() => setShoworderDatePicker(true)}
-                    style={{padding: 5, marginLeft: 35}}>
-                    <Icon name="calendar-today" size={22} color="white" />
-                  </TouchableOpacity>
-                  {showorderDatePicker && (
-                    <DateTimePicker
-                      testID="startDatePicker"
-                      value={orderDate}
-                      mode="date"
-                      is24Hour={true}
-                      display="default"
-                      onChange={onorderDateChange}
-                    />
-                  )}
-                </View>
-              </View>
-            </View>
+            <Text style={styles.headerTitle}>Trading</Text>
           </View>
 
           <TouchableOpacity
-            onPress={() => {
-              handleCheckout();
-            }}>
-            <View
-              style={{
-                width: '90%',
-                height: 38,
-                backgroundColor: 'white',
-                borderRadius: 10,
-                alignSelf: 'center',
-                justifyContent: 'center',
-                marginTop: 15,
-              }}>
-              <Text
-                style={{
-                  textAlign: 'center',
-                  color: '#144272',
-                  fontSize: 14,
-                  fontWeight: 'bold',
-                }}>
-                Check Out
-              </Text>
-            </View>
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
+            onPress={() => {}}
+            disabled>
+            <Icon name="swap-horiz" size={24} color="transparent" />
           </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.scrollContainer}>
+          {/* Product Search Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Search Product</Text>
+
+            <View style={styles.searchContainer}>
+              <View style={styles.searchInputWrapper}>
+                <Icon
+                  name="search"
+                  size={20}
+                  color="rgba(255,255,255,0.7)"
+                  style={styles.searchIcon}
+                />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  placeholder="Search Product..."
+                  value={searchTerm}
+                  onChangeText={handleSearch}
+                />
+              </View>
+            </View>
+
+            {/* Form Fields */}
+            <View style={styles.formRow}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Sale Price</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  placeholder="0.00"
+                  keyboardType="numeric"
+                  value={prodDetails.salePrice}
+                  onChangeText={t => detailsOnChange('salePrice', t)}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Cost Price</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  placeholder="0.00"
+                  keyboardType="numeric"
+                  value={prodDetails.costPrice}
+                  onChangeText={t => detailsOnChange('costPrice', t)}
+                />
+              </View>
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.inputGroup, {width: '100%'}]}>
+                <Text style={styles.inputLabel}>Quantity</Text>
+                <TextInput
+                  style={[styles.input, {width: '100%'}]}
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  placeholder="0"
+                  keyboardType="numeric"
+                  value={prodDetails.qty}
+                  onChangeText={t => detailsOnChange('qty', t)}
+                />
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.addToCartButton}
+              onPress={handleStore}>
+              <Icon
+                name="add"
+                size={20}
+                color="#144272"
+                style={{marginRight: 8}}
+              />
+              <Text style={styles.addToCartText}>Add Product</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Invoice Details Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Invoice Details</Text>
+
+            <View style={styles.formRow}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Invoice No</Text>
+                <View style={styles.infoDisplay}>
+                  <Text style={styles.infoDisplayText}>Auto Generated</Text>
+                </View>
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Reference No *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter reference"
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  value={refNumber}
+                  onChangeText={t => setRefNumber(t)}
+                />
+              </View>
+            </View>
+
+            <View style={styles.formRow}>
+              <View style={[styles.inputGroup, {zIndex: 1000}]}>
+                <Text style={styles.inputLabel}>Select Supplier</Text>
+                <DropDownPicker
+                  items={transformedSup}
+                  open={supOpen}
+                  setOpen={setSupOpen}
+                  value={supValue}
+                  setValue={setSupValue}
+                  placeholder="Choose supplier..."
+                  placeholderStyle={{color: 'rgba(255,255,255,0.7)'}}
+                  textStyle={{color: 'white'}}
+                  ArrowUpIconComponent={() => (
+                    <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                  )}
+                  ArrowDownIconComponent={() => (
+                    <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                  )}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  labelStyle={{color: 'white'}}
+                  listItemLabelStyle={{color: '#144272'}}
+                  listMode="MODAL"
+                />
+              </View>
+            </View>
+
+            {/* Supplier Info */}
+            {selectedSup.name && (
+              <View style={styles.supplierInfo}>
+                <View style={styles.supplierCard}>
+                  <Text style={styles.supplierLabel}>Supplier Name</Text>
+                  <Text style={styles.supplierValue}>{selectedSup.name}</Text>
+                </View>
+                <View style={styles.supplierCard}>
+                  <Text style={styles.supplierLabel}>Company Name</Text>
+                  <Text style={styles.supplierValue}>
+                    {selectedSup.compnayName}
+                  </Text>
+                </View>
+                <View style={styles.supplierCard}>
+                  <Text style={styles.supplierLabel}>Address</Text>
+                  <Text style={styles.supplierValue}>
+                    {selectedSup.address}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Customer Details Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Customer Details</Text>
+
+            <View style={styles.formRow}>
+              <View style={[styles.inputGroup, {zIndex: 999}]}>
+                <Text style={styles.inputLabel}>Select Customer</Text>
+                <DropDownPicker
+                  items={transformedCust}
+                  open={custOpen}
+                  setOpen={setCustOpen}
+                  value={custValue}
+                  setValue={setCustValue}
+                  placeholder="Choose customer..."
+                  placeholderStyle={{color: 'rgba(255,255,255,0.7)'}}
+                  textStyle={{color: 'white'}}
+                  ArrowUpIconComponent={() => (
+                    <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                  )}
+                  ArrowDownIconComponent={() => (
+                    <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                  )}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  labelStyle={{color: 'white'}}
+                  listItemLabelStyle={{color: '#144272'}}
+                  listMode="MODAL"
+                />
+              </View>
+            </View>
+
+            {/* Customer Info */}
+            {selectedCust.name && (
+              <View style={styles.customerInfo}>
+                <View style={styles.customerCard}>
+                  <Text style={styles.customerLabel}>Customer Name</Text>
+                  <Text style={styles.customerValue}>{selectedCust.name}</Text>
+                </View>
+                <View style={styles.customerCard}>
+                  <Text style={styles.customerLabel}>Father Name</Text>
+                  <Text style={styles.customerValue}>
+                    {selectedCust.fatherName}
+                  </Text>
+                </View>
+                <View style={styles.customerCard}>
+                  <Text style={styles.customerLabel}>Address</Text>
+                  <Text style={styles.customerValue}>
+                    {selectedCust.address}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Checkout Summary Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Checkout Summary</Text>
+
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryLabelContainer}>
+                  <Icon
+                    name="trending-down"
+                    size={20}
+                    color="#fff"
+                    style={styles.summaryIcon}
+                  />
+                  <Text style={styles.summaryLabel}>Cost Total:</Text>
+                </View>
+                <Text style={styles.summaryValue}>
+                  PKR {checkoutDetails?.costtotal ?? '0.00'}
+                </Text>
+              </View>
+
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryLabelContainer}>
+                  <Icon
+                    name="trending-up"
+                    size={20}
+                    color="#fff"
+                    style={styles.summaryIcon}
+                  />
+                  <Text style={styles.summaryLabel}>Sale Total:</Text>
+                </View>
+                <Text style={styles.summaryValue}>
+                  PKR {checkoutDetails?.saletotal ?? '0.00'}
+                </Text>
+              </View>
+
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryLabelContainer}>
+                  <Icon
+                    name="account-balance"
+                    size={20}
+                    color="#4CAF50"
+                    style={styles.summaryIcon}
+                  />
+                  <Text style={[styles.summaryLabel, styles.profitLabel]}>
+                    Profit/Loss:
+                  </Text>
+                </View>
+                <Text style={[styles.summaryValue, styles.profitValue]}>
+                  PKR {checkoutDetails?.profitandloss ?? '0.00'}
+                </Text>
+              </View>
+
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryLabelContainer}>
+                  <Icon
+                    name="payment"
+                    size={20}
+                    color="#fff"
+                    style={styles.summaryIcon}
+                  />
+                  <Text style={styles.summaryLabel}>Payable:</Text>
+                </View>
+                <Text style={styles.summaryValue}>
+                  PKR {checkoutDetails?.payable ?? '0.00'}
+                </Text>
+              </View>
+            </View>
+          </View>
+
+          {/* Payment Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Payment Details</Text>
+
+            <View style={styles.formRow}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Paid Amount</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="0.00"
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  keyboardType="numeric"
+                  value={paidAmount}
+                  onChangeText={t => setPaidAmount(t)}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Order Date</Text>
+                <TouchableOpacity
+                  onPress={() => setShoworderDatePicker(true)}
+                  style={styles.dateInput}>
+                  <Icon name="event" size={20} color="white" />
+                  <Text style={styles.dateText}>
+                    {orderDate.toLocaleDateString()}
+                  </Text>
+                  <Icon name="keyboard-arrow-down" size={20} color="white" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {showorderDatePicker && (
+              <DateTimePicker
+                testID="startDatePicker"
+                value={orderDate}
+                mode="date"
+                is24Hour={true}
+                display="default"
+                onChange={onorderDateChange}
+              />
+            )}
+
+            <TouchableOpacity
+              style={styles.checkoutButton}
+              onPress={handleCheckout}>
+              <Icon name="shopping-cart-checkout" size={20} color="white" />
+              <Text style={styles.checkoutButtonText}>Complete Trade</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={{height: 100}} />
         </ScrollView>
 
-        {/*Add Customer Modal*/}
-        <Modal isVisible={modalVisible === 'AddCustomer'}>
-          <ScrollView
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: '60%',
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Add New Customer
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('');
-                  setAddForm(initialAddCustomer);
-                }}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
-                  }}
-                  source={require('../../../assets/cross.png')}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.row, {paddingHorizontal: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Customer Name"
-                value={addForm.name}
-                onChangeText={t => onChange('name', t)}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Father Name"
-                value={addForm.father_name}
-                onChangeText={t => onChange('father_name', t)}
-              />
-            </View>
-
-            <View style={[styles.row, {paddingHorizontal: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Email"
-                value={addForm.email}
-                onChangeText={t => onChange('email', t)}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Address"
-                value={addForm.address}
-                onChangeText={t => onChange('address', t)}
-              />
-            </View>
-
-            <View style={[styles.row, {paddingHorizontal: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact"
-                value={addForm.contact}
-                keyboardType="phone-pad"
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  onChange('contact', cleaned);
-                }}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="CNIC"
-                keyboardType="numeric"
-                maxLength={15}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 5 digits
-                  if (cleaned.length > 5) {
-                    cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                  }
-                  // Insert another dash after 7 more digits (total 13 digits: 5-7-1)
-                  if (cleaned.length > 13) {
-                    cleaned =
-                      cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                  }
-                  // Limit to 15 characters (including dashes)
-                  if (cleaned.length > 15) {
-                    cleaned = cleaned.slice(0, 15);
-                  }
-                  onChange('cnic', cleaned);
-                }}
-                value={addForm.cnic}
-              />
-            </View>
-
-            <View style={[styles.row, {paddingHorizontal: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 1"
-                value={addForm.sec_contact}
-                keyboardType="phone-pad"
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  onChange('sec_contact', cleaned);
-                }}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 2"
-                value={addForm.third_contact}
-                keyboardType="phone-pad"
-                maxLength={12}
-                onChangeText={t => {
-                  // Remove all non-digits and non-dash
-                  let cleaned = t.replace(/[^0-9-]/g, '');
-                  // Remove existing dashes for formatting
-                  cleaned = cleaned.replace(/-/g, '');
-                  // Insert dash after 4 digits
-                  if (cleaned.length > 4) {
-                    cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                  }
-                  // Limit to 12 characters (including dash)
-                  if (cleaned.length > 12) {
-                    cleaned = cleaned.slice(0, 12);
-                  }
-                  onChange('third_contact', cleaned);
-                }}
-              />
-            </View>
-
-            {/* Customer Type Dropdown - moved above Customer Area */}
-            <View
-              style={{
-                flexDirection: 'row',
-                paddingHorizontal: 10,
-              }}>
-              <DropDownPicker
-                items={transformedTypes}
-                open={custTypeOpen}
-                setOpen={setCustTypeOpen}
-                value={custType}
-                setValue={setCustType}
-                placeholder="Select Customer Type"
-                placeholderStyle={{color: '#144272'}}
-                textStyle={{color: '#144272'}}
-                ArrowUpIconComponent={() => (
-                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
-                )}
-                style={[
-                  styles.dropdown,
-                  {borderColor: '#144272', width: '100%'},
-                ]}
-                dropDownContainerStyle={{
-                  backgroundColor: 'white',
-                  borderColor: '#144272',
-                  width: '100%',
-                  zIndex: 1000,
-                  marginTop: 8,
-                  maxHeight: 120,
-                }}
-                labelStyle={{color: '#144272'}}
-                listItemLabelStyle={{color: '#144272'}}
-                listMode="SCROLLVIEW"
-              />
-            </View>
-
-            {/* Customer Area Dropdown */}
-            <View
-              style={{
-                flexDirection: 'row',
-                paddingHorizontal: 10,
-              }}>
-              <DropDownPicker
-                items={transformedAreas}
-                open={custAreaOpen}
-                setOpen={setCustAreaOpen}
-                value={custArea}
-                setValue={setCustArea}
-                placeholder="Select Customer Area"
-                placeholderStyle={{color: '#144272'}}
-                textStyle={{color: '#144272'}}
-                ArrowUpIconComponent={() => (
-                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
-                )}
-                style={[
-                  styles.dropdown,
-                  {
-                    borderColor: '#144272',
-                    width: '100%',
-                    zIndex: 999,
-                  },
-                ]}
-                dropDownContainerStyle={{
-                  backgroundColor: 'white',
-                  borderColor: '#144272',
-                  width: '100%',
-                  marginTop: 8,
-                  maxHeight: 120,
-                }}
-                labelStyle={{color: '#144272'}}
-                listItemLabelStyle={{color: '#144272'}}
-                listMode="SCROLLVIEW"
-              />
-            </View>
-
-            <TouchableOpacity onPress={addCustomer}>
-              <View
-                style={{
-                  backgroundColor: '#144272',
-                  height: 30,
-                  width: 120,
-                  margin: 10,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignSelf: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
+        {/* Search Results Overlay */}
+        {searchTerm.length > 0 && showResults && searchResults.length > 0 && (
+          <View style={styles.searchResultsOverlay}>
+            <FlatList
+              data={searchResults}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({item}) => (
+                <TouchableOpacity
+                  key={item.prod_id}
+                  style={styles.resultItem}
+                  onPress={() => {
+                    setSearchTerm(item.value);
+                    setProdDetails({
+                      barCode: item.value,
+                      costPrice: item.prod_costprice,
+                      name: item.prod_name,
+                      qty: '',
+                      salePrice: item.prod_price,
+                    });
+                    setSelectedProduct(item);
+                    setShowResults(false);
                   }}>
-                  Add Customer
+                  <Text style={styles.resultText}>
+                    {item.label.replace(/\n/g, ' ')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
+
+        {/* Floating Cart Button */}
+        <Animated.View
+          style={[
+            styles.floatingCartContainer,
+            {
+              transform: [
+                {
+                  scale: bounceAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 1.2],
+                  }),
+                },
+              ],
+            },
+          ]}>
+          <TouchableOpacity
+            style={styles.floatingCartBtn}
+            onPress={() => setModalVisible('Cart')}>
+            <Icon name="shopping-cart" size={24} color="white" />
+            {cartItems.length > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>{cartItems.length}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Cart Modal */}
+        <Modal
+          visible={modalVisible === 'Cart'}
+          animationType="slide"
+          transparent={false}>
+          <SafeAreaView style={styles.cartModalContainer}>
+            {/* Header */}
+            <View style={styles.cartModalHeader}>
+              <TouchableOpacity
+                onPress={() => setModalVisible('')}
+                style={styles.cartModalCloseBtn}>
+                <Icon name="arrow-back" size={24} color="#144272" />
+              </TouchableOpacity>
+              <Text style={styles.cartModalTitle}>Shopping Cart</Text>
+              <Text style={styles.cartItemCount}>{cartItems.length} items</Text>
+            </View>
+
+            {/* Empty Cart */}
+            {cartItems.length === 0 ? (
+              <View style={styles.emptyCartContainer}>
+                <Icon name="shopping-cart" size={80} color="#ccc" />
+                <Text style={styles.emptyCartText}>Your cart is empty</Text>
+                <Text style={styles.emptyCartSubtext}>
+                  Add some products to get started
                 </Text>
               </View>
-            </TouchableOpacity>
-          </ScrollView>
+            ) : (
+              <>
+                {/* Cart List */}
+                <FlatList
+                  data={cartItems}
+                  keyExtractor={(item, index) => index.toString()}
+                  style={styles.cartList}
+                  contentContainerStyle={styles.cartListContent}
+                  renderItem={({item}) => (
+                    <View style={styles.cartItemContainer}>
+                      <View style={styles.cartItemHeader}>
+                        <Text style={styles.cartProductName} numberOfLines={2}>
+                          {item.prod_name}
+                        </Text>
+                        <Text style={styles.quantityValue}>
+                          {item.tmptrd_qty}
+                        </Text>
+                      </View>
+
+                      <View style={styles.cartItemDetails}>
+                        <Text style={styles.detailLabel}>Cost Price:</Text>
+                        <Text style={styles.detailValue}>
+                          PKR {item.tmptrd_cost_price}
+                        </Text>
+                      </View>
+
+                      <View style={styles.cartItemDetails}>
+                        <Text style={styles.detailLabel}>Sale Price:</Text>
+                        <Text style={styles.detailValue}>
+                          PKR {item.tmptrd_sale_price}
+                        </Text>
+                      </View>
+
+                      <View style={styles.cartItemDetails}>
+                        <Text style={styles.detailLabel}>Sub Total:</Text>
+                        <Text
+                          style={[
+                            styles.detailValue,
+                            {fontSize: 16, color: '#4CAF50'},
+                          ]}>
+                          PKR {item.tmptrd_sub_total}
+                        </Text>
+                      </View>
+
+                      <View
+                        style={[
+                          styles.cartItemDetails,
+                          {justifyContent: 'flex-end'},
+                        ]}>
+                        <TouchableOpacity
+                          onPress={() => handleDelete(item.id)}
+                          style={styles.deleteBtn}>
+                          <Icon name="delete" size={20} color="#FF5252" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                />
+
+                {/* Summary Footer */}
+                <View style={styles.cartSummaryContainer}>
+                  <View style={styles.cartTotalRow}>
+                    <Text style={styles.cartTotalLabel}>Total Amount:</Text>
+                    <Text style={styles.cartTotalValue}>
+                      PKR {checkoutDetails?.saletotal ?? '0.00'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.proceedBtn}
+                    onPress={() => {
+                      setModalVisible('');
+                    }}>
+                    <Text style={styles.proceedBtnText}>
+                      Proceed to Checkout
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+          </SafeAreaView>
         </Modal>
 
-        {/*Add Supplier Modal*/}
-        <Modal isVisible={modalVisible === 'AddSupplier'}>
-          <ScrollView
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: '60%',
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Add New Supplier
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('');
-                  setSupAddForm(initialAddSupplier);
-                }}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
-                  }}
-                  source={require('../../../assets/cross.png')}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View
-              style={[
-                styles.row,
-                {marginLeft: 7, marginRight: 10, justifyContent: 'flex-start'},
-              ]}>
-              <TouchableOpacity
-                style={{flexDirection: 'row', alignItems: 'center'}}
-                activeOpacity={0.7}
-                onPress={() => {
-                  const newOptions = selectedOptions.includes('on')
-                    ? selectedOptions.filter(opt => opt !== 'on')
-                    : [...selectedOptions, 'on'];
-                  setSelectedOptions(newOptions);
-                }}>
-                <Checkbox.Android
-                  status={
-                    selectedOptions.includes('on') ? 'checked' : 'unchecked'
-                  }
-                  color="#144272"
-                  uncheckedColor="#144272"
-                />
-                <Text style={{color: '#144272', marginLeft: 8}}>
-                  Also a Customer
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.row, {paddingHorizontal: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Company Name"
-                value={supAddForm.comp_name}
-                onChangeText={text => handleAddInputChange('comp_name', text)}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Agency Name"
-                value={supAddForm.agencyname}
-                onChangeText={text => handleAddInputChange('agencyname', text)}
-              />
-            </View>
-
-            <View style={[styles.row, {paddingHorizontal: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Supplier Name"
-                value={supAddForm.supp_name}
-                onChangeText={text => handleAddInputChange('supp_name', text)}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 1"
-                keyboardType="numeric"
-                value={supAddForm.contact}
-                onChangeText={text => handleAddInputChange('contact', text)}
-              />
-            </View>
-
-            <View style={[styles.row, {paddingHorizontal: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 2"
-                keyboardType="numeric"
-                value={supAddForm.sec_contact}
-                onChangeText={text => handleAddInputChange('sec_contact', text)}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 3"
-                keyboardType="numeric"
-                value={supAddForm.third_contact}
-                onChangeText={text =>
-                  handleAddInputChange('third_contact', text)
-                }
-              />
-            </View>
-
-            <View style={[styles.row, {paddingHorizontal: 10}]}>
-              <TextInput
-                style={[styles.productinput, {width: '100%'}]}
-                placeholderTextColor={'#144272'}
-                placeholder="Address"
-                value={supAddForm.address}
-                onChangeText={text => handleAddInputChange('address', text)}
-              />
-            </View>
-
-            <View
-              style={{
-                flexDirection: 'row',
-                marginLeft: 10,
-                marginRight: 10,
-              }}>
-              <DropDownPicker
-                items={transformedAreas}
-                open={areaOpen}
-                setOpen={setAreaOpen}
-                value={areaValue}
-                setValue={setAreaValue}
-                placeholder="Select Supplier Area"
-                placeholderStyle={{color: '#144272'}}
-                textStyle={{color: '#144272'}}
-                ArrowUpIconComponent={() => (
-                  <Icon name="keyboard-arrow-up" size={18} color="#144272" />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon name="keyboard-arrow-down" size={18} color="#144272" />
-                )}
-                style={[
-                  styles.dropdown,
-                  {
-                    borderColor: '#144272',
-                    width: '100%',
-                  },
-                ]}
-                dropDownContainerStyle={{
-                  backgroundColor: 'white',
-                  borderColor: '#144272',
-                  width: '100%',
-                  zIndex: 1000,
-                  marginTop: 8,
-                  maxHeight: 130,
-                }}
-                labelStyle={{color: '#144272'}}
-                listItemLabelStyle={{color: '#144272'}}
-                listMode="SCROLLVIEW"
-              />
-            </View>
-
-            <TouchableOpacity onPress={handleAddSupplier}>
-              <View
-                style={{
-                  backgroundColor: '#144272',
-                  height: 30,
-                  width: 120,
-                  margin: 10,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignSelf: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Add Supplier
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </Modal>
+        <Toast />
       </ImageBackground>
     </SafeAreaView>
   );
@@ -1595,121 +929,472 @@ export default function Trade() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
   },
   background: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  headerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   headerTextContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  scrollContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
   section: {
-    borderColor: 'white',
-    height: 'auto',
-    borderRadius: 12,
-    elevation: 15,
-    padding: 10,
-    paddingHorizontal: 15,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  row: {
+  sectionTitle: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 16,
+  },
+  searchContainer: {
+    marginBottom: 16,
+  },
+  searchInputWrapper: {
     flexDirection: 'row',
-    marginTop: 12,
-    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  input: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
+    borderColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  searchIcon: {
+    marginRight: 12,
+  },
+  searchInput: {
+    flex: 1,
+    height: 40,
     color: 'white',
-    height: 38,
-    width: '100%',
+    fontSize: 16,
   },
-  inputSmall: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    height: 38,
-    width: '46%',
-    color: '#fff',
-  },
-  addButton: {
-    alignSelf: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    paddingVertical: 10,
-    marginTop: 12,
-    width: '100%',
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 38,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: '90%',
-  },
-  productinput: {
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 6,
-    padding: 8,
-    height: 38,
-    width: '46%',
-  },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  rowt: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  resultsContainer: {
+  searchResultsOverlay: {
     position: 'absolute',
-    top: 50,
-    left: 0,
-    right: 0,
-    backgroundColor: 'white',
-    borderRadius: 5,
-    zIndex: 100,
-    elevation: 10,
-    maxHeight: 'auto',
+    top: 180,
+    left: 16,
+    right: 16,
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    maxHeight: 280,
+    zIndex: 1000,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
   },
   resultItem: {
-    padding: 10,
+    padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   resultText: {
     color: '#144272',
+    fontSize: 14,
+  },
+  formRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  inputGroup: {
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  inputLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    color: 'white',
+    fontSize: 16,
+  },
+  infoDisplay: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: 'center',
+  },
+  infoDisplayText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
+    fontStyle: 'italic',
+  },
+  dropdown: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    minHeight: 48,
+  },
+  dropdownContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#144272',
+    marginTop: 8,
+    maxHeight: 200,
+  },
+  supplierInfo: {
+    marginTop: 16,
+  },
+  supplierCard: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  supplierLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  supplierValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  customerInfo: {
+    marginTop: 16,
+  },
+  customerCard: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  customerLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  customerValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  emptyCartContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  emptyCartText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
+    marginTop: 12,
+  },
+  cartItemContainer: {
+    backgroundColor: '#fff',
+    marginHorizontal: 15,
+    marginVertical: 8,
+    borderRadius: 10,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cartItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 5,
+  },
+  cartProductName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#144272',
+    flex: 1,
+  },
+  quantityValue: {
+    marginHorizontal: 15,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#144272',
+    minWidth: 30,
+    textAlign: 'center',
+  },
+  deleteBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,82,82,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartItemDetails: {
+    marginTop: 4,
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  detailLabel: {
+    fontSize: 13,
+    color: '#444',
+    marginBottom: 2,
+  },
+  detailValue: {
+    color: '#444',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  summaryCard: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.1)',
+  },
+  summaryLabelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  summaryIcon: {
+    marginRight: 8,
+  },
+  summaryLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  summaryValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  profitLabel: {
+    color: '#4CAF50',
+  },
+  profitValue: {
+    color: '#4CAF50',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    justifyContent: 'space-between',
+  },
+  dateText: {
+    color: 'white',
+    fontSize: 16,
+    flex: 1,
+    marginLeft: 8,
+  },
+  addToCartButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 16,
+    gap: 8,
+  },
+  addToCartText: {
+    color: '#144272',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  checkoutButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    paddingVertical: 16,
+    marginTop: 20,
+    gap: 8,
+    shadowColor: '#4CAF50',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  checkoutButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Floating Cart Button Styles
+  floatingCartContainer: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    zIndex: 1000,
+  },
+  floatingCartBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#FF5252',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  // Cart Modal Styles
+  cartModalContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  cartModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  cartModalCloseBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#f5f5f5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#144272',
+  },
+  cartItemCount: {
+    fontSize: 14,
+    color: '#666',
+  },
+  cartList: {
+    flex: 1,
+  },
+  cartListContent: {
+    padding: 16,
+  },
+  cartSummaryContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  cartTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  cartTotalLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+  },
+  cartTotalValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#144272',
+  },
+  proceedBtn: {
+    backgroundColor: '#144272',
+    borderRadius: 12,
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  proceedBtnText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  emptyCartSubtext: {
+    color: '#999',
+    fontSize: 14,
+    marginTop: 8,
   },
 });

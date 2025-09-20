@@ -4,11 +4,10 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
   Modal,
+  ScrollView,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -16,7 +15,8 @@ import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import {useUser} from '../../CTX/UserContext';
 
 interface Returns {
   salr_return_invoice_no: string;
@@ -40,11 +40,27 @@ interface InvoiceDetails {
 
 export default function SalesReturnList() {
   const {openDrawer} = useDrawer();
+  const {bussName, bussAddress} = useUser();
   const [saleReturns, setSaleReturns] = useState<Returns[]>([]);
   const [startDate, setStartDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [modalVisible, setModalVisible] = useState('');
   const [invcDetails, setInvcDetails] = useState<InvoiceDetails[]>([]);
+  const [endDate, setEndDate] = useState(new Date());
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const totalRecords = saleReturns.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const currentData = saleReturns.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
 
   const onStartDateChange = (
     event: DateTimePickerEvent,
@@ -54,9 +70,6 @@ export default function SalesReturnList() {
     setShowStartDatePicker(false);
     setStartDate(currentDate);
   };
-
-  const [endDate, setEndDate] = useState(new Date());
-  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
 
   const onEndDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     const currentDate = selectedDate || endDate;
@@ -87,7 +100,6 @@ export default function SalesReturnList() {
         invoice: inv,
       });
       setInvcDetails(res.data.return_detail);
-      console.log(invcDetails);
     } catch (error) {
       console.log(error);
     }
@@ -103,312 +115,384 @@ export default function SalesReturnList() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        {/* Topbar */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{width: 30, height: 30, tintColor: 'white'}}
-            />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
+
           <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Return List
-            </Text>
+            <Text style={styles.headerTitle}>Return List</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
+            onPress={() => {}}
+            disabled>
+            <Icon name="mail" size={24} color="transparent" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Date Selection */}
+        <View style={styles.dateContainer}>
+          <View style={styles.dateInputWrapper}>
+            <Text style={styles.dateLabel}>From Date</Text>
+            <TouchableOpacity
+              style={styles.dateInputBox}
+              onPress={() => setShowStartDatePicker(true)}>
+              <Text style={styles.dateText}>
+                {startDate.toLocaleDateString('en-GB')}
+              </Text>
+              <Icon name="calendar" size={20} color="#144272" />
+            </TouchableOpacity>
+            {showStartDatePicker && (
+              <DateTimePicker
+                testID="startDatePicker"
+                value={startDate}
+                mode="date"
+                is24Hour={true}
+                display="default"
+                onChange={onStartDateChange}
+              />
+            )}
+          </View>
+
+          <View style={styles.dateInputWrapper}>
+            <Text style={styles.dateLabel}>To Date</Text>
+            <TouchableOpacity
+              style={styles.dateInputBox}
+              onPress={() => setShowEndDatePicker(true)}>
+              <Text style={styles.dateText}>
+                {endDate.toLocaleDateString('en-GB')}
+              </Text>
+              <Icon name="calendar" size={20} color="#144272" />
+            </TouchableOpacity>
+            {showEndDatePicker && (
+              <DateTimePicker
+                testID="endDatePicker"
+                value={endDate}
+                mode="date"
+                is24Hour={true}
+                display="default"
+                onChange={onEndDateChange}
+              />
+            )}
           </View>
         </View>
 
-        <ScrollView
-          style={{
-            marginBottom: 10,
-          }}>
-          <View style={styles.dateContainer}>
-            <View style={styles.dateInput}>
-              <Text style={styles.label}>From</Text>
-
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  borderRadius: 5,
-                  borderColor: 'white',
-                }}>
-                <Text style={{marginLeft: 10, color: 'white'}}>
-                  {`${startDate.toLocaleDateString()}`}
-                </Text>
-                <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-                  <Image
-                    style={{
-                      height: 20,
-                      width: 20,
-                      resizeMode: 'stretch',
-                      alignItems: 'center',
-                      marginLeft: 35,
-                      tintColor: 'white',
-                    }}
-                    source={require('../../../assets/calendar.png')}
-                  />
-                  {showStartDatePicker && (
-                    <DateTimePicker
-                      testID="startDatePicker"
-                      value={startDate}
-                      mode="date"
-                      is24Hour={true}
-                      display="default"
-                      onChange={onStartDateChange}
-                    />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.dateInput}>
-              <Text style={styles.label}>To</Text>
-
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  borderRadius: 5,
-                  borderColor: 'white',
-                }}>
-                <Text
-                  style={{
-                    marginLeft: 10,
-                    color: 'white',
-                  }}>
-                  {`${endDate.toLocaleDateString()}`}
-                </Text>
-                <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-                  <Image
-                    style={{
-                      height: 20,
-                      width: 20,
-                      resizeMode: 'stretch',
-                      alignItems: 'center',
-                      marginLeft: 35,
-                      tintColor: 'white',
-                    }}
-                    source={require('../../../assets/calendar.png')}
-                  />
-                  {showEndDatePicker && (
-                    <DateTimePicker
-                      testID="endDatePicker"
-                      value={endDate}
-                      mode="date"
-                      is24Hour={true}
-                      display="default"
-                      onChange={onEndDateChange}
-                      textColor="white"
-                      accentColor="white"
-                    />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-
+        {/* Flatlist */}
+        <View>
           <FlatList
-            data={saleReturns}
+            data={currentData}
             keyExtractor={(item, index) => index.toString()}
-            scrollEnabled={false}
-            renderItem={({item}) => (
-              <ScrollView
-                style={{
-                  padding: 5,
-                }}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text
-                      style={{
-                        color: '#144272',
-                        fontWeight: 'bold',
-                        marginLeft: 5,
-                        marginTop: 5,
-                      }}>
-                      {item.salr_return_invoice_no}
-                    </Text>
-
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'center',
-                      }}>
-                      <TouchableOpacity
-                        style={{
-                          paddingHorizontal: 10,
-                          paddingVertical: 5,
-                          borderRadius: 5,
-                          marginRight: 10,
-                        }}
-                        onPress={() => {
-                          setModalVisible('View');
-                          getOrderInvoice(item.salr_return_invoice_no);
-                        }}>
-                        <Icon name="receipt" size={18} color="#144272" />
-                      </TouchableOpacity>
+            renderItem={({item}) => {
+              return (
+                <View style={styles.card}>
+                  {/* Header Row */}
+                  <View style={styles.headerRow}>
+                    <View style={styles.avatarBox}>
+                      <Text style={styles.avatarText}>
+                        {item.salr_return_invoice_no?.charAt(0) || 'R'}
+                      </Text>
                     </View>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.name}>
+                        {item.salr_return_invoice_no}
+                      </Text>
+                      <Text style={styles.subText}>
+                        {new Date(item.created_at).toLocaleDateString('en-US', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })}
+                      </Text>
+                    </View>
+
+                    {/* View Action */}
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('View');
+                        getOrderInvoice(item.salr_return_invoice_no);
+                      }}>
+                      <Icon
+                        name="receipt"
+                        size={20}
+                        color={'#144272'}
+                        style={{marginLeft: 10}}
+                      />
+                    </TouchableOpacity>
                   </View>
 
-                  <View style={styles.infoRow}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Date:</Text>
-                      <Text style={styles.text}>
-                        {new Date(item.created_at)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-')}
-                      </Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={[styles.value, {marginBottom: 5}]}>
-                        Return Amount:
-                      </Text>
-                      <Text style={[styles.value, {marginBottom: 5}]}>
+                  {/* Info Section */}
+                  <View style={styles.infoBox}>
+                    <View style={styles.infoRow}>
+                      <View style={styles.labelRow}>
+                        <Icon name="cash-multiple" size={16} color="#144272" />
+                        <Text style={styles.infoText}>Return Amount:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
                         {item.salr_return_amount}
                       </Text>
                     </View>
                   </View>
                 </View>
-              </ScrollView>
-            )}
+              );
+            }}
             ListEmptyComponent={
-              <Text
-                style={{
-                  flex: 1,
-                  color: 'white',
-                  textAlign: 'center',
-                  justifyContent: 'center',
-                }}>
-                No record present in the database for this Date range!
-              </Text>
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>
+                  No record present in the database for this Date range!
+                </Text>
+              </View>
             }
+            contentContainerStyle={{paddingBottom: 280, paddingTop: 10}}
           />
-        </ScrollView>
+        </View>
+      </ImageBackground>
 
-        {/* View Modal */}
-        <Modal
-          visible={modalVisible === 'View'}
-          transparent
-          animationType="slide">
-          <View style={styles.overlay}>
-            <View style={styles.modal}>
-              <Text style={styles.title}>Return Receipt</Text>
-              <Text style={styles.subtitle}>Sale Return Detail</Text>
+      {/* Pagination Controls */}
+      {totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => prev - 1)}
+            style={[
+              styles.pageButton,
+              currentPage === 1 && styles.pageButtonDisabled,
+            ]}>
+            <Text
+              style={[
+                styles.pageButtonText,
+                currentPage === 1 && styles.pageButtonTextDisabled,
+              ]}>
+              Prev
+            </Text>
+          </TouchableOpacity>
 
-              <View style={styles.modalRow}>
-                <Text style={styles.modalLabel}>Invoice No: </Text>
-                <Text style={styles.modalValue}>{'In'}</Text>
-                <Text style={[styles.modalLabel, {marginLeft: 20}]}>
-                  Date:{' '}
-                </Text>
-                <Text style={styles.modalValue}>
-                  {new Date(invcDetails[0]?.created_at)
-                    .toLocaleDateString('en-GB', {
-                      day: '2-digit',
-                      month: '2-digit',
-                      year: 'numeric',
-                    })
-                    .replace(/ /g, '-')}
-                </Text>
+          <View style={styles.pageIndicator}>
+            <Text style={styles.pageIndicatorText}>
+              Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+              {totalPages}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() => setCurrentPage(prev => prev + 1)}
+            style={[
+              styles.pageButton,
+              currentPage === totalPages && styles.pageButtonDisabled,
+            ]}>
+            <Text
+              style={[
+                styles.pageButtonText,
+                currentPage === totalPages && styles.pageButtonTextDisabled,
+              ]}>
+              Next
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* View Modal */}
+      <Modal
+        visible={modalVisible === 'View'}
+        animationType="slide"
+        transparent
+        presentationStyle="overFullScreen">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Modal Handle */}
+            <View style={styles.modalHandle} />
+
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.headerLeft}>
+                <View style={styles.invoiceIconContainer}>
+                  <Icon name="receipt" size={24} color="#144272" />
+                </View>
+                <View>
+                  <Text style={styles.modalTitle}>Sales Return</Text>
+                  <Text style={styles.modalSubtitle}>Return Details</Text>
+                </View>
               </View>
-
-              <View style={{marginTop: 10}}>
-                <Text style={styles.info}>
-                  Customer: {invcDetails[0]?.cust_name}
-                </Text>
-                <Text style={styles.info}>
-                  Father Name: {invcDetails[0]?.cust_fathername}
-                </Text>
-                <Text style={styles.info}>
-                  Contact: {invcDetails[0]?.cust_contact}
-                </Text>
-                <Text style={styles.info}>
-                  Address: {invcDetails[0]?.cust_address}
-                </Text>
-              </View>
-
-              <View style={styles.tableHeader}>
-                <Text style={[styles.cell, {flex: 0.5}]}>Sr#</Text>
-                <Text style={[styles.cell, {flex: 2}]}>Product Name</Text>
-                <Text style={styles.cell}>Return Qty</Text>
-                <Text style={styles.cell}>Price</Text>
-                <Text style={styles.cell}>Total Price</Text>
-              </View>
-
-              <FlatList
-                data={invcDetails}
-                keyExtractor={(item, index) => index.toString()}
-                style={{maxHeight: 200}}
-                renderItem={({item, index}) => (
-                  <View style={styles.tableRow}>
-                    <Text style={[styles.cell, {flex: 0.5}]}>{index + 1}</Text>
-                    <Text style={[styles.cell, {flex: 2}]}>
-                      {item.prod_name}
-                    </Text>
-                    <Text style={styles.cell}>{item?.salrd_return_qty}</Text>
-                    <Text style={styles.cell}>
-                      {Number(item?.salrd_price).toFixed(2)}
-                    </Text>
-                    <Text style={styles.cell}>{item?.salrd_total_price}</Text>
-                  </View>
-                )}
-              />
-
-              <View style={styles.tableRow}>
-                <Text style={[styles.cell, {flex: 2, fontWeight: 'bold'}]}>
-                  Total Qty
-                </Text>
-                <Text style={[styles.cell]}></Text>
-                <Text style={[styles.cell, {fontWeight: 'bold'}]}>
-                  {invcDetails[0]?.salrd_return_qty}
-                </Text>
-                <Text style={[styles.cell]}></Text>
-                <Text style={[styles.cell, {fontWeight: 'bold'}]}>
-                  {Number(invcDetails[0]?.salrd_total_price).toFixed(2)}
-                </Text>
-              </View>
-
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Return Total:</Text>
-                <Text style={styles.totalValue}>
-                  {Number(invcDetails[0]?.salrd_total_price).toFixed(2)}
-                </Text>
-              </View>
-
               <TouchableOpacity
                 onPress={() => {
                   setModalVisible('');
+                  setInvcDetails([]);
                 }}
                 style={styles.closeButton}>
-                <Text style={{color: 'white', fontWeight: 'bold'}}>Close</Text>
+                <Icon name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
+
+            <ScrollView
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}>
+              {/* Company Info Card */}
+              <View style={styles.companyCard}>
+                <View style={styles.companyHeader}>
+                  <Text style={styles.companyName}>{bussName ?? 'N/A'}</Text>
+                </View>
+                <Text style={styles.companyAddress}>
+                  {bussAddress ?? 'N/A'}
+                </Text>
+              </View>
+
+              {/* Return Info Grid */}
+              <View style={styles.orderInfoGrid}>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Return #</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails[0]?.salr_cust_id || 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Date</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails[0]?.created_at
+                      ? new Date(invcDetails[0].created_at).toLocaleDateString(
+                          'en-US',
+                          {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          },
+                        )
+                      : 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Customer</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails[0]?.cust_name || 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Father Name</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails[0]?.cust_fathername || 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Contact</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails[0]?.cust_contact || 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Address</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails[0]?.cust_address || 'N/A'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Return Table Section */}
+              <View style={styles.tableSection}>
+                <Text style={styles.sectionTitle}>Return Items</Text>
+
+                {/* Table Container */}
+                <View style={styles.tableContainer}>
+                  {/* Table Header */}
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, styles.col1]}>
+                      Sr#
+                    </Text>
+                    <Text style={[styles.tableHeaderText, styles.col2]}>
+                      Product
+                    </Text>
+                    <Text style={[styles.tableHeaderText, styles.col3]}>
+                      Qty
+                    </Text>
+                    <Text style={[styles.tableHeaderText, styles.col4]}>
+                      Price
+                    </Text>
+                    <Text style={[styles.tableHeaderText, styles.col5]}>
+                      Total
+                    </Text>
+                  </View>
+
+                  {/* Table Rows */}
+                  <FlatList
+                    data={invcDetails}
+                    keyExtractor={(item, index) => index.toString()}
+                    renderItem={({item, index}) => (
+                      <View
+                        style={[
+                          styles.tableRow,
+                          index % 2 === 0
+                            ? styles.tableRowEven
+                            : styles.tableRowOdd,
+                        ]}>
+                        <Text style={[styles.tableCell, styles.col1]}>
+                          {index + 1}
+                        </Text>
+                        <Text
+                          style={[styles.tableCell, styles.col2]}
+                          numberOfLines={2}>
+                          {item.prod_name || item.salrd_prod_name}
+                        </Text>
+                        <Text style={[styles.tableCell, styles.col3]}>
+                          {item.salrd_return_qty}
+                        </Text>
+                        <Text style={[styles.tableCell, styles.col4]}>
+                          {Number(item.salrd_price || '0').toFixed(2)}
+                        </Text>
+                        <Text style={[styles.tableCell, styles.col5]}>
+                          {Number(item.salrd_total_price || '0').toFixed(2)}
+                        </Text>
+                      </View>
+                    )}
+                    scrollEnabled={false}
+                  />
+                </View>
+              </View>
+
+              {/* Return Totals */}
+              <View style={styles.totalsSection}>
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Total Qty:</Text>
+                  <Text style={styles.totalValue}>
+                    {invcDetails.reduce(
+                      (sum, item) => sum + Number(item.salrd_return_qty || '0'),
+                      0,
+                    )}
+                  </Text>
+                </View>
+                <View style={[styles.totalRow, styles.pendingTotalRow]}>
+                  <Text style={[styles.totalLabel, styles.pendingLabel]}>
+                    Return Total:
+                  </Text>
+                  <Text style={[styles.totalValue, styles.pendingValue]}>
+                    PKR{' '}
+                    {invcDetails
+                      .reduce(
+                        (sum, item) =>
+                          sum + Number(item.salrd_total_price || '0'),
+                        0,
+                      )
+                      .toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Footer */}
+              <View style={styles.modalFooter}>
+                <Text style={styles.thankYou}>Thank you for your visit</Text>
+                <View style={styles.developerInfo}>
+                  <Text style={styles.developerText}>
+                    Software Developed with ❤️ by
+                  </Text>
+                  <Text style={styles.companyContact}>
+                    Technic Mentors | +923111122144
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
           </View>
-        </Modal>
-      </ImageBackground>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -421,153 +505,474 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   headerTextContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  label: {
-    position: 'absolute',
-    top: -10,
-    left: 14,
-    fontSize: 10,
-    color: 'white',
+
+  // Pagination Component
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     backgroundColor: '#144272',
-    paddingHorizontal: 4,
-    borderRadius: 10,
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  dateContainer: {
-    flexDirection: 'row',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
     width: '100%',
-    justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
   },
-  dateInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    width: '46%',
-    borderRightWidth: 1,
-    borderLeftWidth: 1,
-    borderRadius: 5,
-    borderColor: 'white',
-    height: 38,
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    paddingHorizontal: 10,
+  },
+  pageIndicatorText: {
+    color: 'white',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
   },
 
-  // Modal Styling
-  overlay: {
+  // Flatlist styling
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    marginHorizontal: 10,
+    padding: 12,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#144272',
+  },
+  subText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  infoBox: {
+    marginTop: 10,
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 10,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  infoText: {
+    color: '#144272',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+
+  // Date Fields
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  dateInputWrapper: {
+    flex: 0.48,
+  },
+  dateLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  dateInputBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(20, 66, 114, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    height: 48,
+  },
+  dateText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#144272',
+  },
+
+  // Modal stying
+  modalOverlay: {
     flex: 1,
-    backgroundColor: '#00000099',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#FAFBFC',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '85%',
+    paddingBottom: 20,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#DDD',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  invoiceIconContainer: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#E8F4FD',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 2,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  modal: {
-    width: '90%',
+
+  // Company Card
+  companyCard: {
     backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 15,
-    elevation: 10,
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+    alignItems: 'flex-start',
   },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#144272',
-    marginVertical: 5,
-    textDecorationLine: 'underline',
-  },
-  modalRow: {
+  companyHeader: {
     flexDirection: 'row',
-    marginTop: 5,
+    justifyContent: 'space-between',
     alignItems: 'center',
-    flexWrap: 'wrap',
+    marginBottom: 4,
   },
-  modalLabel: {
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  modalValue: {
+  companyName: {
+    fontSize: 20,
+    fontWeight: '700',
     color: '#144272',
   },
-  info: {
-    marginTop: 2,
-    color: '#333',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    borderBottomWidth: 1,
-    marginTop: 10,
-    paddingBottom: 5,
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 5,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#ccc',
-  },
-  cell: {
-    flex: 1,
+  companyAddress: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '400',
     textAlign: 'center',
-    fontSize: 13,
-    color: '#444',
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 12,
+  },
+
+  // Info Grid
+  orderInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    marginTop: 16,
+  },
+  infoCard: {
+    width: '48%',
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 8,
+    margin: '1%',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  infoLabel: {
+    fontSize: 11,
+    color: '#888',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#1A1A1A',
+    fontWeight: '600',
+  },
+
+  // Totals Section
+  totalsSection: {
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pendingTotalRow: {
     borderTopWidth: 1,
-    paddingTop: 5,
+    borderTopColor: '#F0F0F0',
+    paddingTop: 12,
+    marginTop: 4,
+    marginBottom: 0,
   },
   totalLabel: {
-    fontWeight: 'bold',
-    fontSize: 15,
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
   },
   totalValue: {
-    fontWeight: 'bold',
-    fontSize: 15,
+    fontSize: 16,
+    color: '#1A1A1A',
+    fontWeight: '700',
   },
-  closeButton: {
-    backgroundColor: '#665df5',
-    padding: 8,
-    borderRadius: 5,
-    marginTop: 15,
+  pendingLabel: {
+    color: '#C62828',
+  },
+  pendingValue: {
+    color: '#C62828',
+    fontSize: 18,
+  },
+
+  // Footer
+  modalFooter: {
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    marginTop: 16,
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  thankYou: {
+    fontSize: 16,
+    color: '#144272',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  developerInfo: {
+    alignItems: 'center',
+  },
+  developerText: {
+    fontSize: 12,
+    color: '#888',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  companyContact: {
+    fontSize: 12,
+    color: '#144272',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+
+  // Table Section
+  tableSection: {
+    marginTop: 20,
+    marginHorizontal: 20,
+  },
+  tableContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#144272',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  tableHeaderText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    alignItems: 'center',
+  },
+  tableRowEven: {
+    backgroundColor: '#FAFAFA',
+  },
+  tableRowOdd: {
+    backgroundColor: 'white',
+  },
+  tableCell: {
+    fontSize: 11,
+    color: '#333',
+    textAlign: 'center',
+    paddingHorizontal: 2,
+  },
+
+  // Column widths
+  col1: {
+    flex: 0.2, // Sr#
+  },
+  col2: {
+    flex: 0.4, // Product
+  },
+  col3: {
+    flex: 0.2, // Qty
+  },
+  col4: {
+    flex: 0.2, // Price
+  },
+  col5: {
+    flex: 0.2, // Total
   },
 });

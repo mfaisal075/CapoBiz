@@ -267,7 +267,18 @@ export default function PurchaseReturnList() {
                   {/* Info Section */}
                   <View style={styles.infoBox}>
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoText}>Return Amount:</Text>
+                      {/* Left side: Icon + Label */}
+                      <View style={styles.labelRow}>
+                        <Icon
+                          name="payments"
+                          size={16}
+                          color={'#144272'}
+                          style={{marginRight: 6}}
+                        />
+                        <Text style={styles.infoText}>Return Amount:</Text>
+                      </View>
+
+                      {/* Right side: Value */}
                       <Text style={styles.infoValue}>
                         PKR {item.prchr_return_amount}
                       </Text>
@@ -662,6 +673,10 @@ const styles = StyleSheet.create({
     color: '#144272',
     fontSize: 13,
     fontWeight: '600',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 
   // Date Fields

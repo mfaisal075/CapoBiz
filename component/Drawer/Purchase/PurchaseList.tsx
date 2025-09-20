@@ -14,7 +14,6 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useDrawer} from '../../DrawerContext';
-import {useUser} from '../../CTX/UserContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 
@@ -59,7 +58,6 @@ interface InvoicePurchaseDetails {
 }
 
 export default function PurchaseList() {
-  const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [purchaseList, setPurchaseList] = useState<PurchaseList[]>([]);
   const [modalVisible, setModalVisible] = useState('');
@@ -234,7 +232,7 @@ export default function PurchaseList() {
                         fetchIncv(item.prch_invoice_no);
                       }}>
                       <Icon
-                        name="eye"
+                        name="receipt"
                         size={20}
                         color={'#144272'}
                         style={{marginLeft: 10}}
@@ -245,19 +243,30 @@ export default function PurchaseList() {
                   {/* Info Section */}
                   <View style={styles.infoBox}>
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoText}>Order Total:</Text>
+                      <View style={styles.labelRow}>
+                        <Icon name="cash-multiple" size={16} color="#144272" />
+                        <Text style={styles.infoText}>Order Total:</Text>
+                      </View>
                       <Text style={styles.infoValue}>
                         {item.prch_order_total}
                       </Text>
                     </View>
+
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoText}>Paid Amount:</Text>
+                      <View style={styles.labelRow}>
+                        <Icon name="cash-check" size={16} color="#144272" />
+                        <Text style={styles.infoText}>Paid Amount:</Text>
+                      </View>
                       <Text style={styles.infoValue}>
                         {item.prch_paid_amount}
                       </Text>
                     </View>
+
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoText}>Balance:</Text>
+                      <View style={styles.labelRow}>
+                        <Icon name="scale-balance" size={16} color="#144272" />
+                        <Text style={styles.infoText}>Balance:</Text>
+                      </View>
                       <Text style={styles.infoValue}>{item.prch_balance}</Text>
                     </View>
                   </View>
@@ -360,11 +369,11 @@ export default function PurchaseList() {
               <View style={styles.companyCard}>
                 <View style={styles.companyHeader}>
                   <Text style={styles.companyName}>
-                    {invcData?.config?.bus_name || 'Super Itefaq'}
+                    {invcData?.config?.bus_name || 'N/A'}
                   </Text>
                 </View>
                 <Text style={styles.companyAddress}>
-                  {invcData?.config?.bus_address || 'Mumtaz Market, Gujranwala'}
+                  {invcData?.config?.bus_address || 'N/A'}
                 </Text>
                 <Text style={styles.companyContact}>
                   {invcData?.config?.bus_contact1 || 'Contact: N/A'}
@@ -702,6 +711,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#1A1A1A',
     fontWeight: '600',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
 
   // Date Fields

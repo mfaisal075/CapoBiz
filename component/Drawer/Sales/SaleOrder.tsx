@@ -4,15 +4,15 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
   ScrollView,
   TextInput,
   FlatList,
   Modal,
+  Animated,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
@@ -105,6 +105,25 @@ export default function SaleOrder() {
   const [invoiceData, setInvoiceData] = useState<InvoiceData | null>(null);
   const [orderDetails, setOrderDetails] = useState<OrderDetails[]>([]);
   const [editForm, setEditForm] = useState<EditForm>(initialEditFrom);
+
+  // Animation for cart icon
+  const bounceAnim = useRef(new Animated.Value(0)).current;
+
+  const animateCartIcon = () => {
+    Animated.sequence([
+      Animated.timing(bounceAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+      Animated.timing(bounceAnim, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const onorderDateChange = (
     event: DateTimePickerEvent,
     selectedDate?: Date,
@@ -191,6 +210,7 @@ export default function SaleOrder() {
         setSelectedProduct(null);
         setProdName('');
         setProdStock('');
+        animateCartIcon();
         fetchAddToCartOrders();
       }
     } catch (error) {
@@ -280,7 +300,7 @@ export default function SaleOrder() {
     if (!currentVal) {
       Toast.show({
         type: 'error',
-        text1: 'Please Select Supplier First',
+        text1: 'Please Select Customer First',
         visibilityTime: 1500,
       });
       return;
@@ -297,7 +317,7 @@ export default function SaleOrder() {
 
       if (res.status === 200 && data.status === 200) {
         Toast.show({
-          type: 'error',
+          type: 'success',
           text1: 'Completed',
           text2: 'Order Completed Successfully!',
           visibilityTime: 1500,
@@ -400,419 +420,544 @@ export default function SaleOrder() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        {/* Topbar */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{width: 30, height: 30, tintColor: 'white'}}
-            />
+        {/* Modern Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
+
           <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Take Order
-            </Text>
+            <Text style={styles.headerTitle}>Take Order</Text>
           </View>
+
+          <TouchableOpacity
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
+            onPress={() => {}}
+            disabled>
+            <Icon name="receipt" size={24} color="transparent" />
+          </TouchableOpacity>
         </View>
 
-        <ScrollView
-          style={{
-            marginBottom: 10,
-            paddingHorizontal: 10,
-          }}>
+        <ScrollView style={styles.scrollContainer}>
+          {/* Product Search Section */}
           <View style={styles.section}>
-            <TextInput
-              style={[styles.input, {width: '100%'}]}
-              placeholderTextColor={'white'}
-              placeholder="Search Product..."
-              value={searchTerm}
-              onChangeText={handleSearch}
-            />
+            <Text style={styles.sectionTitle}>Search Product</Text>
 
-            {/* Search Result Container */}
-            {searchTerm.length > 0 &&
-              showResults &&
-              searchResults.length > 0 && (
-                <View style={styles.resultsContainer}>
-                  {searchResults.map((item: any) => (
-                    <TouchableOpacity
-                      key={item.prod_id}
-                      style={styles.resultItem}
-                      onPress={() => {
-                        setSearchTerm(item.value);
-                        setProdName(item.prod_name);
-                        setSelectedProduct(item);
-                        setProdBarCode(item.value);
-                        setProdStock(item.prod_qty);
-                        setProdQty('');
-                        setProdPrice(item.prod_price);
-                        setShowResults(false);
-                      }}>
-                      <Text style={styles.resultText}>{item.label}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              )}
-
-            <View style={[styles.row, {alignItems: 'center'}]}>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                {prodName ? prodName : 'Item Name'}
-              </Text>
-
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                {prodStock ? prodStock : 'Stock'}
-              </Text>
-            </View>
-
-            <View style={styles.row}>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                {prodBarCode ? prodBarCode : 'BarCode'}
-              </Text>
-
-              <TextInput
-                style={styles.inputSmall}
-                placeholderTextColor={'white'}
-                placeholder="Quantity"
-                keyboardType="numeric"
-                value={prodQty}
-                onChangeText={t => setProdQty(t)}
-              />
-            </View>
-
-            <View style={styles.row}>
-              <TextInput
-                style={[styles.inputSmall, {width: '46%'}]}
-                placeholderTextColor={'white'}
-                placeholder="Unit Price"
-                keyboardType="numeric"
-                value={prodPrice}
-                onChangeText={t => setProdPrice(t)}
-              />
-
-              <TouchableOpacity
-                style={styles.addButton}
-                onPress={saleOrderAddToCart}>
-                <Text style={styles.addButtonTxt}>Add To Cart</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={styles.section}>
-            <View style={[styles.row]}>
-              <Text style={styles.inputSmall}>Invoice No:</Text>
-
-              <View style={styles.dateInput}>
-                <Text style={{color: 'white'}}>
-                  {`${orderDate.toLocaleDateString()}`}
-                </Text>
-                <TouchableOpacity onPress={() => setShoworderDatePicker(true)}>
-                  <Image
-                    style={{
-                      height: 20,
-                      width: 20,
-                      resizeMode: 'stretch',
-                      alignItems: 'center',
-                      tintColor: 'white',
-                    }}
-                    source={require('../../../assets/calendar.png')}
-                  />
-                  {showorderDatePicker && (
-                    <DateTimePicker
-                      testID="startDatePicker"
-                      value={orderDate}
-                      mode="date"
-                      is24Hour={true}
-                      display="default"
-                      onChange={onorderDateChange}
-                    />
-                  )}
-                </TouchableOpacity>
+            <View style={styles.searchContainer}>
+              <View style={styles.searchInputWrapper}>
+                <Icon
+                  name="search"
+                  size={20}
+                  color="rgba(255,255,255,0.7)"
+                  style={styles.searchIcon}
+                />
+                <TextInput
+                  style={styles.searchInput}
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  placeholder="Search by name or barcode..."
+                  value={searchTerm}
+                  onChangeText={handleSearch}
+                />
               </View>
             </View>
 
-            <DropDownPicker
-              items={transformedCust}
-              open={Open}
-              setOpen={setOpen}
-              value={currentVal}
-              setValue={setCurrentVal}
-              placeholder="Select Customer"
-              placeholderStyle={{color: 'white'}}
-              textStyle={{color: 'white'}}
-              ArrowUpIconComponent={() => (
-                <Icon name="keyboard-arrow-up" size={18} color="#fff" />
-              )}
-              ArrowDownIconComponent={() => (
-                <Icon name="keyboard-arrow-down" size={18} color="#fff" />
-              )}
-              style={styles.dropdown}
-              dropDownContainerStyle={{
-                backgroundColor: 'white',
-                borderColor: '#144272',
-                width: '100%',
-                marginTop: 8,
-                maxHeight: 120,
-                zIndex: 1000,
-              }}
-              labelStyle={{color: 'white'}}
-              listItemLabelStyle={{color: '#144272'}}
-              listMode="SCROLLVIEW"
-            />
+            {/* Product Info Display */}
+            {selectedProduct && (
+              <View style={styles.productInfoContainer}>
+                <View style={styles.productInfoRow}>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Product Name</Text>
+                    <Text style={styles.infoValue}>{prodName || 'N/A'}</Text>
+                  </View>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Stock</Text>
+                    <Text style={styles.infoValue}>{prodStock || '0'}</Text>
+                  </View>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Barcode</Text>
+                  <Text style={styles.infoValue}>{prodBarCode || 'N/A'}</Text>
+                </View>
+              </View>
+            )}
 
-            <View style={[styles.row, {marginBottom: 5}]}>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                {currentVal
-                  ? transformedCust.find(c => c.value === currentVal)?.label ||
-                    'Customer Name'
-                  : 'Customer Name'}
-              </Text>
-              <Text style={[styles.inputSmall, {backgroundColor: 'gray'}]}>
-                {currentVal
-                  ? custData.find(c => c.id.toString() === currentVal)
-                      ?.cust_contact || 'Customer Number'
-                  : 'Customer Number'}
-              </Text>
+            {/* Form Fields */}
+            <View style={styles.formRow}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Quantity</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  placeholder="0"
+                  value={prodQty}
+                  onChangeText={setProdQty}
+                  keyboardType="numeric"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Unit Price</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholderTextColor="rgba(255,255,255,0.7)"
+                  placeholder="0.00"
+                  value={prodPrice}
+                  onChangeText={setProdPrice}
+                  keyboardType="decimal-pad"
+                />
+              </View>
             </View>
 
-            <View style={[styles.row, {marginBottom: 10}]}>
-              <Text
-                style={[
-                  styles.inputSmall,
-                  {width: '100%', backgroundColor: 'gray'},
-                ]}>
-                {currentVal
-                  ? custData.find(c => c.id.toString() === currentVal)
-                      ?.cust_address || 'Customer Address'
-                  : 'Customer Address'}
-              </Text>
-            </View>
+            <TouchableOpacity
+              style={styles.addToCartButton}
+              onPress={saleOrderAddToCart}>
+              <Icon
+                name="add-shopping-cart"
+                size={20}
+                color="#144272"
+                style={{marginRight: 8}}
+              />
+              <Text style={styles.addToCartText}>Add to Cart</Text>
+            </TouchableOpacity>
           </View>
 
-          <View>
-            <FlatList
-              data={addToCartOrders}
-              keyExtractor={item => item.prod_id.toString()}
-              scrollEnabled={false}
-              renderItem={({item}) => (
-                <View style={{padding: 5}}>
-                  <View style={styles.table}>
-                    <View style={styles.tablehead}>
-                      <Text
-                        style={{
-                          color: '#144272',
-                          fontWeight: 'bold',
-                          marginLeft: 5,
-                          marginTop: 5,
-                        }}>
-                        {item.prod_name}
-                      </Text>
+          {/* Order Details Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Order Details</Text>
 
-                      <View
-                        style={{flexDirection: 'row', alignItems: 'center'}}>
+            <View style={styles.formRow}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Order Date</Text>
+                <TouchableOpacity
+                  onPress={() => setShoworderDatePicker(true)}
+                  style={styles.dateInput}>
+                  <Icon name="event" size={20} color="white" />
+                  <Text style={styles.dateText}>
+                    {orderDate.toLocaleDateString()}
+                  </Text>
+                  <Icon name="keyboard-arrow-down" size={20} color="white" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={[styles.inputGroup, {zIndex: 1000}]}>
+                <Text style={styles.inputLabel}>Select Customer</Text>
+                <DropDownPicker
+                  items={transformedCust}
+                  open={Open}
+                  setOpen={setOpen}
+                  value={currentVal}
+                  setValue={setCurrentVal}
+                  placeholder="Customer"
+                  placeholderStyle={{color: 'rgba(255,255,255,0.7)'}}
+                  textStyle={{color: 'white'}}
+                  ArrowUpIconComponent={() => (
+                    <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                  )}
+                  ArrowDownIconComponent={() => (
+                    <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                  )}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  labelStyle={{color: 'white'}}
+                  listItemLabelStyle={{color: '#144272'}}
+                  listMode="MODAL"
+                />
+              </View>
+            </View>
+
+            {showorderDatePicker && (
+              <DateTimePicker
+                testID="orderDatePicker"
+                value={orderDate}
+                mode="date"
+                is24Hour={true}
+                display="default"
+                onChange={onorderDateChange}
+              />
+            )}
+
+            {/* Customer Info */}
+            {currentVal && (
+              <View style={styles.customerInfo}>
+                <View style={styles.customerCard}>
+                  <Text style={styles.customerLabel}>Customer Name</Text>
+                  <Text style={styles.customerValue}>
+                    {transformedCust.find(c => c.value === currentVal)?.label ||
+                      'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.customerCard}>
+                  <Text style={styles.customerLabel}>Contact Number</Text>
+                  <Text style={styles.customerValue}>
+                    {custData.find(c => c.id.toString() === currentVal)
+                      ?.cust_contact || 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.customerCard}>
+                  <Text style={styles.customerLabel}>Address</Text>
+                  <Text style={styles.customerValue}>
+                    {custData.find(c => c.id.toString() === currentVal)
+                      ?.cust_address || 'N/A'}
+                  </Text>
+                </View>
+              </View>
+            )}
+          </View>
+
+          {/* Checkout Button */}
+          <TouchableOpacity style={styles.checkoutBtn} onPress={completeOrder}>
+            <Icon name="receipt" size={20} color="white" />
+            <Text style={styles.checkoutBtnText}>Complete Order</Text>
+          </TouchableOpacity>
+
+          <View style={{height: 100}} />
+        </ScrollView>
+
+        {/* Search Results Overlay */}
+        {searchTerm.length > 0 && showResults && searchResults.length > 0 && (
+          <View style={styles.searchResultsOverlay}>
+            <FlatList
+              data={searchResults}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({item}) => (
+                <TouchableOpacity
+                  style={styles.resultItem}
+                  onPress={() => {
+                    setSearchTerm(item.value);
+                    setProdName(item.prod_name);
+                    setSelectedProduct(item);
+                    setProdBarCode(item.value);
+                    setProdStock(item.prod_qty);
+                    setProdQty('');
+                    setProdPrice(item.prod_price);
+                    setShowResults(false);
+                  }}>
+                  <Text style={styles.resultText}>
+                    {item.label.replace(/\n/g, ' ')}
+                  </Text>
+                </TouchableOpacity>
+              )}
+            />
+          </View>
+        )}
+
+        {/* Floating Cart Button */}
+        <Animated.View
+          style={[
+            styles.floatingCartContainer,
+            {
+              transform: [
+                {
+                  scale: bounceAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [1, 1.2],
+                  }),
+                },
+              ],
+            },
+          ]}>
+          <TouchableOpacity
+            style={styles.floatingCartBtn}
+            onPress={() => setModalVisible('Cart')}>
+            <Icon name="shopping-cart" size={24} color="white" />
+            {addToCartOrders.length > 0 && (
+              <View style={styles.cartBadge}>
+                <Text style={styles.cartBadgeText}>
+                  {addToCartOrders.length}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* Cart Modal */}
+        <Modal
+          visible={modalVisible === 'Cart'}
+          animationType="slide"
+          transparent={false}>
+          <SafeAreaView style={styles.cartModalContainer}>
+            {/* Header */}
+            <View style={styles.cartModalHeader}>
+              <TouchableOpacity
+                onPress={() => setModalVisible('')}
+                style={styles.cartModalCloseBtn}>
+                <Icon name="arrow-back" size={24} color="#144272" />
+              </TouchableOpacity>
+              <Text style={styles.cartModalTitle}>Shopping Cart</Text>
+              <Text style={styles.cartItemCount}>
+                {addToCartOrders.length} items
+              </Text>
+            </View>
+
+            {/* Empty Cart */}
+            {addToCartOrders.length === 0 ? (
+              <View style={styles.emptyCartContainer}>
+                <Icon name="shopping-cart" size={80} color="#ccc" />
+                <Text style={styles.emptyCartText}>Your cart is empty</Text>
+                <Text style={styles.emptyCartSubtext}>
+                  Add some products to get started
+                </Text>
+              </View>
+            ) : (
+              <>
+                {/* List */}
+                <FlatList
+                  data={addToCartOrders}
+                  keyExtractor={item => item.prod_id.toString()}
+                  style={styles.cartList}
+                  contentContainerStyle={styles.cartListContent}
+                  renderItem={({item}) => (
+                    <View style={styles.cartItemContainer}>
+                      <View style={styles.cartItemHeader}>
+                        <Text style={styles.cartProductName} numberOfLines={2}>
+                          {item.prod_name}
+                        </Text>
+                        <Text style={styles.quantityValue}>
+                          {item.prod_qty}
+                        </Text>
+                      </View>
+
+                      <View style={styles.cartItemDetails}>
+                        <Text style={styles.detailText}>
+                          Unit Price: Rs. {item.prod_unit_price}
+                        </Text>
+                        <Text style={styles.detailTextPrice}>
+                          Rs.{' '}
+                          {(
+                            parseFloat(item.prod_qty) *
+                            parseFloat(item.prod_retail_price)
+                          ).toFixed(2)}
+                        </Text>
+                      </View>
+
+                      <View style={styles.cartItemActions}>
                         <TouchableOpacity
                           onPress={() => {
                             getEditOrder(item.prod_id.toString());
                             setModalVisible('EditOrder');
-                          }}>
-                          <Icon
-                            name="edit"
-                            size={20}
-                            color="#144272"
-                            style={{
-                              alignSelf: 'center',
-                              marginRight: 10,
-                            }}
-                          />
+                          }}
+                          style={styles.editBtn}>
+                          <Icon name="edit" size={18} color="#2196F3" />
                         </TouchableOpacity>
                         <TouchableOpacity
-                          onPress={() => {
-                            removeAddToCart(item.prod_id);
-                          }}>
-                          <Icon
-                            name="delete"
-                            size={20}
-                            color="#B22222"
-                            style={{
-                              alignSelf: 'center',
-                              marginRight: 5,
-                            }}
-                          />
+                          onPress={() => removeAddToCart(item.prod_id)}
+                          style={styles.deleteBtn}>
+                          <Icon name="delete" size={18} color="#FF5252" />
                         </TouchableOpacity>
                       </View>
                     </View>
+                  )}
+                />
 
-                    <View style={styles.infoRow}>
-                      <View style={styles.rowt}>
-                        <Text style={styles.text}>Quantity:</Text>
-                        <Text style={styles.text}>{item.prod_qty}</Text>
-                      </View>
-                      <View style={styles.rowt}>
-                        <Text style={styles.text}>Purchase Price:</Text>
-                        <Text style={styles.text}>{item.prod_unit_price}</Text>
-                      </View>
-                      <View style={styles.rowt}>
-                        <Text style={styles.text}>Retail Price:</Text>
-                        <Text style={styles.text}>
-                          {item.prod_retail_price}
-                        </Text>
-                      </View>
-                      <View style={styles.rowt}>
-                        <Text style={styles.text}>Total Price:</Text>
-                        <Text style={styles.text}>
-                          {(
-                            parseFloat(item.prod_qty) *
-                            parseFloat(item.prod_cost_price)
-                          ).toFixed(2)}
-                        </Text>
-                      </View>
-                    </View>
+                {/* Summary Footer */}
+                <View style={styles.cartSummaryContainer}>
+                  <View style={styles.cartTotalRow}>
+                    <Text style={styles.cartTotalLabel}>Total Amount:</Text>
+                    <Text style={styles.cartTotalValue}>
+                      Rs. {orderTotal.toFixed(2)}
+                    </Text>
                   </View>
+                  <TouchableOpacity
+                    style={styles.proceedBtn}
+                    onPress={() => {
+                      setModalVisible('');
+                    }}>
+                    <Text style={styles.proceedBtnText}>
+                      Proceed to Checkout
+                    </Text>
+                  </TouchableOpacity>
                 </View>
-              )}
-            />
-          </View>
-        </ScrollView>
-
-        {/* Bottom Bar */}
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalText}>Total:</Text>
-          <Text style={styles.totalText}>{orderTotal}</Text>
-        </View>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignSelf: 'center',
-            justifyContent: 'center',
-            marginBottom: 1,
-          }}>
-          <TouchableOpacity onPress={completeOrder}>
-            <View
-              style={{
-                width: 80,
-                height: 30,
-                backgroundColor: 'white',
-                borderRadius: 10,
-                marginBottom: 10,
-              }}>
-              <Text
-                style={{
-                  textAlign: 'center',
-                  color: '#144272',
-                  marginTop: 5,
-                  fontWeight: 'bold',
-                }}>
-                Check Out
-              </Text>
-            </View>
-          </TouchableOpacity>
-        </View>
+              </>
+            )}
+          </SafeAreaView>
+        </Modal>
 
         {/* Invoice Modal */}
         <Modal
           visible={modalVisible === 'ordComplete'}
           animationType="slide"
-          transparent={true}>
-          <View style={styles.centeredView}>
-            <View style={styles.modalView}>
-              <ScrollView>
-                <Text style={styles.title}>Sale Invoice :</Text>
+          transparent
+          presentationStyle="overFullScreen">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              {/* Modal Handle */}
+              <View style={styles.modalHandle} />
 
-                <Text style={styles.shopName}>
-                  {invoiceData?.config?.bus_name}
-                </Text>
-                <Text style={styles.shopAddress}>
-                  {invoiceData?.config?.bus_address}
-                </Text>
-                <Text style={styles.phone}>
-                  {invoiceData?.config?.bus_contact1}
-                </Text>
-
-                <View style={styles.modalRow}>
-                  <Text>
-                    Receipt#: {invoiceData?.order?.salordd_invoice_no}
-                  </Text>
-                  <Text>
-                    {invoiceData?.order?.created_at
-                      ? new Date(
-                          invoiceData.order.created_at,
-                        ).toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                      : ''}
-                  </Text>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <View style={styles.headerLeft}>
+                  <View style={styles.invoiceIconContainer}>
+                    <Icon name="receipt" size={24} color="#144272" />
+                  </View>
+                  <View>
+                    <Text style={styles.modalTitle}>Sale Invoice</Text>
+                    <Text style={styles.modalSubtitle}>Invoice Details</Text>
+                  </View>
                 </View>
-
-                <Text>Customer: {invoiceData?.order?.cust_name}</Text>
-                <Text>Contact #: {invoiceData?.order?.cust_contact}</Text>
-                <Text>Address: {invoiceData?.order?.cust_address}</Text>
-
-                <View style={styles.tableHeader}>
-                  <Text style={styles.cell}>sr#</Text>
-                  <Text style={styles.cell}>Product</Text>
-                  <Text style={styles.cell}>Qty</Text>
-                  <Text style={styles.cell}>Price</Text>
-                </View>
-
-                <FlatList
-                  data={orderDetails}
-                  keyExtractor={(_, index) => index.toString()}
-                  renderItem={({item, index}) => (
-                    <View style={styles.tableRow}>
-                      <Text style={styles.cell}>{index + 1}</Text>
-                      <Text style={styles.cell}>{item.prod_name}</Text>
-                      <Text style={styles.cell}>
-                        {item.salordd_partial_qty}
-                      </Text>
-                      <Text style={styles.cell}>
-                        {parseFloat(item.salordd_sub_total).toFixed(2)}
-                      </Text>
-                    </View>
-                  )}
-                  scrollEnabled={false}
-                />
-
-                <View style={styles.totalRow}>
-                  <Text style={{fontWeight: 'bold'}}>Total Items</Text>
-                  <Text>{orderDetails.length}</Text>
-                  <Text>
-                    {orderDetails
-                      .reduce(
-                        (sum, item) =>
-                          sum + parseFloat(item.salordd_sub_total || '0'),
-                        0,
-                      )
-                      .toFixed(2)}
-                  </Text>
-                </View>
-
-                <Text style={styles.footerText}>
-                  Software Developed with love by{'\n'}TechnicMentors
-                </Text>
-
-                <Text style={styles.printIcon}>🖨 Print</Text>
-
                 <TouchableOpacity
-                  style={styles.closeButton}
                   onPress={() => {
                     setModalVisible('');
                     setInvoiceData(null);
                     setOrderDetails([]);
-                  }}>
-                  <Text style={styles.closeText}>Close</Text>
+                  }}
+                  style={styles.closeButton}>
+                  <Icon name="close" size={24} color="#666" />
                 </TouchableOpacity>
+              </View>
+
+              {/* Content */}
+              <ScrollView
+                style={styles.modalContent}
+                showsVerticalScrollIndicator={false}>
+                {/* Company Info Card */}
+                <View style={styles.companyCard}>
+                  <View style={styles.companyHeader}>
+                    <Text style={styles.companyName}>
+                      {invoiceData?.config?.bus_name || 'Business Name'}
+                    </Text>
+                  </View>
+                  <Text style={styles.companyAddress}>
+                    {invoiceData?.config?.bus_address || 'Business Address'}
+                  </Text>
+                  <Text style={styles.companyContact}>
+                    {invoiceData?.config?.bus_contact1 || 'Contact: N/A'}
+                  </Text>
+                </View>
+
+                {/* Order Info Grid */}
+                <View style={styles.orderInfoGrid}>
+                  <View style={styles.invcInfoCard}>
+                    <Text style={styles.invcInfoLabel}>Receipt #</Text>
+                    <Text style={styles.invcInfoValue}>
+                      {invoiceData?.order?.salordd_invoice_no ?? 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.invcInfoCard}>
+                    <Text style={styles.invcInfoLabel}>Date</Text>
+                    <Text style={styles.invcInfoValue}>
+                      {invoiceData?.order?.created_at
+                        ? new Date(
+                            invoiceData.order.created_at,
+                          ).toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                        : 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.invcInfoCard}>
+                    <Text style={styles.invcInfoLabel}>Customer</Text>
+                    <Text style={styles.invcInfoValue}>
+                      {invoiceData?.order?.cust_name ?? 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.invcInfoCard}>
+                    <Text style={styles.invcInfoLabel}>Contact #</Text>
+                    <Text style={styles.invcInfoValue}>
+                      {invoiceData?.order?.cust_contact ?? 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoCardFull}>
+                    <Text style={styles.invcInfoLabel}>Address</Text>
+                    <Text style={styles.invcInfoValue}>
+                      {invoiceData?.order?.cust_address ?? 'N/A'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Order Table Section */}
+                <View style={styles.tableSection}>
+                  <Text style={styles.invcSectionTitle}>Invoice Items</Text>
+                  <View style={styles.tableContainer}>
+                    {/* Table Header */}
+                    <View style={styles.invcTableHeader}>
+                      <Text style={[styles.tableHeaderText, styles.col1]}>
+                        #
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col2]}>
+                        Product
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col3]}>
+                        Qty
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col4]}>
+                        Price
+                      </Text>
+                    </View>
+
+                    {/* Table Rows */}
+                    <FlatList
+                      data={orderDetails}
+                      keyExtractor={(_, index) => index.toString()}
+                      renderItem={({item, index}) => (
+                        <View
+                          style={[
+                            styles.invcTableRow,
+                            index % 2 === 0
+                              ? styles.tableRowEven
+                              : styles.tableRowOdd,
+                          ]}>
+                          <Text style={[styles.tableCell, styles.col1]}>
+                            {index + 1}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col2]}>
+                            {item.prod_name}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col3]}>
+                            {item.salordd_partial_qty}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col4]}>
+                            {parseFloat(item.salordd_sub_total).toFixed(2)}
+                          </Text>
+                        </View>
+                      )}
+                      scrollEnabled={false}
+                    />
+                  </View>
+                </View>
+
+                {/* Totals */}
+                <View style={styles.totalsSection}>
+                  <View style={styles.invcTotalRow}>
+                    <Text style={styles.totalLabel}>Total Items:</Text>
+                    <Text style={styles.totalValue}>{orderDetails.length}</Text>
+                  </View>
+                  <View style={[styles.invcTotalRow, styles.pendingTotalRow]}>
+                    <Text style={[styles.totalLabel, styles.pendingLabel]}>
+                      Total Amount:
+                    </Text>
+                    <Text style={[styles.totalValue, styles.pendingValue]}>
+                      PKR{' '}
+                      {orderDetails
+                        .reduce(
+                          (sum, item) =>
+                            sum + parseFloat(item.salordd_sub_total || '0'),
+                          0,
+                        )
+                        .toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Footer */}
+                <View style={styles.modalFooter}>
+                  <Text style={styles.invoiceState}>Invoice State</Text>
+                  <Text style={styles.invcfooterText}>
+                    Sale Invoice Generated Successfully
+                  </Text>
+                  <Text style={styles.thankYou}>
+                    Thank you for your purchase
+                  </Text>
+                  <View style={styles.developerInfo}>
+                    <Text style={styles.developerText}>
+                      Software Developed with ❤️ by
+                    </Text>
+                    <Text style={styles.companyContact}>
+                      Technic Mentors | +923111122144
+                    </Text>
+                  </View>
+                </View>
               </ScrollView>
             </View>
           </View>
@@ -825,18 +970,12 @@ export default function SaleOrder() {
           animationType="fade">
           <View style={styles.overlay}>
             <View style={styles.editModalView}>
-              <View
-                style={[
-                  styles.header,
-                  {borderBottomColor: '#144272', borderBottomWidth: 0.8},
-                ]}>
-                <Text style={styles.headerText}>Order Detail</Text>
+              <View style={styles.editHeader}>
+                <Text style={styles.editHeaderText}>Update Order</Text>
                 <TouchableOpacity onPress={() => setModalVisible('')}>
-                  <Text style={[styles.closeText, {color: '#000'}]}>✕</Text>
+                  <Icon name="close" size={24} color="#666" />
                 </TouchableOpacity>
               </View>
-
-              <Text style={styles.editTitle}>Update Order</Text>
 
               <Text style={styles.editLabel}>Item name</Text>
               <TextInput
@@ -855,7 +994,7 @@ export default function SaleOrder() {
                 onChangeText={t => editOnChange('editProdQty', t)}
               />
 
-              <Text style={styles.label}>Unit Price</Text>
+              <Text style={styles.editLabel}>Unit Price</Text>
               <TextInput
                 style={styles.editInput}
                 keyboardType="numeric"
@@ -863,12 +1002,16 @@ export default function SaleOrder() {
                 onChangeText={t => editOnChange('editProdPrice', t)}
               />
 
-              <TouchableOpacity style={styles.button} onPress={updateOrder}>
-                <Text style={styles.buttonText}>Update Cart</Text>
+              <TouchableOpacity
+                style={styles.updateButton}
+                onPress={updateOrder}>
+                <Text style={styles.updateButtonText}>Update Cart</Text>
               </TouchableOpacity>
             </View>
           </View>
         </Modal>
+
+        <Toast />
       </ImageBackground>
     </SafeAreaView>
   );
@@ -877,147 +1020,422 @@ export default function SaleOrder() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#f8f9fa',
   },
   background: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   headerTextContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
   section: {
-    borderColor: 'white',
-    height: 'auto',
-    borderRadius: 12,
-    elevation: 15,
-    padding: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  row: {
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 16,
+  },
+  searchContainer: {
+    marginBottom: 16,
+    position: 'relative',
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 12,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    color: 'white',
+    fontSize: 16,
+    paddingVertical: 12,
+  },
+  productInfoContainer: {
+    marginBottom: 16,
+  },
+  productInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
+    marginBottom: 8,
+  },
+  infoCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+    width: '48%',
+  },
+  infoLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  infoValue: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  formRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  inputGroup: {
+    width: '48%',
+  },
+  inputLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginBottom: 6,
+    fontWeight: '500',
   },
   input: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    color: 'white',
-  },
-  inputSmall: {
-    width: '46%',
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    color: '#fff',
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: 'white',
-  },
-  addButton: {
-    backgroundColor: 'white',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 10,
-    width: '46%',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  addButtonTxt: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  dropdown: {
     borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 38,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: '100%',
-  },
-  text: {
-    marginLeft: 5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  rowt: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  totalContainer: {
-    padding: 7,
-    borderTopWidth: 1,
-    borderTopColor: 'white',
-    marginTop: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  totalText: {
-    color: 'white',
-    fontWeight: 'bold',
     fontSize: 16,
   },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
+  addToCartButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: 'white',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+  },
+  addToCartText: {
+    color: '#144272',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
   dateInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    borderTopWidth: 1,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    width: '46%',
-    borderRightWidth: 1,
-    borderLeftWidth: 1,
-    borderRadius: 6,
-    borderColor: '#fff',
-    height: 38,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    height: 48
   },
-  resultsContainer: {
-    position: 'absolute',
-    top: 50,
-    left: 0,
-    right: 0,
+  dateText: {
+    flex: 1,
+    color: 'white',
+    fontSize: 16,
+    marginLeft: 8,
+  },
+  dropdown: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    height: 45,
+  },
+  dropdownContainer: {
     backgroundColor: 'white',
-    borderRadius: 5,
-    zIndex: 100,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    maxHeight: 200,
+  },
+  customerInfo: {
+    marginTop: 16,
+  },
+  customerCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  customerLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  customerValue: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  checkoutBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#4CAF50',
+    borderRadius: 12,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    shadowColor: '#4CAF50',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    marginVertical: 10,
+  },
+  checkoutBtnText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+
+  // Search Results Overlay
+  searchResultsOverlay: {
+    position: 'absolute',
+    top: 180,
+    left: 20,
+    backgroundColor: 'white',
+    borderRadius: 10,
+    zIndex: 1000,
     elevation: 10,
-    maxHeight: 'auto',
+    maxHeight: 200,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
+    width: '90%',
   },
   resultItem: {
-    padding: 10,
+    padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#ccc',
+    borderBottomColor: '#f0f0f0',
   },
   resultText: {
     color: '#144272',
+    fontSize: 14,
   },
 
-  //Modal Styling
+  // Floating Cart
+  floatingCartContainer: {
+    position: 'absolute',
+    bottom: 30,
+    right: 20,
+    zIndex: 1000,
+  },
+  floatingCartBtn: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#144272',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  cartBadge: {
+    position: 'absolute',
+    top: -5,
+    right: -5,
+    backgroundColor: '#FF5252',
+    borderRadius: 12,
+    minWidth: 24,
+    height: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: 'white',
+  },
+  cartBadgeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+
+  // Cart Modal
+  cartModalContainer: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  cartModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    backgroundColor: 'white',
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  cartModalCloseBtn: {
+    padding: 5,
+  },
+  cartModalTitle: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#144272',
+    textAlign: 'center',
+  },
+  cartItemCount: {
+    fontSize: 14,
+    color: '#666',
+  },
+  cartList: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  cartListContent: {},
+  cartItemContainer: {
+    backgroundColor: '#fff',
+    marginHorizontal: 0,
+    marginVertical: 6,
+    borderRadius: 10,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  cartItemHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cartProductName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#144272',
+    flex: 1,
+    marginRight: 10,
+  },
+  quantityValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#144272',
+    backgroundColor: '#f0f8ff',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 15,
+    minWidth: 50,
+    textAlign: 'center',
+  },
+  cartItemDetails: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  detailText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  detailTextPrice: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  cartItemActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 15,
+  },
+  editBtn: {
+    padding: 8,
+    backgroundColor: '#e3f2fd',
+    borderRadius: 20,
+  },
+  deleteBtn: {
+    padding: 8,
+    backgroundColor: '#ffebee',
+    borderRadius: 20,
+  },
+  emptyCartContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyCartText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginTop: 10,
+  },
+  emptyCartSubtext: {
+    fontSize: 14,
+    color: '#777',
+    marginTop: 4,
+  },
+  cartSummaryContainer: {
+    padding: 20,
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  cartTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  cartTotalLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#144272',
+  },
+  cartTotalValue: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  proceedBtn: {
+    backgroundColor: '#144272',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  proceedBtnText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  // Invoice Modal (keep existing styles)
   centeredView: {
     flex: 1,
     backgroundColor: '#000000aa',
@@ -1083,19 +1501,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginTop: 10,
   },
-  closeButton: {
-    marginTop: 15,
-    backgroundColor: '#6666cc',
-    padding: 10,
-    borderRadius: 5,
-    alignSelf: 'center',
-  },
   closeText: {
     color: 'white',
     fontWeight: 'bold',
   },
 
-  //Edit Modal Styling
+  // Edit Modal
   overlay: {
     flex: 1,
     backgroundColor: '#00000055',
@@ -1105,57 +1516,347 @@ const styles = StyleSheet.create({
   editModalView: {
     width: '85%',
     backgroundColor: '#fff',
-    borderRadius: 8,
+    borderRadius: 12,
     padding: 20,
     elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 5,
   },
-  header: {
+  editHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 20,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
   },
-  headerText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  editCloseText: {
+  editHeaderText: {
     fontSize: 20,
-    color: '#888',
-  },
-  editTitle: {
-    marginTop: 15,
-    fontSize: 16,
-    fontWeight: '600',
+    fontWeight: 'bold',
+    color: '#144272',
   },
   editLabel: {
-    marginTop: 15,
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '500',
+    color: '#333',
+    marginTop: 15,
+    marginBottom: 5,
   },
   required: {
     color: 'red',
   },
   editInput: {
     borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 6,
-    padding: 10,
-    marginTop: 5,
-    fontSize: 14,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#333',
+    backgroundColor: '#fff',
   },
   disabledInput: {
-    backgroundColor: '#f2f2f2',
+    backgroundColor: '#f5f5f5',
     color: '#999',
   },
-  button: {
-    backgroundColor: '#28a745',
-    paddingVertical: 10,
-    borderRadius: 6,
+  updateButton: {
+    backgroundColor: '#4CAF50',
+    paddingVertical: 12,
+    borderRadius: 8,
     marginTop: 25,
     alignItems: 'center',
+    shadowColor: '#4CAF50',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  buttonText: {
+  updateButtonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+
+  // Modal Styling
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#FAFBFC',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '80%',
+    paddingBottom: 20,
+  },
+  modalContent: {
+    flex: 1,
+    backgroundColor: '#F9F9F9',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+  },
+
+  /* Handle */
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#DDD',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+
+  /* Header */
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  invoiceIconContainer: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#E8F4FD',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 2,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  /* Company Info */
+  companyCard: {
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: {width: 0, height: 2},
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  companyHeader: {
+    marginBottom: 8,
+  },
+  companyName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#144272',
+  },
+  companyAddress: {
+    fontSize: 14,
+    color: '#444',
+    marginBottom: 4,
+  },
+  companyContact: {
+    fontSize: 14,
+    color: '#666',
+  },
+
+  /* Info Grid */
+  orderInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 16,
+  },
+  invcInfoCard: {
+    width: '48%',
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    marginRight: '2%',
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowOffset: {width: 0, height: 1},
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  infoCardFull: {
+    width: '100%',
+    backgroundColor: '#FFF',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.03,
+    shadowOffset: {width: 0, height: 1},
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  invcInfoLabel: {
+    fontSize: 12,
+    color: '#777',
+    marginBottom: 4,
+  },
+  invcInfoValue: {
+    fontSize: 14,
     fontWeight: '600',
+    color: '#222',
+  },
+
+  /* Table */
+  tableSection: {
+    marginBottom: 16,
+  },
+  invcSectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: '#144272',
+  },
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: '#EEE',
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  invcTableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#144272',
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+  },
+  tableHeaderText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  invcTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+  },
+  tableRowEven: {
+    backgroundColor: '#FFF',
+  },
+  tableRowOdd: {
+    backgroundColor: '#FAFAFA',
+  },
+  tableCell: {
+    fontSize: 13,
+    color: '#222',
+  },
+
+  /* Table Columns */
+  col1: {
+    flex: 0.5,
+  },
+  col2: {
+    flex: 2,
+  },
+  col3: {
+    flex: 1,
+  },
+  col4: {
+    flex: 1.2,
+  },
+
+  /* Totals */
+  totalsSection: {
+    marginTop: 12,
+    marginBottom: 16,
+    backgroundColor: '#FFF',
+    borderRadius: 12,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowOffset: {width: 0, height: 1},
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  invcTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  totalLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+  },
+  totalValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#144272',
+  },
+  pendingTotalRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#EEE',
+    paddingTop: 8,
+    marginTop: 6,
+  },
+  pendingLabel: {
+    color: '#B00020',
+  },
+  pendingValue: {
+    color: '#B00020',
+    fontWeight: '700',
+  },
+
+  /* Footer */
+  modalFooter: {
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  invoiceState: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#144272',
+    marginBottom: 4,
+  },
+  invcfooterText: {
+    fontSize: 13,
+    color: '#444',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  thankYou: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+  },
+  developerInfo: {
+    alignItems: 'center',
+    marginTop: 6,
+  },
+  developerText: {
+    fontSize: 12,
+    color: '#777',
   },
 });

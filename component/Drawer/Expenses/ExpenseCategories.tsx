@@ -4,23 +4,24 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
   TextInput,
+  Modal,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import Modal from 'react-native-modal';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import LottieView from 'lottie-react-native';
 
 interface Categories {
   id: number;
   expc_name: string;
+  created_at: string;
 }
 
 export default function ExpenseCategories() {
@@ -31,6 +32,19 @@ export default function ExpenseCategories() {
   const [category, setCategory] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [selectedItem, setSelectedItem] = useState<number | null>(null);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const totalRecords = expenseCategories.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const currentData = expenseCategories.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
 
   // Fetch Expense Categories
   const fetchCategories = async () => {
@@ -170,363 +184,285 @@ export default function ExpenseCategories() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-            marginBottom: 15,
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Expense Categories
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Expense</Text>
           </View>
-          <TouchableOpacity onPress={() => setModalVisible('Add')}>
-            <Image
-              style={{
-                tintColor: 'white',
-                width: 18,
-                height: 18,
-                alignSelf: 'center',
-                marginRight: 5,
-              }}
-              source={require('../../../assets/add.png')}
-            />
+
+          <TouchableOpacity
+            onPress={() => {
+              setModalVisible('Add');
+            }}
+            style={[styles.headerBtn]}>
+            <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
         <View>
           <FlatList
-            data={expenseCategories}
+            data={currentData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <ScrollView
-                style={{
-                  padding: 5,
-                }}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text
-                      style={{
-                        color: 'white',
-                        fontWeight: 'bold',
-                        marginLeft: 5,
-                        marginTop: 5,
-                      }}>
-                      {item.expc_name}
+              <View style={styles.card}>
+                {/* Header Row */}
+                <View style={styles.headerRow}>
+                  {/* Avatar with first letter of category */}
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.expc_name?.charAt(0) || 'E'}
                     </Text>
+                  </View>
 
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'center',
+                  {/* Category Info */}
+                  <View style={{flex: 1}}>
+                    <Text style={styles.name}>{item.expc_name}</Text>
+                    <Text style={styles.subText}>Expense Category</Text>
+                  </View>
+
+                  {/* Actions */}
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('Edit');
+                        getEditCategoryData(item.id);
+                        setSelectedItem(item.id);
                       }}>
-                      <TouchableOpacity
-                        onPress={() => {
-                          setModalVisible('Edit');
-                          getEditCategoryData(item.id);
-                          setSelectedItem(item.id);
-                        }}>
-                        <Image
-                          style={{
-                            tintColor: 'white',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginTop: 8,
-                          }}
-                          source={require('../../../assets/edit.png')}
-                        />
-                      </TouchableOpacity>
+                      <Icon
+                        style={styles.actionIcon}
+                        name="pencil"
+                        size={20}
+                        color={'#144272'}
+                      />
+                    </TouchableOpacity>
 
-                      <TouchableOpacity
-                        onPress={() => {
-                          setModalVisible('Delete');
-                          setSelectedItem(item.id);
-                        }}>
-                        <Image
-                          style={{
-                            tintColor: 'white',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginRight: 5,
-                            marginTop: 8,
-                          }}
-                          source={require('../../../assets/delete.png')}
-                        />
-                      </TouchableOpacity>
-                    </View>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('Delete');
+                        setSelectedItem(item.id);
+                      }}>
+                      <Icon
+                        style={styles.actionIcon}
+                        name="delete"
+                        size={20}
+                        color={'#144272'}
+                      />
+                    </TouchableOpacity>
                   </View>
                 </View>
-              </ScrollView>
+
+                {/* Info Section */}
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="calendar-month"
+                        size={20}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Created At:</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {new Date(item.created_at).toLocaleDateString('en-US', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </Text>
+                  </View>
+                </View>
+              </View>
             )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 30}}>
-                <Text style={{color: 'white', fontSize: 16}}>
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>
                   No categories found.
                 </Text>
               </View>
             }
+            contentContainerStyle={{paddingBottom: 120}}
+            showsVerticalScrollIndicator={false}
           />
         </View>
 
         {/*Delete Category*/}
-        <Modal isVisible={modalVisible === 'Delete'}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: 'auto',
-              maxHeight: 220,
-              borderRadius: 5,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/info.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Are you sure?
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              You won't be able to revert this record!
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('');
-                  setSelectedItem(null);
-                }}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 100,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
+        <Modal
+          visible={modalVisible === 'Delete'}
+          transparent
+          animationType="fade">
+          <View style={styles.addCustomerModalOverlay}>
+            <View style={styles.deleteModalContainer}>
+              <View style={styles.delAnim}>
+                <LottieView
+                  style={{flex: 1}}
+                  source={require('../../../assets/warning.json')}
+                  autoPlay
+                  loop={false}
+                />
+              </View>
+
+              {/* Title */}
+              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
+
+              {/* Subtitle */}
+              <Text style={styles.deleteModalMessage}>
+                You won’t be able to revert this record!
+              </Text>
+
+              {/* Buttons */}
+              <View style={styles.deleteModalActions}>
+                <TouchableOpacity
+                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
+                  onPress={() => setModalVisible('')}>
+                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
                     Cancel
                   </Text>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
 
-              <TouchableOpacity onPress={handleDeleteCategory}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 100,
-                    height: 30,
-                    padding: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    Yes, delete it
-                  </Text>
-                </View>
+                <TouchableOpacity
+                  style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
+                  onPress={handleDeleteCategory}>
+                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Edit Category Modal */}
+        <Modal
+          visible={modalVisible === 'Edit'}
+          transparent
+          animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Edit Category</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setModalVisible('');
+                    setEditCategory('');
+                  }}
+                  style={styles.closeBtn}>
+                  <Icon name="close" size={20} color="#144272" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Form */}
+              <View style={styles.formRow}>
+                <Text style={styles.inputLabel}>Category Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter category name"
+                  placeholderTextColor="#999"
+                  value={editCategory}
+                  onChangeText={t => setEditCategory(t)}
+                />
+              </View>
+
+              {/* Submit */}
+              <TouchableOpacity
+                style={styles.submitBtn}
+                onPress={handleUpdateCategory}>
+                <Icon name="pencil" size={18} color="#fff" />
+                <Text style={styles.submitText}>Update</Text>
               </TouchableOpacity>
             </View>
           </View>
         </Modal>
 
-        {/*Edit Category*/}
-        <Modal isVisible={modalVisible === 'Edit'}>
-          <ScrollView
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 135,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Edit Category
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('');
-                  setEditCategory('');
-                }}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
+        {/* Add Category Modal */}
+        <Modal
+          visible={modalVisible === 'Add'}
+          transparent
+          animationType="slide">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Add New Category</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setModalVisible('');
+                    setCategory('');
                   }}
-                  source={require('../../../assets/cross.png')}
+                  style={styles.closeBtn}>
+                  <Icon name="close" size={20} color="#144272" />
+                </TouchableOpacity>
+              </View>
+
+              {/* Form */}
+              <View style={styles.formRow}>
+                <Text style={styles.inputLabel}>Category Name *</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter category name"
+                  placeholderTextColor="#999"
+                  value={category}
+                  onChangeText={t => setCategory(t)}
                 />
+              </View>
+
+              {/* Submit */}
+              <TouchableOpacity
+                style={styles.submitBtn}
+                onPress={handleAddCategory}>
+                <Icon name="plus" size={18} color="#fff" />
+                <Text style={styles.submitText}>Add</Text>
               </TouchableOpacity>
             </View>
-
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.search}
-                placeholderTextColor={'#144272'}
-                placeholder="Category Name"
-                value={editCategory}
-                onChangeText={t => setEditCategory(t)}
-              />
-            </View>
-            <TouchableOpacity onPress={handleUpdateCategory}>
-              <View
-                style={{
-                  alignSelf: 'center',
-                  backgroundColor: '#144272',
-                  height: 30,
-                  borderRadius: 10,
-                  width: 100,
-                  justifyContent: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Add Category
-                </Text>
-              </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </Modal>
-
-        {/*Add Category*/}
-        <Modal isVisible={modalVisible === 'Add'}>
-          {modalVisible === 'Add' ? <Toast /> : null}
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: 'auto',
-              maxHeight: 135,
-              borderRadius: 5,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Add New Category
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('');
-                  setCategory('');
-                }}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
-                  }}
-                  source={require('../../../assets/cross.png')}
-                />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.inputRow}>
-              <TextInput
-                style={styles.search}
-                placeholderTextColor={'#144272'}
-                placeholder="Category Name"
-                value={category}
-                onChangeText={t => setCategory(t)}
-              />
-            </View>
-            <TouchableOpacity onPress={handleAddCategory}>
-              <View
-                style={{
-                  alignSelf: 'center',
-                  backgroundColor: '#144272',
-                  height: 30,
-                  borderRadius: 10,
-                  width: 100,
-                  justifyContent: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Add Category
-                </Text>
-              </View>
-            </TouchableOpacity>
+            <Toast />
           </View>
         </Modal>
+
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
+                Next
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ImageBackground>
     </SafeAreaView>
   );
@@ -540,181 +476,291 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
-  headerTextContainer: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+
+  // Flatlist styling
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    marginHorizontal: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  name: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#144272',
+  },
+  subText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionIcon: {
+    tintColor: '#144272',
+    width: 20,
+    height: 20,
+    marginHorizontal: 4,
+  },
+  infoBox: {
+    marginTop: 10,
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 10,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  infoIcon: {
+    width: 18,
+    height: 18,
+    tintColor: '#144272',
+    marginRight: 6,
+  },
+  labelText: {
+    fontSize: 13,
+    color: '#144272',
+    fontWeight: '600',
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: '60%',
+    textAlign: 'right',
+  },
+
+  // Pagination Component
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#144272',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
+  },
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    paddingHorizontal: 10,
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
+  },
+
+  //Delete Modal
+  deleteModalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  deleteModalIcon: {
+    width: 60,
+    height: 60,
+    tintColor: '#144272',
+    marginBottom: 15,
+  },
+  deleteModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#144272',
+    marginBottom: 8,
+  },
+  deleteModalMessage: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  deleteModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  deleteModalBtn: {
+    flex: 1,
+    marginHorizontal: 5,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  deleteModalBtnText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  delAnim: {
+    width: 120,
+    height: 120,
+    marginBottom: 15,
+  },
+  addCustomerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+
+  // Edit and Add Modal styling
+  modalOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    paddingHorizontal: 16,
   },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
+  modalContainer: {
+    backgroundColor: '#fff',
+    width: '100%',
+    borderRadius: 12,
+    padding: 16,
+    elevation: 6,
   },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#144272',
   },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
+  closeBtn: {
+    padding: 4,
   },
-  infoRow: {
-    marginTop: 5,
+  formRow: {
+    marginBottom: 16,
   },
-  lastrow: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderBottomEndRadius: 10,
-    borderBottomLeftRadius: 10,
-  },
-  card: {
-    borderColor: '#144272',
-    backgroundColor: 'white',
-    height: 'auto',
-    borderRadius: 12,
-    elevation: 15,
-    marginBottom: 5,
-    padding: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#144272',
+    marginBottom: 6,
   },
   input: {
     borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    color: 'white',
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#333',
+    backgroundColor: '#f9f9f9',
   },
-  inputSmall: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: 'white',
-  },
-  addButton: {
-    marginLeft: 8,
-    alignSelf: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 60,
-  },
-  completeButton: {
-    marginTop: 16,
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 320,
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 35,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: 285,
-  },
-  inputRow: {
+  submitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-    justifyContent: 'space-between',
-    marginLeft: 10,
-    marginRight: 10,
-  },
-  search: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    height: 40,
-    color: '#000',
-  },
-  productinput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 6,
-    padding: 8,
-  },
-  cardContainer: {
-    margin: 20,
-    padding: 16,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-    paddingBottom: 24,
-    marginBottom: 40,
-  },
-  customerImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: '#144272',
-  },
-  noImageText: {
-    color: '#144272',
-    fontStyle: 'italic',
-  },
-  infoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  labl: {
-    width: '68%',
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 4,
-  },
-  valu: {
-    width: '68%',
-    marginBottom: 8,
-    color: '#144272',
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-  },
-  exportBtn: {
+    justifyContent: 'center',
     backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    paddingVertical: 12,
+    borderRadius: 8,
+    marginTop: 8,
   },
-  exportText: {
-    color: 'white',
-    fontWeight: 'bold',
+  submitText: {
+    color: '#fff',
+    fontWeight: '600',
+    marginLeft: 6,
   },
 });

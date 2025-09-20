@@ -8,6 +8,12 @@ interface UserContextProps {
   setUserName: (userName: string | '') => void;
   userEmail: string | '';
   setUserEmail: (userEmail: string | '') => void;
+  bussName: string | '';
+  setBussName: (bussName: string | '') => void;
+  bussAddress: string | '';
+  setBussAddress: (bussAddress: string | '') => void;
+  bussContact: string | '';
+  setBussContact: (bussContact: string | '') => void;
   setToken: (token: string | null) => void;
   refreshAddToCart: () => Promise<void>;
 }
@@ -18,6 +24,9 @@ export const UserProvider: React.FC<{children: ReactNode}> = ({children}) => {
   const [token, setToken] = useState<string | null>(null);
   const [userName, setUserName] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [bussName, setBussName] = useState('');
+  const [bussAddress, setBussAddress] = useState('');
+  const [bussContact, setBussContact] = useState('');
 
   const refreshAddToCart = async () => {
     if (!token) return;
@@ -40,6 +49,12 @@ export const UserProvider: React.FC<{children: ReactNode}> = ({children}) => {
         setUserName,
         userEmail,
         setUserEmail,
+        bussName,
+        setBussName,
+        bussAddress,
+        setBussAddress,
+        bussContact,
+        setBussContact,
         refreshAddToCart,
       }}>
       {children}

@@ -12,7 +12,7 @@ import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useUser} from '../../CTX/UserContext';
 
 type Product = {
@@ -160,33 +160,86 @@ export default function ReOrderProductStock() {
                 {/* Info */}
                 <View style={styles.infoBox}>
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Quantity:</Text>
+                    <View style={styles.infoLeft}>
+                      <Icon
+                        name="cube-outline"
+                        size={16}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.infoText}>Quantity:</Text>
+                    </View>
                     <Text style={styles.infoValue}>{qty}</Text>
                   </View>
+
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Reorder:</Text>
+                    <View style={styles.infoLeft}>
+                      <Icon
+                        name="reload"
+                        size={16}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.infoText}>Reorder:</Text>
+                    </View>
                     <Text style={styles.infoValue}>
                       {reorderedQty.toFixed(2)}
                     </Text>
                   </View>
+
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Cost Price:</Text>
+                    <View style={styles.infoLeft}>
+                      <Icon
+                        name="cash"
+                        size={16}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.infoText}>Cost Price:</Text>
+                    </View>
                     <Text style={styles.infoValue}>{costPrice.toFixed(2)}</Text>
                   </View>
+
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Total Cost:</Text>
+                    <View style={styles.infoLeft}>
+                      <Icon
+                        name="calculator"
+                        size={16}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.infoText}>Total Cost:</Text>
+                    </View>
                     <Text style={styles.infoValue}>
                       {itemTotalCost.toFixed(2)}
                     </Text>
                   </View>
+
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Retail Price:</Text>
+                    <View style={styles.infoLeft}>
+                      <Icon
+                        name="tag-outline"
+                        size={16}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.infoText}>Retail Price:</Text>
+                    </View>
                     <Text style={styles.infoValue}>
                       {retailPrice.toFixed(2)}
                     </Text>
                   </View>
+
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Total Retail:</Text>
+                    <View style={styles.infoLeft}>
+                      <Icon
+                        name="cash-multiple"
+                        size={16}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.infoText}>Total Retail:</Text>
+                    </View>
                     <Text style={styles.infoValue}>
                       {itemTotalRetail.toFixed(2)}
                     </Text>
@@ -356,6 +409,13 @@ const styles = StyleSheet.create({
   infoValue: {
     color: '#333',
     fontSize: 13,
+  },
+  infoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoIcon: {
+    marginRight: 6,
   },
 
   headerTextContainer: {

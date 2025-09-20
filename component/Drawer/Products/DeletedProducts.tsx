@@ -102,7 +102,7 @@ export default function DeletedProducts() {
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>UOMs</Text>
+            <Text style={styles.headerTitle}>Deleted Products</Text>
           </View>
 
           <TouchableOpacity
@@ -151,33 +151,73 @@ export default function DeletedProducts() {
                 {/* Info Section */}
                 <View style={styles.infoBox}>
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Barcode:</Text>
+                    <View style={styles.infoLeft}>
+                      <Icon
+                        name="barcode"
+                        size={16}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.infoText}>Barcode:</Text>
+                    </View>
                     <Text style={styles.infoValue}>
                       {item.prod_UPC_EAN || 'N/A'}
                     </Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Cost:</Text>
+                    <View style={styles.infoLeft}>
+                      <Icon
+                        name="cash"
+                        size={16}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.infoText}>Cost:</Text>
+                    </View>
                     <Text style={styles.infoValue}>{item.prod_costprice}</Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Retail Price:</Text>
+                    <View style={styles.infoLeft}>
+                      <Icon
+                        name="tag-outline"
+                        size={16}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.infoText}>Retail Price:</Text>
+                    </View>
                     <Text style={styles.infoValue}>
                       {item.prod_retailprice}
                     </Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Quantity:</Text>
+                    <View style={styles.infoLeft}>
+                      <Icon
+                        name="cube-outline"
+                        size={16}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.infoText}>Quantity:</Text>
+                    </View>
                     <Text style={styles.infoValue}>
                       {item?.prod_qty ?? '0'}
                     </Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Expiry:</Text>
+                    <View style={styles.infoLeft}>
+                      <Icon
+                        name="calendar-clock"
+                        size={16}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.infoText}>Expiry:</Text>
+                    </View>
                     <Text style={styles.infoValue}>
                       {item?.prod_expirydate ?? 'No expiry date'}
                     </Text>
@@ -192,7 +232,7 @@ export default function DeletedProducts() {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 110}}
+            contentContainerStyle={{paddingBottom: 120}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -383,7 +423,15 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 6,
+  },
+  infoLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  infoIcon: {
+    marginRight: 6,
   },
   infoText: {
     color: '#144272',

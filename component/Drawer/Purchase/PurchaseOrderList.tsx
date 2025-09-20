@@ -17,6 +17,7 @@ import {useDrawer} from '../../DrawerContext';
 import {useUser} from '../../CTX/UserContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
+import DropDownPicker from 'react-native-dropdown-picker';
 
 interface OrderList {
   id: number;
@@ -26,6 +27,7 @@ interface OrderList {
   pord_order_total: string;
   pord_status: string;
   pord_sup_id: number;
+  sup_name: string;
 }
 
 interface SingleOrder {
@@ -63,7 +65,7 @@ interface InvoiceOrders {
 }
 
 export default function PurchaseOrderList() {
-  const {token} = useUser();
+  const {token, bussName, bussAddress} = useUser();
   const [orderList, setOrderList] = useState<OrderList[]>([]);
   const {openDrawer} = useDrawer();
   const [modalVisible, setModalVisible] = useState('');
@@ -71,6 +73,8 @@ export default function PurchaseOrderList() {
   const [startDate, setStartDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [invoiceOrder, setInvoiceOrder] = useState<InvoiceOrders[]>([]);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [status, setStatus] = useState('Pending');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,6 +88,12 @@ export default function PurchaseOrderList() {
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
+
+  // Status Dropdown
+  const statusDropdown = [
+    {label: 'Pending', value: 'Pending'},
+    {label: 'Completed', value: 'Completed'},
+  ];
 
   const onStartDateChange = (
     event: DateTimePickerEvent,
@@ -109,7 +119,7 @@ export default function PurchaseOrderList() {
       const from = startDate.toISOString().split('T')[0];
       const to = endDate.toISOString().split('T')[0];
       const res = await axios.get(
-        `${BASE_URL}/fetchpurchaseorderlist?from=${from}&to=${to}&status=Purchase%20Order&_token=${token}`,
+        `${BASE_URL}/fetchpurchaseorderlist?from=${from}&to=${to}&status=${status}&_token=${token}`,
       );
 
       setOrderList(res.data.pucrhaseorders);
@@ -133,7 +143,7 @@ export default function PurchaseOrderList() {
 
   useEffect(() => {
     fetchOrders();
-  }, [startDate, endDate]);
+  }, [startDate, endDate, status]);
   return (
     <SafeAreaView style={styles.container}>
       <ImageBackground
@@ -204,6 +214,28 @@ export default function PurchaseOrderList() {
           </View>
         </View>
 
+        {/* Status Filter */}
+        <View style={{paddingHorizontal: 15, marginVertical: 8}}>
+          <DropDownPicker
+            items={statusDropdown}
+            open={statusOpen}
+            setOpen={setStatusOpen}
+            value={status}
+            setValue={setStatus}
+            placeholder="Select Category"
+            placeholderStyle={{color: '#666'}}
+            textStyle={{color: '#144272'}}
+            ArrowUpIconComponent={() => (
+              <Icon name="chevron-up" size={18} color="#144272" />
+            )}
+            ArrowDownIconComponent={() => (
+              <Icon name="chevron-down" size={18} color="#144272" />
+            )}
+            style={styles.dropdown}
+            dropDownContainerStyle={styles.dropDownContainer}
+          />
+        </View>
+
         {/* Flatlist */}
         <View>
           <FlatList
@@ -251,13 +283,20 @@ export default function PurchaseOrderList() {
                   {/* Info Section */}
                   <View style={styles.infoBox}>
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoText}>Supplier:</Text>
+                      <View style={styles.labelRow}>
+                        <Icon name="account-tie" size={16} color="#144272" />
+                        <Text style={styles.infoText}>Supplier:</Text>
+                      </View>
                       <Text style={styles.infoValue}>
-                        {item.pord_sup_id || 'N/A'}
+                        {item.sup_name || 'N/A'}
                       </Text>
                     </View>
+
                     <View style={styles.infoRow}>
-                      <Text style={styles.infoText}>Order Total:</Text>
+                      <View style={styles.labelRow}>
+                        <Icon name="cash-multiple" size={16} color="#144272" />
+                        <Text style={styles.infoText}>Order Total:</Text>
+                      </View>
                       <Text style={styles.infoValue}>
                         {item.pord_order_total}
                       </Text>
@@ -273,7 +312,7 @@ export default function PurchaseOrderList() {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 220, paddingTop: 10}}
+            contentContainerStyle={{paddingBottom: 280, paddingTop: 10}}
           />
         </View>
       </ImageBackground>
@@ -360,10 +399,10 @@ export default function PurchaseOrderList() {
               {/* Company Info Card */}
               <View style={styles.companyCard}>
                 <View style={styles.companyHeader}>
-                  <Text style={styles.companyName}>Super Itefaq</Text>
+                  <Text style={styles.companyName}>{bussName ?? 'N/A'}</Text>
                 </View>
                 <Text style={styles.companyAddress}>
-                  Mumtaz Market, Gujranwala
+                  {bussAddress ?? 'N/A'}
                 </Text>
               </View>
 
@@ -653,6 +692,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
 
   // Date Fields
   dateContainer: {
@@ -690,6 +734,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3,
     elevation: 3,
+    height: 48,
   },
   dateText: {
     fontSize: 14,
@@ -1101,5 +1146,18 @@ const styles = StyleSheet.create({
     color: '#144272',
     fontWeight: '600',
     marginBottom: 8,
+  },
+  // Dropdown
+  dropdown: {
+    borderWidth: 1,
+    borderColor: '#144272',
+    minHeight: 48,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    backgroundColor: '#fff',
+  },
+  dropDownContainer: {
+    backgroundColor: '#fff',
+    borderColor: '#144272',
   },
 });

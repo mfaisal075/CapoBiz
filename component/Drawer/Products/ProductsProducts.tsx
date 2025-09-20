@@ -399,7 +399,8 @@ export default function CustomerPeople() {
       });
       return;
     }
-    if (!genBarCode.includes('on') && !addForm.autobarcode.trim()) {
+
+    if (!addForm.upc_ean?.trim()) {
       Toast.show({
         type: 'error',
         text1: 'Barcode is required',
@@ -407,6 +408,7 @@ export default function CustomerPeople() {
       });
       return;
     }
+
     if (!catValue) {
       Toast.show({
         type: 'error',
@@ -422,22 +424,6 @@ export default function CustomerPeople() {
         visibilityTime: 1500,
       });
       return;
-    }
-    if (
-      !manageStock.includes('on') &&
-      addForm.opening_qty.trim() !== '' &&
-      addForm.reorder_qty.trim() !== ''
-    ) {
-      const openingQty = parseFloat(addForm.opening_qty);
-      const reorderQty = parseFloat(addForm.reorder_qty);
-      if (!isNaN(openingQty) && !isNaN(reorderQty) && openingQty < reorderQty) {
-        Toast.show({
-          type: 'error',
-          text1: 'Opening quantity cannot be less than reorder quantity!',
-          visibilityTime: 1500,
-        });
-        return;
-      }
     }
     if (!addForm.cost_price.trim()) {
       Toast.show({
@@ -481,6 +467,15 @@ export default function CustomerPeople() {
         return;
       }
     }
+    if (addForm.cost_price > addForm.retail_price) {
+      Toast.show({
+        type: 'error',
+        text1: 'Warning!',
+        text2: 'Sale price should be greater!',
+        visibilityTime: 2000,
+      });
+      return;
+    }
 
     try {
       const res = await axios.post(`${BASE_URL}/addproducts`, {
@@ -492,8 +487,16 @@ export default function CustomerPeople() {
         expiry_date: startDate.toISOString().split('T')[0],
         cat_id: catValue,
         productuom_id: uomValue,
-        ...(manageStock.includes('on') && {opening_qty: addForm.opening_qty}),
-        ...(manageStock.includes('on') && {reorder_qty: addForm.reorder_qty}),
+        ...(!manageStock.includes('on')
+          ? {opening_qty: addForm.opening_qty}
+          : {}),
+        ...(!manageStock.includes('on')
+          ? {reorder_qty: addForm.reorder_qty}
+          : {}),
+        ...(manageStock.includes('on')
+          ? {stockmanage: 'N'}
+          : {stockmanage: 'Y'}),
+        ...(manageStock.includes('on') ? {dont_stock_manage: 'on'} : {}),
         cost_price: addForm.cost_price,
         retail_price: addForm.retail_price,
         discount: addForm.discount,
@@ -529,8 +532,35 @@ export default function CustomerPeople() {
         setBarCode('');
         setStartDate(new Date());
         fetchPrducts();
+      } else if (res.status === 200 && data.status === 201) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Opening quantity cannot be less than reorder quantity!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 101) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This product name already exists!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 102) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This Barcode Already exist!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: `${error}`,
+      });
+
       console.log(error);
     }
   };
@@ -678,6 +708,27 @@ export default function CustomerPeople() {
         setExpiry([]);
         setBarCode('');
         fetchPrducts();
+      } else if (res.status === 200 && data.status === 102) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This Barcode Already exist!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 101) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This product name already exists!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 206) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'In sub uom sale price should be greater!',
+          visibilityTime: 200,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -824,67 +875,84 @@ export default function CustomerPeople() {
               {/* Info Box */}
               <View style={styles.infoBox}>
                 <View style={styles.infoRow}>
-                  <Icon
-                    name="barcode"
-                    size={20}
-                    color={'#144272'}
-                    style={styles.infoIcon}
-                  />
-                  <Text style={styles.infoText}>
+                  <View style={styles.labelRow}>
+                    <Icon
+                      name="barcode"
+                      size={18}
+                      color={'#144272'}
+                      style={styles.infoIcon}
+                    />
+                    <Text style={styles.labelText}>Barcode</Text>
+                  </View>
+                  <Text style={styles.valueText}>
                     {item.prod_UPC_EAN || 'N/A'}
                   </Text>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <Icon
-                    name="cash"
-                    size={20}
-                    color={'#144272'}
-                    style={styles.infoIcon}
-                  />
-                  <Text style={styles.infoText}>
-                    Cost: {item.prod_costprice || '0'}
+                  <View style={styles.labelRow}>
+                    <Icon
+                      name="cash"
+                      size={18}
+                      color={'#144272'}
+                      style={styles.infoIcon}
+                    />
+                    <Text style={styles.labelText}>Cost</Text>
+                  </View>
+                  <Text style={styles.valueText}>
+                    {item.prod_costprice || '0'}
                   </Text>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <Icon
-                    name="tag"
-                    size={20}
-                    color={'#144272'}
-                    style={styles.infoIcon}
-                  />
-                  <Text style={styles.infoText}>
-                    Retail: {item.prod_retailprice || '0'}
+                  <View style={styles.labelRow}>
+                    <Icon
+                      name="tag"
+                      size={18}
+                      color={'#144272'}
+                      style={styles.infoIcon}
+                    />
+                    <Text style={styles.labelText}>Retail</Text>
+                  </View>
+                  <Text style={styles.valueText}>
+                    {item.prod_retailprice || '0'}
                   </Text>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <Icon
-                    name="cube"
-                    size={20}
-                    color={'#144272'}
-                    style={styles.infoIcon}
-                  />
-                  <Text style={styles.infoText}>Qty: {item.prod_qty || 0}</Text>
+                  <View style={styles.labelRow}>
+                    <Icon
+                      name="cube"
+                      size={18}
+                      color={'#144272'}
+                      style={styles.infoIcon}
+                    />
+                    <Text style={styles.labelText}>Quantity</Text>
+                  </View>
+                  <Text style={styles.valueText}>{item.prod_qty || 0}</Text>
                 </View>
 
                 <View style={styles.infoRow}>
-                  <Icon
-                    name="calendar"
-                    size={20}
-                    color={'#144272'}
-                    style={styles.infoIcon}
-                  />
-                  <Text style={styles.infoText}>
-                    {new Date(item.prod_expirydate).toLocaleDateString(
-                      'en-US',
-                      {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      },
-                    ) ?? 'No expiry date'}
+                  <View style={styles.labelRow}>
+                    <Icon
+                      name="calendar"
+                      size={18}
+                      color={'#144272'}
+                      style={styles.infoIcon}
+                    />
+                    <Text style={styles.labelText}>Expiry</Text>
+                  </View>
+                  <Text style={styles.valueText}>
+                    {item.prod_expirydate
+                      ? new Date(item.prod_expirydate).toLocaleDateString(
+                          'en-US',
+                          {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          },
+                        )
+                      : 'No expiry'}
                   </Text>
                 </View>
               </View>
@@ -897,7 +965,7 @@ export default function CustomerPeople() {
               </Text>
             </View>
           }
-          contentContainerStyle={{paddingBottom: 50}}
+          contentContainerStyle={{paddingBottom: 60}}
           showsVerticalScrollIndicator={false}
         />
 
@@ -2024,7 +2092,7 @@ export default function CustomerPeople() {
                     />
                   </View>
                   <View style={styles.editProductField}>
-                    <Text style={styles.editProductLabel}>Retail Pricem *</Text>
+                    <Text style={styles.editProductLabel}>Retail Price *</Text>
                     <TextInput
                       style={styles.editProductInput}
                       placeholderTextColor="#999"
@@ -2402,21 +2470,38 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 10,
   },
+  infoText: {
+    flex: 1,
+    color: '#333',
+    fontSize: 13,
+  },
   infoRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
   },
   infoIcon: {
     width: 18,
     height: 18,
     tintColor: '#144272',
-    marginRight: 8,
+    marginRight: 6,
   },
-  infoText: {
-    flex: 1,
-    color: '#333',
+  labelText: {
     fontSize: 13,
+    color: '#144272',
+    fontWeight: '600',
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
 
   // Pagination Component

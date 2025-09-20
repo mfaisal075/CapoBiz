@@ -8,7 +8,6 @@ import {
   View,
   Image,
   Dimensions,
-  Animated,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import {useDrawer} from './DrawerContext';

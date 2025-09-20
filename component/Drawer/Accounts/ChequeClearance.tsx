@@ -8,17 +8,18 @@ import {
   TouchableOpacity,
   View,
   Modal,
+  ScrollView,
+  ImageBackground,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
-import {ImageBackground} from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
-import {ScrollView} from 'react-native-gesture-handler';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Toast from 'react-native-toast-message';
+import LottieView from 'lottie-react-native';
 
 interface Customers {
   id: number;
@@ -52,6 +53,7 @@ const ChequeClearance = () => {
   const [clearanceDate, setClearanceDate] = useState<Date | null>(null);
   const [note, setNote] = useState<string>('');
   const [modalVisible, setModalVisible] = useState('');
+  const [custData, setCustData] = useState<Customers | null>(null);
 
   // Fetch Customer dropdown
   const fetchCustDropdown = async () => {
@@ -60,6 +62,25 @@ const ChequeClearance = () => {
       setCustDropdown(res.data.customers);
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  // Get Single Customet Data
+  const getCustData = async () => {
+    if (customerVal) {
+      try {
+        const res = await axios.post(`${BASE_URL}/fetchcustdata`, {
+          id: customerVal,
+        });
+        setCustData({
+          cust_address: res.data.customer.cust_address,
+          cust_fathername: res.data.customer.cust_fathername,
+          cust_name: res.data.customer.cust_name,
+          id: res.data.customer.id,
+        });
+      } catch (error) {
+        console.log(error);
+      }
     }
   };
 
@@ -80,11 +101,21 @@ const ChequeClearance = () => {
   // Cheque Clearance
   const clearCheque = async () => {
     if (!loadchequeData || !clearanceDate) {
-      console.log('No cheque data or clearance date selected');
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Information',
+        text2: 'Please select a cheque and clearance date',
+        visibilityTime: 3000,
+      });
       return;
     }
     if (!note.trim()) {
-      console.log('Note cannot be empty');
+      Toast.show({
+        type: 'error',
+        text1: 'Note Required',
+        text2: 'Please add a note for the clearance',
+        visibilityTime: 3000,
+      });
       return;
     }
 
@@ -107,22 +138,33 @@ const ChequeClearance = () => {
           text2: 'Cheque has been cleared successfully.',
           visibilityTime: 3000,
         });
-        console.log('Cheque cleared successfully');
         setModalVisible('');
         setLoadChequeData(null);
         setClearanceDate(null);
         setNote('');
         fetchChequeInfo();
       } else {
-        console.log('Failed to clear cheque:', data.message);
+        Toast.show({
+          type: 'error',
+          text1: 'Failed to Clear Cheque',
+          text2: data.message || 'Please try again',
+          visibilityTime: 3000,
+        });
       }
     } catch (error) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to clear cheque. Please try again.',
+        visibilityTime: 3000,
+      });
       console.log(error);
     }
   };
 
   useEffect(() => {
     fetchCustDropdown();
+    getCustData();
     fetchChequeInfo();
   }, [customerVal]);
 
@@ -133,264 +175,240 @@ const ChequeClearance = () => {
         resizeMode="cover"
         style={styles.background}>
         {/* Header */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
           <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Cheque Clearance
-            </Text>
+            <Text style={styles.headerTitle}>Cheque Clearance</Text>
           </View>
+
+          <TouchableOpacity
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
+            onPress={() => {}}
+            disabled>
+            <Icon name="account-balance" size={24} color="transparent" />
+          </TouchableOpacity>
         </View>
 
-        <ScrollView
-          style={{
-            flex: 1,
-          }}>
-          <View style={styles.row}>
-            <DropDownPicker
-              items={transformedCust}
-              open={Open}
-              value={customerVal}
-              setValue={setCustomerVal}
-              setOpen={setOpen}
-              placeholder="Select Customer"
-              placeholderStyle={{color: 'white'}}
-              textStyle={{color: 'white'}}
-              style={styles.dropdown}
-              dropDownContainerStyle={{
-                backgroundColor: 'white',
-                borderColor: '#144272',
-                width: '100%',
-                marginTop: 8,
-              }}
-              labelStyle={{color: 'white'}}
-              listItemLabelStyle={{color: '#144272'}}
-              ArrowUpIconComponent={() => (
-                <Text>
-                  <Icon name="chevron-up" size={15} color="white" />
-                </Text>
-              )}
-              ArrowDownIconComponent={() => (
-                <Text>
-                  <Icon name="chevron-down" size={15} color="white" />
-                </Text>
-              )}
-              listMode="SCROLLVIEW"
-            />
-          </View>
+        <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Cheque Information</Text>
 
-          <View style={{paddingBottom: 30}}>
-            <View style={{marginTop: 20}}>
+            {/* Customer Selection */}
+            <View style={styles.dropdownRow}>
+              <Text style={styles.inputLabel}>Select Customer</Text>
+              <DropDownPicker
+                items={transformedCust}
+                open={Open}
+                value={customerVal}
+                setValue={setCustomerVal}
+                setOpen={setOpen}
+                placeholder="Choose customer..."
+                placeholderStyle={styles.dropdownPlaceholder}
+                textStyle={styles.dropdownText}
+                style={styles.dropdown}
+                dropDownContainerStyle={styles.dropdownContainer}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                )}
+                listMode="SCROLLVIEW"
+                listItemLabelStyle={{color: '#144272'}}
+              />
+            </View>
+
+            {custData && (
+              <View style={styles.customerInfo}>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Customer Name:</Text>
+                  <Text style={styles.infoValue}>{custData.cust_name}</Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Father Name:</Text>
+                  <Text style={styles.infoValue}>
+                    {custData.cust_fathername}
+                  </Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Text style={styles.infoLabel}>Address:</Text>
+                  <Text style={styles.infoValue}>{custData.cust_address}</Text>
+                </View>
+              </View>
+            )}
+
+            {/* Cheque List */}
+            <View style={{marginTop: 16}}>
               {chequeData.length === 0 ? (
                 <View style={{alignItems: 'center', marginTop: 20}}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                    }}>
-                    No record found.
-                  </Text>
+                  <Text style={styles.noRecordText}>No cheques found.</Text>
                 </View>
               ) : (
                 chequeData.map((item, index) => (
-                  <View key={item.id} style={{padding: 5}}>
-                    <View style={styles.table}>
-                      <View style={styles.tablehead}>
-                        <Text
-                          style={{
-                            color: '#144272',
-                            fontWeight: 'bold',
-                            marginLeft: 5,
-                          }}>
-                          {item.cust_name}
-                        </Text>
-                        <TouchableOpacity
-                          style={{paddingHorizontal: 10, paddingVertical: 2}}
-                          onPress={() => {
-                            setLoadChequeData(item);
-                            setClearanceDate(new Date(item.chi_date));
-                          }}>
-                          <Icon
-                            name="clipboard-text"
-                            size={25}
-                            color={'#144272'}
-                          />
-                        </TouchableOpacity>
-                      </View>
-
-                      <View style={styles.infoRow}>
-                        {[
-                          {
-                            label: 'Date:',
-                            value: new Date(item.chi_date)
-                              .toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                              .replace(/\//g, '-'),
-                          },
-                          {
-                            label: 'Cheque Number:',
-                            value: item.chi_number,
-                          },
-                          {
-                            label: 'Amount:',
-                            value: item.chi_amount,
-                          },
-                          {
-                            label: 'Status:',
-                            value: item.chi_status,
-                          },
-                          {
-                            label: 'Payment Method:',
-                            value: item.chi_payment_method,
-                          },
-                        ].map(
-                          (
-                            field: {
-                              label: string;
-                              value: number | string;
-                            },
-                            idx,
-                          ) => (
-                            <View
-                              key={`${index}-${idx}`}
-                              style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                              }}>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {field.label}
-                              </Text>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {typeof field.value === 'number'
-                                  ? field.value.toFixed(2)
-                                  : field.value}
-                              </Text>
-                            </View>
-                          ),
-                        )}
-                      </View>
+                  <TouchableOpacity
+                    key={item.id}
+                    style={[
+                      styles.chequeItem,
+                      loadchequeData?.id === item.id && {
+                        backgroundColor: 'rgba(255,255,255,0.15)',
+                      },
+                    ]}
+                    onPress={() => {
+                      setLoadChequeData(item);
+                      setClearanceDate(new Date(item.chi_date));
+                    }}>
+                    <View style={styles.chequeHeader}>
+                      <Text style={styles.chequeName}>{item.cust_name}</Text>
+                      <Icon
+                        name="receipt"
+                        size={20}
+                        color={
+                          loadchequeData?.id === item.id ? '#D0F4DE' : 'white'
+                        }
+                      />
                     </View>
-                  </View>
+
+                    <View style={styles.chequeDetails}>
+                      {[
+                        {
+                          label: 'Date:',
+                          value: new Date(item.chi_date)
+                            .toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                            .replace(/\//g, '-'),
+                        },
+                        {
+                          label: 'Cheque No:',
+                          value: item.chi_number,
+                        },
+                        {
+                          label: 'Amount:',
+                          value: `Rs. ${item.chi_amount}`,
+                        },
+                        {
+                          label: 'Status:',
+                          value: item.chi_status,
+                        },
+                        {
+                          label: 'Method:',
+                          value: item.chi_payment_method,
+                        },
+                      ].map((field, idx) => (
+                        <View
+                          key={idx}
+                          style={[
+                            styles.chequeDetailRow,
+                            idx % 2 === 0 && {
+                              backgroundColor: 'rgba(255,255,255,0.05)',
+                            },
+                          ]}>
+                          <Text style={styles.chequeDetailLabel}>
+                            {field.label}
+                          </Text>
+                          <Text style={styles.chequeDetailValue}>
+                            {field.value}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </TouchableOpacity>
                 ))
               )}
             </View>
-          </View>
 
-          <View style={styles.row}>
-            <Text
-              style={[
-                styles.productinput,
-                {backgroundColor: 'gray', color: '#F0F0EC'},
-              ]}>
-              {loadchequeData?.chi_number
-                ? loadchequeData.chi_number
-                : 'Cheque Number'}
-            </Text>
-            <Text
-              style={[
-                styles.productinput,
-                {backgroundColor: 'gray', color: '#F0F0EC'},
-              ]}>
-              {loadchequeData?.chi_amount
-                ? loadchequeData?.chi_amount
-                : 'Cheque Amount'}
-            </Text>
-          </View>
+            {/* Selected Cheque Details */}
+            {loadchequeData && (
+              <View style={styles.selectedChequeSection}>
+                <Text style={styles.sectionTitle}>Selected Cheque Details</Text>
 
-          {/* Date Fields Section */}
-          <View style={styles.row}>
-            <View style={{width: '100%'}}>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker(true)}
-                style={styles.dateInput}>
-                <Text style={{color: 'white'}}>
-                  {loadchequeData?.chi_date
-                    ? new Date(loadchequeData.chi_date).toLocaleDateString()
-                    : new Date().toLocaleDateString()}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+                <View style={styles.inputRow}>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Cheque Number</Text>
+                    <Text style={styles.readOnlyInput}>
+                      {loadchequeData.chi_number}
+                    </Text>
+                  </View>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Amount</Text>
+                    <Text style={styles.readOnlyInput}>
+                      Rs. {loadchequeData.chi_amount}
+                    </Text>
+                  </View>
+                </View>
 
-          {/* Date Picker */}
-          {showDatePicker && (
-            <DateTimePicker
-              value={clearanceDate || new Date()}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate) {
-                  setClearanceDate(selectedDate);
-                }
-              }}
-              themeVariant="dark"
-              style={{backgroundColor: '#144272'}}
-            />
-          )}
+                <View style={styles.inputRow}>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Payment Method</Text>
+                    <Text style={styles.readOnlyInput}>
+                      {loadchequeData.chi_payment_method}
+                    </Text>
+                  </View>
+                </View>
 
-          <View style={styles.row}>
-            <TextInput
-              style={[
-                styles.productinput,
-                {height: 75, textAlignVertical: 'top', width: '100%'},
-              ]}
-              value={note}
-              placeholder="Note"
-              placeholderTextColor={'#f0f0ec'}
-              onChangeText={t => setNote(t)}
-              numberOfLines={3}
-              multiline
-            />
-          </View>
+                <View style={styles.inputRow}>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Clearance Date</Text>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker(true)}
+                      style={styles.dateInput}>
+                      <Icon name="event" size={20} color="white" />
+                      <Text style={styles.dateText}>
+                        {clearanceDate
+                          ? clearanceDate.toLocaleDateString()
+                          : 'Select Date'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
-          <View style={styles.row}>
-            <Text
-              style={[
-                styles.productinput,
-                {backgroundColor: 'gray', color: '#F0F0EC', width: '100%'},
-              ]}>
-              {loadchequeData?.chi_payment_method
-                ? loadchequeData?.chi_payment_method
-                : 'Payment Method'}
-            </Text>
-          </View>
+                <View style={styles.inputRow}>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Note</Text>
+                    <TextInput
+                      style={[styles.input, styles.textArea]}
+                      value={note}
+                      placeholder="Enter clearance note"
+                      placeholderTextColor={'rgba(255,255,255,0.7)'}
+                      onChangeText={t => setNote(t)}
+                      numberOfLines={3}
+                      multiline
+                    />
+                  </View>
+                </View>
 
-          <View style={styles.row}>
-            <TouchableOpacity
-              style={styles.submitBtn}
-              onPress={() => {
-                setModalVisible('confirmation');
-              }}>
-              <Text style={styles.submitBtnText}>Clear</Text>
-            </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.submitBtn}
+                  onPress={() => {
+                    setModalVisible('confirmation');
+                  }}>
+                  <Text style={styles.submitBtnText}>Clear Cheque</Text>
+                </TouchableOpacity>
+              </View>
+            )}
           </View>
         </ScrollView>
+
+        {/* Date Picker */}
+        {showDatePicker && (
+          <DateTimePicker
+            value={clearanceDate || new Date()}
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(event, selectedDate) => {
+              setShowDatePicker(false);
+              if (selectedDate) {
+                setClearanceDate(selectedDate);
+              }
+            }}
+            themeVariant="dark"
+          />
+        )}
 
         {/* Confirmation Modal */}
         <Modal
@@ -398,65 +416,27 @@ const ChequeClearance = () => {
           onDismiss={() => setModalVisible('')}
           transparent
           animationType="fade">
-          <View
-            style={{
-              flex: 1,
-              justifyContent: 'center',
-              alignItems: 'center',
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-            }}>
-            <View
-              style={{
-                backgroundColor: 'white',
-                padding: 25,
-                borderRadius: 10,
-                width: '80%',
-                alignItems: 'center',
-              }}>
-              <View
-                style={{
-                  width: 60,
-                  height: 60,
-                  borderColor: '#d0e2f2',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  marginBottom: 15,
-                }}>
-                <Icon name="information-outline" size={60} color="#d0e2f2" />
+          <View style={styles.modalContainer}>
+            <View style={styles.modalContent}>
+              <View style={styles.delAnim}>
+                <LottieView
+                  style={{flex: 1}}
+                  source={require('../../../assets/warning.json')}
+                  autoPlay
+                  loop={false}
+                />
               </View>
 
-              <Text style={{fontSize: 20, fontWeight: 'bold', marginBottom: 8}}>
-                Are you sure?
-              </Text>
-              <Text
-                style={{
-                  fontSize: 14,
-                  color: '#555',
-                  marginBottom: 20,
-                  textAlign: 'center',
-                }}>
-                Do you really want to clear this cheque!
+              <Text style={styles.modalTitle}>Are you sure?</Text>
+              <Text style={styles.modalMessage}>
+                Do you really want to clear this cheque?
               </Text>
 
-              <View
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  width: '100%',
-                }}>
+              <View style={styles.modalButtonContainer}>
                 <TouchableOpacity
                   onPress={() => setModalVisible('')}
-                  style={{
-                    flex: 1,
-                    backgroundColor: '#ff6b6b',
-                    padding: 10,
-                    borderRadius: 5,
-                    marginRight: 10,
-                    alignItems: 'center',
-                  }}>
-                  <Text style={{color: 'white', fontWeight: 'bold'}}>
-                    Cancel
-                  </Text>
+                  style={[styles.modalButton, styles.cancelButton]}>
+                  <Text style={styles.modalButtonText}>Cancel</Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -464,15 +444,8 @@ const ChequeClearance = () => {
                     clearCheque();
                     setModalVisible('');
                   }}
-                  style={{
-                    flex: 1,
-                    backgroundColor: '#28a745',
-                    padding: 10,
-                    borderRadius: 5,
-                    marginLeft: 10,
-                    alignItems: 'center',
-                  }}>
-                  <Text style={{color: 'white', fontWeight: 'bold'}}>Yes</Text>
+                  style={[styles.modalButton, styles.confirmButton]}>
+                  <Text style={styles.modalButtonText}>Yes</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -483,8 +456,6 @@ const ChequeClearance = () => {
   );
 };
 
-export default ChequeClearance;
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -493,92 +464,265 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   headerTextContainer: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  scrollContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  section: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 16,
+  },
+  dropdownRow: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  dropdown: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 40,
+  },
+  dropdownContainer: {
+    backgroundColor: 'white',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    marginTop: 2,
+    maxHeight: 200,
+  },
+  dropdownText: {
+    color: 'white',
+    fontSize: 14,
+  },
+  dropdownPlaceholder: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  customerInfo: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  infoLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  infoValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  chequeItem: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  chequeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  chequeName: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  chequeDetails: {
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  chequeDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  chequeDetailLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  chequeDetailValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  selectedChequeSection: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 16,
+  },
+  inputContainer: {
+    flex: 1,
+  },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    color: 'white',
+    fontSize: 14,
+  },
+  readOnlyInput: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+  },
+  dateText: {
+    flex: 1,
+    color: 'white',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  submitBtn: {
+    backgroundColor: '#144272',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  submitBtnText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  noRecordText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  modalContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 20,
   },
-  row: {
-    width: '100%',
-    marginTop: 10,
-    paddingHorizontal: '5%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 38,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: '100%',
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  productinput: {
-    borderWidth: 1,
-    width: '46%',
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 5,
-    color: '#fff',
-    height: 38,
-  },
-  dateInput: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 5,
-    justifyContent: 'center',
-    height: 38, // Match other input heights
-  },
-  submitBtn: {
-    height: 38,
-    width: '100%',
-    justifyContent: 'center',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#144272',
+  modalContent: {
     backgroundColor: '#fff',
+    width: '100%',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
   },
-  submitBtnText: {
-    fontSize: 14,
+  modalIconContainer: {
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
+    marginBottom: 8,
     color: '#144272',
+  },
+  modalMessage: {
+    fontSize: 14,
+    color: '#555',
+    marginBottom: 20,
     textAlign: 'center',
   },
+  modalButtonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 10,
+  },
+  modalButton: {
+    flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: '#ff6b6b',
+  },
+  confirmButton: {
+    backgroundColor: '#28a745',
+  },
+  modalButtonText: {
+    color: 'white',
+    fontWeight: 'bold',
+  },
+  delAnim: {
+    width: 120,
+    height: 120,
+    marginBottom: 15,
+  },
 });
+
+export default ChequeClearance;

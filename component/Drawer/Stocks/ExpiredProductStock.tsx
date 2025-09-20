@@ -4,14 +4,13 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
   FlatList,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 
@@ -151,27 +150,46 @@ export default function ExpiredProductStock() {
                 {/* Info */}
                 <View style={styles.infoBox}>
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Quantity:</Text>
+                    <View style={styles.labelRow}>
+                      <Icon name="cube-outline" size={16} color="#144272" />
+                      <Text style={styles.infoText}>Quantity:</Text>
+                    </View>
                     <Text style={styles.infoValue}>{qty}</Text>
                   </View>
+
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Cost Price:</Text>
+                    <View style={styles.labelRow}>
+                      <Icon name="tag-outline" size={16} color="#144272" />
+                      <Text style={styles.infoText}>Cost Price:</Text>
+                    </View>
                     <Text style={styles.infoValue}>{costPrice.toFixed(2)}</Text>
                   </View>
+
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Total Cost:</Text>
+                    <View style={styles.labelRow}>
+                      <Icon name="cash-multiple" size={16} color="#144272" />
+                      <Text style={styles.infoText}>Total Cost:</Text>
+                    </View>
                     <Text style={styles.infoValue}>
                       {itemTotalCost.toFixed(2)}
                     </Text>
                   </View>
+
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Retail Price:</Text>
+                    <View style={styles.labelRow}>
+                      <Icon name="sale" size={16} color="#144272" />
+                      <Text style={styles.infoText}>Retail Price:</Text>
+                    </View>
                     <Text style={styles.infoValue}>
                       {retailPrice.toFixed(2)}
                     </Text>
                   </View>
+
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoText}>Total Retail:</Text>
+                    <View style={styles.labelRow}>
+                      <Icon name="cash-register" size={16} color="#144272" />
+                      <Text style={styles.infoText}>Total Retail:</Text>
+                    </View>
                     <Text style={styles.infoValue}>
                       {itemTotalRetail.toFixed(2)}
                     </Text>
@@ -383,6 +401,11 @@ const styles = StyleSheet.create({
   infoValue: {
     color: '#333',
     fontSize: 13,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4, // works in RN 0.71+, otherwise use marginRight
   },
 
   // Pagination Component

@@ -4,21 +4,20 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
   Modal,
+  ScrollView,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
-import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useDrawer} from '../../DrawerContext';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import {useUser} from '../../CTX/UserContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
-import {useUser} from '../../CTX/UserContext';
+import DropDownPicker from 'react-native-dropdown-picker';
 
 interface Orders {
   id: number;
@@ -27,6 +26,7 @@ interface Orders {
   salord_partial_status: string;
   order_total: string;
   salord_cust_id: number;
+  cust_name: string;
 }
 
 interface InvoiceDetails {
@@ -54,15 +54,37 @@ interface InvoiceOrders {
 }
 
 export default function SalesOrderList() {
-  const {token} = useUser();
+  const {token, bussName, bussAddress} = useUser();
   const {openDrawer} = useDrawer();
   const [saleOrders, setSaleOrders] = useState<Orders[]>([]);
   const [modalVisible, setModalVisible] = useState('');
   const [invcDetails, setInvcDetails] = useState<InvoiceDetails | null>(null);
   const [invcOrders, setInvcOrders] = useState<InvoiceOrders[]>([]);
-
   const [startDate, setStartDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [endDate, setEndDate] = useState(new Date());
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [statusOpen, setStatusOpen] = useState(false);
+  const [status, setStatus] = useState('Sale Order');
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const totalRecords = saleOrders.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const currentData = saleOrders.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
+
+  // Status Dropdown
+  const statusDropdown = [
+    {label: 'Pending', value: 'Sale Order'},
+    {label: 'Complete', value: 'Complete'},
+  ];
 
   const onStartDateChange = (
     event: DateTimePickerEvent,
@@ -73,22 +95,11 @@ export default function SalesOrderList() {
     setStartDate(currentDate);
   };
 
-  const [endDate, setEndDate] = useState(new Date());
-  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-
   const onEndDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     const currentDate = selectedDate || endDate;
     setShowEndDatePicker(false);
     setEndDate(currentDate);
   };
-  const [issupplier, setissupplier] = useState(false);
-  const [currentsupplier, setCurrentsupplier] = useState<string | null>(
-    'Sale Order',
-  );
-  const supplierItem = [
-    {label: 'Pending', value: 'Sale Order'},
-    {label: 'Complete', value: 'Complete'},
-  ];
 
   // Fetch Sale Order List
   const fetchSaleOrderList = async () => {
@@ -96,7 +107,7 @@ export default function SalesOrderList() {
       const from = startDate.toISOString().split('T')[0];
       const to = endDate.toISOString().split('T')[0];
       const res = await axios.get(
-        `${BASE_URL}/fetchorderlist?from=${from}&to=${to}&status=${currentsupplier}&_token=${token}`,
+        `${BASE_URL}/fetchorderlist?from=${from}&to=${to}&status=${status}&_token=${token}`,
       );
 
       setSaleOrders(res.data.orderlis);
@@ -120,7 +131,7 @@ export default function SalesOrderList() {
 
   useEffect(() => {
     fetchSaleOrderList();
-  }, [currentsupplier, startDate, endDate]);
+  }, [startDate, endDate, status]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -128,430 +139,395 @@ export default function SalesOrderList() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        {/* Topbar */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{width: 30, height: 30, tintColor: 'white'}}
-            />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
           <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Order List
-            </Text>
+            <Text style={styles.headerTitle}>Sales Order List</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
+            onPress={() => {}}
+            disabled>
+            <Icon name="mail" size={24} color="transparent" />
+          </TouchableOpacity>
+        </View>
+        <View style={styles.dateContainer}>
+          <View style={styles.dateInputWrapper}>
+            <Text style={styles.dateLabel}>From Date</Text>
+            <TouchableOpacity
+              style={styles.dateInputBox}
+              onPress={() => setShowStartDatePicker(true)}>
+              <Text style={styles.dateText}>
+                {startDate.toLocaleDateString('en-GB')}
+              </Text>
+              <Icon name="calendar" size={20} color="#144272" />
+            </TouchableOpacity>
+            {showStartDatePicker && (
+              <DateTimePicker
+                testID="startDatePicker"
+                value={startDate}
+                mode="date"
+                is24Hour={true}
+                display="default"
+                onChange={onStartDateChange}
+              />
+            )}
+          </View>
+
+          <View style={styles.dateInputWrapper}>
+            <Text style={styles.dateLabel}>To Date</Text>
+            <TouchableOpacity
+              style={styles.dateInputBox}
+              onPress={() => setShowEndDatePicker(true)}>
+              <Text style={styles.dateText}>
+                {endDate.toLocaleDateString('en-GB')}
+              </Text>
+              <Icon name="calendar" size={20} color="#144272" />
+            </TouchableOpacity>
+            {showEndDatePicker && (
+              <DateTimePicker
+                testID="endDatePicker"
+                value={endDate}
+                mode="date"
+                is24Hour={true}
+                display="default"
+                onChange={onEndDateChange}
+              />
+            )}
           </View>
         </View>
 
-        <ScrollView
-          style={{
-            marginBottom: 10,
-          }}>
-          <View style={styles.dateContainer}>
-            <View style={styles.dateInput}>
-              <Text style={styles.label}>From</Text>
+        {/* Status Filter */}
+        <View style={{paddingHorizontal: 15, marginVertical: 8}}>
+          <DropDownPicker
+            items={statusDropdown}
+            open={statusOpen}
+            setOpen={setStatusOpen}
+            value={status}
+            setValue={setStatus}
+            placeholder="Select Status"
+            placeholderStyle={{color: '#666'}}
+            textStyle={{color: '#144272'}}
+            ArrowUpIconComponent={() => (
+              <Icon name="chevron-up" size={18} color="#144272" />
+            )}
+            ArrowDownIconComponent={() => (
+              <Icon name="chevron-down" size={18} color="#144272" />
+            )}
+            style={styles.dropdown}
+            dropDownContainerStyle={styles.dropDownContainer}
+          />
+        </View>
 
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  borderRadius: 5,
-                  borderColor: 'white',
-                }}>
-                <Text style={{marginLeft: 10, color: 'white'}}>
-                  {`${startDate.toLocaleDateString()}`}
-                </Text>
-                <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-                  <Image
-                    style={{
-                      height: 20,
-                      width: 20,
-                      resizeMode: 'stretch',
-                      alignItems: 'center',
-                      marginLeft: 35,
-                      tintColor: 'white',
-                    }}
-                    source={require('../../../assets/calendar.png')}
-                  />
-                  {showStartDatePicker && (
-                    <DateTimePicker
-                      testID="startDatePicker"
-                      value={startDate}
-                      mode="date"
-                      is24Hour={true}
-                      display="default"
-                      onChange={onStartDateChange}
-                    />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.dateInput}>
-              <Text style={styles.label}>To</Text>
-
-              <View
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  borderRadius: 5,
-                  borderColor: 'white',
-                }}>
-                <Text
-                  style={{
-                    marginLeft: 10,
-                    color: 'white',
-                  }}>
-                  {`${endDate.toLocaleDateString()}`}
-                </Text>
-                <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-                  <Image
-                    style={{
-                      height: 20,
-                      width: 20,
-                      resizeMode: 'stretch',
-                      alignItems: 'center',
-                      marginLeft: 35,
-                      tintColor: 'white',
-                    }}
-                    source={require('../../../assets/calendar.png')}
-                  />
-                  {showEndDatePicker && (
-                    <DateTimePicker
-                      testID="endDatePicker"
-                      value={endDate}
-                      mode="date"
-                      is24Hour={true}
-                      display="default"
-                      onChange={onEndDateChange}
-                      textColor="white"
-                      accentColor="white"
-                    />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-
-          <View style={styles.dropdownContainer}>
-            <DropDownPicker
-              items={supplierItem}
-              open={issupplier}
-              setOpen={setissupplier}
-              value={currentsupplier}
-              setValue={setCurrentsupplier}
-              placeholder="Status"
-              placeholderStyle={{color: 'white'}}
-              textStyle={{color: 'white'}}
-              ArrowUpIconComponent={() => (
-                <Icon name="keyboard-arrow-up" size={18} color="#fff" />
-              )}
-              ArrowDownIconComponent={() => (
-                <Icon name="keyboard-arrow-down" size={18} color="#fff" />
-              )}
-              style={[styles.dropdown]}
-              dropDownContainerStyle={{
-                backgroundColor: 'white',
-                borderColor: 'white',
-                width: '100%',
-              }}
-              labelStyle={{color: 'white'}}
-              listItemLabelStyle={{color: '#144272'}}
-              listMode="SCROLLVIEW"
-            />
-          </View>
-
+        {/* Flatlist */}
+        <View>
           <FlatList
-            data={saleOrders}
-            keyExtractor={item => item.id.toString()}
-            renderItem={({item}) => (
-              <View style={{padding: 5}}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text
-                      style={{
-                        color: '#144272',
-                        fontWeight: 'bold',
-                        marginLeft: 5,
-                        marginTop: 5,
-                      }}>
-                      {item.salord_invoice_no}
-                    </Text>
+            data={currentData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => {
+              return (
+                <View style={styles.card}>
+                  {/* Header Row */}
+                  <View style={styles.headerRow}>
+                    <View style={styles.avatarBox}>
+                      <Text style={styles.avatarText}>
+                        {item.salord_invoice_no?.charAt(0) || 'S'}
+                      </Text>
+                    </View>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.name}>{item.salord_invoice_no}</Text>
+                      <Text style={styles.subText}>
+                        {new Date(item.salord_date).toLocaleDateString(
+                          'en-US',
+                          {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          },
+                        )}
+                      </Text>
+                    </View>
+
+                    {/* View Action */}
                     <TouchableOpacity
-                      style={{
-                        paddingHorizontal: 10,
-                        paddingVertical: 5,
-                        borderRadius: 5,
-                        marginRight: 10,
-                      }}
                       onPress={() => {
                         setModalVisible('View');
                         getOrderInvoice(item.id);
                       }}>
-                      <Icon name="receipt" size={18} color="#144272" />
+                      <Icon
+                        name="eye"
+                        size={20}
+                        color={'#144272'}
+                        style={{marginLeft: 10}}
+                      />
                     </TouchableOpacity>
                   </View>
 
-                  <View style={styles.infoRow}>
-                    <View style={styles.rowt}>
-                      <Text style={styles.text}>Date:</Text>
-                      <Text style={styles.text}>
-                        {' '}
-                        {new Date(item.salord_date)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-')}
+                  {/* Info Section */}
+                  <View style={styles.infoBox}>
+                    <View style={styles.infoRow}>
+                      <View style={styles.labelRow}>
+                        <Icon name="account" size={16} color="#144272" />
+                        <Text style={styles.infoText}>Customer:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
+                        {item.cust_name || 'N/A'}
                       </Text>
                     </View>
-                    <View style={styles.rowt}>
-                      <Text style={styles.text}>Customer:</Text>
-                      <Text style={styles.text}>{item.salord_cust_id}</Text>
-                    </View>
-                    <View style={styles.rowt}>
-                      <Text style={styles.text}>Order Amount:</Text>
-                      <Text style={styles.text}>{item.order_total}</Text>
-                    </View>
-                    <View style={styles.rowt}>
-                      <Text style={styles.text}>Status:</Text>
-                      <Text style={styles.text}>
-                        {currentsupplier === 'Sale Order'
-                          ? 'Pending'
-                          : 'Completed'}
-                      </Text>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.labelRow}>
+                        <Icon name="cash-multiple" size={16} color="#144272" />
+                        <Text style={styles.infoText}>Order Total:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>{item.order_total}</Text>
                     </View>
                   </View>
                 </View>
-              </View>
-            )}
-            scrollEnabled={false}
+              );
+            }}
             ListEmptyComponent={
-              <Text
-                style={{
-                  flex: 1,
-                  color: 'white',
-                  textAlign: 'center',
-                  justifyContent: 'center',
-                }}>
-                No record present in the database for this Date range!
-              </Text>
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>
+                  No record present in the database for this Date range!
+                </Text>
+              </View>
             }
+            contentContainerStyle={{paddingBottom: 280, paddingTop: 10}}
           />
-        </ScrollView>
+        </View>
+      </ImageBackground>
 
-        {/* View Modal */}
-        <Modal
-          visible={modalVisible === 'View'}
-          animationType="slide"
-          transparent>
+      {/* Pagination Controls */}
+      {totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => prev - 1)}
+            style={[
+              styles.pageButton,
+              currentPage === 1 && styles.pageButtonDisabled,
+            ]}>
+            <Text
+              style={[
+                styles.pageButtonText,
+                currentPage === 1 && styles.pageButtonTextDisabled,
+              ]}>
+              Prev
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.pageIndicator}>
+            <Text style={styles.pageIndicatorText}>
+              Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+              {totalPages}
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() => setCurrentPage(prev => prev + 1)}
+            style={[
+              styles.pageButton,
+              currentPage === totalPages && styles.pageButtonDisabled,
+            ]}>
+            <Text
+              style={[
+                styles.pageButtonText,
+                currentPage === totalPages && styles.pageButtonTextDisabled,
+              ]}>
+              Next
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* View Modal */}
+      <Modal
+        visible={modalVisible === 'View'}
+        animationType="slide"
+        transparent
+        presentationStyle="overFullScreen">
+        <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              {/* Modal Header */}
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalHeaderText}>
-                  Pucrhase Order Invoice Details
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    // setSelectedOrder([]);
-                  }}
-                  style={styles.closeButton}>
-                  <Icon name="close" size={24} color="red" />
-                </TouchableOpacity>
-              </View>
+            {/* Modal Handle */}
+            <View style={styles.modalHandle} />
 
-              <View style={styles.details}>
-                <Text style={[styles.modalHeaderText, {fontSize: 20}]}>
-                  Super Itefaq
-                </Text>
-                <Text style={styles.modalHeaderText}>
-                  Mumtaz Market, Gujramwala
-                </Text>
-              </View>
-
-              <View style={styles.othDetails}>
-                <Text style={[styles.modalHeaderText, {fontSize: 12}]}>
-                  Customer: {invcDetails?.customer.cust_name}
-                </Text>
-                <Text style={[styles.modalHeaderText, {fontSize: 12}]}>
-                  Maker User: {invcDetails?.usermaker.name}
-                </Text>
-              </View>
-
-              <View
-                style={[
-                  styles.othDetails,
-                  {flexDirection: 'row-reverse', marginTop: 5},
-                ]}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.headerLeft}>
+                <View style={styles.invoiceIconContainer}>
+                  <Icon name="receipt" size={24} color="#144272" />
+                </View>
                 <View>
-                  <Text style={[styles.modalHeaderText, {fontSize: 12}]}>
-                    Invoice# {invcDetails?.orderrecord.salord_invoice_no}
+                  <Text style={styles.modalTitle}>Sales Order</Text>
+                  <Text style={styles.modalSubtitle}>Invoice Details</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setInvcDetails(null);
+                  setInvcOrders([]);
+                }}
+                style={styles.closeButton}>
+                <Icon name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}>
+              {/* Company Info Card */}
+              <View style={styles.companyCard}>
+                <View style={styles.companyHeader}>
+                  <Text style={styles.companyName}>{bussName ?? 'N/A'}</Text>
+                </View>
+                <Text style={styles.companyAddress}>
+                  {bussAddress ?? 'N/A'}
+                </Text>
+              </View>
+
+              {/* Order Info Grid */}
+              <View style={styles.orderInfoGrid}>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Customer</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails?.customer?.cust_name ?? 'N/A'}
                   </Text>
-                  <Text style={[styles.modalHeaderText, {fontSize: 12}]}>
-                    Purchase Order Date: {invcDetails?.orderrecord.salord_date}
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Maker User</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails?.usermaker?.name ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Invoice #</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails?.orderrecord?.salord_invoice_no ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Order Date</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails?.orderrecord?.salord_date
+                      ? new Date(
+                          invcDetails.orderrecord.salord_date,
+                        ).toLocaleDateString('en-GB')
+                      : 'N/A'}
                   </Text>
                 </View>
               </View>
 
-              {/* Modal Body */}
-              <FlatList
-                data={invcOrders}
-                keyExtractor={(item, index) =>
-                  item?.id ? item.id.toString() : index.toString()
-                }
-                ListHeaderComponent={
-                  <View
-                    style={[
-                      styles.lineItem,
-                      {backgroundColor: '#144272', alignItems: 'center'},
-                    ]}>
-                    <Text
-                      style={[
-                        styles.headerText,
-                        {color: 'white', fontSize: 12},
-                      ]}>
+              {/* Order Table Section */}
+              <View style={styles.tableSection}>
+                <Text style={styles.sectionTitle}>Order Items</Text>
+
+                {/* Table Container */}
+                <View style={styles.tableContainer}>
+                  {/* Table Header */}
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, styles.col1]}>
                       Invoice#
                     </Text>
-                    <Text
-                      style={[
-                        styles.headerText,
-                        {color: 'white', fontSize: 12},
-                      ]}>
+                    <Text style={[styles.tableHeaderText, styles.col2]}>
                       Product
                     </Text>
-                    <Text
-                      style={[
-                        styles.headerText,
-                        {color: 'white', fontSize: 12},
-                      ]}>
-                      QTY
+                    <Text style={[styles.tableHeaderText, styles.col3]}>
+                      Qty
                     </Text>
-                    <Text
-                      style={[
-                        styles.headerText,
-                        {color: 'white', fontSize: 12},
-                      ]}>
+                    <Text style={[styles.tableHeaderText, styles.col4]}>
                       Price
                     </Text>
-                    <Text
-                      style={[
-                        styles.headerText,
-                        {color: 'white', fontSize: 12},
-                      ]}>
+                    <Text style={[styles.tableHeaderText, styles.col5]}>
                       Sub Total
                     </Text>
-                    <Text
-                      style={[
-                        styles.headerText,
-                        {color: 'white', fontSize: 12},
-                      ]}>
-                      Status
-                    </Text>
                   </View>
-                }
-                renderItem={({item}) => (
-                  <View style={styles.lineItem}>
-                    <Text style={styles.itemText}>
-                      {item.salordd_invoice_no}
-                    </Text>
-                    <Text style={styles.itemText}>{item.prod_name}</Text>
-                    <Text style={styles.itemText}>
-                      {item.salordd_partial_qty}
-                    </Text>
-                    <Text style={styles.itemText}>
-                      {Number(item.salordd_retail_price).toLocaleString()}
-                    </Text>
-                    <Text style={styles.itemText}>
-                      {Number(item.salordd_sub_total).toLocaleString()}
-                    </Text>
-                    <View style={[styles.itemText, {alignItems: 'center'}]}>
+
+                  {/* Table Rows */}
+                  <FlatList
+                    data={invcOrders}
+                    keyExtractor={(item, index) =>
+                      item?.id ? item.id.toString() : index.toString()
+                    }
+                    renderItem={({item, index}) => (
                       <View
-                        style={{
-                          backgroundColor: '#f44336',
-                          paddingHorizontal: 8,
-                          paddingVertical: 2,
-                          borderRadius: 12,
-                          alignSelf: 'center',
-                        }}>
-                        <Text style={{color: 'white', fontSize: 8}}>
-                          Pending Order
+                        style={[
+                          styles.tableRow,
+                          index % 2 === 0
+                            ? styles.tableRowEven
+                            : styles.tableRowOdd,
+                        ]}>
+                        <Text
+                          style={[styles.tableCell, styles.col1]}
+                          numberOfLines={1}>
+                          {item.salordd_invoice_no}
+                        </Text>
+                        <Text
+                          style={[styles.tableCell, styles.col2]}
+                          numberOfLines={2}>
+                          {item.prod_name}
+                        </Text>
+                        <Text style={[styles.tableCell, styles.col3]}>
+                          {item.salordd_partial_qty}
+                        </Text>
+                        <Text style={[styles.tableCell, styles.col4]}>
+                          {Number(item.salordd_retail_price).toLocaleString()}
+                        </Text>
+                        <Text style={[styles.tableCell, styles.col5]}>
+                          {Number(item.salordd_sub_total).toLocaleString()}
                         </Text>
                       </View>
-                    </View>
-                  </View>
-                )}
-              />
-
-              <View
-                style={[styles.othDetails, {marginTop: 20, marginBottom: 10}]}>
-                <Text
-                  style={[
-                    styles.modalHeaderText,
-                    {fontSize: 14, textAlign: 'center'},
-                  ]}>
-                  Total Amount:{' '}
-                  <Text style={{fontWeight: '100'}}>
-                    {invcDetails?.total ?? 'N/A'}
-                  </Text>
-                </Text>
-                <Text
-                  style={[
-                    styles.modalHeaderText,
-                    {fontSize: 14, textAlign: 'center'},
-                  ]}>
-                  Pending Total:{' '}
-                  <Text style={{fontWeight: '100'}}>
-                    {invcDetails?.pendingtotal ?? 'N/A'}
-                  </Text>
-                </Text>
+                    )}
+                    scrollEnabled={false}
+                  />
+                </View>
               </View>
 
-              <View style={styles.othDetails}>
-                <Text style={styles.simpText}>Invoice State</Text>
-                <Text
-                  style={[
-                    styles.simpText,
-                    {textAlign: 'center', marginBottom: 10},
-                  ]}>
+              {/* Order Totals */}
+              <View style={styles.totalsSection}>
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>Order Total:</Text>
+                  <Text style={styles.totalValue}>
+                    PKR {invcDetails?.total ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={[styles.totalRow, styles.pendingTotalRow]}>
+                  <Text style={[styles.totalLabel, styles.pendingLabel]}>
+                    Pending Total:
+                  </Text>
+                  <Text style={[styles.totalValue, styles.pendingValue]}>
+                    PKR {invcDetails?.pendingtotal ?? 'N/A'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Footer */}
+              <View style={styles.modalFooter}>
+                <Text style={styles.invoiceState}>Invoice State</Text>
+                <Text style={styles.footerText}>
                   No Finalized Record Found..!
                 </Text>
-                <Text style={[styles.simpText, {textAlign: 'center'}]}>
-                  Thank you for your visit
-                </Text>
-                <Text
-                  style={[
-                    styles.simpText,
-                    {textAlign: 'center', fontWeight: 'bold'},
-                  ]}>
-                  Software Developed with love by
-                </Text>
-                <Text
-                  style={[
-                    styles.simpText,
-                    {textAlign: 'center', marginBottom: 10},
-                  ]}>
-                  Technic Mentors | +923111122144
-                </Text>
+                <Text style={styles.thankYou}>Thank you for your visit</Text>
+                <View style={styles.developerInfo}>
+                  <Text style={styles.developerText}>
+                    Software Developed with ❤️ by
+                  </Text>
+                  <Text style={styles.companyContact}>
+                    Technic Mentors | +923111122144
+                  </Text>
+                </View>
               </View>
-            </View>
+            </ScrollView>
           </View>
-        </Modal>
-      </ImageBackground>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -564,182 +540,605 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   headerTextContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  label: {
-    position: 'absolute',
-    top: -10,
-    left: 14,
-    fontSize: 10,
-    color: 'white',
+
+  // Pagination Component
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     backgroundColor: '#144272',
-    paddingHorizontal: 4,
-    borderRadius: 10,
-  },
-  dropdownContainer: {
-    paddingHorizontal: 15,
-    marginVertical: 15,
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 38,
-    borderRadius: 6,
-    padding: 8,
-    backgroundColor: 'transparent',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
     width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
   },
-  dateContainer: {
-    flexDirection: 'row',
-    width: '100%',
-    justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    alignItems: 'center',
-    marginTop: 20,
-    marginBottom: 10,
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
   },
-  dateInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    width: '46%',
-    borderRightWidth: 1,
-    borderLeftWidth: 1,
-    borderRadius: 5,
-    borderColor: 'white',
-    height: 38,
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    paddingHorizontal: 10,
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
   },
 
-  // FlateList Item
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
+  // Flatlist styling
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    marginHorizontal: 10,
+    padding: 12,
   },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
+  headerRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: 'white',
   },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  rowt: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-
-  //Modal Styling
-  modalContainer: {
-    flex: 1,
+  avatarBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    marginRight: 12,
   },
-  modalContent: {
-    width: '90%',
-    maxHeight: '80%',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    overflow: 'hidden',
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  name: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#144272',
+  },
+  subText: {
+    fontSize: 12,
+    color: '#666',
+  },
+  infoBox: {
+    marginTop: 10,
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 10,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  infoText: {
+    color: '#144272',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+
+  // Date Fields
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  dateInputWrapper: {
+    flex: 0.48,
+  },
+  dateLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  dateInputBox: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(20, 66, 114, 0.2)',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 3,
+    height: 48,
+  },
+  dateText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#144272',
+  },
+
+  // Modal stying
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#FAFBFC',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '80%',
+    paddingBottom: 20,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#DDD',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
   },
   modalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
-    borderBottomColor: '#144272',
-    borderBottomWidth: 0.8,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  modalHeaderText: {
-    color: '#000',
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  invoiceIconContainer: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#E8F4FD',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 2,
+  },
+  modalSubtitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    color: '#666',
+    fontWeight: '500',
   },
   closeButton: {
-    padding: 5,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F5F5F5',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  modalBody: {
-    padding: 15,
+
+  // Company Card
+  companyCard: {
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  orderSummary: {
-    marginBottom: 15,
-  },
-  summaryText: {
-    fontSize: 16,
-    marginBottom: 5,
-    color: '#333',
-  },
-  lineItemsHeader: {
+  companyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 10,
-    borderBottomWidth: 1,
-    paddingBottom: 5,
-    borderBottomColor: '#ccc',
+    alignItems: 'center',
+    marginBottom: 4,
   },
-  headerText: {
-    fontWeight: 'bold',
+  companyName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#144272',
+  },
+  statusBadge: {
+    backgroundColor: '#FFF3CD',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  statusText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#856404',
+  },
+  companyAddress: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '400',
+  },
+
+  // Info Grid
+  orderInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    paddingHorizontal: 16,
+    marginTop: 16,
+  },
+  infoCard: {
+    width: '48%',
+    backgroundColor: 'white',
+    padding: 12,
+    borderRadius: 8,
+    margin: '1%',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  infoLabel: {
+    fontSize: 11,
+    color: '#888',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#1A1A1A',
+    fontWeight: '600',
+  },
+
+  // Items Section
+  itemsSection: {
     flex: 1,
-    textAlign: 'center',
+    marginTop: 20,
   },
-  lineItem: {
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    paddingHorizontal: 20,
+    marginBottom: 12,
+  },
+  itemsList: {
+    paddingHorizontal: 20,
+  },
+  itemCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  itemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  itemIconContainer: {
+    width: 36,
+    height: 36,
+    backgroundColor: '#E8F4FD',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  itemInfo: {
+    flex: 1,
+  },
+  itemName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A1A1A',
+    marginBottom: 2,
+  },
+  itemInvoice: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  itemBadge: {
+    backgroundColor: '#FFEBEE',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  itemBadgeText: {
+    fontSize: 10,
+    fontWeight: '600',
+    color: '#C62828',
+  },
+  itemDetails: {
+    backgroundColor: '#F8F9FA',
+    padding: 12,
+    borderRadius: 8,
+  },
+  itemDetailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    alignItems: 'center',
+    marginBottom: 6,
   },
-  orderTotals: {
-    marginTop: 15,
+  itemDetailLabel: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
+  },
+  itemDetailValue: {
+    fontSize: 13,
+    color: '#1A1A1A',
+    fontWeight: '600',
+  },
+  itemTotal: {
+    color: '#144272',
+    fontSize: 14,
+  },
+
+  // Totals Section
+  totalsSection: {
+    backgroundColor: 'white',
+    marginHorizontal: 20,
+    marginTop: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pendingTotalRow: {
     borderTopWidth: 1,
-    paddingTop: 10,
-    borderColor: '#ccc',
-    alignItems: 'flex-end',
+    borderTopColor: '#F0F0F0',
+    paddingTop: 12,
+    marginTop: 4,
+    marginBottom: 0,
   },
-  totalText: {
-    fontWeight: 'bold',
+  totalLabel: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: '600',
+  },
+  totalValue: {
+    fontSize: 16,
+    color: '#1A1A1A',
+    fontWeight: '700',
+  },
+  pendingLabel: {
+    color: '#C62828',
+  },
+  pendingValue: {
+    color: '#C62828',
+    fontSize: 18,
+  },
+
+  // Footer
+  modalFooter: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    marginTop: 16,
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  thankYou: {
     fontSize: 16,
     color: '#144272',
-    marginBottom: 5,
-  },
-  details: {
-    marginVertical: 8,
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  othDetails: {
-    width: '100%',
-    paddingHorizontal: 10,
-  },
-  itemText: {
-    flex: 1,
+    fontWeight: '600',
     textAlign: 'center',
-    color: '#555',
+    marginBottom: 16,
+  },
+  developerInfo: {
+    alignItems: 'center',
+  },
+  developerText: {
     fontSize: 12,
+    color: '#888',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  companyContact: {
+    fontSize: 12,
+    color: '#144272',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+
+  // Table Section
+  tableSection: {
+    marginTop: 20,
+    marginHorizontal: 20,
+  },
+  tableContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#144272',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  tableHeaderText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 11,
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+    alignItems: 'center',
+  },
+  tableRowEven: {
+    backgroundColor: '#FAFAFA',
+  },
+  tableRowOdd: {
+    backgroundColor: 'white',
+  },
+  tableCell: {
+    fontSize: 11,
+    color: '#333',
+    textAlign: 'center',
     paddingHorizontal: 2,
   },
-  simpText: {
-    fontSize: 14,
-    color: '#000',
-    marginTop: 10,
+
+  // Column widths
+  col1: {
+    flex: 0.2, // Invoice#
+  },
+  col2: {
+    flex: 0.3, // Product
+  },
+  col3: {
+    flex: 0.15, // Qty
+  },
+  col4: {
+    flex: 0.2, // Price
+  },
+  col5: {
+    flex: 0.2, // Total
+  },
+
+  statusCell: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statusContainer: {
+    backgroundColor: '#FFEBEE',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    minWidth: 50,
+  },
+  statusCellText: {
+    color: '#C62828',
+    fontSize: 9,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  invoiceState: {
+    fontSize: 16,
+    color: '#144272',
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  // Dropdown
+  dropdown: {
+    borderWidth: 1,
+    borderColor: '#144272',
+    minHeight: 48,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    backgroundColor: '#fff',
+  },
+  dropDownContainer: {
+    backgroundColor: '#fff',
+    borderColor: '#144272',
   },
 });

@@ -322,7 +322,9 @@ export default function PurchaseAddStock() {
     if (!currentsupplier) {
       Toast.show({
         type: 'error',
-        text1: 'Please select a supplier',
+        text1: 'Warning!',
+        text2: 'Please select a supplier!',
+        visibilityTime: 2000,
       });
       return;
     }
@@ -382,6 +384,13 @@ export default function PurchaseAddStock() {
         setSelectedProduct(null);
         setOrderTotal(0);
         setModalVisible('');
+      } else if (res.status === 200 && res.data.status === 203) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Please Select Transporter!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);

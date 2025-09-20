@@ -638,27 +638,34 @@ export default function CustomerPeople() {
                 </View>
 
                 {/* Info Section */}
+                {/* Info Section */}
                 <View style={styles.infoBox}>
                   <View style={styles.infoRow}>
-                    <Icon
-                      name="phone"
-                      size={20}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.infoText}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="phone"
+                        size={20}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Phone</Text>
+                    </View>
+                    <Text style={styles.valueText}>
                       {item.cust_contact || 'N/A'}
                     </Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <Icon
-                      name="map-marker"
-                      size={20}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.infoText}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="map-marker"
+                        size={20}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Address</Text>
+                    </View>
+                    <Text style={styles.valueText}>
                       {item.cust_address || 'N/A'}
                     </Text>
                   </View>
@@ -1544,21 +1551,38 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 10,
   },
+  infoText: {
+    flex: 1,
+    color: '#333',
+    fontSize: 13,
+  },
   infoRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
   },
   infoIcon: {
     width: 18,
     height: 18,
     tintColor: '#144272',
-    marginRight: 8,
+    marginRight: 6,
   },
-  infoText: {
-    flex: 1,
-    color: '#333',
+  labelText: {
     fontSize: 13,
+    color: '#144272',
+    fontWeight: '600',
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
 
   // Pagination Component
