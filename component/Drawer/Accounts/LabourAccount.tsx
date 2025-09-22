@@ -1,20 +1,21 @@
 import {
   Platform,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
+  SafeAreaView,
+  ImageBackground,
+  ScrollView,
+  FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
-import {ImageBackground} from 'react-native';
-import {Image} from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import {RadioButton} from 'react-native-paper';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import {useNavigation} from '@react-navigation/native';
@@ -56,15 +57,21 @@ export default function LabourAccount() {
     null,
   );
   const [labourDropdown, setLabourDropdown] = useState<Labour[]>([]);
-  const transformedLab = labourDropdown.map(lab => ({
-    label: lab.labr_name,
-    value: lab.id.toString(),
-  }));
   const [labourData, setLabourData] = useState<Labour | null>(null);
   const [singleAccDetails, setSingleAccDetails] = useState<
     SingleAccountDetails[]
   >([]);
   const [allLabourData, setAllLabourData] = useState<AllLabour[]>([]);
+
+  // Pagination states
+  const [currentPageAll, setCurrentPageAll] = useState(1);
+  const [currentPageSingle, setCurrentPageSingle] = useState(1);
+  const [itemsPerPage] = useState(5);
+
+  const transformedLab = labourDropdown.map(lab => ({
+    label: lab.labr_name,
+    value: lab.id.toString(),
+  }));
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
@@ -177,12 +184,81 @@ export default function LabourAccount() {
     };
   };
 
+  // Pagination helpers for All Labour
+  const paginateAllLabour = () => {
+    const startIndex = (currentPageAll - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return allLabourData.slice(startIndex, endIndex);
+  };
+
+  const totalPagesAll = Math.ceil(allLabourData.length / itemsPerPage);
+
+  // Pagination helpers for Single Labour
+  const paginateSingleLabour = () => {
+    const startIndex = (currentPageSingle - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return singleAccDetails.slice(startIndex, endIndex);
+  };
+
+  const totalPagesSingle = Math.ceil(singleAccDetails.length / itemsPerPage);
+
+  // Pagination controls component
+  const PaginationControls = ({
+    currentPage,
+    totalPages,
+    onPageChange,
+  }: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+  }) => {
+    if (totalPages <= 1) return null;
+
+    return (
+      <View style={styles.paginationContainer}>
+        <TouchableOpacity
+          style={[
+            styles.paginationBtn,
+            currentPage === 1 && styles.disabledBtn,
+          ]}
+          onPress={() => onPageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}>
+          <Icon
+            name="chevron-left"
+            size={20}
+            color={currentPage === 1 ? '#666' : 'white'}
+          />
+        </TouchableOpacity>
+
+        <View style={styles.pageIndicator}>
+          <Text style={styles.pageText}>
+            {currentPage} of {totalPages}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.paginationBtn,
+            currentPage === totalPages && styles.disabledBtn,
+          ]}
+          onPress={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages}>
+          <Icon
+            name="chevron-right"
+            size={20}
+            color={currentPage === totalPages ? '#666' : 'white'}
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   useEffect(() => {
     fetchCustDropdown();
     getLabourData();
     fetchTransportDetails();
     fetchAllLabourData();
-  }, [labourVal]);
+  }, [labourVal, fromDate, toDate]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -191,37 +267,31 @@ export default function LabourAccount() {
         resizeMode="cover"
         style={styles.background}>
         {/* Header */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
             <Image
               source={require('../../../assets/menu.png')}
               style={{
-                width: 30,
-                height: 30,
+                width: 24,
+                height: 24,
                 tintColor: 'white',
               }}
             />
           </TouchableOpacity>
 
           <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Labour Account
-            </Text>
+            <Text style={styles.headerTitle}>Labour Account</Text>
           </View>
+
+          <TouchableOpacity
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
+            onPress={() => {}}
+            disabled>
+            <Icon name="account-balance" size={24} color="transparent" />
+          </TouchableOpacity>
         </View>
 
-        <ScrollView style={{flex: 1}}>
+        <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
           {/* Toggle Buttons */}
           <View style={styles.toggleBtnContainer}>
             <TouchableOpacity
@@ -230,7 +300,13 @@ export default function LabourAccount() {
                 selectedTab === 'Single' && {backgroundColor: '#D0F4DE'},
               ]}
               onPress={() => setSelectedTab('Single')}>
-              <Text style={styles.toggleBtnText}>Single Labour</Text>
+              <Text
+                style={[
+                  styles.toggleBtnText,
+                  selectedTab === 'Single' && {color: '#144272'},
+                ]}>
+                Single Labour
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -238,496 +314,335 @@ export default function LabourAccount() {
                 selectedTab === 'All' && {backgroundColor: '#D0F4DE'},
               ]}
               onPress={() => setSelectedTab('All')}>
-              <Text style={styles.toggleBtnText}>All Labours</Text>
+              <Text
+                style={[
+                  styles.toggleBtnText,
+                  selectedTab === 'All' && {color: '#144272'},
+                ]}>
+                All Labours
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Other Buttons */}
+          {/* Action Buttons */}
           <View style={[styles.toggleBtnContainer, {marginVertical: 5}]}>
             <TouchableOpacity
-              style={[
-                styles.toggleBtn,
-                {borderRadius: 10, backgroundColor: '#144272'},
-              ]}
+              style={[styles.actionBtn, {backgroundColor: '#144272'}]}
               onPress={() => {
-                closeDrawer()
+                closeDrawer();
                 navigation.navigate('LabourAddPayment' as never);
               }}>
-              <Text style={[styles.toggleBtnText, {color: 'white'}]}>
-                Add Payment
-              </Text>
+              <Icon name="payment" size={16} color="white" />
+              <Text style={styles.actionBtnText}>Add Payment</Text>
             </TouchableOpacity>
           </View>
 
           {selectedTab === 'Single' ? (
             <>
-              {/* Single Customer Data */}
-              <View
-                style={{
-                  flexDirection: 'column',
-                  alignSelf: 'center',
-                  marginTop: 10,
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: 14,
-                    marginLeft: 5,
-                  }}>
-                  Labour:
-                </Text>
-                <DropDownPicker
-                  items={transformedLab}
-                  open={Open}
-                  value={labourVal}
-                  setValue={setLabourVal}
-                  setOpen={setOpen}
-                  placeholder="Select Labour"
-                  placeholderStyle={{color: 'white'}}
-                  textStyle={{color: 'white'}}
-                  style={styles.dropdown}
-                  dropDownContainerStyle={{
-                    backgroundColor: 'white',
-                    borderColor: '#144272',
-                    width: '90%',
-                    marginTop: 8,
-                  }}
-                  labelStyle={{color: 'white'}}
-                  listItemLabelStyle={{color: '#144272'}}
-                  ArrowUpIconComponent={() => (
-                    <Text>
-                      <Icon name="chevron-up" size={15} color="white" />
-                    </Text>
-                  )}
-                  ArrowDownIconComponent={() => (
-                    <Text>
-                      <Icon name="chevron-down" size={15} color="white" />
-                    </Text>
-                  )}
-                  listMode="SCROLLVIEW"
-                />
-              </View>
+              {/* Single Labour Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Labour Information</Text>
 
-              {/* Date Fields Section */}
-              <View
-                style={{
-                  width: '100%',
-                  marginTop: 10,
-                  paddingHorizontal: '5%',
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                }}>
-                {/* From Date */}
-                <View style={{width: '48%'}}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: 14,
-                      marginLeft: 5,
-                      textAlign: 'left',
-                    }}>
-                    From Date:
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setShowDatePicker('from')}
-                    style={styles.dateInput}>
-                    <Text style={{color: 'white'}}>
-                      {fromDate ? fromDate.toLocaleDateString() : ''}
-                    </Text>
-                  </TouchableOpacity>
+                <View style={styles.dropdownRow}>
+                  <Text style={styles.inputLabel}>Select Labour</Text>
+                  <DropDownPicker
+                    items={transformedLab}
+                    open={Open}
+                    value={labourVal}
+                    setValue={setLabourVal}
+                    setOpen={setOpen}
+                    placeholder="Choose labour..."
+                    placeholderStyle={styles.dropdownPlaceholder}
+                    textStyle={styles.dropdownText}
+                    style={styles.dropdown}
+                    dropDownContainerStyle={styles.dropdownContainer}
+                    ArrowUpIconComponent={() => (
+                      <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                    )}
+                    ArrowDownIconComponent={() => (
+                      <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                    )}
+                    listMode="SCROLLVIEW"
+                    listItemLabelStyle={{color: '#144272'}}
+                  />
                 </View>
 
-                {/* To Date */}
-                <View style={{width: '48%'}}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: 14,
-                      marginLeft: 5,
-                      textAlign: 'left',
-                    }}>
-                    To Date:
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setShowDatePicker('to')}
-                    style={styles.dateInput}>
-                    <Text style={{color: 'white'}}>
-                      {toDate ? toDate.toLocaleDateString() : ''}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {showDatePicker && (
-                <DateTimePicker
-                  value={
-                    showDatePicker === 'from'
-                      ? fromDate ?? new Date()
-                      : toDate ?? new Date()
-                  }
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={handleDateChange}
-                  themeVariant="dark"
-                  style={{backgroundColor: '#144272'}}
-                />
-              )}
-
-              <View
-                style={{
-                  width: '100%',
-                  marginTop: 10,
-                  paddingHorizontal: '5%',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: 14,
-                    marginLeft: 5,
-                    textAlign: 'left',
-                  }}>
-                  Labour Name:
-                </Text>
-                <TextInput
-                  style={[styles.productinput, {backgroundColor: 'gray'}]}
-                  value={labourData?.labr_name}
-                  editable={false}
-                />
-              </View>
-
-              <View
-                style={{
-                  width: '100%',
-                  marginTop: 10,
-                  paddingHorizontal: '5%',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: 14,
-                    marginLeft: 5,
-                    textAlign: 'left',
-                  }}>
-                  CNIC:
-                </Text>
-                <TextInput
-                  style={[styles.productinput, {backgroundColor: 'gray'}]}
-                  value={labourData?.labr_cnic}
-                  editable={false}
-                />
-              </View>
-
-              <View
-                style={{
-                  width: '100%',
-                  marginTop: 10,
-                  paddingHorizontal: '5%',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: 14,
-                    marginLeft: 5,
-                    textAlign: 'left',
-                  }}>
-                  Address:
-                </Text>
-                <TextInput
-                  style={[styles.productinput, {backgroundColor: 'gray'}]}
-                  value={labourData?.labr_address}
-                  editable={false}
-                />
-              </View>
-
-              {/* Invoices Cards */}
-              <View style={{paddingBottom: 30}}>
-                <View style={{marginTop: 20}}>
-                  {singleAccDetails.length === 0 ? (
-                    <View style={{alignItems: 'center', marginTop: 20}}>
-                      <Text
-                        style={{
-                          color: 'white',
-                          fontSize: 16,
-                          fontWeight: 'bold',
-                        }}>
-                        No record found.
+                {labourData && (
+                  <View style={styles.labourInfo}>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Labour Name:</Text>
+                      <Text style={styles.infoValue}>
+                        {labourData.labr_name}
                       </Text>
                     </View>
-                  ) : (
-                    singleAccDetails.map((item, index) => (
-                      <View key={item.id} style={{padding: 5}}>
-                        <View style={styles.table}>
-                          <View style={styles.tablehead}>
-                            <Text
-                              style={{
-                                color: '#144272',
-                                fontWeight: 'bold',
-                                marginLeft: 5,
-                                marginTop: 5,
-                              }}>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>CNIC:</Text>
+                      <Text style={styles.infoValue}>
+                        {labourData.labr_cnic}
+                      </Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Address:</Text>
+                      <Text style={styles.infoValue}>
+                        {labourData.labr_address}
+                      </Text>
+                    </View>
+                  </View>
+                )}
+
+                {/* Date Range Section */}
+                <View style={styles.dateSection}>
+                  <Text style={styles.inputLabel}>Date Range</Text>
+                  <View style={styles.dateRow}>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker('from')}
+                      style={styles.dateInput}>
+                      <Icon name="event" size={20} color="white" />
+                      <Text style={styles.dateText}>
+                        {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker('to')}
+                      style={styles.dateInput}>
+                      <Icon name="event" size={20} color="white" />
+                      <Text style={styles.dateText}>
+                        {toDate ? toDate.toLocaleDateString() : 'To Date'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={
+                      showDatePicker === 'from'
+                        ? fromDate ?? new Date()
+                        : toDate ?? new Date()
+                    }
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDateChange}
+                    themeVariant="dark"
+                    style={{backgroundColor: '#144272'}}
+                  />
+                )}
+              </View>
+
+              {/* Account Details Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Account Details</Text>
+
+                {singleAccDetails.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Icon
+                      name="receipt"
+                      size={40}
+                      color="rgba(255,255,255,0.5)"
+                    />
+                    <Text style={styles.emptyStateText}>
+                      No transactions found
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <FlatList
+                      data={paginateSingleLabour()}
+                      keyExtractor={item => item.id.toString()}
+                      scrollEnabled={false}
+                      renderItem={({item}) => (
+                        <View style={styles.transactionCard}>
+                          <View style={styles.transactionHeader}>
+                            <Text style={styles.invoiceNumber}>
                               {item.labrac_invoice_no}
+                            </Text>
+                            <Text style={styles.transactionDate}>
+                              {new Date(item.labrac_date).toLocaleDateString(
+                                'en-GB',
+                              )}
                             </Text>
                           </View>
 
-                          <View style={styles.infoRow}>
-                            {[
-                              {
-                                label: 'Date:',
-                                value: new Date(item.labrac_date)
-                                  .toLocaleDateString('en-GB', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })
-                                  .replace(/\//g, '-'),
-                              },
-                              {
-                                label: 'Payable:',
-                                value: item.labrac_total_bill_amount,
-                              },
-                              {label: 'Paid:', value: item.labrac_paid_amount},
-                              {label: 'Balance:', value: item.labrac_balance},
-                              {label: 'Type:', value: item.labrac_payment_type},
-                              {
-                                label: 'Method:',
-                                value: item.labrac_payment_method,
-                              },
-                            ].map(
-                              (
-                                field: {label: string; value: number | string},
-                                idx,
-                              ) => (
-                                <View
-                                  key={`${index}-${idx}`}
-                                  style={{
-                                    flexDirection: 'row',
-                                    justifyContent: 'space-between',
-                                  }}>
-                                  <Text
-                                    style={[styles.value, {marginBottom: 5}]}>
-                                    {field.label}
-                                  </Text>
-                                  <Text
-                                    style={[styles.value, {marginBottom: 5}]}>
-                                    {typeof field.value === 'number'
-                                      ? field.value.toFixed(2)
-                                      : field.value}
-                                  </Text>
-                                </View>
-                              ),
-                            )}
+                          <View style={styles.transactionDetails}>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>Payable:</Text>
+                              <Text style={styles.detailValue}>
+                                {item.labrac_total_bill_amount}
+                              </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>Paid:</Text>
+                              <Text style={styles.detailValue}>
+                                {item.labrac_paid_amount}
+                              </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>Balance:</Text>
+                              <Text style={styles.detailValue}>
+                                {item.labrac_balance}
+                              </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>Type:</Text>
+                              <Text style={styles.detailValue}>
+                                {item.labrac_payment_type}
+                              </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>Method:</Text>
+                              <Text style={styles.detailValue}>
+                                {item.labrac_payment_method}
+                              </Text>
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    ))
-                  )}
-                </View>
-              </View>
+                      )}
+                    />
 
-              {/* Last Component */}
-              <View
-                style={{
-                  width: '100%',
-                  paddingVertical: 20,
-                  paddingHorizontal: 10,
-                }}>
-                {(() => {
-                  const {netReceivables, totalReceivables, totalReceived} =
-                    calculateSingleTransTotals();
+                    <PaginationControls
+                      currentPage={currentPageSingle}
+                      totalPages={totalPagesSingle}
+                      onPageChange={setCurrentPageSingle}
+                    />
+                  </>
+                )}
 
-                  return (
-                    <>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginVertical: 5,
-                          paddingHorizontal: '10%',
-                        }}>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          Total Payables:
-                        </Text>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          {totalReceivables}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginVertical: 5,
-                          paddingHorizontal: '10%',
-                        }}>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          Total Paid:
-                        </Text>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          {totalReceived}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginVertical: 5,
-                          paddingHorizontal: '10%',
-                        }}>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          Net Payables:
-                        </Text>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          {netReceivables}
-                        </Text>
-                      </View>
-                    </>
-                  );
-                })()}
-
-                <View style={styles.btnContainer}>
-                  <TouchableOpacity style={styles.btnItem}>
-                    <Text style={styles.btnText}>View Details</Text>
-                  </TouchableOpacity>
+                {/* Summary Section */}
+                <View style={styles.summarySection}>
+                  {(() => {
+                    const {netReceivables, totalReceivables, totalReceived} =
+                      calculateSingleTransTotals();
+                    return (
+                      <>
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>
+                            Total Payables:
+                          </Text>
+                          <Text style={styles.summaryValue}>
+                            {totalReceivables}
+                          </Text>
+                        </View>
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>Total Paid:</Text>
+                          <Text style={styles.summaryValue}>
+                            {totalReceived}
+                          </Text>
+                        </View>
+                        <View style={[styles.summaryRow, styles.totalRow]}>
+                          <Text
+                            style={[styles.summaryLabel, styles.totalLabel]}>
+                            Net Payables:
+                          </Text>
+                          <Text
+                            style={[styles.summaryValue, styles.totalValue]}>
+                            {netReceivables}
+                          </Text>
+                        </View>
+                      </>
+                    );
+                  })()}
                 </View>
               </View>
             </>
           ) : (
             <>
-              <View style={{paddingBottom: 30}}>
-                <View style={{marginTop: 20}}>
-                  {allLabourData.length === 0 ? (
-                    <View style={{alignItems: 'center', marginTop: 20}}>
-                      <Text
-                        style={{
-                          color: 'white',
-                          fontSize: 16,
-                          fontWeight: 'bold',
-                        }}>
-                        No record found.
-                      </Text>
-                    </View>
-                  ) : (
-                    allLabourData.map((item, index) => (
-                      <View key={index} style={{padding: 5}}>
-                        <View style={styles.table}>
-                          <View style={styles.tablehead}>
-                            <Text
-                              style={{
-                                color: '#144272',
-                                fontWeight: 'bold',
-                                marginLeft: 5,
-                                marginTop: 5,
-                              }}>
-                              {item.labr_name}
-                            </Text>
-                          </View>
+              {/* All Labours Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>All Labour Accounts</Text>
 
-                          <View style={styles.infoRow}>
-                            {[
-                              {
-                                label: 'Bill Amount:',
-                                value: item.labrac_total_bill_amount,
-                              },
-                              {
-                                label: 'Paid amount:',
-                                value: item.labrac_paid_amount,
-                              },
-                              {label: 'Balance:', value: item.labrac_balance},
-                            ].map(
-                              (
-                                field: {label: string; value: number | string},
-                                idx,
-                              ) => (
-                                <View
-                                  key={`${index}-${idx}`}
-                                  style={{
-                                    flexDirection: 'row',
-                                    justifyContent: 'space-between',
-                                  }}>
-                                  <Text
-                                    style={[styles.value, {marginBottom: 5}]}>
-                                    {field.label}
-                                  </Text>
-                                  <Text
-                                    style={[styles.value, {marginBottom: 5}]}>
-                                    {typeof field.value === 'number'
-                                      ? field.value.toFixed(2)
-                                      : field.value}
-                                  </Text>
-                                </View>
-                              ),
-                            )}
+                {allLabourData.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Icon
+                      name="people"
+                      size={40}
+                      color="rgba(255,255,255,0.5)"
+                    />
+                    <Text style={styles.emptyStateText}>
+                      No labour accounts found
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <FlatList
+                      data={paginateAllLabour()}
+                      keyExtractor={(item, index) => index.toString()}
+                      scrollEnabled={false}
+                      renderItem={({item}) => (
+                        <View style={styles.labourAccountCard}>
+                          <Text style={styles.labourName}>
+                            {item.labr_name}
+                          </Text>
+                          <View style={styles.accountDetails}>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>
+                                Bill Amount:
+                              </Text>
+                              <Text style={styles.detailValue}>
+                                {item.labrac_total_bill_amount}
+                              </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>
+                                Paid Amount:
+                              </Text>
+                              <Text style={styles.detailValue}>
+                                {item.labrac_paid_amount}
+                              </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>Balance:</Text>
+                              <Text style={styles.detailValue}>
+                                {item.labrac_balance}
+                              </Text>
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    ))
-                  )}
+                      )}
+                    />
+
+                    <PaginationControls
+                      currentPage={currentPageAll}
+                      totalPages={totalPagesAll}
+                      onPageChange={setCurrentPageAll}
+                    />
+                  </>
+                )}
+
+                {/* All Labours Summary */}
+                <View style={styles.summarySection}>
+                  {(() => {
+                    const {totalReceivables, totalReceived, netReceivables} =
+                      calculateAllLabourTotals();
+                    return (
+                      <>
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>
+                            Total Payables:
+                          </Text>
+                          <Text style={styles.summaryValue}>
+                            {totalReceivables}
+                          </Text>
+                        </View>
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>Total Paid:</Text>
+                          <Text style={styles.summaryValue}>
+                            {totalReceived}
+                          </Text>
+                        </View>
+                        <View style={[styles.summaryRow, styles.totalRow]}>
+                          <Text
+                            style={[styles.summaryLabel, styles.totalLabel]}>
+                            Net Payables:
+                          </Text>
+                          <Text
+                            style={[styles.summaryValue, styles.totalValue]}>
+                            {netReceivables}
+                          </Text>
+                        </View>
+                      </>
+                    );
+                  })()}
                 </View>
-              </View>
-
-              {/* Last Component */}
-              <View
-                style={{
-                  width: '100%',
-                  paddingVertical: 20,
-                  paddingHorizontal: 10,
-                }}>
-                {(() => {
-                  const {netReceivables, totalReceivables, totalReceived} =
-                    calculateAllLabourTotals();
-
-                  return (
-                    <>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginVertical: 5,
-                          paddingHorizontal: '10%',
-                        }}>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          Total Payables:
-                        </Text>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          {totalReceivables}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginVertical: 5,
-                          paddingHorizontal: '10%',
-                        }}>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          Total Paid:
-                        </Text>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          {totalReceived}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginVertical: 5,
-                          paddingHorizontal: '10%',
-                        }}>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          Net Payables:
-                        </Text>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          {netReceivables}
-                        </Text>
-                      </View>
-                    </>
-                  );
-                })()}
               </View>
             </>
           )}
@@ -745,121 +660,297 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   headerTextContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
   toggleBtnContainer: {
-    width: '100%',
-    height: 50,
-    paddingHorizontal: '5%',
-    marginVertical: 10,
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    marginVertical: 8,
   },
   toggleBtn: {
-    height: '80%',
-    width: '40%',
-    backgroundColor: '#f8f8f8',
-    alignSelf: 'center',
-    borderRadius: 50,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 1,
-      height: 2,
-    },
-    shadowOpacity: 1,
-    shadowRadius: 5,
-    elevation: 5,
-    justifyContent: 'center',
+    flex: 1,
+    marginHorizontal: 4,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   toggleBtnText: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#000',
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
   },
-
-  //Single Screen Styles
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 38,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: '90%',
-  },
-  productinput: {
-    borderWidth: 1,
-    width: '100%',
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 5,
-    height: 38,
-    color: '#fff',
-  },
-  dateInput: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 5,
+  actionBtn: {
+    flex: 1,
+    marginHorizontal: 4,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
     justifyContent: 'center',
-    height: 40, // Match other input heights
   },
-  table: {
+  actionBtnText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  section: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
     borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  tablehead: {
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 16,
+  },
+  dropdownRow: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  dropdown: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 40,
+  },
+  dropdownContainer: {
     backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    marginTop: 2,
+    maxHeight: 200,
+  },
+  dropdownText: {
+    color: 'white',
+    fontSize: 14,
+  },
+  dropdownPlaceholder: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  labourInfo: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  infoLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  infoValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  dateSection: {
+    marginBottom: 16,
+  },
+  dateRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  btnContainer: {
-    width: '100%',
-    paddingHorizontal: '10%',
-    paddingVertical: 10,
-    justifyContent: 'center',
-    height: 55,
-  },
-  btnItem: {
-    height: '100%',
-    width: '30%',
-    backgroundColor: '#144272',
-    alignSelf: 'center',
+  dateInput: {
+    flex: 1,
+    marginHorizontal: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dateText: {
+    flex: 1,
+    color: 'white',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyStateText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  transactionCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  transactionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  invoiceNumber: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  transactionDate: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  transactionDetails: {
+    marginTop: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  detailLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  detailValue: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  labourAccountCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  labourName: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  accountDetails: {
+    marginTop: 4,
+  },
+  summarySection: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  summaryValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  totalRow: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+    paddingTop: 8,
+    marginTop: 8,
+  },
+  totalLabel: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  totalValue: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
   },
-  btnText: {
-    fontSize: 12,
-    fontWeight: 'bold',
+  paginationBtn: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  disabledBtn: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  pageIndicator: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  pageText: {
     color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

@@ -2,18 +2,17 @@ import {
   Platform,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
+  SafeAreaView,
+  ImageBackground,
+  ScrollView,
+  FlatList,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import {SafeAreaView} from 'react-native';
-import {ImageBackground} from 'react-native';
-import {Image} from 'react-native';
-import {ScrollView} from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {RadioButton} from 'react-native-paper';
 import axios from 'axios';
@@ -58,6 +57,8 @@ interface DetailsWith {
   supac_total_bill_amount: string;
   supac_paid_amount: string;
   supac_balance: string;
+  supac_payment_type: string;
+  supac_payment_method: string;
 }
 
 export default function SupplierAccount() {
@@ -76,10 +77,6 @@ export default function SupplierAccount() {
   >('withoutDetails');
   const [allSuppData, setAllSuppData] = useState<AllSupplierData[]>([]);
   const [suppDropdown, setSuppDropdown] = useState<Suppliers[]>([]);
-  const transformedSupp = suppDropdown.map(sup => ({
-    label: `${sup.sup_name}_${sup.sup_company_name}`,
-    value: sup.id.toString(),
-  }));
   const [suppData, setSuppData] = useState<SingleSupplier | null>(null);
   const [accountDetailsWithout, setAccountDetailsWithout] = useState<
     DetailsWithout[]
@@ -89,6 +86,16 @@ export default function SupplierAccount() {
   const [accountDetailsWith, setAccountDetailsWith] = useState<DetailsWith[]>(
     [],
   );
+
+  // Pagination states
+  const [currentPageAll, setCurrentPageAll] = useState(1);
+  const [currentPageSingle, setCurrentPageSingle] = useState(1);
+  const [itemsPerPage] = useState(5);
+
+  const transformedSupp = suppDropdown.map(sup => ({
+    label: `${sup.sup_name}_${sup.sup_company_name}`,
+    value: sup.id.toString(),
+  }));
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
@@ -126,7 +133,7 @@ export default function SupplierAccount() {
     };
   };
 
-  //Fetch All Supplier Data
+  // Fetch All Supplier Data
   const fetchAllSupplierData = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/allsupplieraccount`);
@@ -137,7 +144,7 @@ export default function SupplierAccount() {
   };
 
   // Fetch Supplier dropdown
-  const fetchCustDropdown = async () => {
+  const fetchSuppDropdown = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/loadsuppliers`);
       setSuppDropdown(res.data);
@@ -166,7 +173,7 @@ export default function SupplierAccount() {
   };
 
   // Fetch Single Supplier Without Details
-  const fetchCustWithoutDetails = async () => {
+  const fetchSuppWithoutDetails = async () => {
     try {
       const from = fromDate?.toISOString().split('T')[0];
       const to = toDate?.toISOString().split('T')[0];
@@ -186,12 +193,16 @@ export default function SupplierAccount() {
     }
   };
 
-  // Calculate Withou Details Totals
+  // Calculate Without Details Totals
   const calculateWithoutTotals = () => {
+    const dataToCalculate =
+      selectedOption === 'withoutDetails'
+        ? accountDetailsWithout
+        : accountDetailsWith;
     let totalReceivables = 0;
     let totalReceived = 0;
 
-    accountDetailsWithout.forEach(invc => {
+    dataToCalculate.forEach(invc => {
       const receivables = parseFloat(invc.supac_total_bill_amount) || 0;
       const received = parseFloat(invc.supac_paid_amount) || 0;
 
@@ -206,8 +217,8 @@ export default function SupplierAccount() {
     };
   };
 
-  // Fetch Single Customer With Details
-  const fetchCustWithDetails = async () => {
+  // Fetch Single Supplier With Details
+  const fetchSuppWithDetails = async () => {
     try {
       const from = fromDate?.toISOString().split('T')[0];
       const to = toDate?.toISOString().split('T')[0];
@@ -222,13 +233,95 @@ export default function SupplierAccount() {
     }
   };
 
+  // Pagination helpers for All Suppliers
+  const paginateAllSuppliers = () => {
+    const startIndex = (currentPageAll - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return allSuppData.slice(startIndex, endIndex);
+  };
+
+  const totalPagesAll = Math.ceil(allSuppData.length / itemsPerPage);
+
+  // Pagination helpers for Single Supplier
+  const paginateSingleSupplier = () => {
+    const data =
+      selectedOption === 'withoutDetails'
+        ? accountDetailsWithout
+        : accountDetailsWith;
+    const startIndex = (currentPageSingle - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return data.slice(startIndex, endIndex);
+  };
+
+  const totalPagesSingle = Math.ceil(
+    (selectedOption === 'withoutDetails'
+      ? accountDetailsWithout
+      : accountDetailsWith
+    ).length / itemsPerPage,
+  );
+
+  // Pagination controls component
+  const PaginationControls = ({
+    currentPage,
+    totalPages,
+    onPageChange,
+  }: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+  }) => {
+    if (totalPages <= 1) return null;
+
+    return (
+      <View style={styles.paginationContainer}>
+        <TouchableOpacity
+          style={[
+            styles.paginationBtn,
+            currentPage === 1 && styles.disabledBtn,
+          ]}
+          onPress={() => onPageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}>
+          <Icon
+            name="chevron-left"
+            size={20}
+            color={currentPage === 1 ? '#666' : 'white'}
+          />
+        </TouchableOpacity>
+
+        <View style={styles.pageIndicator}>
+          <Text style={styles.pageText}>
+            {currentPage} of {totalPages}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.paginationBtn,
+            currentPage === totalPages && styles.disabledBtn,
+          ]}
+          onPress={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages}>
+          <Icon
+            name="chevron-right"
+            size={20}
+            color={currentPage === totalPages ? '#666' : 'white'}
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   useEffect(() => {
     fetchAllSupplierData();
-    fetchCustWithoutDetails();
+    fetchSuppWithoutDetails();
     getSuppData();
-    fetchCustDropdown();
-    fetchCustWithDetails();
-  }, [suppValue]);
+    fetchSuppDropdown();
+    fetchSuppWithDetails();
+  }, [suppValue, fromDate, toDate]);
+
+  useEffect(() => {
+    setCurrentPageSingle(1); // Reset pagination when switching between detail types
+  }, [selectedOption]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -237,37 +330,25 @@ export default function SupplierAccount() {
         resizeMode="cover"
         style={styles.background}>
         {/* Header */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
           <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Supplier Account
-            </Text>
+            <Text style={styles.headerTitle}>Supplier Account</Text>
           </View>
+
+          <TouchableOpacity
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
+            onPress={() => {}}
+            disabled>
+            <Icon name="account-balance" size={24} color="transparent" />
+          </TouchableOpacity>
         </View>
 
-        <ScrollView style={{flex: 1}}>
+        <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
+          {/* Toggle Buttons */}
           <View style={styles.toggleBtnContainer}>
             <TouchableOpacity
               style={[
@@ -275,7 +356,13 @@ export default function SupplierAccount() {
                 selectedTab === 'Single' && {backgroundColor: '#D0F4DE'},
               ]}
               onPress={() => setSelectedTab('Single')}>
-              <Text style={styles.toggleBtnText}>Single Supplier</Text>
+              <Text
+                style={[
+                  styles.toggleBtnText,
+                  selectedTab === 'Single' && {color: '#144272'},
+                ]}>
+                Single Supplier
+              </Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
@@ -283,669 +370,457 @@ export default function SupplierAccount() {
                 selectedTab === 'All' && {backgroundColor: '#D0F4DE'},
               ]}
               onPress={() => setSelectedTab('All')}>
-              <Text style={styles.toggleBtnText}>All Supplier</Text>
+              <Text
+                style={[
+                  styles.toggleBtnText,
+                  selectedTab === 'All' && {color: '#144272'},
+                ]}>
+                All Suppliers
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Other Buttons */}
+          {/* Action Buttons */}
           <View style={[styles.toggleBtnContainer, {marginVertical: 5}]}>
             <TouchableOpacity
-              style={[
-                styles.toggleBtn,
-                {borderRadius: 10, backgroundColor: '#144272'},
-              ]}
+              style={[styles.actionBtn, {backgroundColor: '#144272'}]}
               onPress={() => {
                 closeDrawer();
                 navigation.navigate('SupplierAddPayment' as never);
               }}>
-              <Text style={[styles.toggleBtnText, {color: 'white'}]}>
-                Add Payment
-              </Text>
+              <Icon name="payment" size={16} color="white" />
+              <Text style={styles.actionBtnText}>Add Payment</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.toggleBtn,
-                {borderRadius: 10, backgroundColor: '#144272'},
-              ]}
+              style={[styles.actionBtn, {backgroundColor: '#144272'}]}
               onPress={() => {
-                navigation.navigate('SupplierChequeClearance' as never);
                 closeDrawer();
+                navigation.navigate('SupplierChequeClearance' as never);
               }}>
-              <Text style={[styles.toggleBtnText, {color: 'white'}]}>
-                Cheque Clearance
-              </Text>
+              <Icon name="account-balance-wallet" size={16} color="white" />
+              <Text style={styles.actionBtnText}>Cheque Clearance</Text>
             </TouchableOpacity>
           </View>
 
           {selectedTab === 'Single' ? (
             <>
-              <View
-                style={{
-                  flexDirection: 'column',
-                  alignSelf: 'center',
-                  marginTop: 10,
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: 14,
-                    marginLeft: 5,
-                  }}>
-                  Supplier:
-                </Text>
-                <DropDownPicker
-                  items={transformedSupp}
-                  open={Open}
-                  value={suppValue}
-                  setValue={setSuppValue}
-                  setOpen={setOpen}
-                  placeholder="Select Supplier"
-                  placeholderStyle={{color: 'white'}}
-                  textStyle={{color: 'white'}}
-                  style={styles.dropdown}
-                  dropDownContainerStyle={{
-                    backgroundColor: 'white',
-                    borderColor: '#144272',
-                    width: '90%',
-                    marginTop: 8,
-                  }}
-                  labelStyle={{color: 'white'}}
-                  listItemLabelStyle={{color: '#144272'}}
-                  ArrowUpIconComponent={() => (
-                    <Text>
-                      <Icon name="chevron-up" size={15} color="white" />
-                    </Text>
-                  )}
-                  ArrowDownIconComponent={() => (
-                    <Text>
-                      <Icon name="chevron-down" size={15} color="white" />
-                    </Text>
-                  )}
-                  listMode="SCROLLVIEW"
-                />
-              </View>
+              {/* Single Supplier Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Supplier Information</Text>
 
-              {/* Date Fields Section */}
-              <View
-                style={{
-                  width: '100%',
-                  marginTop: 10,
-                  paddingHorizontal: '5%',
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                }}>
-                {/* From Date */}
-                <View style={{width: '48%'}}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: 14,
-                      marginLeft: 5,
-                      textAlign: 'left',
-                    }}>
-                    From Date:
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setShowDatePicker('from')}
-                    style={styles.dateInput}>
-                    <Text style={{color: 'white'}}>
-                      {fromDate ? fromDate.toLocaleDateString() : ''}
-                    </Text>
-                  </TouchableOpacity>
+                <View style={styles.dropdownRow}>
+                  <Text style={styles.inputLabel}>Select Supplier</Text>
+                  <DropDownPicker
+                    items={transformedSupp}
+                    open={Open}
+                    value={suppValue}
+                    setValue={setSuppValue}
+                    setOpen={setOpen}
+                    placeholder="Choose supplier..."
+                    placeholderStyle={styles.dropdownPlaceholder}
+                    textStyle={styles.dropdownText}
+                    style={styles.dropdown}
+                    dropDownContainerStyle={styles.dropdownContainer}
+                    ArrowUpIconComponent={() => (
+                      <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                    )}
+                    ArrowDownIconComponent={() => (
+                      <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                    )}
+                    listMode="SCROLLVIEW"
+                    listItemLabelStyle={{color: '#144272'}}
+                  />
                 </View>
 
-                {/* To Date */}
-                <View style={{width: '48%'}}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      fontWeight: 'bold',
-                      fontSize: 14,
-                      marginLeft: 5,
-                      textAlign: 'left',
-                    }}>
-                    To Date:
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => setShowDatePicker('to')}
-                    style={styles.dateInput}>
-                    <Text style={{color: 'white'}}>
-                      {toDate ? toDate.toLocaleDateString() : ''}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {showDatePicker && (
-                <DateTimePicker
-                  value={
-                    showDatePicker === 'from'
-                      ? fromDate ?? new Date()
-                      : toDate ?? new Date()
-                  }
-                  mode="date"
-                  display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                  onChange={handleDateChange}
-                  themeVariant="dark"
-                  style={{backgroundColor: '#144272'}}
-                />
-              )}
-
-              <View
-                style={{
-                  width: '100%',
-                  marginTop: 10,
-                  paddingHorizontal: '5%',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: 14,
-                    marginLeft: 5,
-                    textAlign: 'left',
-                  }}>
-                  Supplier Name:
-                </Text>
-                <TextInput
-                  style={[styles.productinput, {backgroundColor: 'gray'}]}
-                  value={suppData?.sup_name}
-                  editable={false}
-                />
-              </View>
-
-              <View
-                style={{
-                  width: '100%',
-                  marginTop: 10,
-                  paddingHorizontal: '5%',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: 14,
-                    marginLeft: 5,
-                    textAlign: 'left',
-                  }}>
-                  Compnay Name:
-                </Text>
-                <TextInput
-                  style={[styles.productinput, {backgroundColor: 'gray'}]}
-                  value={suppData?.sup_company_name}
-                  editable={false}
-                />
-              </View>
-
-              <View
-                style={{
-                  width: '100%',
-                  marginTop: 10,
-                  paddingHorizontal: '5%',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: 14,
-                    marginLeft: 5,
-                    textAlign: 'left',
-                  }}>
-                  Address:
-                </Text>
-                <TextInput
-                  style={[styles.productinput, {backgroundColor: 'gray'}]}
-                  value={suppData?.sup_address}
-                  editable={false}
-                />
-              </View>
-
-              {/* Account Type Radio Buttons */}
-              <View
-                style={{
-                  width: '100%',
-                  marginTop: 15,
-                  paddingHorizontal: '5%',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    fontWeight: 'bold',
-                    fontSize: 14,
-                    marginLeft: 5,
-                    marginBottom: 8,
-                  }}>
-                  Account:
-                </Text>
-
-                <RadioButton.Group
-                  onValueChange={value =>
-                    setSelectedOption(value as 'withoutDetails' | 'withDetails')
-                  }
-                  value={selectedOption}>
-                  <View style={{flexDirection: 'row'}}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        marginRight: 20,
-                      }}>
-                      <RadioButton.Android
-                        value="withoutDetails"
-                        color="#D0F4DE"
-                        uncheckedColor="white"
-                      />
-                      <Text style={{color: 'white', marginLeft: 8}}>
-                        Without Details
+                {suppData && (
+                  <View style={styles.supplierInfo}>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Supplier Name:</Text>
+                      <Text style={styles.infoValue}>{suppData.sup_name}</Text>
+                    </View>
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Company Name:</Text>
+                      <Text style={styles.infoValue}>
+                        {suppData.sup_company_name}
                       </Text>
                     </View>
-
-                    <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                      <RadioButton.Android
-                        value="withDetails"
-                        color="#D0F4DE"
-                        uncheckedColor="white"
-                      />
-                      <Text style={{color: 'white', marginLeft: 8}}>
-                        With Details
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Address:</Text>
+                      <Text style={styles.infoValue}>
+                        {suppData.sup_address}
                       </Text>
                     </View>
                   </View>
-                </RadioButton.Group>
+                )}
+
+                {/* Date Range Section */}
+                <View style={styles.dateSection}>
+                  <Text style={styles.inputLabel}>Date Range</Text>
+                  <View style={styles.dateRow}>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker('from')}
+                      style={styles.dateInput}>
+                      <Icon name="event" size={20} color="white" />
+                      <Text style={styles.dateText}>
+                        {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker('to')}
+                      style={styles.dateInput}>
+                      <Icon name="event" size={20} color="white" />
+                      <Text style={styles.dateText}>
+                        {toDate ? toDate.toLocaleDateString() : 'To Date'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={
+                      showDatePicker === 'from'
+                        ? fromDate ?? new Date()
+                        : toDate ?? new Date()
+                    }
+                    mode="date"
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    onChange={handleDateChange}
+                    themeVariant="dark"
+                    style={{backgroundColor: '#144272'}}
+                  />
+                )}
+
+                {/* Account Type Selection */}
+                <View style={styles.accountTypeSection}>
+                  <Text style={styles.inputLabel}>Account View</Text>
+                  <RadioButton.Group
+                    onValueChange={value =>
+                      setSelectedOption(
+                        value as 'withoutDetails' | 'withDetails',
+                      )
+                    }
+                    value={selectedOption}>
+                    <View style={styles.radioRow}>
+                      <View style={styles.radioOption}>
+                        <RadioButton.Android
+                          value="withoutDetails"
+                          color="#D0F4DE"
+                          uncheckedColor="white"
+                        />
+                        <Text style={styles.radioLabel}>Without Details</Text>
+                      </View>
+                      <View style={styles.radioOption}>
+                        <RadioButton.Android
+                          value="withDetails"
+                          color="#D0F4DE"
+                          uncheckedColor="white"
+                        />
+                        <Text style={styles.radioLabel}>With Details</Text>
+                      </View>
+                    </View>
+                  </RadioButton.Group>
+                </View>
               </View>
 
-              {/* Without Details Invoices Cards */}
-              {selectedOption === 'withoutDetails' && (
-                <View style={{paddingBottom: 30}}>
-                  <View style={{marginTop: 20}}>
-                    {accountDetailsWithout.length === 0 ? (
-                      <View style={{alignItems: 'center', marginTop: 20}}>
-                        <Text
-                          style={{
-                            color: 'white',
-                            fontSize: 16,
-                            fontWeight: 'bold',
-                          }}>
-                          No record found.
-                        </Text>
-                      </View>
-                    ) : (
-                      accountDetailsWithout.map((item, index) => (
-                        <View key={item.id} style={{padding: 5}}>
-                          <View style={styles.table}>
-                            <View style={styles.tablehead}>
-                              <Text
-                                style={{
-                                  color: '#144272',
-                                  fontWeight: 'bold',
-                                  marginLeft: 5,
-                                  marginTop: 5,
-                                }}>
-                                {item.supac_invoice_no}
-                              </Text>
-                            </View>
+              {/* Account Details Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                  {selectedOption === 'withoutDetails'
+                    ? 'Account Summary'
+                    : 'Detailed Transactions'}
+                </Text>
 
-                            <View style={styles.infoRow}>
-                              {[
-                                {
-                                  label: 'Date:',
-                                  value: new Date(item.supac_date)
-                                    .toLocaleDateString('en-DB', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      year: 'numeric',
-                                    })
-                                    .replace(/\//g, '-'),
-                                },
-                                {
-                                  label: 'Payable:',
-                                  value: item.supac_total_bill_amount,
-                                },
-                                {label: 'Paid:', value: item.supac_paid_amount},
-                                {label: 'Balance:', value: item.supac_balance},
-                                {
-                                  label: 'Type:',
-                                  value: item.supac_payment_type,
-                                },
-                                {
-                                  label: 'Method:',
-                                  value: item.supac_payment_method,
-                                },
-                              ].map(
-                                (
-                                  field: {
-                                    label: string;
-                                    value: number | string;
-                                  },
-                                  idx,
-                                ) => (
-                                  <View
-                                    key={`${index}-${idx}`}
-                                    style={{
-                                      flexDirection: 'row',
-                                      justifyContent: 'space-between',
-                                    }}>
-                                    <Text
-                                      style={[styles.value, {marginBottom: 5}]}>
-                                      {field.label}
-                                    </Text>
-                                    <Text
-                                      style={[styles.value, {marginBottom: 5}]}>
-                                      {typeof field.value === 'number'
-                                        ? field.value.toFixed(2)
-                                        : field.value}
-                                    </Text>
-                                  </View>
-                                ),
-                              )}
-                            </View>
-                          </View>
-                        </View>
-                      ))
-                    )}
-                  </View>
-                </View>
-              )}
-
-              {/* Without Details Invoices Cards */}
-              {selectedOption === 'withDetails' && (
-                <View style={{paddingBottom: 30}}>
-                  <View style={{marginTop: 20}}>
-                    {accountDetailsWith.length === 0 ? (
-                      <View style={{alignItems: 'center', marginTop: 20}}>
-                        <Text
-                          style={{
-                            color: 'white',
-                            fontSize: 16,
-                            fontWeight: 'bold',
-                          }}>
-                          No record found.
-                        </Text>
-                      </View>
-                    ) : (
-                      accountDetailsWith.map((item, index) => (
-                        <View key={item.id} style={{padding: 5}}>
-                          <View style={styles.table}>
-                            <View style={styles.tablehead}>
-                              <Text
-                                style={{
-                                  color: '#144272',
-                                  fontWeight: 'bold',
-                                  marginLeft: 5,
-                                  marginTop: 5,
-                                }}>
-                                {item.supac_invoice_no}
-                              </Text>
-                            </View>
-
-                            <View style={styles.infoRow}>
-                              {[
-                                {
-                                  label: 'Date:',
-                                  value: new Date(item.supac_date)
-                                    .toLocaleDateString('en-DB', {
-                                      day: '2-digit',
-                                      month: 'short',
-                                      year: 'numeric',
-                                    })
-                                    .replace(/\//g, '-'),
-                                },
-                                {
-                                  label: 'Payable:',
-                                  value: item.supac_total_bill_amount,
-                                },
-                                {label: 'Paid:', value: item.supac_paid_amount},
-                                {label: 'Balance:', value: item.supac_balance},
-                              ].map(
-                                (
-                                  field: {
-                                    label: string;
-                                    value: number | string;
-                                  },
-                                  idx,
-                                ) => (
-                                  <View
-                                    key={`${index}-${idx}`}
-                                    style={{
-                                      flexDirection: 'row',
-                                      justifyContent: 'space-between',
-                                    }}>
-                                    <Text
-                                      style={[styles.value, {marginBottom: 5}]}>
-                                      {field.label}
-                                    </Text>
-                                    <Text
-                                      style={[styles.value, {marginBottom: 5}]}>
-                                      {typeof field.value === 'number'
-                                        ? field.value.toFixed(2)
-                                        : field.value}
-                                    </Text>
-                                  </View>
-                                ),
-                              )}
-                            </View>
-                          </View>
-                        </View>
-                      ))
-                    )}
-                  </View>
-                </View>
-              )}
-
-              {/* Last Component */}
-              <View
-                style={{
-                  width: '100%',
-                  paddingVertical: 20,
-                  paddingHorizontal: 10,
-                }}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    No of Unpaid Cheques:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    {chequeCount}
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginVertical: 5,
-                    paddingHorizontal: '10%',
-                  }}>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    Unpaid Cheques Amount:
-                  </Text>
-                  <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                    {chequeAmount?.toFixed(2)}
-                  </Text>
-                </View>
-                {(() => {
-                  const {netReceivables, totalReceivables, totalReceived} =
-                    calculateWithoutTotals();
-
-                  return (
+                {selectedOption === 'withoutDetails' ? (
+                  accountDetailsWithout.length === 0 ? (
+                    <View style={styles.emptyState}>
+                      <Icon
+                        name="receipt"
+                        size={40}
+                        color="rgba(255,255,255,0.5)"
+                      />
+                      <Text style={styles.emptyStateText}>
+                        No transactions found
+                      </Text>
+                    </View>
+                  ) : (
                     <>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginVertical: 5,
-                          paddingHorizontal: '10%',
-                        }}>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          Total Receivables:
-                        </Text>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          {totalReceivables}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginVertical: 5,
-                          paddingHorizontal: '10%',
-                        }}>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          Total Received:
-                        </Text>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          {totalReceived}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginVertical: 5,
-                          paddingHorizontal: '10%',
-                        }}>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          Net Receivables:
-                        </Text>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          {netReceivables}
-                        </Text>
-                      </View>
+                      <FlatList
+                        data={paginateSingleSupplier()}
+                        keyExtractor={item => item.id}
+                        scrollEnabled={false}
+                        renderItem={({item}) => (
+                          <View style={styles.transactionCard}>
+                            <View style={styles.transactionHeader}>
+                              <Text style={styles.invoiceNumber}>
+                                {item.supac_invoice_no}
+                              </Text>
+                              <Text style={styles.transactionDate}>
+                                {new Date(item.supac_date).toLocaleDateString(
+                                  'en-GB',
+                                )}
+                              </Text>
+                            </View>
+
+                            <View style={styles.transactionDetails}>
+                              <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Payable:</Text>
+                                <Text style={styles.detailValue}>
+                                  {item.supac_total_bill_amount}
+                                </Text>
+                              </View>
+                              <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Paid:</Text>
+                                <Text style={styles.detailValue}>
+                                  {item.supac_paid_amount}
+                                </Text>
+                              </View>
+                              <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Balance:</Text>
+                                <Text style={styles.detailValue}>
+                                  {item.supac_balance}
+                                </Text>
+                              </View>
+                              <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Type:</Text>
+                                <Text style={styles.detailValue}>
+                                  {item.supac_payment_type}
+                                </Text>
+                              </View>
+                              <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Method:</Text>
+                                <Text style={styles.detailValue}>
+                                  {item.supac_payment_method}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        )}
+                      />
+
+                      <PaginationControls
+                        currentPage={currentPageSingle}
+                        totalPages={totalPagesSingle}
+                        onPageChange={setCurrentPageSingle}
+                      />
                     </>
-                  );
-                })()}
+                  )
+                ) : accountDetailsWith.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Icon
+                      name="receipt"
+                      size={40}
+                      color="rgba(255,255,255,0.5)"
+                    />
+                    <Text style={styles.emptyStateText}>
+                      No detailed transactions found
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <FlatList
+                      data={paginateSingleSupplier()}
+                      keyExtractor={item => item.id}
+                      scrollEnabled={false}
+                      renderItem={({item}) => (
+                        <View style={styles.transactionCard}>
+                          <View style={styles.transactionHeader}>
+                            <Text style={styles.invoiceNumber}>
+                              {item.supac_invoice_no}
+                            </Text>
+                            <Text style={styles.transactionDate}>
+                              {new Date(item.supac_date).toLocaleDateString(
+                                'en-GB',
+                              )}
+                            </Text>
+                          </View>
+
+                          <View style={styles.transactionDetails}>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>Payable:</Text>
+                              <Text style={styles.detailValue}>
+                                {item.supac_total_bill_amount}
+                              </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>Paid:</Text>
+                              <Text style={styles.detailValue}>
+                                {item.supac_paid_amount}
+                              </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>Balance:</Text>
+                              <Text style={styles.detailValue}>
+                                {item.supac_balance}
+                              </Text>
+                            </View>
+                          </View>
+                        </View>
+                      )}
+                    />
+
+                    <PaginationControls
+                      currentPage={currentPageSingle}
+                      totalPages={totalPagesSingle}
+                      onPageChange={setCurrentPageSingle}
+                    />
+                  </>
+                )}
+
+                {/* Summary Section */}
+                <View style={styles.summarySection}>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>Unpaid Cheques:</Text>
+                    <Text style={styles.summaryValue}>
+                      {chequeCount || '0'}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryLabel}>
+                      Unpaid Cheque Amount:
+                    </Text>
+                    <Text style={styles.summaryValue}>
+                      {(chequeAmount || 0).toFixed(2)}
+                    </Text>
+                  </View>
+                  {(() => {
+                    const {netReceivables, totalReceivables, totalReceived} =
+                      calculateWithoutTotals();
+                    return (
+                      <>
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>
+                            Total Receivables:
+                          </Text>
+                          <Text style={styles.summaryValue}>
+                            {totalReceivables}
+                          </Text>
+                        </View>
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>
+                            Total Received:
+                          </Text>
+                          <Text style={styles.summaryValue}>
+                            {totalReceived}
+                          </Text>
+                        </View>
+                        <View style={[styles.summaryRow, styles.totalRow]}>
+                          <Text
+                            style={[styles.summaryLabel, styles.totalLabel]}>
+                            Net Receivables:
+                          </Text>
+                          <Text
+                            style={[styles.summaryValue, styles.totalValue]}>
+                            {netReceivables}
+                          </Text>
+                        </View>
+                      </>
+                    );
+                  })()}
+                </View>
               </View>
             </>
           ) : (
             <>
-              {allSuppData.length === 0 ? (
-                <View style={{alignItems: 'center', marginTop: 20}}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                    }}>
-                    No record found.
-                  </Text>
-                </View>
-              ) : (
-                <View style={{paddingBottom: 30}}>
-                  <View style={{marginTop: 20}}>
-                    {allSuppData.map((item, index) => (
-                      <View key={index} style={{padding: 5}}>
-                        <View style={styles.table}>
-                          <View style={styles.tablehead}>
-                            <Text
-                              style={{
-                                color: '#144272',
-                                fontWeight: 'bold',
-                                marginLeft: 5,
-                                marginTop: 5,
-                              }}>
-                              {item.sup_name}
-                            </Text>
-                          </View>
+              {/* All Suppliers Section */}
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>All Supplier Accounts</Text>
 
-                          <View style={styles.infoRow}>
-                            {[
-                              {
-                                label: 'Bill Amount:',
-                                value: item.supac_total_bill_amount,
-                              },
-                              {
-                                label: 'Paid amount:',
-                                value: item.supac_paid_amount,
-                              },
-                              {label: 'Balance:', value: item.supac_balance},
-                            ].map((field, idx) => (
-                              <View
-                                key={`${index}-${idx}`}
-                                style={{
-                                  flexDirection: 'row',
-                                  justifyContent: 'space-between',
-                                }}>
-                                <Text style={[styles.value, {marginBottom: 5}]}>
-                                  {field.label}
-                                </Text>
-                                <Text style={[styles.value, {marginBottom: 5}]}>
-                                  {typeof field.value === 'number'
-                                    ? field.value.toFixed(2)
-                                    : field.value}
-                                </Text>
-                              </View>
-                            ))}
+                {allSuppData.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Icon
+                      name="people"
+                      size={40}
+                      color="rgba(255,255,255,0.5)"
+                    />
+                    <Text style={styles.emptyStateText}>
+                      No supplier accounts found
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <FlatList
+                      data={paginateAllSuppliers()}
+                      keyExtractor={(item, index) => index.toString()}
+                      scrollEnabled={false}
+                      renderItem={({item}) => (
+                        <View style={styles.supplierAccountCard}>
+                          <Text style={styles.supplierName}>
+                            {item.sup_name}
+                          </Text>
+                          <View style={styles.accountDetails}>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>
+                                Bill Amount:
+                              </Text>
+                              <Text style={styles.detailValue}>
+                                {item.supac_total_bill_amount.toFixed(2)}
+                              </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>
+                                Paid Amount:
+                              </Text>
+                              <Text style={styles.detailValue}>
+                                {item.supac_paid_amount.toFixed(2)}
+                              </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>Balance:</Text>
+                              <Text style={styles.detailValue}>
+                                {item.supac_balance.toFixed(2)}
+                              </Text>
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              )}
+                      )}
+                    />
 
-              {/* Last Component */}
-              <View
-                style={{
-                  width: '100%',
-                  paddingVertical: 20,
-                  paddingHorizontal: 10,
-                }}>
-                {(() => {
-                  const {totalReceivables, totalReceived, netReceivables} =
-                    calculateTotals();
-                  return (
-                    <>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginVertical: 5,
-                          paddingHorizontal: '10%',
-                        }}>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          Total Receivables:
-                        </Text>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          {totalReceivables}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginVertical: 5,
-                          paddingHorizontal: '10%',
-                        }}>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          Total Received:
-                        </Text>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          {totalReceived}
-                        </Text>
-                      </View>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          justifyContent: 'space-between',
-                          marginVertical: 5,
-                          paddingHorizontal: '10%',
-                        }}>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          Net Receivables:
-                        </Text>
-                        <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                          {netReceivables}
-                        </Text>
-                      </View>
-                    </>
-                  );
-                })()}
+                    <PaginationControls
+                      currentPage={currentPageAll}
+                      totalPages={totalPagesAll}
+                      onPageChange={setCurrentPageAll}
+                    />
+                  </>
+                )}
+
+                {/* All Suppliers Summary */}
+                <View style={styles.summarySection}>
+                  {(() => {
+                    const {totalReceivables, totalReceived, netReceivables} =
+                      calculateTotals();
+                    return (
+                      <>
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>
+                            Total Receivables:
+                          </Text>
+                          <Text style={styles.summaryValue}>
+                            {totalReceivables}
+                          </Text>
+                        </View>
+                        <View style={styles.summaryRow}>
+                          <Text style={styles.summaryLabel}>
+                            Total Received:
+                          </Text>
+                          <Text style={styles.summaryValue}>
+                            {totalReceived}
+                          </Text>
+                        </View>
+                        <View style={[styles.summaryRow, styles.totalRow]}>
+                          <Text
+                            style={[styles.summaryLabel, styles.totalLabel]}>
+                            Net Receivables:
+                          </Text>
+                          <Text
+                            style={[styles.summaryValue, styles.totalValue]}>
+                            {netReceivables}
+                          </Text>
+                        </View>
+                      </>
+                    );
+                  })()}
+                </View>
               </View>
             </>
           )}
@@ -963,121 +838,313 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   headerTextContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
   toggleBtnContainer: {
-    width: '100%',
-    height: 50,
-    paddingHorizontal: '5%',
-    marginVertical: 10,
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    marginVertical: 8,
   },
   toggleBtn: {
-    height: '80%',
-    width: '40%',
-    backgroundColor: '#f8f8f8',
-    alignSelf: 'center',
-    borderRadius: 50,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 1,
-      height: 2,
-    },
-    shadowOpacity: 1,
-    shadowRadius: 5,
-    elevation: 5,
-    justifyContent: 'center',
+    flex: 1,
+    marginHorizontal: 4,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   toggleBtnText: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#000',
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
   },
-
-  //Single Screen Styles
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 38,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: '90%',
-  },
-  productinput: {
-    borderWidth: 1,
-    width: '100%',
-    borderColor: 'white',
-    color: '#fff',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 5,
-    height: 38,
-  },
-  dateInput: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 5,
+  actionBtn: {
+    flex: 1,
+    marginHorizontal: 4,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
     justifyContent: 'center',
-    height: 40, // Match other input heights
   },
-  table: {
+  actionBtnText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  section: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
     borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  tablehead: {
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 16,
+  },
+  dropdownRow: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  dropdown: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 40,
+  },
+  dropdownContainer: {
     backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    marginTop: 2,
+    maxHeight: 200,
+  },
+  dropdownText: {
+    color: 'white',
+    fontSize: 14,
+  },
+  dropdownPlaceholder: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  supplierInfo: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  infoLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  infoValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  dateSection: {
+    marginBottom: 16,
+  },
+  dateRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  btnContainer: {
-    width: '100%',
-    paddingHorizontal: '10%',
-    paddingVertical: 10,
-    justifyContent: 'center',
-    height: 55,
-  },
-  btnItem: {
-    height: '100%',
-    width: '30%',
-    backgroundColor: '#144272',
-    alignSelf: 'center',
+  dateInput: {
+    flex: 1,
+    marginHorizontal: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 10,
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dateText: {
+    flex: 1,
+    color: 'white',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  accountTypeSection: {
+    marginBottom: 16,
+  },
+  radioRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  radioOption: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  btnText: {
-    fontSize: 12,
-    fontWeight: 'bold',
+  radioLabel: {
     color: 'white',
+    marginLeft: 8,
+    fontSize: 14,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyStateText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  transactionCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  transactionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  invoiceNumber: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  transactionDate: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  transactionDetails: {
+    marginTop: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  detailLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  detailValue: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  supplierAccountCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  supplierName: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  accountDetails: {
+    marginTop: 4,
+  },
+  summarySection: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  summaryValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  totalRow: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+    paddingTop: 8,
+    marginTop: 8,
+  },
+  totalLabel: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  totalValue: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  paginationBtn: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  disabledBtn: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  pageIndicator: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  pageText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

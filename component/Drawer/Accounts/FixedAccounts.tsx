@@ -1,21 +1,21 @@
 import {
-  KeyboardAvoidingView,
-  Modal,
   Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
+  SafeAreaView,
+  ImageBackground,
+  ScrollView,
+  FlatList,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
-import {ImageBackground} from 'react-native';
-import {Image} from 'react-native';
 import {useDrawer} from '../../DrawerContext';
-import {ScrollView} from 'react-native';
 import DropDownPicker from 'react-native-dropdown-picker';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
@@ -77,6 +77,17 @@ export default function FixedAccounts() {
     initialFixedAccAddFrom,
   );
   const [txnTypeValue, setTxnTypeValue] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
+
+  const totalPages = Math.ceil(fixedAccDetails.length / itemsPerPage);
+
+  // Pagination helpers for Fixed
+  const paginateFixedAccounts = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return fixedAccDetails.slice(startIndex, endIndex);
+  };
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
@@ -199,6 +210,57 @@ export default function FixedAccounts() {
     }
   };
 
+  // Pagination controls component
+  const PaginationControls = ({
+    currentPage,
+    totalPages,
+    onPageChange,
+  }: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+  }) => {
+    if (totalPages <= 1) return null;
+
+    return (
+      <View style={styles.paginationContainer}>
+        <TouchableOpacity
+          style={[
+            styles.paginationBtn,
+            currentPage === 1 && styles.disabledBtn,
+          ]}
+          onPress={() => onPageChange(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}>
+          <Icon
+            name="chevron-left"
+            size={20}
+            color={currentPage === 1 ? '#666' : 'white'}
+          />
+        </TouchableOpacity>
+
+        <View style={styles.pageIndicator}>
+          <Text style={styles.pageText}>
+            {currentPage} of {totalPages}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.paginationBtn,
+            currentPage === totalPages && styles.disabledBtn,
+          ]}
+          onPress={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages}>
+          <Icon
+            name="chevron-right"
+            size={20}
+            color={currentPage === totalPages ? '#666' : 'white'}
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   useEffect(() => {
     fetchFixesDropdown();
     fetchFixedAccDetails();
@@ -211,246 +273,182 @@ export default function FixedAccounts() {
         resizeMode="cover"
         style={styles.background}>
         {/* Header */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
           <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Fixed Accounts
-            </Text>
+            <Text style={styles.headerTitle}>Fixed Accounts</Text>
           </View>
+
+          <TouchableOpacity
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
+            onPress={() => {}}
+            disabled>
+            <Icon name="account-balance" size={24} color="transparent" />
+          </TouchableOpacity>
         </View>
 
-        <ScrollView style={{flex: 1}}>
-          {/* Other Buttons */}
+        <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
+          {/* Action Buttons */}
           <View style={[styles.toggleBtnContainer, {marginVertical: 5}]}>
             <TouchableOpacity
-              style={[
-                styles.toggleBtn,
-                {borderRadius: 10, backgroundColor: '#144272'},
-              ]}
+              style={[styles.actionBtn, {backgroundColor: '#144272'}]}
               onPress={() => setModalVisible('addPayment')}>
-              <Text style={[styles.toggleBtnText, {color: 'white'}]}>
-                Add Payment
-              </Text>
+              <Icon name="payment" size={16} color="white" />
+              <Text style={styles.actionBtnText}>Add Payment</Text>
             </TouchableOpacity>
           </View>
 
-          <View
-            style={{
-              flexDirection: 'column',
-              alignSelf: 'center',
-              marginTop: 10,
-            }}>
-            <Text
-              style={{
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: 14,
-                marginLeft: 5,
-              }}>
-              Account:
-            </Text>
-            <DropDownPicker
-              items={transformedFixedAcc}
-              open={Open}
-              value={fixedAccValue}
-              setValue={setFixedAccValue}
-              setOpen={setOpen}
-              placeholder="Select Customer"
-              placeholderStyle={{color: 'white'}}
-              textStyle={{color: 'white'}}
-              style={styles.dropdown}
-              dropDownContainerStyle={{
-                backgroundColor: 'white',
-                borderColor: '#144272',
-                width: '90%',
-                marginTop: 8,
-              }}
-              labelStyle={{color: 'white', fontWeight: 'bold'}}
-              listItemLabelStyle={{color: '#144272'}}
-              ArrowUpIconComponent={() => (
-                <Text>
-                  <Icon name="chevron-up" size={15} color="white" />
-                </Text>
-              )}
-              ArrowDownIconComponent={() => (
-                <Text>
-                  <Icon name="chevron-down" size={15} color="white" />
-                </Text>
-              )}
-              listMode="SCROLLVIEW"
-            />
-          </View>
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Account Information</Text>
 
-          {/* Date Fields Section */}
-          <View
-            style={{
-              width: '100%',
-              marginTop: 10,
-              paddingHorizontal: '5%',
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-            }}>
-            {/* From Date */}
-            <View style={{width: '48%'}}>
-              <Text
-                style={{
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: 14,
-                  marginLeft: 5,
-                  textAlign: 'left',
-                }}>
-                From Date:
-              </Text>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker('from')}
-                style={styles.dateInput}>
-                <Text style={{color: 'white'}}>
-                  {fromDate ? fromDate.toLocaleDateString() : ''}
-                </Text>
-              </TouchableOpacity>
+            <View style={styles.dropdownRow}>
+              <Text style={styles.inputLabel}>Select Account</Text>
+              <DropDownPicker
+                items={transformedFixedAcc}
+                open={Open}
+                value={fixedAccValue}
+                setValue={setFixedAccValue}
+                setOpen={setOpen}
+                placeholder="Choose account..."
+                placeholderStyle={styles.dropdownPlaceholder}
+                textStyle={styles.dropdownText}
+                style={styles.dropdown}
+                dropDownContainerStyle={styles.dropdownContainer}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                )}
+                listMode="SCROLLVIEW"
+                listItemLabelStyle={{color: '#144272'}}
+              />
             </View>
 
-            {/* To Date */}
-            <View style={{width: '48%'}}>
-              <Text
-                style={{
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: 14,
-                  marginLeft: 5,
-                  textAlign: 'left',
-                }}>
-                To Date:
-              </Text>
-              <TouchableOpacity
-                onPress={() => setShowDatePicker('to')}
-                style={styles.dateInput}>
-                <Text style={{color: 'white'}}>
-                  {toDate ? toDate.toLocaleDateString() : ''}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={
-                showDatePicker === 'from'
-                  ? fromDate ?? new Date()
-                  : toDate ?? new Date()
-              }
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={handleDateChange}
-              themeVariant="dark"
-              style={{backgroundColor: '#144272'}}
-            />
-          )}
-
-          {/* Invoices Cards */}
-          <View style={{paddingBottom: 30}}>
-            <View style={{marginTop: 20}}>
-              {fixedAccDetails.length === 0 ? (
-                <View style={{alignItems: 'center', marginTop: 20}}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                    }}>
-                    No record found.
+            {/* Date Range Section */}
+            <View style={styles.dateSection}>
+              <Text style={styles.inputLabel}>Date Range</Text>
+              <View style={styles.dateRow}>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker('from')}
+                  style={styles.dateInput}>
+                  <Icon name="event" size={20} color="white" />
+                  <Text style={styles.dateText}>
+                    {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
                   </Text>
-                </View>
-              ) : (
-                fixedAccDetails.map((item, index) => (
-                  <View key={item.id} style={{padding: 5}}>
-                    <View style={styles.table}>
-                      <View style={styles.tablehead}>
-                        <Text
-                          style={{
-                            color: '#144272',
-                            fontWeight: 'bold',
-                            marginLeft: 5,
-                            marginTop: 5,
-                          }}>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker('to')}
+                  style={styles.dateInput}>
+                  <Icon name="event" size={20} color="white" />
+                  <Text style={styles.dateText}>
+                    {toDate ? toDate.toLocaleDateString() : 'To Date'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={
+                  showDatePicker === 'from'
+                    ? fromDate ?? new Date()
+                    : toDate ?? new Date()
+                }
+                mode="date"
+                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                onChange={handleDateChange}
+                themeVariant="dark"
+                style={{backgroundColor: '#144272'}}
+              />
+            )}
+          </View>
+
+          {/* Account Details Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Account Transactions</Text>
+
+            {fixedAccDetails.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Icon name="receipt" size={40} color="rgba(255,255,255,0.5)" />
+                <Text style={styles.emptyStateText}>No transactions found</Text>
+              </View>
+            ) : (
+              <>
+                <FlatList
+                  data={paginateFixedAccounts()}
+                  keyExtractor={item => item.id.toString()}
+                  scrollEnabled={false}
+                  renderItem={({item}) => (
+                    <View style={styles.transactionCard}>
+                      <View style={styles.transactionHeader}>
+                        <Text style={styles.invoiceNumber}>
                           {item.fixac_invoice_no}
+                        </Text>
+                        <Text style={styles.transactionDate}>
+                          {new Date(item.fixac_date).toLocaleDateString(
+                            'en-GB',
+                          )}
                         </Text>
                       </View>
 
-                      <View style={styles.infoRow}>
-                        {[
-                          {
-                            label: 'Date:',
-                            value: new Date(item.fixac_date)
-                              .toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                              .replace(/\//g, '-'),
-                          },
-                          {
-                            label: 'Account:',
-                            value: item.fixprf_business_account_name,
-                          },
-                          {label: 'Debit:', value: item.fixac_debit},
-                          {label: 'Credit:', value: item.fixac_credit},
-                          {label: 'Balance:', value: item.fixac_balance},
-                        ].map(
-                          (
-                            field: {label: string; value: string | number},
-                            idx,
-                          ) => (
-                            <View
-                              key={`${index}-${idx}`}
-                              style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                              }}>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {field.label}
-                              </Text>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {typeof field.value === 'number'
-                                  ? field.value.toFixed(2)
-                                  : field.value}
-                              </Text>
-                            </View>
-                          ),
-                        )}
+                      <View style={styles.transactionDetails}>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Account:</Text>
+                          <Text style={styles.detailValue}>
+                            {item.fixprf_business_account_name}
+                          </Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Type:</Text>
+                          <Text style={styles.detailValue}>
+                            {item.fixac_payment_type}
+                          </Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Debit:</Text>
+                          <Text style={styles.detailValue}>
+                            {item.fixac_debit}
+                          </Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Credit:</Text>
+                          <Text style={styles.detailValue}>
+                            {item.fixac_credit}
+                          </Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Balance:</Text>
+                          <Text style={styles.detailValue}>
+                            {item.fixac_balance}
+                          </Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Description:</Text>
+                          <Text style={styles.detailValue}>
+                            {item.fixac_description}
+                          </Text>
+                        </View>
                       </View>
                     </View>
-                  </View>
-                ))
-              )}
-            </View>
+                  )}
+                />
+
+                <PaginationControls
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </>
+            )}
           </View>
         </ScrollView>
       </ImageBackground>
-      {/* Add & WithDraw Payment Modal */}
+
+      {/* Add Payment Modal */}
       <Modal
         visible={modalVisible === 'addPayment'}
         transparent
@@ -718,92 +716,172 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   headerTextContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
   toggleBtnContainer: {
-    width: '100%',
-    height: 50,
-    paddingHorizontal: '5%',
-    marginVertical: 10,
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
+    marginVertical: 8,
   },
-  toggleBtn: {
-    height: '80%',
-    width: '40%',
-    backgroundColor: '#f8f8f8',
-    alignSelf: 'center',
-    borderRadius: 50,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 1,
-      height: 2,
-    },
-    shadowOpacity: 1,
-    shadowRadius: 5,
-    elevation: 5,
-    justifyContent: 'center',
+  actionBtn: {
+    flex: 1,
+    marginHorizontal: 4,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
-  toggleBtnText: {
-    fontSize: 13,
+  actionBtnText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  section: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  sectionTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#000',
+    color: 'white',
+    marginBottom: 16,
+  },
+  dropdownRow: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginBottom: 6,
+    fontWeight: '500',
   },
   dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 38,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: '90%',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 40,
   },
-  dateInput: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 5,
-    justifyContent: 'center',
-    height: 40,
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
+  dropdownContainer: {
     backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    marginTop: 2,
+    maxHeight: 200,
+  },
+  dropdownText: {
+    color: 'white',
+    fontSize: 14,
+  },
+  dropdownPlaceholder: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  dateSection: {
+    marginBottom: 16,
+  },
+  dateRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  text: {
-    marginLeft: 5,
+  dateInput: {
+    flex: 1,
+    marginHorizontal: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dateText: {
+    flex: 1,
     color: 'white',
-    marginRight: 5,
+    fontSize: 14,
+    marginLeft: 8,
   },
-  value: {
-    marginLeft: 5,
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyStateText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  transactionCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  transactionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  invoiceNumber: {
     color: 'white',
-    marginRight: 5,
+    fontSize: 16,
+    fontWeight: '600',
   },
-  infoRow: {
-    marginTop: 5,
+  transactionDate: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
   },
-
-  //Modal Styles
+  transactionDetails: {
+    marginTop: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  detailLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  detailValue: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
   keyboardAvoidContainer: {
     flex: 1,
   },
@@ -871,5 +949,40 @@ const styles = StyleSheet.create({
     padding: 8,
     marginTop: 5,
     height: 40,
+  },
+
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  paginationBtn: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  disabledBtn: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  pageIndicator: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  pageText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

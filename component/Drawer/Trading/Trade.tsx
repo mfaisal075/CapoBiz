@@ -227,6 +227,13 @@ export default function Trade() {
         setSearchTerm('');
         fetchCartItems();
         animateCartIcon();
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Sale price must be greater than cost price!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -391,6 +398,27 @@ export default function Trade() {
           text1: 'Warning!',
           text2: 'Paid amount should equal to payable amount!',
           visibilityTime: 1500,
+        });
+      } else if (res.status === 200 && data.status === 404) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This Reference No. is Already exist!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 409) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Paid amount should equal to payable amount!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 202) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Please add some product in cart!',
+          visibilityTime: 2000,
         });
       }
     } catch (error) {

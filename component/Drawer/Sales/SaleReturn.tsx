@@ -170,7 +170,7 @@ export default function SaleReturn() {
       );
 
       const data = res.data;
-      if (res.status === 200 && data.status) {
+      if (res.status === 200 && data.status === 200) {
         Toast.show({
           type: 'success',
           text1: 'Product added to cart successfully!',
@@ -351,15 +351,6 @@ export default function SaleReturn() {
   };
 
   const updateCartItem = async () => {
-    if (editForm.return_qty > parseFloat(editForm.sold_qty)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Warning',
-        text2: 'Return Quantity cannot be greater than sold quantity.',
-        visibilityTime: 1500,
-      });
-      return;
-    }
     try {
       const res = await axios.post(`${BASE_URL}/updatesalewithinvoicereturn`, {
         pro_id: editForm.prod_id,
@@ -384,6 +375,13 @@ export default function SaleReturn() {
         setEditForm(initialEditFrom);
         setModal('');
         fetchCartItems();
+      } else if (res.status === 200 && data.status === 201) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Return quantity cannot be greater than sold quantity!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -458,16 +456,6 @@ export default function SaleReturn() {
 
   // Complete Sale Return
   const completeSaleReturn = async () => {
-    if (orderTotal === 0) {
-      Toast.show({
-        type: 'error',
-        text1: 'Warning',
-        text2: 'Please Add some quantity to return!',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-
     try {
       const res = await axios.post(`${BASE_URL}/productinvoicereturn`, {
         invoice_no: selectedProduct?.value,
@@ -495,6 +483,20 @@ export default function SaleReturn() {
           text2: 'Please Add some quantity to return!',
           visibilityTime: 1500,
         });
+      } else if (data.status === 203) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Return quantity should be greater than 0!',
+          visibilityTime: 2000,
+        });
+      } else if (data.status === 205) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Please Add Invoice data into the Cart!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -509,16 +511,6 @@ export default function SaleReturn() {
 
   // Complete Sale Return Without Invoice
   const completeSaleReturnWithout = async () => {
-    if (orderTotalWithout === 0) {
-      Toast.show({
-        type: 'error',
-        text1: 'Warning',
-        text2: 'Please Add some quantity to return!',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-
     try {
       const res = await axios.post(`${BASE_URL}/productreturn`, {
         sale_return: orderTotalWithout,
@@ -542,6 +534,20 @@ export default function SaleReturn() {
           text1: 'Warning',
           text2: 'Please Add some quantity to return!',
           visibilityTime: 1500,
+        });
+      } else if (data.status === 203) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Return quantity should not be less than 0!',
+          visibilityTime: 2000,
+        });
+      } else if (data.status === 206) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Both quantity and sub quantity cannot be 0!',
+          visibilityTime: 2000,
         });
       }
     } catch (error) {

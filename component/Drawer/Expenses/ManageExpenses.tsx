@@ -200,6 +200,16 @@ export default function ManageExpenses() {
       });
       return;
     }
+
+    if (parseFloat(addFrom.amount) <= 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Amount must be greater than 0!',
+        visibilityTime: 2000,
+      });
+      return;
+    }
     try {
       const res = await axios.post(`${BASE_URL}/addexpense`, {
         cat_id: categoryValue,
@@ -247,6 +257,17 @@ export default function ManageExpenses() {
       });
       return;
     }
+
+    if (parseFloat(editFrom.amount) <= 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Amount must be greater than 0!',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
     try {
       const res = await axios.post(`${BASE_URL}/updateexpenses`, {
         cat_id: editCategoryValue,
@@ -536,6 +557,7 @@ export default function ManageExpenses() {
                 </TouchableOpacity>
               </View>
             </ScrollView>
+            <Toast />
           </View>
         </Modal>
 
@@ -689,6 +711,7 @@ export default function ManageExpenses() {
                 </TouchableOpacity>
               </View>
             </ScrollView>
+            <Toast />
           </View>
         </Modal>
 

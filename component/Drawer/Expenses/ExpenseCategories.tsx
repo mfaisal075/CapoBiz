@@ -58,11 +58,23 @@ export default function ExpenseCategories() {
 
   // Add Category
   const handleAddCategory = async () => {
+    const nameRegex = /^[A-Za-z ]+$/;
+
     if (!category) {
       Toast.show({
         type: 'error',
         text1: 'Please enter a category name',
         visibilityTime: 1500,
+      });
+      return;
+    }
+
+    if (!nameRegex.test(category.trim())) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Name',
+        text2: 'Category name should only contain letters and spaces.',
+        visibilityTime: 2000,
       });
       return;
     }
@@ -111,11 +123,23 @@ export default function ExpenseCategories() {
 
   // Edit Category
   const handleUpdateCategory = async () => {
+    const nameRegex = /^[A-Za-z ]+$/;
+
     if (!editCategory) {
       Toast.show({
         type: 'error',
         text1: 'Please enter a category name',
         visibilityTime: 1500,
+      });
+      return;
+    }
+
+    if (!nameRegex.test(editCategory.trim())) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Name',
+        text2: 'name should only contain letters and spaces.',
+        visibilityTime: 2000,
       });
       return;
     }
@@ -138,7 +162,7 @@ export default function ExpenseCategories() {
         setEditCategory('');
         setSelectedItem(null);
         setModalVisible('');
-      } else if (res.status === 200 && data.status === 404) {
+      } else if (res.status === 200 && data.status === 202) {
         Toast.show({
           type: 'info',
           text1: 'Warning!',

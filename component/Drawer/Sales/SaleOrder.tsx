@@ -297,15 +297,6 @@ export default function SaleOrder() {
 
   //Complete Order
   const completeOrder = async () => {
-    if (!currentVal) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please Select Customer First',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-
     try {
       const res = await axios.post(`${BASE_URL}/ordercomplete`, {
         customer_id: currentVal,
@@ -329,6 +320,20 @@ export default function SaleOrder() {
         await axios.get(`${BASE_URL}/order_emptycart`);
         fetchAddToCartOrders();
         takeOrderInvoice();
+      } else if (res.status === 200 && data.status === 400) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Please add Customer!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 202) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Please add some product!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -392,6 +397,13 @@ export default function SaleOrder() {
           type: 'error',
           text1: 'Quantity should not be greater than product!',
           visibilityTime: 1500,
+        });
+      } else if (res.status === 200 && res.data.status === 400) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Product must be greater than 0!',
+          visibilityTime: 2000,
         });
       } else {
         Toast.show({
@@ -1159,7 +1171,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.3)',
     paddingHorizontal: 12,
     paddingVertical: 10,
-    height: 48
+    height: 48,
   },
   dateText: {
     flex: 1,

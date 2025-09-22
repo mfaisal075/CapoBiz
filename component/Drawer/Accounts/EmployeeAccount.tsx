@@ -1,22 +1,23 @@
 import {
-  Image,
   Platform,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
-  Modal,
+  TouchableOpacity,
   View,
+  SafeAreaView,
+  ImageBackground,
+  ScrollView,
+  FlatList,
+  Modal,
   TextInput,
   KeyboardAvoidingView,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
-import {ImageBackground} from 'react-native';
-import {TouchableOpacity} from 'react-native';
 import {useDrawer} from '../../DrawerContext';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DropDownPicker from 'react-native-dropdown-picker';
+import Icon from 'react-native-vector-icons/MaterialIcons';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import {RadioButton} from 'react-native-paper';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import {useUser} from '../../CTX/UserContext';
@@ -57,6 +58,7 @@ const initialEmployeeAddFrom: EmployeeAddForm = {
 export default function EmployeeAccount() {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
+  const [selectedTab, setSelectedTab] = useState('Single');
   const [Open, setOpen] = useState(false);
   const [modalDropdowOpen, setModalDropdowOpen] = useState(false);
   const [customerVal, setCustomerVal] = useState<string | ''>('');
@@ -76,6 +78,10 @@ export default function EmployeeAccount() {
   const [cashAddFrom, setCashAddForm] = useState<EmployeeAddForm>(
     initialEmployeeAddFrom,
   );
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(5);
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
@@ -111,6 +117,7 @@ export default function EmployeeAccount() {
       [field]: value,
     }));
   };
+
   // Fetch Employee dropdown
   const fetchEmpDropdown = async () => {
     try {
@@ -121,7 +128,7 @@ export default function EmployeeAccount() {
     }
   };
 
-  // Fetch Employye Details
+  // Fetch Employee Details
   const fetchEmployeeDetails = async () => {
     try {
       const from = fromDate?.toISOString().split('T')[0];
@@ -155,7 +162,7 @@ export default function EmployeeAccount() {
       Toast.show({
         type: 'error',
         text1: 'Fields Missing',
-        text2: 'Please filled add fields',
+        text2: 'Please fill all fields',
         visibilityTime: 1500,
       });
       return;
@@ -182,6 +189,7 @@ export default function EmployeeAccount() {
         setCustomerVal('');
         setCashAddForm(initialEmployeeAddFrom);
         setModalVisible('');
+        fetchEmployeeDetails();
       }
     } catch (error) {
       console.log(error);
@@ -208,7 +216,7 @@ export default function EmployeeAccount() {
       Toast.show({
         type: 'error',
         text1: 'Fields Missing',
-        text2: 'Please filled add fields',
+        text2: 'Please fill all fields',
         visibilityTime: 1500,
       });
       return;
@@ -235,6 +243,7 @@ export default function EmployeeAccount() {
         setCustomerVal('');
         setCashAddForm(initialEmployeeAddFrom);
         setModalVisible('');
+        fetchEmployeeDetails();
       }
     } catch (error) {
       console.log(error);
@@ -261,6 +270,58 @@ export default function EmployeeAccount() {
     };
   };
 
+  // Pagination helpers
+  const paginateData = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return empData.slice(startIndex, endIndex);
+  };
+
+  const totalPages = Math.ceil(empData.length / itemsPerPage);
+
+  // Pagination controls component
+  const PaginationControls = () => {
+    if (totalPages <= 1) return null;
+
+    return (
+      <View style={styles.paginationContainer}>
+        <TouchableOpacity
+          style={[
+            styles.paginationBtn,
+            currentPage === 1 && styles.disabledBtn,
+          ]}
+          onPress={() => setCurrentPage(Math.max(1, currentPage - 1))}
+          disabled={currentPage === 1}>
+          <Icon
+            name="chevron-left"
+            size={20}
+            color={currentPage === 1 ? '#666' : 'white'}
+          />
+        </TouchableOpacity>
+
+        <View style={styles.pageIndicator}>
+          <Text style={styles.pageText}>
+            {currentPage} of {totalPages}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.paginationBtn,
+            currentPage === totalPages && styles.disabledBtn,
+          ]}
+          onPress={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+          disabled={currentPage === totalPages}>
+          <Icon
+            name="chevron-right"
+            size={20}
+            color={currentPage === totalPages ? '#666' : 'white'}
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   useEffect(() => {
     fetchEmpDropdown();
     fetchEmployeeDetails();
@@ -273,108 +334,58 @@ export default function EmployeeAccount() {
         resizeMode="cover"
         style={styles.background}>
         {/* Header */}
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
           <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Employee Account
-            </Text>
+            <Text style={styles.headerTitle}>Employee Account</Text>
           </View>
+
+          <TouchableOpacity
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
+            onPress={() => {}}
+            disabled>
+            <Icon name="account-balance" size={24} color="transparent" />
+          </TouchableOpacity>
         </View>
 
-        <ScrollView style={{flex: 1}}>
-          {/* Other Buttons */}
+        <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
+          {/* Action Buttons */}
           <View style={[styles.toggleBtnContainer, {marginVertical: 5}]}>
             <TouchableOpacity
-              style={[
-                styles.toggleBtn,
-                {borderRadius: 10, backgroundColor: '#144272'},
-              ]}
+              style={[styles.actionBtn, {backgroundColor: '#144272'}]}
               onPress={() => setModalVisible('Payment')}>
-              <Text style={[styles.toggleBtnText, {color: 'white'}]}>
-                Add Payment
-              </Text>
+              <Icon name="payment" size={16} color="white" />
+              <Text style={styles.actionBtnText}>Add Payment</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.toggleBtn,
-                {borderRadius: 10, backgroundColor: '#144272'},
-              ]}
+              style={[styles.actionBtn, {backgroundColor: '#144272'}]}
               onPress={() => setModalVisible('WithDraw')}>
-              <Text style={[styles.toggleBtnText, {color: 'white'}]}>
-                WithDraw Payment
-              </Text>
+              <Icon name="account-balance-wallet" size={16} color="white" />
+              <Text style={styles.actionBtnText}>Withdraw Payment</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Date Fields Section */}
-          <View
-            style={{
-              width: '100%',
-              marginTop: 10,
-              paddingHorizontal: '5%',
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-            }}>
-            {/* From Date */}
-            <View style={{width: '48%'}}>
-              <Text
-                style={{
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: 14,
-                  marginLeft: 5,
-                  textAlign: 'left',
-                }}>
-                From Date:
-              </Text>
+          {/* Date Range Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Date Range</Text>
+            <View style={styles.dateRow}>
               <TouchableOpacity
                 onPress={() => setShowDatePicker('from')}
                 style={styles.dateInput}>
-                <Text style={{color: 'white'}}>
-                  {fromDate ? fromDate.toLocaleDateString() : ''}
+                <Icon name="event" size={20} color="white" />
+                <Text style={styles.dateText}>
+                  {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
                 </Text>
               </TouchableOpacity>
-            </View>
-
-            {/* To Date */}
-            <View style={{width: '48%'}}>
-              <Text
-                style={{
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: 14,
-                  marginLeft: 5,
-                  textAlign: 'left',
-                }}>
-                To Date:
-              </Text>
               <TouchableOpacity
                 onPress={() => setShowDatePicker('to')}
                 style={styles.dateInput}>
-                <Text style={{color: 'white'}}>
-                  {toDate ? toDate.toLocaleDateString() : ''}
+                <Icon name="event" size={20} color="white" />
+                <Text style={styles.dateText}>
+                  {toDate ? toDate.toLocaleDateString() : 'To Date'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -391,196 +402,120 @@ export default function EmployeeAccount() {
               display={Platform.OS === 'ios' ? 'spinner' : 'default'}
               onChange={handleDateChange}
               themeVariant="dark"
-              style={{backgroundColor: '#144272'}}
             />
           )}
 
-          <View
-            style={{
-              flexDirection: 'column',
-              alignSelf: 'center',
-              marginTop: 10,
-            }}>
-            <Text
-              style={{
-                color: 'white',
-                fontWeight: 'bold',
-                fontSize: 14,
-                marginLeft: 5,
-              }}>
-              Employee:
-            </Text>
-            <DropDownPicker
-              items={transformedEmp}
-              open={Open}
-              value={empValue}
-              setValue={setEmpValaue}
-              setOpen={setOpen}
-              placeholder="Select Employee"
-              placeholderStyle={{color: 'white'}}
-              textStyle={{color: 'white'}}
-              style={styles.dropdown}
-              dropDownContainerStyle={{
-                backgroundColor: 'white',
-                borderColor: '#144272',
-                width: '90%',
-                marginTop: 8,
-              }}
-              labelStyle={{color: 'white'}}
-              listItemLabelStyle={{color: '#144272'}}
-              ArrowUpIconComponent={() => (
-                <Text>
-                  <Icon name="chevron-up" size={15} color="white" />
-                </Text>
-              )}
-              ArrowDownIconComponent={() => (
-                <Text>
-                  <Icon name="chevron-down" size={15} color="white" />
-                </Text>
-              )}
-              listMode="SCROLLVIEW"
-            />
-          </View>
-
-          {/* Invoices Cards */}
-          <View style={{paddingBottom: 30}}>
-            <View style={{marginTop: 20}}>
-              {empData.length === 0 ? (
-                <View style={{alignItems: 'center', marginTop: 20}}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      fontSize: 16,
-                      fontWeight: 'bold',
-                    }}>
-                    No record found.
-                  </Text>
-                </View>
-              ) : (
-                empData.map((item, index) => (
-                  <View key={index} style={{padding: 5}}>
-                    <View style={styles.table}>
-                      <View style={styles.tablehead}>
-                        <Text
-                          style={{
-                            color: '#144272',
-                            fontWeight: 'bold',
-                            marginLeft: 5,
-                            marginTop: 5,
-                          }}>
-                          {item.empac_invoice_no}
-                        </Text>
-                      </View>
-
-                      <View style={styles.infoRow}>
-                        {[
-                          {
-                            label: 'Total Earning:',
-                            value: item.empac_earning,
-                          },
-                          {
-                            label: 'Total WithDraw:',
-                            value: item.empac_withdraw_amount,
-                          },
-                          {label: 'Balance:', value: item.empac_balance},
-                          {
-                            label: 'Date:',
-                            value: new Date(item.empac_date)
-                              .toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                              .replace(/\//g, '-'),
-                          },
-                        ].map(
-                          (
-                            field: {label: string; value: number | string},
-                            idx,
-                          ) => (
-                            <View
-                              key={`${index}-${idx}`}
-                              style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                              }}>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {field.label}
-                              </Text>
-                              <Text style={[styles.value, {marginBottom: 5}]}>
-                                {typeof field.value === 'number'
-                                  ? field.value.toFixed(2)
-                                  : field.value}
-                              </Text>
-                            </View>
-                          ),
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                ))
-              )}
+          {/* Employee Selection */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Employee Information</Text>
+            <View style={styles.dropdownRow}>
+              <Text style={styles.inputLabel}>Select Employee</Text>
+              <DropDownPicker
+                items={transformedEmp}
+                open={Open}
+                value={empValue}
+                setValue={setEmpValaue}
+                setOpen={setOpen}
+                placeholder="Choose employee..."
+                placeholderStyle={styles.dropdownPlaceholder}
+                textStyle={styles.dropdownText}
+                style={styles.dropdown}
+                dropDownContainerStyle={styles.dropdownContainer}
+                ArrowUpIconComponent={() => (
+                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                )}
+                listMode="SCROLLVIEW"
+                listItemLabelStyle={{color: '#144272'}}
+              />
             </View>
           </View>
 
-          {/* Last Component */}
-          <View
-            style={{
-              width: '100%',
-              paddingVertical: 20,
-              paddingHorizontal: 10,
-            }}>
-            {(() => {
-              const {netBalance, totalEarning, totalWithdraw} =
-                calculateTotals();
+          {/* Account Details Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Account Transactions</Text>
 
-              return (
-                <>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      marginVertical: 5,
-                      paddingHorizontal: '10%',
-                    }}>
-                    <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                      Total Earnings:
-                    </Text>
-                    <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                      {totalEarning}
-                    </Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      marginVertical: 5,
-                      paddingHorizontal: '10%',
-                    }}>
-                    <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                      Total Withdraw:
-                    </Text>
-                    <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                      {totalWithdraw}
-                    </Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      marginVertical: 5,
-                      paddingHorizontal: '10%',
-                    }}>
-                    <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                      Net Balance:
-                    </Text>
-                    <Text style={[styles.text, {fontWeight: 'bold'}]}>
-                      {netBalance}
-                    </Text>
-                  </View>
-                </>
-              );
-            })()}
+            {empData.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Icon name="receipt" size={40} color="rgba(255,255,255,0.5)" />
+                <Text style={styles.emptyStateText}>No transactions found</Text>
+              </View>
+            ) : (
+              <>
+                <FlatList
+                  data={paginateData()}
+                  keyExtractor={(item, index) => index.toString()}
+                  scrollEnabled={false}
+                  renderItem={({item}) => (
+                    <View style={styles.transactionCard}>
+                      <View style={styles.transactionHeader}>
+                        <Text style={styles.invoiceNumber}>
+                          {item.empac_invoice_no}
+                        </Text>
+                        <Text style={styles.transactionDate}>
+                          {new Date(item.empac_date).toLocaleDateString(
+                            'en-GB',
+                          )}
+                        </Text>
+                      </View>
+
+                      <View style={styles.transactionDetails}>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Earnings:</Text>
+                          <Text style={styles.detailValue}>
+                            {item.empac_earning}
+                          </Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Withdrawals:</Text>
+                          <Text style={styles.detailValue}>
+                            {item.empac_withdraw_amount}
+                          </Text>
+                        </View>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailLabel}>Balance:</Text>
+                          <Text style={styles.detailValue}>
+                            {item.empac_balance}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                  )}
+                />
+
+                <PaginationControls />
+              </>
+            )}
+
+            {/* Summary Section */}
+            <View style={styles.summarySection}>
+              {(() => {
+                const {netBalance, totalEarning, totalWithdraw} =
+                  calculateTotals();
+                return (
+                  <>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Total Earnings:</Text>
+                      <Text style={styles.summaryValue}>{totalEarning}</Text>
+                    </View>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Total Withdraw:</Text>
+                      <Text style={styles.summaryValue}>{totalWithdraw}</Text>
+                    </View>
+                    <View style={[styles.summaryRow, styles.totalRow]}>
+                      <Text style={[styles.summaryLabel, styles.totalLabel]}>
+                        Net Balance:
+                      </Text>
+                      <Text style={[styles.summaryValue, styles.totalValue]}>
+                        {netBalance}
+                      </Text>
+                    </View>
+                  </>
+                );
+              })()}
+            </View>
           </View>
         </ScrollView>
       </ImageBackground>
@@ -599,7 +534,7 @@ export default function EmployeeAccount() {
               <View style={styles.modalHeader}>
                 <Text style={styles.modalTitle}>
                   {modalVisible === 'WithDraw'
-                    ? 'WithDraw Payment'
+                    ? 'Withdraw Payment'
                     : 'Add Payment'}
                 </Text>
                 <TouchableOpacity
@@ -619,20 +554,9 @@ export default function EmployeeAccount() {
                 contentContainerStyle={styles.modalBodyContent}
                 keyboardShouldPersistTaps="handled">
                 <View style={styles.modalBody}>
-                  <View
-                    style={{
-                      flexDirection: 'column',
-                      alignSelf: 'center',
-                      marginTop: 10,
-                    }}>
-                    <Text
-                      style={{
-                        color: '#000',
-                        fontWeight: 'bold',
-                        fontSize: 14,
-                        marginLeft: 5,
-                      }}>
-                      Employee:
+                  <View style={styles.dropdownRow}>
+                    <Text style={[styles.inputLabel, {color: '#000'}]}>
+                      Select Employee
                     </Text>
                     <DropDownPicker
                       items={transformedEmp}
@@ -640,148 +564,96 @@ export default function EmployeeAccount() {
                       value={customerVal}
                       setValue={setCustomerVal}
                       setOpen={setModalDropdowOpen}
-                      placeholder="Select Customer"
-                      placeholderStyle={{color: '#000'}}
+                      placeholder="Choose employee..."
+                      placeholderStyle={{color: '#666'}}
                       textStyle={{color: '#144272'}}
-                      style={[styles.dropdown, {borderColor: '#000'}]}
+                      style={[styles.dropdown, {borderColor: '#ccc'}]}
                       dropDownContainerStyle={{
                         backgroundColor: 'white',
                         borderColor: '#144272',
-                        width: '90%',
-                        marginTop: 8,
+                        borderRadius: 10,
+                        marginTop: 2,
                       }}
-                      labelStyle={{color: '#000', fontWeight: 'bold'}}
                       listItemLabelStyle={{color: '#144272'}}
                       ArrowUpIconComponent={() => (
-                        <Text>
-                          <Icon name="chevron-up" size={15} color="#000" />
-                        </Text>
+                        <Icon name="keyboard-arrow-up" size={18} color="#666" />
                       )}
                       ArrowDownIconComponent={() => (
-                        <Text>
-                          <Icon name="chevron-down" size={15} color="#000" />
-                        </Text>
+                        <Icon
+                          name="keyboard-arrow-down"
+                          size={18}
+                          color="#666"
+                        />
                       )}
                       listMode="SCROLLVIEW"
                     />
                   </View>
 
-                  <View
-                    style={{
-                      width: '100%',
-                      marginTop: 10,
-                      paddingHorizontal: '5%',
-                    }}>
-                    <Text
-                      style={{
-                        color: '#000',
-                        fontWeight: 'bold',
-                        fontSize: 14,
-                        marginLeft: 5,
-                        textAlign: 'left',
-                      }}>
+                  <View style={styles.inputRow}>
+                    <Text style={[styles.inputLabel, {color: '#000'}]}>
                       Amount <Text style={{color: 'red'}}>*</Text>
                     </Text>
                     <TextInput
-                      style={styles.productinput}
+                      style={[
+                        styles.input,
+                        {color: '#000', borderColor: '#ccc'},
+                      ]}
                       keyboardType="number-pad"
                       value={cashAddFrom.amount}
                       onChangeText={t => cashOnChange('amount', t)}
+                      placeholder="Enter amount"
+                      placeholderTextColor="#666"
                     />
                   </View>
 
-                  {/* Date Fields Section */}
-                  <View
-                    style={{
-                      width: '100%',
-                      marginTop: 10,
-                      paddingHorizontal: '5%',
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    {/* From Date */}
-                    <View style={{width: '100%'}}>
-                      <Text
-                        style={{
-                          color: '#000',
-                          fontWeight: 'bold',
-                          fontSize: 14,
-                          marginLeft: 5,
-                          textAlign: 'left',
-                        }}>
-                        Date <Text style={{color: 'red'}}>*</Text>
+                  <View style={styles.inputRow}>
+                    <Text style={[styles.inputLabel, {color: '#000'}]}>
+                      Date <Text style={{color: 'red'}}>*</Text>
+                    </Text>
+                    <TouchableOpacity
+                      onPress={() => setShowDatePicker('from')}
+                      style={[styles.dateInput, {borderColor: '#ccc'}]}>
+                      <Icon name="event" size={20} color="#666" />
+                      <Text style={[styles.dateText, {color: '#000'}]}>
+                        {cashAddFrom.date
+                          ? cashAddFrom.date.toLocaleDateString()
+                          : 'Select Date'}
                       </Text>
-                      <TouchableOpacity
-                        onPress={() => setShowDatePicker('from')}
-                        style={[styles.dateInput, {borderColor: '#000'}]}>
-                        <Text style={{color: '#000'}}>
-                          {cashAddFrom.date
-                            ? cashAddFrom.date.toLocaleDateString()
-                            : ''}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
+                    </TouchableOpacity>
                   </View>
 
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={cashAddFrom.date}
-                      mode="date"
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      onChange={modalDateChange}
-                      themeVariant="dark"
-                      style={{backgroundColor: '#144272'}}
-                    />
-                  )}
-
-                  <View
-                    style={{
-                      width: '100%',
-                      marginTop: 10,
-                      paddingHorizontal: '5%',
-                    }}>
-                    <Text
-                      style={{
-                        color: '#000',
-                        fontWeight: 'bold',
-                        fontSize: 14,
-                        marginLeft: 5,
-                        textAlign: 'left',
-                      }}>
+                  <View style={styles.inputRow}>
+                    <Text style={[styles.inputLabel, {color: '#000'}]}>
                       Added By <Text style={{color: 'red'}}>*</Text>
                     </Text>
                     <TextInput
-                      style={styles.productinput}
+                      style={[
+                        styles.input,
+                        {color: '#000', borderColor: '#ccc'},
+                      ]}
                       value={cashAddFrom.addedBy}
                       onChangeText={t => cashOnChange('addedBy', t)}
+                      placeholder="Enter name"
+                      placeholderTextColor="#666"
                     />
                   </View>
 
-                  <View
-                    style={{
-                      width: '100%',
-                      marginTop: 10,
-                      paddingHorizontal: '5%',
-                    }}>
-                    <Text
-                      style={{
-                        color: '#000',
-                        fontWeight: 'bold',
-                        fontSize: 14,
-                        marginLeft: 5,
-                        textAlign: 'left',
-                      }}>
+                  <View style={styles.inputRow}>
+                    <Text style={[styles.inputLabel, {color: '#000'}]}>
                       Note
                     </Text>
                     <TextInput
                       style={[
-                        styles.productinput,
-                        {height: 100, textAlignVertical: 'top'},
+                        styles.input,
+                        styles.textArea,
+                        {color: '#000', borderColor: '#ccc'},
                       ]}
                       multiline
                       numberOfLines={4}
                       value={cashAddFrom.note}
                       onChangeText={t => cashOnChange('note', t)}
+                      placeholder="Enter note"
+                      placeholderTextColor="#666"
                     />
                   </View>
                 </View>
@@ -795,7 +667,11 @@ export default function EmployeeAccount() {
                     modalVisible === 'Payment' && addPayment();
                     modalVisible === 'WithDraw' && withdrawPayment();
                   }}>
-                  <Text style={styles.submitButtonText}>Add Payment</Text>
+                  <Text style={styles.submitButtonText}>
+                    {modalVisible === 'WithDraw'
+                      ? 'Withdraw Payment'
+                      : 'Add Payment'}
+                  </Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -814,115 +690,243 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
   headerTextContainer: {
     flex: 1,
-    justifyContent: 'center',
     alignItems: 'center',
+  },
+  scrollContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
   toggleBtnContainer: {
-    width: '100%',
-    height: 50,
-    paddingHorizontal: '5%',
-    marginVertical: 10,
     flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  toggleBtn: {
-    height: '80%',
-    width: '40%',
-    backgroundColor: '#f8f8f8',
-    alignSelf: 'center',
-    borderRadius: 50,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 1,
-      height: 2,
-    },
-    shadowOpacity: 1,
-    shadowRadius: 5,
-    elevation: 5,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  toggleBtnText: {
-    fontSize: 13,
-    fontWeight: 'bold',
-    color: '#000',
-  },
-
-  //Single Screen Styles
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 38,
-    borderRadius: 6,
-    padding: 8,
+    justifyContent: 'space-between',
     marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: '90%',
   },
-  dateInput: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 5,
+  actionBtn: {
+    flex: 1,
+    marginHorizontal: 4,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    flexDirection: 'row',
     justifyContent: 'center',
-    height: 40, // Match other input heights
   },
-  table: {
+  actionBtnText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 12,
+    marginLeft: 4,
+  },
+  section: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
     borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
-  tablehead: {
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 16,
+  },
+  dropdownRow: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  dropdown: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 40,
+  },
+  dropdownContainer: {
     backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    marginTop: 2,
+    maxHeight: 200,
+  },
+  dropdownText: {
+    color: 'white',
+    fontSize: 14,
+  },
+  dropdownPlaceholder: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 14,
+  },
+  dateRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  btnContainer: {
-    width: '100%',
-    paddingHorizontal: '10%',
-    paddingVertical: 10,
-    justifyContent: 'center',
-    height: 55,
-  },
-  btnItem: {
-    height: '100%',
-    width: '30%',
-    backgroundColor: '#144272',
-    alignSelf: 'center',
+  dateInput: {
+    flex: 1,
+    marginHorizontal: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  dateText: {
+    flex: 1,
+    color: 'white',
+    fontSize: 14,
+    marginLeft: 8,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  emptyStateText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 16,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+  transactionCard: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  transactionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  invoiceNumber: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  transactionDate: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  transactionDetails: {
+    marginTop: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  detailLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 12,
+  },
+  detailValue: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  summarySection: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  summaryLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  summaryValue: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  totalRow: {
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+    paddingTop: 8,
+    marginTop: 8,
+  },
+  totalLabel: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  totalValue: {
+    color: '#4CAF50',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
   },
-  btnText: {
-    fontSize: 12,
-    fontWeight: 'bold',
+  paginationBtn: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginHorizontal: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  disabledBtn: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  pageIndicator: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    marginHorizontal: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  pageText: {
     color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
-
-  //Modal Styles
+  // Modal Styles
   keyboardAvoidContainer: {
     flex: 1,
   },
@@ -947,7 +951,7 @@ const styles = StyleSheet.create({
   },
   modalBodyContent: {
     flexGrow: 1,
-    paddingBottom: 80, // Space for fixed footer
+    paddingBottom: 80,
   },
   modalBody: {
     padding: 15,
@@ -981,14 +985,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: 'bold',
   },
-  productinput: {
+  inputRow: {
+    marginBottom: 16,
+  },
+  input: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(255,255,255,0.3)',
     borderWidth: 1,
-    width: '100%',
-    borderColor: '#000',
-    color: '#000',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 5,
-    height: 40,
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 14,
+  },
+  textArea: {
+    height: 80,
+    textAlignVertical: 'top',
   },
 });

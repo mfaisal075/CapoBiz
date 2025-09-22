@@ -4,9 +4,7 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
@@ -14,6 +12,9 @@ import {useDrawer} from '../../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../../BASE_URL';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import Toast from 'react-native-toast-message';
+import RNPrint from 'react-native-print';
+import {useUser} from '../../../CTX/UserContext';
 
 interface CustList {
   id: string;
@@ -25,7 +26,106 @@ interface CustList {
 
 export default function CustomerList() {
   const {openDrawer} = useDrawer();
+  const {bussName, bussAddress} = useUser();
   const [custList, setCustList] = useState<CustList[]>([]);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const totalRecords = custList.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const currentData = custList.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
+
+  // Handle Print
+  const handlePrint = async () => {
+    if (custList.length === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'No records found to print.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    // Get current date
+    const dateStr = new Date().toLocaleDateString();
+
+    // Build HTML table rows
+    const rows = custList
+      .map(
+        (item, index) => `
+      <tr>
+        <td style="border:1px solid #000; padding:4px; text-align:center;">${
+          index + 1
+        }</td>
+        <td style="border:1px solid #000; padding:4px;">${item.cust_name}</td>
+        <td style="border:1px solid #000; padding:4px;">${
+          item.cust_address
+        }</td>
+        <td style="border:1px solid #000; padding:4px;">${
+          item.cust_contact
+        }</td>
+        <td style="border:1px solid #000; padding:4px;">${item.cust_email}</td>
+      </tr>`,
+      )
+      .join('');
+
+    // HTML Template
+    const html = `
+          <html>
+            <head>
+              <meta charset="utf-8">
+              <title>Customer Report</title>
+            </head>
+            <body style="font-family: Arial, sans-serif; padding:20px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <div style="font-size:12px;">Date: ${dateStr}</div>
+                <div style="text-align:center; flex:1; font-size:16px; font-weight:bold;">Point of Sale System</div>
+              </div>
+      
+              <div style="text-align:center; margin-bottom:20px;">
+                <div style="font-size:18px; font-weight:bold;">${bussName}</div>
+                <div style="font-size:14px;">${bussAddress}</div>
+                <div style="font-size:14px; font-weight:bold; text-decoration:underline;">
+                  Customer Report
+                </div>
+              </div>
+      
+              <table style="border-collapse:collapse; width:100%; font-size:12px;">
+                <thead>
+                  <tr style="background:#f0f0f0;">
+                    <th style="border:1px solid #000; padding:6px;">Sr#</th>
+                    <th style="border:1px solid #000; padding:6px;">Customer Name</th>
+                    <th style="border:1px solid #000; padding:6px;">Address</th>
+                    <th style="border:1px solid #000; padding:6px;">Contact</th>
+                    <th style="border:1px solid #000; padding:6px;">Email</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rows}
+                </tbody>
+              </table>
+            </body>
+          </html>
+        `;
+
+    try {
+      await RNPrint.print({html});
+    } catch (error) {
+      console.log('Print error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Printing not supported on this device/emulator.',
+        visibilityTime: 2000,
+      });
+    }
+  };
 
   // Fetch Customer List
   const fetchCustList = async () => {
@@ -47,122 +147,145 @@ export default function CustomerList() {
         source={require('../../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Customer List
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Customer List</Text>
           </View>
+
+          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="#fff" />
+          </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={custList}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({item}) => (
-            <ScrollView
-              style={{
-                padding: 5,
-              }}>
-              <View style={styles.table}>
-                <View style={styles.tablehead}>
-                  <Text
-                    style={{
-                      color: '#144272',
-                      fontWeight: 'bold',
-                      marginLeft: 5,
-                      marginTop: 5,
-                    }}>
-                    {item.cust_name}
-                  </Text>
-
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'center',
-                    }}></View>
+        <View>
+          <FlatList
+            data={currentData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={styles.card}>
+                {/* Avatar + Name */}
+                <View style={styles.headerRow}>
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.cust_name?.charAt(0) || 'C'}
+                    </Text>
+                  </View>
+                  <View style={{flex: 1}}>
+                    <Text style={styles.name}>{item.cust_name}</Text>
+                    <Text style={styles.subText}>
+                      {item.cust_contact || 'No contact'}
+                    </Text>
+                  </View>
                 </View>
 
-                <View style={styles.infoRow}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Contact:</Text>
-                    <Text style={styles.text}>{item.cust_contact}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={[styles.value, {marginBottom: 5}]}>
-                      Email:
-                    </Text>
-                    <Text style={[styles.value, {marginBottom: 5}]}>
-                      {item.cust_email}
+                {/* Info Section */}
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="phone"
+                        size={20}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Phone</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.cust_contact || 'N/A'}
                     </Text>
                   </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                    }}>
-                    <Text style={[styles.value, {marginBottom: 5, flex: 0.3}]}>
-                      Address:
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="email"
+                        size={20}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Email</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.cust_email || 'N/A'}
                     </Text>
-                    <Text
-                      style={[
-                        styles.value,
-                        {marginBottom: 5, flex: 0.7, textAlign: 'right'},
-                      ]}>
-                      {item.cust_address}
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="map-marker"
+                        size={20}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Address</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.cust_address || 'N/A'}
                     </Text>
                   </View>
                 </View>
               </View>
-            </ScrollView>
-          )}
-          ListEmptyComponent={
-            <View style={{alignItems: 'center', marginTop: 20}}>
+            )}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>
+                  No customers found.
+                </Text>
+              </View>
+            }
+            contentContainerStyle={{paddingBottom: 110}}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
               <Text
-                style={{
-                  color: 'white',
-                  fontSize: 16,
-                  fontWeight: 'bold',
-                }}>
-                No record found.
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
               </Text>
             </View>
-          }
-        />
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalText}>Total Customers:</Text>
-          <Text style={styles.totalText}>{custList.length}</Text>
-        </View>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
+                Next
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ImageBackground>
     </SafeAreaView>
   );
@@ -176,54 +299,172 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
-  headerTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
-  text: {
-    marginLeft: 5,
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
+  },
+  headerTitle: {
     color: 'white',
-    marginRight: 5,
-  },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
+    fontSize: 20,
+    fontWeight: 'bold',
   },
 
-  totalContainer: {
-    paddingHorizontal: 15,
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: 'white',
-    marginTop: 5,
+  // Pagination Component
+  paginationContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#144272',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
   },
-  totalText: {
-    color: 'white',
-    fontWeight: 'bold',
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 6,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    paddingHorizontal: 10,
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
+  },
+
+  // FlatList Styling
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    marginHorizontal: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  name: {
     fontSize: 16,
+    fontWeight: '700',
+    color: '#144272',
+  },
+  subText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionIcon: {
+    tintColor: '#144272',
+    width: 20,
+    height: 20,
+    marginHorizontal: 4,
+  },
+  infoBox: {
+    marginTop: 10,
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 10,
+  },
+  infoText: {
+    flex: 1,
+    color: '#333',
+    fontSize: 13,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  infoIcon: {
+    width: 18,
+    height: 18,
+    tintColor: '#144272',
+    marginRight: 6,
+  },
+  labelText: {
+    fontSize: 13,
+    color: '#144272',
+    fontWeight: '600',
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: '60%',
+    textAlign: 'right',
   },
 });

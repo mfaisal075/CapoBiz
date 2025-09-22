@@ -116,7 +116,7 @@ export default function CurrentStock() {
             <Text style={styles.headerTitle}>Current Stock</Text>
           </View>
           <View style={[styles.headerBtn, {backgroundColor: 'transparent'}]}>
-            <Icon name="filter-list" size={24} color="transparent" />
+            <Icon name="mail" size={24} color="transparent" />
           </View>
         </View>
 
