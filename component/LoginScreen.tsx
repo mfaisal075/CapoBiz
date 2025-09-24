@@ -13,17 +13,9 @@ import {useNavigation} from '@react-navigation/native';
 import axios from 'axios';
 import BASE_URL from './BASE_URL';
 import Toast from 'react-native-toast-message';
-import {useUser} from './CTX/UserContext';
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation();
-  const {
-    setUserEmail,
-    setUserName,
-    setBussName,
-    setBussAddress,
-    setBussContact,
-  } = useUser();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [hidePassword, setHidePassword] = useState(true);
@@ -54,29 +46,10 @@ const LoginScreen: React.FC = () => {
     }
 
     try {
-      const response = await axios.post(
-        `${BASE_URL}/userlogin`,
-        {
-          email: username,
-          password,
-        },
-        {
-          withCredentials: true,
-        },
-      );
-
-      // Only proceed with the second request if login was successful
-      const res = await axios.get(`${BASE_URL}/poscashregister`);
-
-      setUserName(res.data?.authenticated_user?.name ?? '');
-      setUserEmail(res.data?.authenticated_user?.email ?? '');
-
-      // Getting bussiness details
-      const bus = await axios.get(`${BASE_URL}/dashboaddata`);
-
-      setBussName(bus.data?.businessdata?.bus_name ?? '');
-      setBussAddress(bus.data?.businessdata?.bus_address ?? '');
-      setBussContact(bus.data?.businessdata?.bus_contact1 ?? '');
+      const response = await axios.post(`${BASE_URL}/userlogin`, {
+        email: username,
+        password,
+      });
 
       const data = response.data;
 

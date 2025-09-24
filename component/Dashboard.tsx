@@ -49,6 +49,13 @@ interface DashboardData {
 
 export default function Dashboard(): JSX.Element {
   const {userName, userEmail} = useUser();
+  const {
+    setUserEmail,
+    setUserName,
+    setBussName,
+    setBussAddress,
+    setBussContact,
+  } = useUser();
   const navigation = useNavigation<DashboardNavigationProp>();
   const [isModalVisible, setModalVisible] = useState(false);
   const {openDrawer} = useDrawer();
@@ -69,6 +76,27 @@ export default function Dashboard(): JSX.Element {
 
   useEffect(() => {
     fetchData();
+
+    const fetchUserData = async () => {
+      try {
+        // Only proceed with the second request if login was successful
+        const res = await axios.get(`${BASE_URL}/poscashregister`);
+
+        setUserName(res.data?.authenticated_user?.name ?? '');
+        setUserEmail(res.data?.authenticated_user?.email ?? '');
+
+        // Getting bussiness details
+        const bus = await axios.get(`${BASE_URL}/dashboaddata`);
+
+        setBussName(bus.data?.businessdata?.bus_name ?? '');
+        setBussAddress(bus.data?.businessdata?.bus_address ?? '');
+        setBussContact(bus.data?.businessdata?.bus_contact1 ?? '');
+      } catch (error) {
+        console.log(error);
+      }
+    };
+
+    fetchUserData();
   }, []);
 
   // POS Dashboard Stats (static for now)

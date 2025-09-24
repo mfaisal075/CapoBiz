@@ -4,9 +4,7 @@ import {
   View,
   SafeAreaView,
   TouchableOpacity,
-  Image,
   ImageBackground,
-  ScrollView,
   FlatList,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
@@ -77,16 +75,22 @@ export default function TypeWiseCustomer() {
       .map(
         (item, index) => `
       <tr>
-        <td style="border:1px solid #000; padding:4px; text-align:center;">${
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word; text-align:center;">${
           index + 1
         }</td>
-        <td style="border:1px solid #000; padding:4px;">${item.cust_name}</td>
-        <td style="border:1px solid #000; padding:4px;">${item.cust_cnic}</td>
-        <td style="border:1px solid #000; padding:4px;">${
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+          item.cust_name
+        }</td>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+          item.cust_cnic
+        }</td>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
           item.cust_contact
         }</td>
-        <td style="border:1px solid #000; padding:4px;">${item.cust_email}</td>
-        <td style="border:1px solid #000; padding:4px;">${
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+          item.cust_email
+        }</td>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
           item.custtyp_name
         }</td>
       </tr>`,
@@ -176,7 +180,7 @@ export default function TypeWiseCustomer() {
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Customer List</Text>
+            <Text style={styles.headerTitle}>Type Wise Customer</Text>
           </View>
 
           <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
@@ -325,6 +329,9 @@ export default function TypeWiseCustomer() {
                 Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
                 {totalPages}
               </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} Customers
+              </Text>
             </View>
 
             <TouchableOpacity
@@ -378,33 +385,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
-  },
-  headerTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
   },
 
   // FlatList Styling
@@ -565,5 +545,11 @@ const styles = StyleSheet.create({
   pageCurrent: {
     fontWeight: '700',
     color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
   },
 });

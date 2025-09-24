@@ -61,17 +61,21 @@ export default function CustomerList() {
       .map(
         (item, index) => `
       <tr>
-        <td style="border:1px solid #000; padding:4px; text-align:center;">${
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word; text-align:center;">${
           index + 1
         }</td>
-        <td style="border:1px solid #000; padding:4px;">${item.cust_name}</td>
-        <td style="border:1px solid #000; padding:4px;">${
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+          item.cust_name
+        }</td>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
           item.cust_address
         }</td>
-        <td style="border:1px solid #000; padding:4px;">${
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
           item.cust_contact
         }</td>
-        <td style="border:1px solid #000; padding:4px;">${item.cust_email}</td>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+          item.cust_email
+        }</td>
       </tr>`,
       )
       .join('');
@@ -267,6 +271,9 @@ export default function CustomerList() {
                 Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
                 {totalPages}
               </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} Customers
+              </Text>
             </View>
 
             <TouchableOpacity
@@ -374,6 +381,12 @@ const styles = StyleSheet.create({
   pageCurrent: {
     fontWeight: '700',
     color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
   },
 
   // FlatList Styling
