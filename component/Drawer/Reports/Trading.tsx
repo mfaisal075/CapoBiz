@@ -4,15 +4,17 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import RNPrint from 'react-native-print';
+import Toast from 'react-native-toast-message';
+import {useUser} from '../../CTX/UserContext';
 
 interface TradeDetails {
   id: number;
@@ -27,9 +29,128 @@ interface TradeDetails {
   trad_profit: string;
 }
 
-export default function Trading() {
+export default function TradingReport() {
   const {openDrawer} = useDrawer();
+  const {bussName, bussAddress} = useUser();
   const [tradeDetails, setTradeDetails] = useState<TradeDetails[]>([]);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const currentData = tradeDetails;
+  const totalRecords = currentData.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const paginatedData = currentData.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
+
+  // Handle Print
+  const handlePrint = async () => {
+    if (currentData.length === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'No records found to print.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    // Get current date
+    const dateStr = new Date().toLocaleDateString();
+
+    // Build HTML table rows
+    const rows = currentData
+      .map(
+        (item, index) => `
+          <tr>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word; text-align:center;">${
+              index + 1
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.trad_invoice_no
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.sup_name
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.cust_name
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.trad_ref_no
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${new Date(
+              item.trad_date,
+            ).toLocaleDateString('en-US', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })}</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.trad_total_cost
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.trad_total_sale
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.trad_profit
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.trad_payable
+            }</td>
+          </tr>`,
+      )
+      .join('');
+
+    // HTML Template
+    const html = `
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Trading Report</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; padding:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div style="font-size:12px;">Date: ${dateStr}</div>
+              <div style="text-align:center; flex:1; font-size:16px; font-weight:bold;">Point of Sale System</div>
+            </div>
+              
+            <div style="text-align:center; margin-bottom:20px;">
+              <div style="font-size:18px; font-weight:bold;">${bussName}</div>
+              <div style="font-size:14px;">${bussAddress}</div>
+              <div style="font-size:14px; font-weight:bold; text-decoration:underline;">
+                Trading Report
+              </div>
+            </div>
+              
+            <table style="border-collapse:collapse; width:100%; font-size:12px;">
+              <thead>
+                <tr style="background:#f0f0f0;">
+                  <th style="border:1px solid #000; padding:6px;">Sr#</th>
+                  <th style="border:1px solid #000; padding:6px;">Invoice No</th>
+                  <th style="border:1px solid #000; padding:6px;">Supplier</th>
+                  <th style="border:1px solid #000; padding:6px;">Customer</th>
+                  <th style="border:1px solid #000; padding:6px;">Ref No.</th>
+                  <th style="border:1px solid #000; padding:6px;">Date</th>
+                  <th style="border:1px solid #000; padding:6px;">Cost</th>
+                  <th style="border:1px solid #000; padding:6px;">Sale</th>
+                  <th style="border:1px solid #000; padding:6px;">Profit</th>
+                  <th style="border:1px solid #000; padding:6px;">Trade Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+    await RNPrint.print({html});
+  };
 
   // Fetch Trade Details
   const fetchTradeDetails = async () => {
@@ -51,147 +172,226 @@ export default function Trading() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Trading Report
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Trading Report</Text>
           </View>
+
+          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="white" />
+          </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={tradeDetails}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({item}) => (
-            <ScrollView
-              style={{
-                padding: 5,
-              }}>
-              <View style={styles.table}>
-                <View style={styles.tablehead}>
-                  <Text
-                    style={{
-                      color: '#144272',
-                      fontWeight: 'bold',
-                      marginLeft: 5,
-                      marginTop: 5,
-                    }}>
-                    {item.trad_invoice_no}
-                  </Text>
+        <View style={styles.listContainer}>
+          <FlatList
+            data={paginatedData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={styles.card}>
+                {/* Header Row */}
+                <View style={styles.headerRow}>
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.trad_invoice_no?.charAt(0) || 'T'}
+                    </Text>
+                  </View>
+                  <View style={{flex: 1}}>
+                    <Text style={styles.productName}>
+                      {item.trad_invoice_no}
+                    </Text>
+                  </View>
                 </View>
 
-                <View style={styles.infoRow}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Supplier:</Text>
-                    <Text style={styles.text}>{item.sup_name}</Text>
-                  </View>
-
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Customer:</Text>
-                    <Text style={styles.text}>{item.cust_name}</Text>
-                  </View>
-
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Ref No.:</Text>
-                    <Text style={styles.text}>{item.trad_ref_no}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Date:</Text>
-                    <Text style={styles.text}>
-                      {new Date(item.trad_date)
-                        .toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric',
-                        })
-                        .replace(/ /g, '-')}
+                {/* Info Section */}
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="account"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Supplier</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.sup_name ?? 'N/A'}
                     </Text>
                   </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Cost:</Text>
-                    <Text style={styles.text}>{item.trad_total_cost}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={[styles.value]}>Sale:</Text>
-                    <Text style={[styles.value]}>{item.trad_total_sale}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={[styles.value]}>Profit:</Text>
-                    <Text style={[styles.value]}>{item.trad_profit}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={[styles.value, {marginBottom: 5}]}>
-                      Trade Total:
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="account"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Customer</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.cust_name ?? 'N/A'}
                     </Text>
-                    <Text style={[styles.value, {marginBottom: 5}]}>
-                      {item.trad_payable}
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="identifier"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Ref No.</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.trad_ref_no ?? 'N/A'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="calendar"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Date</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {new Date(item.trad_date).toLocaleDateString('en-US', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="cash"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Cost</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.trad_total_cost ?? '--'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="sale"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Sale</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.trad_total_sale ?? '--'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="trending-up"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Profit</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.trad_profit ?? '--'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="cash-multiple"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Trade Total</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.trad_payable ?? '--'}
                     </Text>
                   </View>
                 </View>
               </View>
-            </ScrollView>
-          )}
-        />
-
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalText}>Total Trade Orders:</Text>
-
-          <Text style={styles.totalText}>{tradeDetails.length}</Text>
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
+              </View>
+            }
+            contentContainerStyle={{paddingBottom: 70}}
+            showsVerticalScrollIndicator={false}
+          />
         </View>
+
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
+              </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
+                Next
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ImageBackground>
     </SafeAreaView>
   );
@@ -205,53 +405,183 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
-  headerTextContainer: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerCenter: {
     flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
+  },
+  headerTitle: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+
+  // Flat List Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 15,
+  },
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    zIndex: 1000,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
+    marginRight: 12,
   },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
   },
-  tablehead: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  productName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#144272',
+    flexWrap: 'wrap',
   },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
+  subText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
   },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
+  infoBox: {
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 12,
   },
   infoRow: {
-    marginTop: 5,
-  },
-  totalContainer: {
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderTopWidth: 1,
-    borderTopColor: 'white',
-    marginTop: 5,
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    flex: 1,
+  },
+  infoIcon: {
+    marginRight: 6,
+  },
+  labelText: {
+    fontSize: 13,
+    color: '#144272',
+    fontWeight: '600',
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: '50%',
+    textAlign: 'right',
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 50,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    marginHorizontal: 20,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 16,
+    marginTop: 10,
+    fontWeight: '500',
+  },
+
+  // Pagination Styling
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#144272',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
+  },
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    alignItems: 'center',
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
   },
   totalText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
   },
 });

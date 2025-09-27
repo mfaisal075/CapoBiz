@@ -5,7 +5,6 @@ import {
   SafeAreaView,
   ImageBackground,
   TouchableOpacity,
-  Image,
   FlatList,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
@@ -15,6 +14,9 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {RadioButton} from 'react-native-paper';
+import RNPrint from 'react-native-print';
+import {useUser} from '../../CTX/UserContext';
+import Toast from 'react-native-toast-message';
 
 type TabType = 'receivables' | 'payables' | 'balances';
 
@@ -65,16 +67,154 @@ export default function CustomerBalances() {
   const [custReceivable, setCustReceivable] = useState<
     AllCustomersReceivable[]
   >([]);
-
   const [singleCustReceivable, setSingleCustReceivable] = useState<
     SingleCustomersReceivable[]
   >([]);
-
   const [selectionMode, setSelectionMode] = useState<
     'allCustomers' | 'singleCustomer' | ''
   >('allCustomers');
 
   const {openDrawer} = useDrawer();
+  const {bussName, bussAddress} = useUser();
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const currentData =
+    selectionMode === 'allCustomers' ? custReceivable : singleCustReceivable;
+  const totalRecords = currentData.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const paginatedData = currentData.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
+
+  // Handle Print
+  const handlePrint = async () => {
+    const dataList =
+      selectionMode === 'allCustomers' ? custReceivable : singleCustReceivable;
+
+    if (dataList.length === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'No records found to print.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    const dateStr = new Date().toLocaleDateString();
+    const tabTitle = selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1);
+
+    // Build HTML table rows
+    const rows = dataList
+      .map((item: any, index) => {
+        if (selectionMode === 'allCustomers') {
+          const balance =
+            selectedTab === 'receivables' ? item.custac_balance : item.Balance;
+          return `
+            <tr>
+              <td style="border:1px solid #000; padding:4px; text-align:center;">${
+                index + 1
+              }</td>
+              <td style="border:1px solid #000; padding:4px;">${
+                item.cust_name
+              }</td>
+              <td style="border:1px solid #000; padding:4px;">${
+                balance?.toFixed(2) || '0.00'
+              }</td>
+              <td style="border:1px solid #000; padding:4px;">${
+                item.cust_contact || '--'
+              }</td>
+              <td style="border:1px solid #000; padding:4px;">${
+                item.cust_sec_contact || '--'
+              }</td>
+              <td style="border:1px solid #000; padding:4px;">${
+                item.cust_third_contact || '--'
+              }</td>
+              <td style="border:1px solid #000; padding:4px;">${
+                item.cust_address || '--'
+              }</td>
+            </tr>`;
+        } else {
+          return `
+            <tr>
+              <td style="border:1px solid #000; padding:4px; text-align:center;">${
+                index + 1
+              }</td>
+              <td style="border:1px solid #000; padding:4px;">${
+                item.cust_name
+              }</td>
+              <td style="border:1px solid #000; padding:4px;">${
+                item.custac_total_bill_amount?.toFixed(2) || '0.00'
+              }</td>
+              <td style="border:1px solid #000; padding:4px;">${
+                item.custac_paid_amount?.toFixed(2) || '0.00'
+              }</td>
+              <td style="border:1px solid #000; padding:4px;">${
+                item.custac_balance?.toFixed(2) || '0.00'
+              }</td>
+            </tr>`;
+        }
+      })
+      .join('');
+
+    const headers =
+      selectionMode === 'allCustomers'
+        ? `<tr style="background:#f0f0f0;">
+           <th style="border:1px solid #000; padding:6px;">Sr#</th>
+           <th style="border:1px solid #000; padding:6px;">Customer Name</th>
+           <th style="border:1px solid #000; padding:6px;">Balance</th>
+           <th style="border:1px solid #000; padding:6px;">Contact 1</th>
+           <th style="border:1px solid #000; padding:6px;">Contact 2</th>
+           <th style="border:1px solid #000; padding:6px;">Contact 3</th>
+           <th style="border:1px solid #000; padding:6px;">Address</th>
+         </tr>`
+        : `<tr style="background:#f0f0f0;">
+           <th style="border:1px solid #000; padding:6px;">Sr#</th>
+           <th style="border:1px solid #000; padding:6px;">Customer Name</th>
+           <th style="border:1px solid #000; padding:6px;">Total Bill</th>
+           <th style="border:1px solid #000; padding:6px;">Paid Amount</th>
+           <th style="border:1px solid #000; padding:6px;">Balance</th>
+         </tr>`;
+
+    const html = `
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Customer ${tabTitle} Report</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; padding:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-size:12px;">Date: ${dateStr}</div>
+            <div style="text-align:center; flex:1; font-size:16px; font-weight:bold;">Point of Sale System</div>
+          </div>
+            
+          <div style="text-align:center; margin-bottom:20px;">
+            <div style="font-size:18px; font-weight:bold;">${bussName}</div>
+            <div style="font-size:14px;">${bussAddress}</div>
+            <div style="font-size:14px; font-weight:bold; text-decoration:underline;">
+              Customer ${tabTitle} Report
+            </div>
+          </div>
+            
+          <table style="border-collapse:collapse; width:100%; font-size:12px;">
+            <thead>
+              ${headers}
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    await RNPrint.print({html});
+  };
 
   // Fetch Customer Dropdown
   const fetchCustDropdown = async () => {
@@ -155,22 +295,25 @@ export default function CustomerBalances() {
     let totalReceivable = 0;
 
     custReceivable.forEach(receivable => {
-      const receivableAmount = receivable.custac_balance || 0;
-
+      const receivableAmount =
+        receivable.custac_balance || receivable.Balance || 0;
       totalReceivable += receivableAmount;
     });
 
     return {
-      totalReceivable: totalReceivable.toFixed(2),
+      totalReceivable: Number(totalReceivable).toFixed(2),
     };
   };
+
+  const totals = calculateTotalReceivable();
 
   useEffect(() => {
     fetchCustDropdown();
     fetchAreaDropdown();
     fetchAllCustData();
     fetchSingleCustData();
-  }, [custValue, areaValue]);
+    setCurrentPage(1); // Reset to first page when data changes
+  }, [custValue, areaValue, selectedTab, selectionMode]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -178,325 +321,387 @@ export default function CustomerBalances() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
+        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={styles.menuIcon}
-            />
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Customer Balances</Text>
+
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Customer Balances</Text>
+          </View>
+
+          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="white" />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.toggleRow}>
-          {(['receivables', 'payables', 'balances'] as TabType[]).map(tab => (
-            <TouchableOpacity
-              key={tab}
-              onPress={() => setSelectedTab(tab)}
-              style={[
-                styles.toggleButton,
-                selectedTab === tab && styles.activeButton,
-              ]}>
-              <Text
+        {/* Filter Section */}
+        <View style={styles.filterContainer}>
+          {/* Toggle Tabs */}
+          <View style={styles.toggleRow}>
+            {(['receivables', 'payables', 'balances'] as TabType[]).map(tab => (
+              <TouchableOpacity
+                key={tab}
+                onPress={() => setSelectedTab(tab)}
                 style={[
-                  styles.toggleText,
-                  selectedTab === tab && styles.activeText,
+                  styles.toggleButton,
+                  selectedTab === tab && styles.activeButton,
                 ]}>
-                {tab.charAt(0).toUpperCase() + tab.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+                <Text
+                  style={[
+                    styles.toggleText,
+                    selectedTab === tab && styles.activeText,
+                  ]}>
+                  {tab.charAt(0).toUpperCase() + tab.slice(1)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
 
-        <View style={styles.dropDownContainer}>
-          <DropDownPicker
-            items={transformedCustomer}
-            open={custOpen}
-            setOpen={setCustOpen}
-            value={custValue}
-            setValue={setCustValue}
-            placeholder="Select Customer"
-            disabled={selectionMode === 'allCustomers'}
-            placeholderStyle={{color: 'white'}}
-            textStyle={{color: 'white'}}
-            ArrowUpIconComponent={() => (
-              <Text>
-                <Icon name="chevron-up" size={15} color="white" />
-              </Text>
-            )}
-            ArrowDownIconComponent={() => (
-              <Text>
-                <Icon name="chevron-down" size={15} color="white" />
-              </Text>
-            )}
-            style={[
-              styles.dropdown,
-              selectionMode === 'allCustomers' && {
-                backgroundColor: 'gray',
-              },
-            ]}
-            dropDownContainerStyle={{
-              backgroundColor: 'white',
-              borderColor: '#144272',
-              width: '100%',
-              marginTop: 8,
-              zIndex: 1000,
-            }}
-            labelStyle={{color: 'white'}}
-            listItemLabelStyle={{color: '#144272'}}
-          />
-        </View>
-
-        <View style={styles.dropDownContainer}>
-          <DropDownPicker
-            items={transformedAreas}
-            open={areaOpen}
-            setOpen={setAreaOpen}
-            value={areaValue}
-            setValue={setAreaValue}
-            placeholder="Select Area"
-            disabled={selectionMode === 'singleCustomer'}
-            placeholderStyle={{color: 'white'}}
-            textStyle={{color: 'white'}}
-            ArrowUpIconComponent={() => (
-              <Text>
-                <Icon name="chevron-up" size={15} color="white" />
-              </Text>
-            )}
-            ArrowDownIconComponent={() => (
-              <Text>
-                <Icon name="chevron-down" size={15} color="white" />
-              </Text>
-            )}
-            style={[
-              styles.dropdown,
-              {
-                zIndex: 999,
-              },
-              selectionMode === 'singleCustomer' && {
-                backgroundColor: 'gray',
-              },
-            ]}
-            dropDownContainerStyle={{
-              backgroundColor: 'white',
-              borderColor: '#144272',
-              width: '100%',
-              marginTop: 8,
-            }}
-            labelStyle={{color: 'white'}}
-            listItemLabelStyle={{color: '#144272'}}
-          />
-        </View>
-
-        <View style={{width: '90%', alignSelf: 'center', marginTop: 10}}>
-          <TouchableOpacity
-            style={{flexDirection: 'row', alignItems: 'center'}}
-            onPress={() => {
-              setSelectionMode('allCustomers');
-              setAreaValue('');
-            }}>
-            <RadioButton
-              value="allCustomers"
-              color="white"
-              uncheckedColor="white"
-              status={
-                selectionMode === 'allCustomers' ? 'checked' : 'unchecked'
-              }
+          {/* Radio Buttons */}
+          <View style={styles.radioContainer}>
+            <TouchableOpacity
+              style={styles.radioButton}
               onPress={() => {
                 setSelectionMode('allCustomers');
-                setAreaValue('');
-              }}
-            />
-            <Text
-              style={{
-                color: 'white',
+                setCustValue('');
               }}>
-              All Customer Receivables
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{flexDirection: 'row', alignItems: 'center'}}
-            onPress={() => {
-              setSelectionMode('singleCustomer');
-              setCustValue('');
-            }}>
-            <RadioButton
-              value="singleCustomer"
-              color="white"
-              uncheckedColor="white"
-              status={
-                selectionMode === 'singleCustomer' ? 'checked' : 'unchecked'
-              }
+              <RadioButton
+                value="allCustomers"
+                status={
+                  selectionMode === 'allCustomers' ? 'checked' : 'unchecked'
+                }
+                color="#144272"
+                uncheckedColor="#666"
+              />
+              <Text style={styles.radioText}>All Customers</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.radioButton}
               onPress={() => {
                 setSelectionMode('singleCustomer');
-                setCustValue('');
-              }}
-            />
-            <Text
-              style={{
-                color: 'white',
+                setAreaValue('');
               }}>
-              Single Customer Receivables
-            </Text>
-          </TouchableOpacity>
+              <RadioButton
+                value="singleCustomer"
+                status={
+                  selectionMode === 'singleCustomer' ? 'checked' : 'unchecked'
+                }
+                color="#144272"
+                uncheckedColor="#666"
+              />
+              <Text style={styles.radioText}>Single Customer</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Dropdowns */}
+          <View style={styles.dropdownRow}>
+            <View style={styles.dropdownWrapper}>
+              <DropDownPicker
+                items={transformedCustomer}
+                open={custOpen}
+                setOpen={setCustOpen}
+                value={custValue}
+                setValue={setCustValue}
+                placeholder="Select Customer"
+                disabled={selectionMode === 'allCustomers'}
+                placeholderStyle={{color: '#666'}}
+                textStyle={{color: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="chevron-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="chevron-down" size={18} color="#144272" />
+                )}
+                style={[
+                  styles.dropdown,
+                  selectionMode === 'allCustomers' && styles.dropdownDisabled,
+                ]}
+                dropDownContainerStyle={styles.dropDownContainer}
+                zIndex={3000}
+                zIndexInverse={1000}
+              />
+            </View>
+
+            <View style={styles.dropdownWrapper}>
+              <DropDownPicker
+                items={transformedAreas}
+                open={areaOpen}
+                setOpen={setAreaOpen}
+                value={areaValue}
+                setValue={setAreaValue}
+                placeholder="Select Area"
+                disabled={selectionMode === 'singleCustomer'}
+                placeholderStyle={{color: '#666'}}
+                textStyle={{color: '#144272'}}
+                ArrowUpIconComponent={() => (
+                  <Icon name="chevron-up" size={18} color="#144272" />
+                )}
+                ArrowDownIconComponent={() => (
+                  <Icon name="chevron-down" size={18} color="#144272" />
+                )}
+                style={[
+                  styles.dropdown,
+                  selectionMode === 'singleCustomer' && styles.dropdownDisabled,
+                ]}
+                dropDownContainerStyle={styles.dropDownContainer}
+                zIndex={2000}
+                zIndexInverse={2000}
+              />
+            </View>
+          </View>
         </View>
 
-        {selectionMode === 'allCustomers' && (
-          <FlatList
-            data={custReceivable}
-            keyExtractor={(item, index) => index.toString()}
-            contentContainerStyle={{paddingBottom: 50}}
-            renderItem={({item}) => (
-              <View style={styles.table}>
-                <View style={styles.tablehead}>
-                  <Text
-                    style={{
-                      color: '#144272',
-                      fontWeight: 'bold',
-                      marginLeft: 5,
-                      marginTop: 5,
-                    }}>
-                    {item.cust_name}
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <View style={styles.row}>
-                    <Text style={styles.text}>Balance:</Text>
-                    <Text style={styles.text}>
-                      {selectedTab === 'receivables' &&
-                        item.custac_balance.toFixed(2)}
-                      {selectedTab === 'payables' || selectedTab === 'balances'
-                        ? item.Balance.toFixed(2)
-                        : '0.00'}
-                    </Text>
-                  </View>
-                  <View style={styles.row}>
-                    <Text style={styles.text}>Contact 1:</Text>
-                    <Text style={styles.text}>{item.cust_contact ?? '--'}</Text>
-                  </View>
-                  <View style={styles.row}>
-                    <Text style={styles.text}>Contact 2:</Text>
-                    <Text style={styles.text}>
-                      {item.cust_sec_contact ?? '--'}
-                    </Text>
-                  </View>
-                  <View style={styles.row}>
-                    <Text style={styles.text}>Contact 3:</Text>
-                    <Text style={styles.text}>
-                      {item.cust_third_contact ?? '--'}
-                    </Text>
-                  </View>
-                  <View style={[styles.row]}>
-                    <Text style={styles.text}>Address:</Text>
-                    <Text
-                      style={[styles.text, {textAlign: 'right', width: '70%'}]}>
-                      {item.cust_address ?? '--'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View
-                style={{
-                  width: '100%',
-                  height: 300,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
-                  No data found.
-                </Text>
-              </View>
-            }
-          />
-        )}
-        {selectionMode === 'singleCustomer' && (
-          <FlatList
-            data={singleCustReceivable}
-            keyExtractor={(item, index) => index.toString()}
-            contentContainerStyle={{paddingBottom: 50}}
-            renderItem={({item}) => (
-              <View style={styles.table}>
-                <View style={styles.tablehead}>
-                  <Text
-                    style={{
-                      color: '#144272',
-                      fontWeight: 'bold',
-                      marginLeft: 5,
-                      marginTop: 5,
-                    }}>
-                    {item.cust_name}
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <View style={styles.row}>
-                    <Text style={styles.text}>Total Bill Amount:</Text>
-                    <Text style={styles.text}>
-                      {item.custac_total_bill_amount.toFixed(2) ?? '0.00'}
-                    </Text>
-                  </View>
-                  <View style={styles.row}>
-                    <Text style={styles.text}>Paid Amount:</Text>
-                    <Text style={styles.text}>
-                      {item.custac_paid_amount.toFixed(2) ?? '--'}
-                    </Text>
-                  </View>
-                  <View style={styles.row}>
-                    <Text style={styles.text}>Balance:</Text>
-                    <Text style={styles.text}>
-                      {item.custac_balance.toFixed(2) ?? '--'}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View
-                style={{
-                  width: '100%',
-                  height: 300,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
-                  No data found.
-                </Text>
-              </View>
-            }
-          />
-        )}
+        {/* Summary Cards */}
 
         {selectionMode === 'allCustomers' && selectedTab === 'receivables' && (
-          <View style={styles.totalContainer}>
-            <View
-              style={{
-                flexDirection: 'row',
-              }}>
-              <Text style={styles.totalText}>Total Records:</Text>
-              <Text style={styles.totalText}>{custReceivable.length}</Text>
+          <View style={styles.summaryContainer}>
+            <View style={styles.innerSummaryCtx}>
+              <Text style={styles.summaryLabel}>
+                Total{' '}
+                {selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)}:{' '}
+              </Text>
+              <Text style={styles.summaryValue}>{totals.totalReceivable}</Text>
             </View>
-            {(() => {
-              const {totalReceivable} = calculateTotalReceivable();
+          </View>
+        )}
+
+        <View style={styles.listContainer}>
+          <FlatList<AllCustomersReceivable | SingleCustomersReceivable>
+            data={paginatedData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => {
+              const isAllCustomers = selectionMode === 'allCustomers';
+              const allCustomerItem = item as AllCustomersReceivable;
+              const singleCustomerItem = item as SingleCustomersReceivable;
 
               return (
-                <View
-                  style={{
-                    flexDirection: 'column',
-                  }}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.totalText}>Total Receivable: </Text>
-                    <Text style={styles.totalText}>{totalReceivable}</Text>
+                <View style={styles.card}>
+                  {/* Header Row */}
+                  <View style={styles.headerRow}>
+                    <View style={styles.avatarBox}>
+                      <Text style={styles.avatarText}>
+                        {(isAllCustomers
+                          ? allCustomerItem.cust_name
+                          : singleCustomerItem.cust_name
+                        )?.charAt(0) || 'C'}
+                      </Text>
+                    </View>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.customerName}>
+                        {isAllCustomers
+                          ? allCustomerItem.cust_name
+                          : singleCustomerItem.cust_name}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Info Section */}
+                  <View style={styles.infoBox}>
+                    {isAllCustomers ? (
+                      <>
+                        <View style={styles.infoRow}>
+                          <View style={styles.labelRow}>
+                            <Icon
+                              name="cash"
+                              size={18}
+                              color="#144272"
+                              style={styles.infoIcon}
+                            />
+                            <Text style={styles.labelText}>Balance</Text>
+                          </View>
+                          <Text style={styles.valueText}>
+                            Rs.{' '}
+                            {selectedTab === 'receivables'
+                              ? allCustomerItem.custac_balance?.toFixed(2) ||
+                                '0.00'
+                              : allCustomerItem.Balance?.toFixed(2) || '0.00'}
+                          </Text>
+                        </View>
+
+                        <View style={styles.infoRow}>
+                          <View style={styles.labelRow}>
+                            <Icon
+                              name="phone"
+                              size={18}
+                              color="#144272"
+                              style={styles.infoIcon}
+                            />
+                            <Text style={styles.labelText}>Contact 1</Text>
+                          </View>
+                          <Text style={styles.valueText}>
+                            {allCustomerItem.cust_contact || '--'}
+                          </Text>
+                        </View>
+
+                        <View style={styles.infoRow}>
+                          <View style={styles.labelRow}>
+                            <Icon
+                              name="phone-plus"
+                              size={18}
+                              color="#144272"
+                              style={styles.infoIcon}
+                            />
+                            <Text style={styles.labelText}>Contact 2</Text>
+                          </View>
+                          <Text style={styles.valueText}>
+                            {allCustomerItem.cust_sec_contact || '--'}
+                          </Text>
+                        </View>
+
+                        <View style={styles.infoRow}>
+                          <View style={styles.labelRow}>
+                            <Icon
+                              name="phone-ring"
+                              size={18}
+                              color="#144272"
+                              style={styles.infoIcon}
+                            />
+                            <Text style={styles.labelText}>Contact 3</Text>
+                          </View>
+                          <Text style={styles.valueText}>
+                            {allCustomerItem.cust_third_contact || '--'}
+                          </Text>
+                        </View>
+
+                        <View style={styles.infoRow}>
+                          <View style={styles.labelRow}>
+                            <Icon
+                              name="map-marker"
+                              size={18}
+                              color="#144272"
+                              style={styles.infoIcon}
+                            />
+                            <Text style={styles.labelText}>Address</Text>
+                          </View>
+                          <Text style={[styles.valueText, {maxWidth: '60%'}]}>
+                            {allCustomerItem.cust_address || '--'}
+                          </Text>
+                        </View>
+                      </>
+                    ) : (
+                      <>
+                        <View style={styles.infoRow}>
+                          <View style={styles.labelRow}>
+                            <Icon
+                              name="receipt"
+                              size={18}
+                              color="#144272"
+                              style={styles.infoIcon}
+                            />
+                            <Text style={styles.labelText}>
+                              Total Bill Amount
+                            </Text>
+                          </View>
+                          <Text style={styles.valueText}>
+                            Rs.{' '}
+                            {singleCustomerItem.custac_total_bill_amount?.toFixed(
+                              2,
+                            ) || '0.00'}
+                          </Text>
+                        </View>
+
+                        <View style={styles.infoRow}>
+                          <View style={styles.labelRow}>
+                            <Icon
+                              name="cash-check"
+                              size={18}
+                              color="#144272"
+                              style={styles.infoIcon}
+                            />
+                            <Text style={styles.labelText}>Paid Amount</Text>
+                          </View>
+                          <Text style={styles.valueText}>
+                            Rs.{' '}
+                            {singleCustomerItem.custac_paid_amount?.toFixed(
+                              2,
+                            ) || '0.00'}
+                          </Text>
+                        </View>
+
+                        <View style={styles.infoRow}>
+                          <View style={styles.labelRow}>
+                            <Icon
+                              name="cash-minus"
+                              size={18}
+                              color="#144272"
+                              style={styles.infoIcon}
+                            />
+                            <Text style={styles.labelText}>Balance</Text>
+                          </View>
+                          <Text style={styles.valueText}>
+                            Rs.{' '}
+                            {singleCustomerItem.custac_balance?.toFixed(2) ||
+                              '0.00'}
+                          </Text>
+                        </View>
+                      </>
+                    )}
                   </View>
                 </View>
               );
-            })()}
+            }}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No customers found.</Text>
+              </View>
+            }
+            contentContainerStyle={{paddingBottom: 70}}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
+              </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
+                Next
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
+
+        <Toast />
       </ImageBackground>
     </SafeAreaView>
   );
@@ -513,27 +718,44 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 10,
-    justifyContent: 'space-between',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
-  menuIcon: {
-    width: 30,
-    height: 30,
-    tintColor: 'white',
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
-    flex: 1,
     color: 'white',
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
-    textAlign: 'center',
-    marginRight: 30,
+  },
+
+  // Filter Container
+  filterContainer: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    marginHorizontal: 15,
+    marginVertical: 10,
+    borderRadius: 12,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 3,
+    zIndex: 1000,
   },
   toggleRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginTop: 10,
-    marginHorizontal: 10,
+    marginBottom: 15,
   },
   toggleButton: {
     flex: 1,
@@ -541,7 +763,7 @@ const styles = StyleSheet.create({
     borderColor: '#144272',
     borderWidth: 1,
     marginHorizontal: 4,
-    borderRadius: 5,
+    borderRadius: 8,
     backgroundColor: '#fff',
   },
   activeButton: {
@@ -555,66 +777,221 @@ const styles = StyleSheet.create({
   activeText: {
     color: '#fff',
   },
+  radioContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '95%',
+    marginBottom: 15,
+  },
+  radioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  radioText: {
+    color: '#144272',
+    marginLeft: -5,
+    fontWeight: '500',
+  },
+  dropdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  dropdownWrapper: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
   dropdown: {
     borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 38,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: '100%',
+    borderColor: '#144272',
+    minHeight: 40,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    backgroundColor: '#fff',
   },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: '90%',
-    borderRadius: 6,
-    marginBottom: 10,
-  },
-  tablehead: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 6,
-    borderTopLeftRadius: 6,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginHorizontal: 5,
-    marginVertical: 2,
-  },
-  totalContainer: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderTopWidth: 1,
-    borderTopColor: 'white',
-    marginTop: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  totalText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
+  dropdownDisabled: {
+    backgroundColor: '#9a9a9a48',
+    borderColor: '#ccc',
   },
   dropDownContainer: {
+    backgroundColor: '#fff',
+    borderColor: '#144272',
+  },
+
+  //Summary Container Styling
+  summaryContainer: {
+    paddingHorizontal: 15,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+    marginHorizontal: 15,
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  innerSummaryCtx: {
+    flexDirection: 'row',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  summaryValue: {
+    fontSize: 16,
+    color: '#144272',
+    fontWeight: 'bold',
+  },
+
+  // Flat List Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 15,
+  },
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    zIndex: 1000,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  customerName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#144272',
+    flexWrap: 'wrap',
+  },
+  infoBox: {
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 12,
+  },
+  infoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '90%',
-    alignSelf: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    flex: 1,
+  },
+  infoIcon: {
+    marginRight: 6,
+  },
+  labelText: {
+    fontSize: 13,
+    color: '#144272',
+    fontWeight: '600',
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: '50%',
+    textAlign: 'right',
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 50,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    marginHorizontal: 20,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 16,
+    marginTop: 10,
+    fontWeight: '500',
+  },
+
+  // Pagination Styling
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#144272',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
+  },
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    alignItems: 'center',
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
   },
 });

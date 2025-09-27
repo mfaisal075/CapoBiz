@@ -138,6 +138,7 @@ import SupplierAddPayment from './component/Drawer/Accounts/SupplierAddPayment';
 import SupplierChequeClearance from './component/Drawer/Accounts/SupplierChequeClearance';
 import TransporterAddPayment from './component/Drawer/Accounts/TransporterAddPayment';
 import LabourAddPayment from './component/Drawer/Accounts/LabourAddPayment';
+import TradingReport from './component/Drawer/Reports/Trading';
 
 const Stack = createStackNavigator();
 export const navigationRef = createNavigationContainerRef();
@@ -251,6 +252,7 @@ function App(): React.JSX.Element {
             <Stack.Screen name="Customer List" component={CustomerList} />
             <Stack.Screen name="Supplier List" component={SupplierList} />
             <Stack.Screen name="Employee List" component={EmployeeList} />
+            <Stack.Screen name="Trading Report" component={TradingReport} />
             <Stack.Screen
               name="Area Wise Customer"
               component={AreaWiseCustomer}

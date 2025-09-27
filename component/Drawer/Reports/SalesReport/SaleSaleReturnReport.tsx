@@ -4,12 +4,11 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
+  Animated,
 } from 'react-native';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useRef} from 'react';
 import {useDrawer} from '../../../DrawerContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
@@ -17,6 +16,9 @@ import axios from 'axios';
 import BASE_URL from '../../../BASE_URL';
 import DropDownPicker from 'react-native-dropdown-picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import RNPrint from 'react-native-print';
+import {useUser} from '../../../CTX/UserContext';
+import Toast from 'react-native-toast-message';
 
 interface Users {
   id: number;
@@ -46,6 +48,7 @@ interface SaleData {
 
 export default function SaleSaleReturnReport() {
   const {openDrawer} = useDrawer();
+  const {bussName, bussAddress} = useUser();
   const [usersDropdown, setUsersDropdown] = useState<Users[]>([]);
   const transformedUsers = usersDropdown.map(user => ({
     label: user.name,
@@ -59,6 +62,203 @@ export default function SaleSaleReturnReport() {
   const [endDate, setEndDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [activeTab, setActiveTab] = useState<'sales' | 'returns'>('sales');
+
+  // Handle Print
+  const handlePrint = async () => {
+    if (saleData.length === 0 && saleReturnData.length === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'No records found to print.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    const userName =
+      usersDropdown.find(user => user.id.toString() === userValue)?.name ||
+      'Customer';
+
+    // Get current date
+    const dateStr = new Date().toLocaleDateString();
+
+    // Build Sale HTML table rows
+    const saleRows = saleData
+      .map(
+        (item, index) => `
+          <tr>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word; text-align:center;">${
+              index + 1
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.sal_invoice_no
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.cust_name
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${new Date(
+              item.sal_date,
+            ).toLocaleDateString('en-US', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })}</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.sal_order_total
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.sal_discount
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.sal_total_amount
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.sal_profit
+            }</td>
+          </tr>`,
+      )
+      .join('');
+
+    // Build Sale Return HTML table rows
+    const returnRows = saleReturnData
+      .map(
+        (item, index) => `
+          <tr>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word; text-align:center;">${
+              index + 1
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.salrd_invoice_no
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.prod_name
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${new Date(
+              item.created_at,
+            ).toLocaleDateString('en-US', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })}</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.salrd_return_qty
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.salrd_price
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.salrd_total_price
+            }</td>
+            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+              item.salrd_profit
+            }</td>
+          </tr>`,
+      )
+      .join('');
+
+    // HTML Template
+    const html = `
+        <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Sale & Sale Return Report</title>
+          </head>
+          <body style="font-family: Arial, sans-serif; padding:20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div style="font-size:12px;">Date: ${dateStr}</div>
+              <div style="text-align:center; flex:1; font-size:16px; font-weight:bold;">Point of Sale System</div>
+            </div>
+              
+            <div style="text-align:center; margin-bottom:20px;">
+              <div style="font-size:18px; font-weight:bold;">${bussName}</div>
+              <div style="font-size:14px;">${bussAddress}</div>
+              <div style="font-size:14px; font-weight:bold; text-decoration:underline; margin-top:20px;">
+                Sale Profit
+              </div>
+            </div>
+    
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+              <div style="font-size:12px; font-weight: bold;">
+                Product: ${userValue === '' ? 'All Products' : userName}
+              </div>
+              <div style="display:flex; justify-content:space-between; width: 35%; gap: 20px;">
+                <div style="font-size:12px;">
+                  <span style="font-weight: bold;">From:</span> ${startDate.toLocaleDateString(
+                    'en-US',
+                    {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    },
+                  )}
+                </div>
+                <div style="font-size:12px;">
+                  <span style="font-weight: bold;">To:</span> ${endDate.toLocaleDateString(
+                    'en-US',
+                    {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    },
+                  )}
+                </div>
+              </div>
+            </div>
+              
+            <table style="border-collapse:collapse; width:100%; font-size:12px;">
+              <thead>
+                <tr style="background:#f0f0f0;">
+                  <th style="border:1px solid #000; padding:6px;">Sr#</th>
+                  <th style="border:1px solid #000; padding:6px;">Invoice No</th>
+                  <th style="border:1px solid #000; padding:6px;">Customer</th>
+                  <th style="border:1px solid #000; padding:6px;">Date</th>
+                  <th style="border:1px solid #000; padding:6px;">Order Total</th>
+                  <th style="border:1px solid #000; padding:6px;">Discount</th>
+                  <th style="border:1px solid #000; padding:6px;">Total Amount</th>
+                  <th style="border:1px solid #000; padding:6px;">Profit</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${saleRows}
+              </tbody>
+            </table>
+
+            <div style="text-align:center; margin-bottom:20px; margin-top:20px;">
+              <div style="font-size:14px; font-weight:bold; text-decoration:underline;">
+                Sale Return
+              </div>
+            </div>
+
+            <table style="border-collapse:collapse; width:100%; font-size:12px;">
+              <thead>
+                <tr style="background:#f0f0f0;">
+                  <th style="border:1px solid #000; padding:6px;">Sr#</th>
+                  <th style="border:1px solid #000; padding:6px;">Invoice No</th>
+                  <th style="border:1px solid #000; padding:6px;">Product</th>
+                  <th style="border:1px solid #000; padding:6px;">Return Date</th>
+                  <th style="border:1px solid #000; padding:6px;">Quantity</th>
+                  <th style="border:1px solid #000; padding:6px;">Price</th>
+                  <th style="border:1px solid #000; padding:6px;">Total Total</th>
+                  <th style="border:1px solid #000; padding:6px;">Profit</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${returnRows}
+              </tbody>
+            </table>
+          </body>
+        </html>
+      `;
+
+    await RNPrint.print({html});
+  };
+
+  // Animation for toggle
+  const slideAnim = useRef(new Animated.Value(0)).current;
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
 
   const onStartDateChange = (
     event: DateTimePickerEvent,
@@ -133,6 +333,240 @@ export default function SaleSaleReturnReport() {
     };
   };
 
+  const totals = calculateTotalSales();
+
+  // Handle tab switch with animation
+  const handleTabSwitch = (tab: 'sales' | 'returns') => {
+    setActiveTab(tab);
+    setCurrentPage(1); // Reset pagination when switching tabs
+    Animated.timing(slideAnim, {
+      toValue: tab === 'sales' ? 0 : 1,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  };
+
+  // Pagination calculations
+  const currentData = activeTab === 'sales' ? saleData : saleReturnData;
+  const totalRecords = currentData.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const paginatedData = currentData.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
+
+  // Render Sale Card
+  const renderSaleCard = ({item}: {item: SaleData}) => (
+    <View style={styles.card}>
+      {/* Header Row */}
+      <View style={styles.headerRow}>
+        <View style={styles.avatarBox}>
+          <Text style={styles.avatarText}>
+            {item.sal_invoice_no?.charAt(0) || 'S'}
+          </Text>
+        </View>
+        <View style={{flex: 1}}>
+          <Text style={styles.productName}>{item.sal_invoice_no}</Text>
+          <Text style={styles.subText}>Invoice Number</Text>
+        </View>
+      </View>
+
+      {/* Info Section */}
+      <View style={styles.infoBox}>
+        <View style={styles.infoRow}>
+          <View style={styles.labelRow}>
+            <Icon
+              name="account"
+              size={18}
+              color="#144272"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.labelText}>Customer</Text>
+          </View>
+          <Text style={styles.valueText}>{item.cust_name}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.labelRow}>
+            <Icon
+              name="calendar"
+              size={18}
+              color="#144272"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.labelText}>Date</Text>
+          </View>
+          <Text style={styles.valueText}>
+            {new Date(item.sal_date).toLocaleDateString('en-US', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.labelRow}>
+            <Icon
+              name="receipt"
+              size={18}
+              color="#144272"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.labelText}>Order Total</Text>
+          </View>
+          <Text style={styles.valueText}>{item.sal_order_total || '0'}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.labelRow}>
+            <Icon
+              name="tag"
+              size={18}
+              color="#144272"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.labelText}>Discount</Text>
+          </View>
+          <Text style={styles.valueText}>{item.sal_discount || '0'}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.labelRow}>
+            <Icon
+              name="cash-multiple"
+              size={18}
+              color="#144272"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.labelText}>Total Amount</Text>
+          </View>
+          <Text style={styles.valueText}>{item.sal_total_amount || '0'}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.labelRow}>
+            <Icon
+              name="trending-up"
+              size={18}
+              color="#144272"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.labelText}>Profit</Text>
+          </View>
+          <Text style={[styles.valueText]}>{item.sal_profit || '0'}</Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  // Render Sale Return Card
+  const renderSaleReturnCard = ({item}: {item: SaleReturnData}) => (
+    <View style={styles.card}>
+      {/* Header Row */}
+      <View style={styles.headerRow}>
+        <View style={styles.avatarBox}>
+          <Text style={styles.avatarText}>
+            {item.salrd_invoice_no?.charAt(0) || 'R'}
+          </Text>
+        </View>
+        <View style={{flex: 1}}>
+          <Text style={styles.productName}>{item.salrd_invoice_no}</Text>
+          <Text style={styles.subText}>Return Invoice</Text>
+        </View>
+      </View>
+
+      {/* Info Section */}
+      <View style={styles.infoBox}>
+        <View style={styles.infoRow}>
+          <View style={styles.labelRow}>
+            <Icon
+              name="package-variant"
+              size={18}
+              color="#144272"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.labelText}>Product</Text>
+          </View>
+          <Text style={styles.valueText}>{item.prod_name}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.labelRow}>
+            <Icon
+              name="calendar"
+              size={18}
+              color="#144272"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.labelText}>Return Date</Text>
+          </View>
+          <Text style={styles.valueText}>
+            {new Date(item.created_at).toLocaleDateString('en-US', {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric',
+            })}
+          </Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.labelRow}>
+            <Icon
+              name="pound-box"
+              size={18}
+              color="#144272"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.labelText}>Quantity</Text>
+          </View>
+          <Text style={styles.valueText}>{item.salrd_return_qty || '0'}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.labelRow}>
+            <Icon
+              name="cash"
+              size={18}
+              color="#144272"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.labelText}>Price</Text>
+          </View>
+          <Text style={styles.valueText}>{item.salrd_price || '0'}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.labelRow}>
+            <Icon
+              name="cash-multiple"
+              size={18}
+              color="#144272"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.labelText}>Total Price</Text>
+          </View>
+          <Text style={styles.valueText}>{item.salrd_total_price || '0'}</Text>
+        </View>
+
+        <View style={styles.infoRow}>
+          <View style={styles.labelRow}>
+            <Icon
+              name="trending-down"
+              size={18}
+              color="#144272"
+              style={styles.infoIcon}
+            />
+            <Text style={styles.labelText}>Profit</Text>
+          </View>
+          <Text style={[styles.valueText]}>{item.salrd_profit || '0'}</Text>
+        </View>
+      </View>
+    </View>
+  );
+
   useEffect(() => {
     fetchUserDropdown();
     fetchSaleData();
@@ -144,107 +578,71 @@ export default function SaleSaleReturnReport() {
         source={require('../../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../../assets/menu.png')}
-              style={{width: 30, height: 30, tintColor: 'white'}}
-            />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text style={{color: 'white', fontSize: 22, fontWeight: 'bold'}}>
-              Sale & Sale Return Report
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Sale & Sale Return Report</Text>
           </View>
+
+          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="white" />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.dateContainer}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderWidth: 1,
-              borderColor: 'white',
-              borderRadius: 5,
-              padding: 5,
-              height: 38,
-              width: '46%',
-            }}>
-            <Text style={{marginLeft: 10, color: 'white'}}>
-              {`${startDate.toLocaleDateString()}`}
-            </Text>
-            <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-              <Image
-                style={{
-                  height: 20,
-                  width: 20,
-                  marginLeft: 10,
-                  tintColor: 'white',
-                }}
-                source={require('../../../../assets/calendar.png')}
-              />
-            </TouchableOpacity>
-            {showStartDatePicker && (
-              <DateTimePicker
-                testID="startDatePicker"
-                value={startDate}
-                mode="date"
-                is24Hour={true}
-                display="default"
-                onChange={onStartDateChange}
-              />
-            )}
+        {/* Filter Section */}
+        <View style={styles.filterContainer}>
+          {/* Date Pickers */}
+          <View style={styles.dateContainer}>
+            <View style={styles.datePicker}>
+              <Text style={styles.dateLabel}>From:</Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowStartDatePicker(true)}>
+                <Text style={styles.dateText}>
+                  {startDate.toLocaleDateString()}
+                </Text>
+                <Icon name="calendar" size={18} color="#144272" />
+              </TouchableOpacity>
+              {showStartDatePicker && (
+                <DateTimePicker
+                  testID="startDatePicker"
+                  value={startDate}
+                  mode="date"
+                  is24Hour={true}
+                  display="default"
+                  onChange={onStartDateChange}
+                />
+              )}
+            </View>
+
+            <View style={styles.datePicker}>
+              <Text style={styles.dateLabel}>To:</Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowEndDatePicker(true)}>
+                <Text style={styles.dateText}>
+                  {endDate.toLocaleDateString()}
+                </Text>
+                <Icon name="calendar" size={18} color="#144272" />
+              </TouchableOpacity>
+              {showEndDatePicker && (
+                <DateTimePicker
+                  testID="endDatePicker"
+                  value={endDate}
+                  mode="date"
+                  is24Hour={true}
+                  display="default"
+                  onChange={onEndDateChange}
+                />
+              )}
+            </View>
           </View>
 
-          {/* To Date */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderWidth: 1,
-              borderColor: 'white',
-              borderRadius: 5,
-              padding: 5,
-              height: 38,
-              width: '46%',
-            }}>
-            <Text style={{marginLeft: 10, color: 'white'}}>
-              {`${endDate.toLocaleDateString()}`}
-            </Text>
-            <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-              <Image
-                style={{
-                  height: 20,
-                  width: 20,
-                  marginLeft: 10,
-                  tintColor: 'white',
-                }}
-                source={require('../../../../assets/calendar.png')}
-              />
-            </TouchableOpacity>
-            {showEndDatePicker && (
-              <DateTimePicker
-                testID="endDatePicker"
-                value={endDate}
-                mode="date"
-                is24Hour={true}
-                display="default"
-                onChange={onEndDateChange}
-              />
-            )}
-          </View>
-        </View>
-
-        <View style={[styles.dropDownContainer, {marginTop: 10}]}>
+          {/* Dropdown */}
           <DropDownPicker
             items={transformedUsers}
             open={userOpen}
@@ -252,214 +650,184 @@ export default function SaleSaleReturnReport() {
             value={userValue}
             setValue={setUserValue}
             placeholder="Select User"
-            placeholderStyle={{color: 'white'}}
-            textStyle={{color: 'white'}}
+            placeholderStyle={{color: '#666'}}
+            textStyle={{color: '#144272'}}
             ArrowUpIconComponent={() => (
-              <Text>
-                <Icon name="chevron-up" size={15} color="white" />
-              </Text>
+              <Icon name="chevron-up" size={18} color="#144272" />
             )}
             ArrowDownIconComponent={() => (
-              <Text>
-                <Icon name="chevron-down" size={15} color="white" />
+              <Icon name="chevron-down" size={18} color="#144272" />
+            )}
+            style={[styles.dropdown]}
+            dropDownContainerStyle={styles.dropDownContainer}
+          />
+        </View>
+
+        {/* Summary Cards */}
+        <View style={styles.summaryContainer}>
+          <View style={styles.innerSummaryCtx}>
+            <Text style={styles.summaryLabel}>Total Sale: </Text>
+            <Text style={styles.summaryValue}>{totals.totalSale}</Text>
+          </View>
+          <View style={styles.innerSummaryCtx}>
+            <Text style={styles.summaryLabel}>Total Sale Profit: </Text>
+            <Text style={styles.summaryValue}>{totals.totalSaleProfit}</Text>
+          </View>
+          <View style={styles.innerSummaryCtx}>
+            <Text style={styles.summaryLabel}>Total Return: </Text>
+            <Text style={styles.summaryValue}>{totals.totalReturn}</Text>
+          </View>
+          <View style={styles.innerSummaryCtx}>
+            <Text style={styles.summaryLabel}>Total Return Profit: </Text>
+            <Text style={styles.summaryValue}>{totals.totalReturnProfit}</Text>
+          </View>
+          <View style={styles.innerSummaryCtx}>
+            <Text style={styles.summaryLabel}>Total Net Profit: </Text>
+            <Text style={styles.summaryValue}>{totals.netProfit}</Text>
+          </View>
+        </View>
+
+        {/* Toggle Button */}
+        <View style={styles.toggleContainer}>
+          <View style={styles.toggleWrapper}>
+            <Animated.View
+              style={[
+                styles.toggleSlider,
+                {
+                  transform: [
+                    {
+                      translateX: slideAnim.interpolate({
+                        inputRange: [0, 1],
+                        outputRange: [0, 187],
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                activeTab === 'sales' && styles.activeToggleButton,
+              ]}
+              onPress={() => handleTabSwitch('sales')}>
+              <Icon
+                name="chart-line"
+                size={18}
+                color={activeTab === 'sales' ? '#ffffff' : '#144272'}
+                style={styles.toggleIcon}
+              />
+              <Text
+                style={[
+                  styles.toggleText,
+                  activeTab === 'sales' && styles.activeToggleText,
+                ]}>
+                Sales ({saleData.length})
               </Text>
-            )}
-            style={[styles.dropdown, {zIndex: 999}]}
-            dropDownContainerStyle={{
-              backgroundColor: 'white',
-              borderColor: '#144272',
-              width: '100%',
-              marginTop: 8,
-            }}
-            labelStyle={{color: 'white'}}
-            listItemLabelStyle={{color: '#144272'}}
-          />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                activeTab === 'returns' && styles.activeToggleButton,
+              ]}
+              onPress={() => handleTabSwitch('returns')}>
+              <Icon
+                name="keyboard-return"
+                size={18}
+                color={activeTab === 'returns' ? '#ffffff' : '#144272'}
+                style={styles.toggleIcon}
+              />
+              <Text
+                style={[
+                  styles.toggleText,
+                  activeTab === 'returns' && styles.activeToggleText,
+                ]}>
+                Returns ({saleReturnData.length})
+              </Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
-        <ScrollView>
-          <Text style={styles.sectionHeader}>Sale Profit</Text>
-          <FlatList
-            data={saleData}
-            keyExtractor={(item, index) => index.toString()}
-            scrollEnabled={false}
-            renderItem={({item}) => (
-              <View style={{padding: 5}}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text style={styles.invoiceText}>
-                      {item.sal_invoice_no}
-                    </Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <View style={styles.row}>
-                      <Text style={styles.text}>Customer:</Text>
-                      <Text style={styles.text}>{item.cust_name}</Text>
-                    </View>
-                    <View style={styles.row}>
-                      <Text style={styles.text}>Date:</Text>
-                      <Text style={styles.text}>
-                        {new Date(item.sal_date)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-')}
-                      </Text>
-                    </View>
-                    <View style={styles.row}>
-                      <Text style={styles.text}>Order Total:</Text>
-                      <Text style={styles.text}>{item.sal_order_total}</Text>
-                    </View>
-                    <View style={styles.row}>
-                      <Text style={styles.text}>Discount:</Text>
-                      <Text style={styles.text}>{item.sal_discount}</Text>
-                    </View>
-                    <View style={styles.row}>
-                      <Text style={styles.text}>Total Amount:</Text>
-                      <Text style={styles.text}>{item.sal_total_amount}</Text>
-                    </View>
-                    <View style={styles.row}>
-                      <Text style={styles.text}>Profit:</Text>
-                      <Text style={styles.text}>{item.sal_profit}</Text>
-                    </View>
-                  </View>
+        {/* List Container */}
+        <View style={styles.listContainer}>
+          {activeTab === 'sales' ? (
+            <FlatList<SaleData>
+              data={paginatedData as SaleData[]}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={renderSaleCard}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Icon name="chart-line" size={48} color="#666" />
+                  <Text style={styles.emptyText}>No sale records found.</Text>
                 </View>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View
-                style={{
-                  height: 200,
-                  width: '100%',
-                  marginTop: 20,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
-                  No record found.
-                </Text>
-              </View>
-            }
-          />
-
-          <Text style={styles.sectionHeader}>Sale Return</Text>
-          <FlatList
-            data={saleReturnData}
-            keyExtractor={(item, index) => index.toString()}
-            scrollEnabled={false}
-            renderItem={({item}) => (
-              <View style={{padding: 5}}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text style={styles.invoiceText}>
-                      {item.salrd_invoice_no}
-                    </Text>
-                  </View>
-                  <View style={styles.infoRow}>
-                    <View style={styles.row}>
-                      <Text style={styles.text}>Product:</Text>
-                      <Text style={styles.text}>{item.prod_name}</Text>
-                    </View>
-                    <View style={styles.row}>
-                      <Text style={styles.text}>Return Date:</Text>
-                      <Text style={styles.text}>
-                        {new Date(item.created_at)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-')}
-                      </Text>
-                    </View>
-                    <View style={styles.row}>
-                      <Text style={styles.text}>Quantity:</Text>
-                      <Text style={styles.text}>{item.salrd_return_qty}</Text>
-                    </View>
-                    <View style={styles.row}>
-                      <Text style={styles.text}>Price:</Text>
-                      <Text style={styles.text}>{item.salrd_price}</Text>
-                    </View>
-                    <View style={styles.row}>
-                      <Text style={styles.text}>Total Price:</Text>
-                      <Text style={styles.text}>{item.salrd_total_price}</Text>
-                    </View>
-                    <View style={styles.row}>
-                      <Text style={styles.text}>Profit:</Text>
-                      <Text style={styles.text}>{item.salrd_profit}</Text>
-                    </View>
-                  </View>
+              }
+              contentContainerStyle={{paddingBottom: 70}}
+              showsVerticalScrollIndicator={false}
+            />
+          ) : (
+            <FlatList<SaleReturnData>
+              data={paginatedData as SaleReturnData[]}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={renderSaleReturnCard}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Icon name="keyboard-return" size={48} color="#666" />
+                  <Text style={styles.emptyText}>No return records found.</Text>
                 </View>
-              </View>
-            )}
-          />
-        </ScrollView>
-
-        <View style={styles.totalContainer}>
-          {(() => {
-            const {
-              totalReturn,
-              totalReturnProfit,
-              totalSale,
-              totalSaleProfit,
-              netProfit,
-            } = calculateTotalSales();
-
-            return (
-              <>
-                <View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                    }}>
-                    <Text style={styles.totalText}>Total Sale: </Text>
-                    <Text style={styles.totalText}>{totalSale}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                    }}>
-                    <Text style={styles.totalText}>Total Return: </Text>
-                    <Text style={styles.totalText}>{totalReturn}</Text>
-                  </View>
-                </View>
-                <View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                    }}>
-                    <Text style={styles.totalText}>Total Sale Profit: </Text>
-                    <Text style={styles.totalText}>{totalSaleProfit}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'column',
-                    }}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.totalText}>
-                        Total Return Profit:{' '}
-                      </Text>
-                      <Text style={styles.totalText}>{totalReturnProfit}</Text>
-                    </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.totalText}>Total Net Profit: </Text>
-                      <Text style={styles.totalText}>{netProfit}</Text>
-                    </View>
-                  </View>
-                </View>
-              </>
-            );
-          })()}
+              }
+              contentContainerStyle={{paddingBottom: 70}}
+              showsVerticalScrollIndicator={false}
+            />
+          )}
         </View>
+
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
+              </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords}{' '}
+                {activeTab === 'sales' ? 'sales' : 'returns'}
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
+                Next
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ImageBackground>
     </SafeAreaView>
   );
@@ -473,104 +841,327 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
-  headerTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-  },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-  },
-  exportBtn: {
-    backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  exportText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 38,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: '100%',
-  },
-  totalContainer: {
     paddingHorizontal: 15,
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: 'white',
-    marginTop: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
-  totalText: {
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
+  },
+  headerTitle: {
     color: 'white',
+    fontSize: 20,
     fontWeight: 'bold',
-    fontSize: 14,
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 2,
-  },
-  sectionHeader: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
+
+  // Filter Container
+  filterContainer: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    marginHorizontal: 15,
     marginVertical: 10,
-  },
-  invoiceText: {
-    color: '#144272',
-    fontWeight: 'bold',
-    marginLeft: 5,
-    marginTop: 5,
+    borderRadius: 12,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 3,
+    zIndex: 1000,
   },
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '90%',
-    alignSelf: 'center',
-    marginTop: 10,
+    marginBottom: 10,
   },
-  dropDownContainer: {
+  datePicker: {
+    width: '48%',
+  },
+  dateLabel: {
+    color: '#144272',
+    fontWeight: '600',
+    marginBottom: 5,
+    fontSize: 14,
+  },
+  dateButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '90%',
-    alignSelf: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#144272',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+  },
+  dateText: {
+    color: '#144272',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  dropdown: {
+    borderWidth: 1,
+    borderColor: '#144272',
+    minHeight: 40,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    backgroundColor: '#fff',
+  },
+  dropDownContainer: {
+    backgroundColor: '#fff',
+    borderColor: '#144272',
+    zIndex: 3000,
+  },
+
+  //Summary Container Styling
+  summaryContainer: {
+    paddingHorizontal: 15,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+    marginHorizontal: 15,
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  innerSummaryCtx: {
+    flexDirection: 'row',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  summaryValue: {
+    fontSize: 16,
+    color: '#144272',
+    fontWeight: 'bold',
+  },
+
+  // Toggle Button Styling
+  toggleContainer: {
+    paddingHorizontal: 15,
+    marginBottom: 15,
+  },
+  toggleWrapper: {
+    position: 'relative',
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 25,
+    flexDirection: 'row',
+    height: 50,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 3,
+  },
+  toggleSlider: {
+    position: 'absolute',
+    top: 2,
+    left: 2,
+    width: '50%',
+    height: 46,
+    backgroundColor: '#144272',
+    borderRadius: 23,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 4,
+  },
+  toggleButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 15,
+    zIndex: 1,
+  },
+  activeToggleButton: {},
+  toggleIcon: {
+    marginRight: 6,
+  },
+  toggleText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#144272',
+  },
+  activeToggleText: {
+    color: '#ffffff',
+  },
+
+  // Flat List Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 15,
+  },
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    zIndex: 1000,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#144272',
+    flexWrap: 'wrap',
+  },
+  subText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  infoBox: {
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    flex: 1,
+  },
+  infoIcon: {
+    marginRight: 6,
+  },
+  labelText: {
+    fontSize: 13,
+    color: '#144272',
+    fontWeight: '600',
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: '50%',
+    textAlign: 'right',
+    fontWeight: '500',
+  },
+  profitText: {
+    color: '#2e7d32',
+    fontWeight: '700',
+  },
+  returnProfitText: {
+    color: '#d32f2f',
+    fontWeight: '700',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 50,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    marginHorizontal: 20,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 16,
+    marginTop: 10,
+    fontWeight: '500',
+  },
+
+  // Pagination Styling
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#144272',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
+  },
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    alignItems: 'center',
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
   },
 });

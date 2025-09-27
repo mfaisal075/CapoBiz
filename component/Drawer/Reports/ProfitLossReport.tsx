@@ -4,8 +4,8 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
+  ScrollView,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -13,6 +13,10 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import RNPrint from 'react-native-print';
+import {useUser} from '../../CTX/UserContext';
+import Toast from 'react-native-toast-message';
 
 interface ProfitLoss {
   expences: string;
@@ -22,6 +26,7 @@ interface ProfitLoss {
 
 export default function ProfitLossReport() {
   const {openDrawer} = useDrawer();
+  const {bussName, bussAddress} = useUser();
   const [profitLossData, setProfitLossData] = useState<ProfitLoss | null>(null);
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
@@ -56,9 +61,118 @@ export default function ProfitLossReport() {
     }
   };
 
+  // Handle Print
+  const handlePrint = async () => {
+    if (!profitLossData) {
+      Toast.show({
+        type: 'error',
+        text1: 'No data found to print.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    const dateStr = new Date().toLocaleDateString();
+    const saleProfit = parseFloat(profitLossData.profit).toFixed(2);
+    const saleReturnProfit = parseFloat(
+      profitLossData.salereturnprofit,
+    ).toFixed(2);
+    const expenses = parseFloat(profitLossData.expences).toFixed(2);
+    const netProfit = (
+      parseFloat(profitLossData.profit) -
+      parseFloat(profitLossData.expences) -
+      parseFloat(profitLossData.salereturnprofit)
+    ).toFixed(2);
+
+    const html = `
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Profit Loss Report</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; padding:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-size:12px;">Date: ${dateStr}</div>
+            <div style="text-align:center; flex:1; font-size:16px; font-weight:bold;">Point of Sale System</div>
+          </div>
+            
+          <div style="text-align:center; margin-bottom:20px;">
+            <div style="font-size:18px; font-weight:bold;">${bussName}</div>
+            <div style="font-size:14px;">${bussAddress}</div>
+            <div style="font-size:14px; font-weight:bold; text-decoration:underline;">
+              Profit Loss Report
+            </div>
+          </div>
+
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <div style="display:flex; justify-content:space-between; width: 35%; gap: 20px;">
+              <div style="font-size:12px;">
+                <span style="font-weight: bold;">From:</span> ${startDate.toLocaleDateString(
+                  'en-US',
+                  {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  },
+                )}
+              </div>
+              <div style="font-size:12px;">
+                <span style="font-weight: bold;">To:</span> ${endDate.toLocaleDateString(
+                  'en-US',
+                  {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  },
+                )}
+              </div>
+            </div>
+          </div>
+            
+          <table style="border-collapse:collapse; width:100%; font-size:14px;">
+            <thead>
+              <tr style="background:#f0f0f0;">
+                <th style="border:1px solid #000; padding:10px; text-align:left;">Description</th>
+                <th style="border:1px solid #000; padding:10px; text-align:right;">Amount (PKR)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="border:1px solid #000; padding:8px;">Sale Profit</td>
+                <td style="border:1px solid #000; padding:8px; text-align:right;">${saleProfit}</td>
+              </tr>
+              <tr>
+                <td style="border:1px solid #000; padding:8px;">Sale Return Profit</td>
+                <td style="border:1px solid #000; padding:8px; text-align:right;">-${saleReturnProfit}</td>
+              </tr>
+              <tr>
+                <td style="border:1px solid #000; padding:8px;">Expenses</td>
+                <td style="border:1px solid #000; padding:8px; text-align:right;">-${expenses}</td>
+              </tr>
+              <tr style="background:#f0f0f0; font-weight:bold;">
+                <td style="border:1px solid #000; padding:8px;">Net Profit</td>
+                <td style="border:1px solid #000; padding:8px; text-align:right;">${netProfit}</td>
+              </tr>
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    await RNPrint.print({html});
+  };
+
   useEffect(() => {
     fetchProfitLossData();
   }, [startDate, endDate]);
+
+  // Calculate values
+  const saleProfit = profitLossData ? parseFloat(profitLossData.profit) : 0;
+  const saleReturnProfit = profitLossData
+    ? parseFloat(profitLossData.salereturnprofit)
+    : 0;
+  const expenses = profitLossData ? parseFloat(profitLossData.expences) : 0;
+  const netProfit = saleProfit - expenses - saleReturnProfit;
 
   return (
     <SafeAreaView style={styles.container}>
@@ -66,167 +180,123 @@ export default function ProfitLossReport() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{width: 30, height: 30, tintColor: 'white'}}
-            />
+        {/* Modern Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text style={{color: 'white', fontSize: 22, fontWeight: 'bold'}}>
-              Profit Loss Report
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Profit Loss Report</Text>
           </View>
+
+          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="white" />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.dateContainer}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderWidth: 1,
-              borderColor: 'white',
-              borderRadius: 5,
-              padding: 5,
-              height: 38,
-              width: '46%',
-            }}>
-            <Text style={{marginLeft: 10, color: 'white'}}>
-              {`${startDate.toLocaleDateString()}`}
-            </Text>
-            <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-              <Image
-                style={{
-                  height: 20,
-                  width: 20,
-                  marginLeft: 10,
-                  tintColor: 'white',
-                }}
-                source={require('../../../assets/calendar.png')}
-              />
-            </TouchableOpacity>
-            {showStartDatePicker && (
-              <DateTimePicker
-                testID="startDatePicker"
-                value={startDate}
-                mode="date"
-                is24Hour={true}
-                display="default"
-                onChange={onStartDateChange}
-              />
-            )}
+        <ScrollView style={styles.scrollContainer}>
+          {/* Filter Section */}
+          <View style={styles.filterContainer}>
+            <Text style={styles.filterTitle}>Select Date Range</Text>
+
+            {/* Date Pickers */}
+            <View style={styles.dateContainer}>
+              <View style={styles.datePicker}>
+                <Text style={styles.dateLabel}>From:</Text>
+                <TouchableOpacity
+                  style={styles.dateButton}
+                  onPress={() => setShowStartDatePicker(true)}>
+                  <Text style={styles.dateText}>
+                    {startDate.toLocaleDateString()}
+                  </Text>
+                  <Icon name="calendar" size={18} color="#144272" />
+                </TouchableOpacity>
+                {showStartDatePicker && (
+                  <DateTimePicker
+                    testID="startDatePicker"
+                    value={startDate}
+                    mode="date"
+                    is24Hour={true}
+                    display="default"
+                    onChange={onStartDateChange}
+                  />
+                )}
+              </View>
+
+              <View style={styles.datePicker}>
+                <Text style={styles.dateLabel}>To:</Text>
+                <TouchableOpacity
+                  style={styles.dateButton}
+                  onPress={() => setShowEndDatePicker(true)}>
+                  <Text style={styles.dateText}>
+                    {endDate.toLocaleDateString()}
+                  </Text>
+                  <Icon name="calendar" size={18} color="#144272" />
+                </TouchableOpacity>
+                {showEndDatePicker && (
+                  <DateTimePicker
+                    testID="endDatePicker"
+                    value={endDate}
+                    mode="date"
+                    is24Hour={true}
+                    display="default"
+                    onChange={onEndDateChange}
+                  />
+                )}
+              </View>
+            </View>
           </View>
 
-          {/* To Date */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderWidth: 1,
-              borderColor: 'white',
-              borderRadius: 5,
-              padding: 5,
-              height: 38,
-              width: '46%',
-            }}>
-            <Text style={{marginLeft: 10, color: 'white'}}>
-              {`${endDate.toLocaleDateString()}`}
-            </Text>
-            <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-              <Image
-                style={{
-                  height: 20,
-                  width: 20,
-                  marginLeft: 10,
-                  tintColor: 'white',
-                }}
-                source={require('../../../assets/calendar.png')}
-              />
-            </TouchableOpacity>
-            {showEndDatePicker && (
-              <DateTimePicker
-                testID="endDatePicker"
-                value={endDate}
-                mode="date"
-                is24Hour={true}
-                display="default"
-                onChange={onEndDateChange}
-              />
-            )}
-          </View>
-        </View>
+          {/* Profit Loss Summary Cards */}
+          <View style={styles.summaryContainer}>
+            <Text style={styles.summaryTitle}>Financial Summary</Text>
 
-        <View style={styles.table}>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              marginHorizontal: 5,
-            }}>
-            <Text style={styles.sectionHeader}>Sale Profit:</Text>
-            <Text style={styles.section}>
-              {profitLossData
-                ? parseFloat(profitLossData.profit).toFixed(2)
-                : '0.00'}
-            </Text>
+            {/* Sale Profit Card */}
+            <View style={styles.summaryCard}>
+              <View style={styles.cardHeader}>
+                <Icon name="trending-up" size={24} color="#4CAF50" />
+                <Text style={styles.cardTitle}>Sale Profit</Text>
+              </View>
+              <Text style={styles.cardValue}>Rs. {saleProfit.toFixed(2)}</Text>
+            </View>
+
+            {/* Sale Return Loss Card */}
+            <View style={styles.summaryCard}>
+              <View style={styles.cardHeader}>
+                <Icon name="undo" size={24} color="#FF9800" />
+                <Text style={styles.cardTitle}>Sale Return Profit</Text>
+              </View>
+              <Text style={[styles.cardValue]}>
+                Rs. {saleReturnProfit.toFixed(2)}
+              </Text>
+            </View>
+
+            {/* Expenses Card */}
+            <View style={styles.summaryCard}>
+              <View style={styles.cardHeader}>
+                <Icon name="cash-minus" size={24} color="#F44336" />
+                <Text style={styles.cardTitle}>Expenses</Text>
+              </View>
+              <Text style={[styles.cardValue]}>Rs. {expenses.toFixed(2)}</Text>
+            </View>
+
+            {/* Net Profit Card */}
+            <View style={[styles.summaryCard, styles.netProfitCard]}>
+              <View style={styles.cardHeader}>
+                <Icon name={'cash-check'} size={24} color={'#4CAF50'} />
+                <Text style={[styles.cardTitle, styles.netProfitTitle]}>
+                  Net Profit
+                </Text>
+              </View>
+              <Text style={[styles.cardValue]}>Rs. {netProfit}</Text>
+            </View>
           </View>
 
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              marginHorizontal: 5,
-            }}>
-            <Text style={styles.sectionHeader}>Sale Return Profit:</Text>
-            <Text style={styles.section}>
-              {profitLossData
-                ? parseFloat(profitLossData.salereturnprofit).toFixed(2)
-                : '0.00'}
-            </Text>
-          </View>
+          <View style={{height: 50}} />
+        </ScrollView>
 
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              marginHorizontal: 5,
-            }}>
-            <Text style={styles.sectionHeader}>Sale Return Profit:</Text>
-            <Text style={styles.section}>
-              {profitLossData
-                ? parseFloat(profitLossData.expences).toFixed(2)
-                : '0.00'}
-            </Text>
-          </View>
-
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              marginHorizontal: 5,
-            }}>
-            <Text style={styles.sectionHeader}>Net Profit:</Text>
-            <Text style={styles.section}>
-              {profitLossData
-                ? (
-                    parseFloat(profitLossData.profit) -
-                    parseFloat(profitLossData.expences) -
-                    parseFloat(profitLossData.salereturnprofit)
-                  ).toFixed(2)
-                : '0.00'}
-            </Text>
-          </View>
-        </View>
+        <Toast />
       </ImageBackground>
     </SafeAreaView>
   );
@@ -240,105 +310,131 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
-  headerTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    marginTop: 20,
-    borderRadius: 5,
-  },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-  },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    paddingHorizontal: 15,
     paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
-  exportBtn: {
-    backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  exportText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 35,
-    borderRadius: 6,
+  headerBtn: {
     padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: 285,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
-  totalContainer: {
-    padding: 3,
-    borderTopWidth: 1,
-    borderTopColor: 'white',
-    marginTop: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
-  totalText: {
+  headerTitle: {
     color: 'white',
+    fontSize: 20,
     fontWeight: 'bold',
-    fontSize: 16,
   },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 2,
+  scrollContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
-  sectionHeader: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginVertical: 10,
-  },
-  invoiceText: {
-    color: '#144272',
-    fontWeight: 'bold',
-    marginLeft: 5,
-    marginTop: 5,
-  },
-  section: {
-    color: 'white',
-    fontSize: 18,
 
-    textAlign: 'center',
+  // Filter Container
+  filterContainer: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
     marginVertical: 10,
+    borderRadius: 12,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 3,
+  },
+  filterTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#144272',
+    marginBottom: 15,
   },
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '90%',
-    alignSelf: 'center',
-    marginTop: 10,
+  },
+  datePicker: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  dateLabel: {
+    color: '#144272',
+    fontWeight: '600',
+    marginBottom: 5,
+    fontSize: 14,
+  },
+  dateButton: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#144272',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+  },
+  dateText: {
+    color: '#144272',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  // Summary Container
+  summaryContainer: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  summaryTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: 'white',
+    marginBottom: 16,
+  },
+  summaryCard: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 3,
+  },
+  netProfitCard: {
+    borderWidth: 2,
+    borderColor: '#4CAF50',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#144272',
+    marginLeft: 8,
+  },
+  netProfitTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  cardValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#144272',
+    textAlign: 'right',
   },
 });

@@ -918,6 +918,7 @@ const styles = StyleSheet.create({
     color: '#144272',
     fontWeight: 'bold',
   },
+  
   // Pagination Styling
   paginationContainer: {
     flexDirection: 'row',

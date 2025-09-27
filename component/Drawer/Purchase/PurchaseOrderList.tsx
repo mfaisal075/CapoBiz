@@ -74,7 +74,7 @@ export default function PurchaseOrderList() {
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [invoiceOrder, setInvoiceOrder] = useState<InvoiceOrders[]>([]);
   const [statusOpen, setStatusOpen] = useState(false);
-  const [status, setStatus] = useState('Pending');
+  const [status, setStatus] = useState('Purchase Order');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -91,7 +91,7 @@ export default function PurchaseOrderList() {
 
   // Status Dropdown
   const statusDropdown = [
-    {label: 'Pending', value: 'Pending'},
+    {label: 'Pending', value: 'Purchase Order'},
     {label: 'Completed', value: 'Completed'},
   ];
 
@@ -301,6 +301,16 @@ export default function PurchaseOrderList() {
                         {item.pord_order_total}
                       </Text>
                     </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.labelRow}>
+                        <Icon name="check-circle" size={16} color="#144272" />
+                        <Text style={styles.infoText}>Status:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
+                        {status === 'Purchase Order' ? 'Pending' : status}
+                      </Text>
+                    </View>
                   </View>
                 </View>
               );
@@ -312,7 +322,7 @@ export default function PurchaseOrderList() {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 280, paddingTop: 10}}
+            contentContainerStyle={{paddingBottom: 290, paddingTop: 10}}
           />
         </View>
       </ImageBackground>

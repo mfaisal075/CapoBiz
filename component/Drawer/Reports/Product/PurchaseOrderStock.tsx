@@ -109,7 +109,7 @@ export default function PurchaseOrderStock() {
           item.pord_order_total
         }</td>
         <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
-          item.pord_status === 'Purchase Order' ? 'Pending' : 'Completed'
+          statusVal === 'Pending' ? 'Pending' : 'Completed'
         }</td>
         <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${new Date(
           item.pord_order_date,
@@ -201,7 +201,10 @@ export default function PurchaseOrderStock() {
           from,
           to,
           status: statusVal,
-          purchaseorder: 'Purchase Order',
+          purchaseorder:
+            selectionMode === 'purchaseOrder'
+              ? 'Purchase Order'
+              : 'Purchase Order Detail',
           detailstatus: '',
         });
         setCompletedList(res.data.purchaseorder);
@@ -213,6 +216,23 @@ export default function PurchaseOrderStock() {
       }
     }
   };
+
+  // Calculate Data Wise Total Return
+  const calculateOrderTotal = () => {
+    let total = 0;
+
+    completedList.forEach(data => {
+      const returnAmount = parseFloat(data.pord_order_total) || 0;
+
+      total += returnAmount;
+    });
+
+    return {
+      total: total.toFixed(2),
+    };
+  };
+
+  const totals = calculateOrderTotal();
 
   useEffect(() => {
     fetchCompletedList();
@@ -247,7 +267,6 @@ export default function PurchaseOrderStock() {
               style={styles.radioButton}
               onPress={() => {
                 setSelectionMode('purchaseOrder');
-                setStatusVal('');
               }}>
               <RadioButton
                 value="purchaseOrder"
@@ -268,7 +287,9 @@ export default function PurchaseOrderStock() {
               <RadioButton
                 value="purchaseOrderDetails"
                 status={
-                  selectionMode === 'purchaseOrderDetails' ? 'checked' : 'unchecked'
+                  selectionMode === 'purchaseOrderDetails'
+                    ? 'checked'
+                    : 'unchecked'
                 }
                 color="#144272"
                 uncheckedColor="#666"
@@ -342,6 +363,14 @@ export default function PurchaseOrderStock() {
                 />
               )}
             </View>
+          </View>
+        </View>
+
+        {/* Summary Cards */}
+        <View style={styles.summaryContainer}>
+          <View style={styles.innerSummaryCtx}>
+            <Text style={styles.summaryLabel}>Total: </Text>
+            <Text style={styles.summaryValue}>{totals.total}</Text>
           </View>
         </View>
 
@@ -547,7 +576,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  
+
   filterContainer: {
     backgroundColor: 'rgba(255,255,255,0.95)',
     marginHorizontal: 15,
@@ -784,5 +813,31 @@ const styles = StyleSheet.create({
     color: '#144272',
     marginLeft: -5,
     fontWeight: '500',
+  },
+
+  //Summary Container Styling
+  summaryContainer: {
+    paddingHorizontal: 15,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+    marginHorizontal: 15,
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  innerSummaryCtx: {
+    flexDirection: 'row',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  summaryValue: {
+    fontSize: 16,
+    color: '#144272',
+    fontWeight: 'bold',
   },
 });

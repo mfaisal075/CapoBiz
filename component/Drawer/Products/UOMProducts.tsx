@@ -67,6 +67,16 @@ export default function UOMProducts() {
       return;
     }
 
+    if (!/^[a-zA-Z0-9 ]+$/.test(editUmo)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid UOM name',
+        text2: 'Special characters are not allowed.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
     try {
       const res = await axios.post(`${BASE_URL}/updateuom`, {
         uom_id: selectedUmo,
@@ -138,6 +148,17 @@ export default function UOMProducts() {
         type: 'error',
         text1: 'Please enter a UOM name',
         visibilityTime: 1500,
+      });
+      return;
+    }
+
+    // Check for special characters (allow only letters, numbers, spaces)
+    if (!/^[a-zA-Z0-9 ]+$/.test(umoName)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid UOM name',
+        text2: 'Special characters are not allowed.',
+        visibilityTime: 2000,
       });
       return;
     }

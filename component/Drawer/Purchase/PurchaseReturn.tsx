@@ -41,6 +41,7 @@ interface InvoiceListWith {
   prod_purchase_qty: string;
   prod_return_qty: number;
   prod_price: string;
+  cart_id?: number;
 }
 
 interface InvoiceListWithout {
@@ -51,6 +52,7 @@ interface InvoiceListWithout {
   prod_return_qty: number;
   prod_price: string;
   prod_fretail_price: string;
+  cart_id?: number;
 }
 
 const initialSupplierData: SupplierData = {
@@ -96,6 +98,11 @@ export default function PurchaseReturn() {
 
   const [expireDate, setexpireDate] = useState(new Date());
   const [showexpireDatePicker, setShowexpireDatePicker] = useState(false);
+
+  // Editing states
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [editingQuantity, setEditingQuantity] = useState<string>('');
+  const [editingType, setEditingType] = useState<'with' | 'without'>('with');
 
   // Cart Animation
   const bounceAnim = useRef(new Animated.Value(0)).current;
@@ -198,7 +205,9 @@ export default function PurchaseReturn() {
         setShowResults(false);
         animateCartIcon();
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error adding invoice:', error);
+    }
   };
 
   // Add Invoice to Cart Without
@@ -248,7 +257,7 @@ export default function PurchaseReturn() {
         Toast.show({
           type: 'info',
           text1: 'Warning!',
-          text2: 'The require quantity is not available!',
+          text2: 'The required quantity is not available!',
         });
       }
     } catch (error) {
@@ -293,6 +302,7 @@ export default function PurchaseReturn() {
         const cartItems = Object.values(res.data.cartsession).map(
           (item: any) => ({
             ...item,
+            cart_id: item.id, // Ensure cart_id is set
             total: (
               item.prod_return_qty * parseFloat(item.prod_price)
             ).toString(),
@@ -307,6 +317,70 @@ export default function PurchaseReturn() {
       }
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  // Update Quantity API Call
+  const updateQuantity = async (
+    id: number,
+    qty: number,
+    type: 'with' | 'without',
+  ) => {
+    // For "with" type, check if return qty > purchase qty
+    if (type === 'with') {
+      const item = withInvcList.find(i => (i.cart_id || i.prod_id) === id);
+      if (item && qty > parseInt(item.prod_purchase_qty)) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Return quantity cannot be greater than Purchase quantity',
+        });
+        return false;
+      }
+    }
+
+    try {
+      const res = await axios.post(
+        `${BASE_URL}/inlinepurinvoicechange`,
+        {
+          id: id,
+          qty: qty,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+
+      if (res.status === 200 && res.data.status) {
+        Toast.show({
+          type: 'success',
+          text1: 'Quantity updated successfully!',
+        });
+
+        // Refresh the appropriate list based on type
+        if (type === 'with') {
+          fetchInvcWith();
+        } else {
+          fetchInvcWithout();
+        }
+
+        return true;
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Failed to update quantity',
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error updating quantity',
+      });
+      return false;
     }
   };
 
@@ -329,7 +403,33 @@ export default function PurchaseReturn() {
         fetchInvcWith();
         setOrderTotal(0);
       }
-    } catch (error) {}
+    } catch (error) {
+      console.error('Error deleting cart item:', error);
+    }
+  };
+
+  // Delete Cart Item (Without Invoice)
+  const delCartItemWithout = async (id: any) => {
+    try {
+      const res = await axios.get(
+        `${BASE_URL}/removepurchasereturn?id=${id}&_token=${token}`,
+      );
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Cart item removed successfully!',
+          visibilityTime: 1500,
+        });
+
+        fetchInvcWithout();
+        setOrderTotalWithout(0);
+      }
+    } catch (error) {
+      console.error('Error deleting cart item:', error);
+    }
   };
 
   // Fetch Return Purchase without invoice
@@ -341,6 +441,7 @@ export default function PurchaseReturn() {
         const cartItems = Object.values(res.data.cartsession).map(
           (item: any) => ({
             ...item,
+            cart_id: item.id, // Ensure cart_id is set
             total: (
               item.prod_return_qty * parseFloat(item.prod_price)
             ).toString(),
@@ -419,7 +520,7 @@ export default function PurchaseReturn() {
     }
   };
 
-  // Complete Odrer Without Invoice
+  // Complete Order Without Invoice
   const compOrderWithoutInvc = async () => {
     if (!withoutInvcList.length) {
       Toast.show({
@@ -428,6 +529,7 @@ export default function PurchaseReturn() {
       });
       return;
     }
+
     try {
       const res = await axios.post(
         `${BASE_URL}/completepurchasereturn`,
@@ -436,13 +538,8 @@ export default function PurchaseReturn() {
           refrence_no: '',
           date: expireDate.toISOString().split('T')[0],
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
       );
-      if (res.status === 200 && res.data.status) {
+      if (res.status === 200 && res.data.status === 200) {
         Toast.show({
           type: 'success',
           text1: 'Order completed successfully!',
@@ -451,11 +548,14 @@ export default function PurchaseReturn() {
         setOrderTotalWithout(0);
         emptyCartWithoutInvc();
         setSupData(initialSupplierData);
+
         setCurrentpsupplier('');
-      } else {
+      } else if (res.status === 200 && res.data.status === 202) {
         Toast.show({
           type: 'error',
-          text1: 'Failed to complete order',
+          text1: 'Warning!',
+          text2: 'Please Select Supplier!',
+          visibilityTime: 2000,
         });
       }
     } catch (error) {
@@ -464,6 +564,51 @@ export default function PurchaseReturn() {
         text1: 'Error completing order',
       });
     }
+  };
+
+  // Start editing quantity
+  const startEditing = (item: any, type: 'with' | 'without') => {
+    setEditingItemId(item.cart_id || item.prod_id);
+    setEditingQuantity(item.prod_return_qty.toString());
+    setEditingType(type);
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setEditingItemId(null);
+    setEditingQuantity('');
+  };
+
+  // Save edited quantity
+  const saveQuantity = async () => {
+    if (!editingItemId || !editingQuantity) return;
+
+    const qty = parseInt(editingQuantity);
+    if (isNaN(qty) || qty <= 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'Please enter a valid quantity',
+      });
+      return;
+    }
+
+    const success = await updateQuantity(editingItemId, qty, editingType);
+    if (success) {
+      cancelEditing();
+    }
+  };
+
+  // Increase quantity
+  const increaseQuantity = async (item: any, type: 'with' | 'without') => {
+    const newQty = item.prod_return_qty + 1;
+    await updateQuantity(item.cart_id || item.prod_id, newQty, type);
+  };
+
+  // Decrease quantity
+  const decreaseQuantity = async (item: any, type: 'with' | 'without') => {
+    if (item.prod_return_qty <= 1) return;
+    const newQty = item.prod_return_qty - 1;
+    await updateQuantity(item.cart_id || item.prod_id, newQty, type);
   };
 
   useEffect(() => {
@@ -476,6 +621,101 @@ export default function PurchaseReturn() {
     emptyCartWithInvc();
     emptyCartWithoutInvc();
   }, [currentpsupplier]);
+
+  // Render editable quantity component for "With Invoice" items
+  const renderQuantityWithInvoice = (item: InvoiceListWith) => {
+    if (
+      editingItemId === (item.cart_id || item.prod_id) &&
+      editingType === 'with'
+    ) {
+      return (
+        <View style={styles.quantityEditorContainer}>
+          <TextInput
+            style={styles.quantityInput}
+            value={editingQuantity}
+            onChangeText={setEditingQuantity}
+            keyboardType="numeric"
+            autoFocus
+          />
+          <TouchableOpacity onPress={saveQuantity} style={styles.saveButton}>
+            <Icon name="check" size={16} color="white" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={cancelEditing} style={styles.cancelButton}>
+            <Icon name="close" size={16} color="white" />
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <View style={styles.quantityContainer}>
+        <TouchableOpacity
+          onPress={() => decreaseQuantity(item, 'with')}
+          style={styles.quantityButton}>
+          <Icon name="remove" size={16} color="white" />
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => startEditing(item, 'with')}
+          style={styles.quantityDisplay}>
+          <Text style={[styles.quantityText, {color: '#fff'}]}>
+            {item.prod_return_qty}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => increaseQuantity(item, 'with')}
+          style={styles.quantityButton}>
+          <Icon name="add" size={16} color="white" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  // Render cart item for modal
+  const renderCartItem = ({item}: {item: InvoiceListWithout}) => (
+    <View style={styles.cartItemContainer}>
+      <View style={styles.cartItemHeader}>
+        <Text style={styles.cartProductName} numberOfLines={2}>
+          {item.prod_name}
+        </Text>
+        <TouchableOpacity
+          onPress={() => delCartItemWithout(item.cart_id || item.prod_id)}>
+          <Icon name="delete" size={20} color="#FF5252" />
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.cartItemDetails}>
+        <View style={styles.cartDetailRow}>
+          <Text style={[styles.detailLabel, {color: '#144272'}]}>Barcode:</Text>
+          <Text style={[styles.detailValue, {color: '#144272'}]}>
+            {item.prod_upc_ean}
+          </Text>
+        </View>
+        <View style={styles.cartDetailRow}>
+          <Text style={[styles.detailLabel, {color: '#144272'}]}>Price:</Text>
+          <Text style={[styles.detailValue, {color: '#144272'}]}>
+            PKR {item.prod_price}
+          </Text>
+        </View>
+        <View style={styles.cartDetailRow}>
+          <Text style={[styles.detailLabel, {color: '#144272'}]}>
+            Quantity:
+          </Text>
+          <Text style={[styles.detailLabel, {color: '#144272'}]}>
+            {item.prod_return_qty}
+          </Text>
+        </View>
+        <View style={styles.cartDetailRow}>
+          <Text style={[styles.detailLabel, {color: '#144272'}]}>Total:</Text>
+          <Text style={styles.detailValuePrice}>
+            PKR{' '}
+            {(item.prod_return_qty * parseFloat(item.prod_price)).toFixed(2)}
+          </Text>
+        </View>
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -602,7 +842,9 @@ export default function PurchaseReturn() {
                             {item.prod_name}
                           </Text>
                           <TouchableOpacity
-                            onPress={() => delCartItem(item.prod_id)}>
+                            onPress={() =>
+                              delCartItem(item.cart_id || item.prod_id)
+                            }>
                             <Icon name="delete" size={24} color="#FF5252" />
                           </TouchableOpacity>
                         </View>
@@ -620,9 +862,7 @@ export default function PurchaseReturn() {
                             <Text style={styles.withDetailLabel}>
                               Return Qty:
                             </Text>
-                            <Text style={styles.detailValue}>
-                              {item.prod_return_qty}
-                            </Text>
+                            {renderQuantityWithInvoice(item)}
                           </View>
                           <View style={styles.withDetailRow}>
                             <Text style={styles.withDetailLabel}>Price:</Text>
@@ -779,9 +1019,10 @@ export default function PurchaseReturn() {
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Reference</Text>
                     <TextInput
-                      style={styles.input}
+                      style={[styles.input, {backgroundColor: 'gray'}]}
                       placeholderTextColor="rgba(255,255,255,0.7)"
                       placeholder="Enter reference"
+                      editable={false}
                     />
                   </View>
 
@@ -829,7 +1070,7 @@ export default function PurchaseReturn() {
             </View>
           )}
 
-          <View style={{height: 100}} />
+          <View style={{height: 60}} />
         </ScrollView>
 
         {/* Search Results Overlay */}
@@ -903,7 +1144,7 @@ export default function PurchaseReturn() {
               style={styles.floatingCartBtn}
               onPress={() => setModalVisible('Cart')}>
               <Icon name="shopping-cart" size={24} color="white" />
-              {(withInvcList.length > 0 || withoutInvcList.length > 0) && (
+              {(withoutInvcList.length > 0) && (
                 <View style={styles.cartBadge}>
                   <Text style={styles.cartBadgeText}>
                     {withInvcList.length + withoutInvcList.length}
@@ -947,44 +1188,12 @@ export default function PurchaseReturn() {
                 {/* Cart List */}
                 <FlatList
                   data={withoutInvcList}
-                  keyExtractor={item => item.prod_id.toString()}
+                  keyExtractor={item =>
+                    (item.cart_id || item.prod_id).toString()
+                  }
                   style={styles.cartList}
                   contentContainerStyle={styles.cartListContent}
-                  renderItem={({item}) => (
-                    <View style={styles.cartItemContainer}>
-                      <View style={styles.cartItemHeader}>
-                        <Text style={styles.cartProductName} numberOfLines={2}>
-                          {item.prod_name}
-                        </Text>
-                        <Text style={styles.quantityValue}>
-                          {item.prod_return_qty}
-                        </Text>
-                      </View>
-
-                      <View style={styles.cartItemDetails}>
-                        <Text style={styles.detailText}>
-                          PKR {item.prod_price}
-                        </Text>
-                        <Text style={styles.detailTextPrice}>
-                          PKR{' '}
-                          {(
-                            parseFloat(item.prod_price) * item.prod_return_qty
-                          ).toFixed(2)}
-                        </Text>
-                      </View>
-
-                      <View style={styles.cartItemDetails}>
-                        <Text style={styles.detailText}>
-                          Barcode: {item.prod_upc_ean}
-                        </Text>
-                        <TouchableOpacity
-                          onPress={() => delCartItem(item.prod_id)}
-                          style={styles.deleteBtn}>
-                          <Icon name="delete" size={20} color="#FF5252" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
+                  renderItem={renderCartItem}
                 />
 
                 {/* Summary Footer */}
@@ -1222,7 +1431,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   detailValue: {
-    color: 'white',
+    color: '#fff',
     fontSize: 14,
     fontWeight: '500',
   },
@@ -1393,17 +1602,14 @@ const styles = StyleSheet.create({
   },
   cartItemDetails: {
     marginTop: 4,
+  },
+  cartDetailRow: {
     flexDirection: 'row',
-    width: '100%',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 4,
   },
-  detailText: {
-    fontSize: 13,
-    color: '#444',
-    marginBottom: 2,
-  },
-  detailTextPrice: {
+  detailValuePrice: {
     fontSize: 16,
     fontWeight: 'bold',
     color: '#4CAF50',
@@ -1458,20 +1664,60 @@ const styles = StyleSheet.create({
   },
   cartList: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
   },
-  cartListContent: {},
-  quantityValue: {
-    marginHorizontal: 15,
-    fontSize: 16,
-    fontWeight: 'bold',
+  cartListContent: {
+    paddingBottom: 20,
+  },
+  quantityContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(20, 66, 114, 0.1)',
+    borderRadius: 8,
+    padding: 4,
+  },
+  quantityButton: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#144272',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quantityDisplay: {
+    minWidth: 40,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  quantityText: {
     color: '#144272',
-    minWidth: 30,
-    textAlign: 'center',
+    fontWeight: 'bold',
+    fontSize: 14,
   },
-  deleteBtn: {
-    padding: 5,
+  quantityEditorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  quantityInput: {
+    width: 60,
+    backgroundColor: 'white',
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    color: '#144272',
+    fontSize: 14,
+    marginRight: 8,
+  },
+  saveButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 4,
+    padding: 4,
+    marginLeft: 4,
+  },
+  cancelButton: {
+    backgroundColor: '#FF5252',
+    borderRadius: 4,
+    padding: 4,
+    marginLeft: 4,
   },
   withCartItemContainer: {
     backgroundColor: 'rgba(255,255,255,0.05)',
@@ -1500,6 +1746,7 @@ const styles = StyleSheet.create({
   withDetailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 4,
   },
   withDetailLabel: {

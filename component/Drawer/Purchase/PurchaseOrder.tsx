@@ -151,7 +151,29 @@ export default function PurchaseOrder() {
     if (!selectedProduct) {
       Toast.show({
         type: 'error',
-        text1: 'Please select a product first',
+        text1: 'Warning!',
+        text2: 'Please select a product first',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    if (!quantity || !purchasePrice || !retailPrice) {
+      Toast.show({
+        type: 'error',
+        text1: 'Warning!',
+        text2: 'Quantity, Purchase Price, and Retail Price are required.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    if (quantity === '0') {
+      Toast.show({
+        type: 'error',
+        text1: 'Warning!',
+        text2: 'Quantity must be greater than 0.',
+        visibilityTime: 2000,
       });
       return;
     }
@@ -376,7 +398,7 @@ export default function PurchaseOrder() {
             {/* Form Fields */}
             <View style={styles.formRow}>
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Quantity</Text>
+                <Text style={styles.inputLabel}>Quantity *</Text>
                 <TextInput
                   style={styles.input}
                   placeholderTextColor="rgba(255,255,255,0.7)"
@@ -388,7 +410,7 @@ export default function PurchaseOrder() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>Purchase Price</Text>
+                <Text style={styles.inputLabel}>Purchase Price *</Text>
                 <TextInput
                   style={styles.input}
                   placeholderTextColor="rgba(255,255,255,0.7)"
@@ -402,7 +424,7 @@ export default function PurchaseOrder() {
 
             <View style={styles.formRow}>
               <View style={[styles.inputGroup, {width: '100%'}]}>
-                <Text style={styles.inputLabel}>Retail Price</Text>
+                <Text style={styles.inputLabel}>Retail Price *</Text>
                 <TextInput
                   style={[styles.input, {width: '100%'}]}
                   placeholderTextColor="rgba(255,255,255,0.7)"

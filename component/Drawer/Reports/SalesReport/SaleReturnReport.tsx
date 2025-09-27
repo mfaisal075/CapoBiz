@@ -4,7 +4,6 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
   FlatList,
 } from 'react-native';
@@ -17,6 +16,9 @@ import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from '../../../BASE_URL';
+import RNPrint from 'react-native-print';
+import Toast from 'react-native-toast-message';
+import { useUser } from '../../../CTX/UserContext';
 
 interface ProductDropdown {
   id: number;
@@ -34,6 +36,7 @@ interface DataWiseList {
 
 export default function SaleReturnReport() {
   const {openDrawer} = useDrawer();
+  const {bussName, bussAddress} = useUser()
   const [prodOpen, setProdOpen] = useState(false);
   const [prodValue, setProdValue] = useState('');
   const [prodDropdown, setProdDropdown] = useState<ProductDropdown[]>([]);
@@ -44,8 +47,8 @@ export default function SaleReturnReport() {
   const [dataWiseList, setDataWiseList] = useState<DataWiseList[]>([]);
   const [prodWiseList, setProdWiseList] = useState<DataWiseList[]>([]);
   const [selectionMode, setSelectionMode] = useState<
-    'allemployees' | 'singleemployee' | ''
-  >('allemployees');
+    'dateWise' | 'productWise' | ''
+  >('dateWise');
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
@@ -64,6 +67,149 @@ export default function SaleReturnReport() {
     const currentDate = selectedDate || endDate;
     setShowEndDatePicker(false);
     setEndDate(currentDate);
+  };
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const currentData =
+    selectionMode === 'dateWise' ? dataWiseList : prodWiseList;
+  const totalRecords = currentData.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const paginatedData = currentData.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
+
+  // Handle Print
+  const handlePrint = async () => {
+    const dataList = selectionMode === 'dateWise' ? dataWiseList : prodWiseList;
+
+    if (dataList.length === 0) {
+      Toast.show({
+        type: 'error',
+        text1: 'No records found to print.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    const prodName =
+      prodDropdown.find(prod => prod.id.toString() === prodValue)?.prod_name ||
+      'Customer';
+
+    // Get current date
+    const dateStr = new Date().toLocaleDateString();
+
+    // Build HTML table rows
+    const rows = dataList
+      .map(
+        (item, index) => `
+        <tr>
+          <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word; text-align:center;">${
+            index + 1
+          }</td>
+          <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+            item.salrd_invoice_no
+          }</td>
+          <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${new Date(
+            item.created_at,
+          ).toLocaleDateString('en-US', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          })}</td>
+          <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+            item.prod_name
+          }</td>
+          <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+            item.salrd_return_qty
+          }</td>
+          <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+            item.salrd_price
+          }</td>
+          <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+            item.salrd_total_price
+          }</td>
+        </tr>`,
+      )
+      .join('');
+
+    // HTML Template
+    const html = `
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <title>Sale Return Report</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; padding:20px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-size:12px;">Date: ${dateStr}</div>
+            <div style="text-align:center; flex:1; font-size:16px; font-weight:bold;">Point of Sale System</div>
+          </div>
+            
+          <div style="text-align:center; margin-bottom:20px;">
+            <div style="font-size:18px; font-weight:bold;">${bussName}</div>
+            <div style="font-size:14px;">${bussAddress}</div>
+            <div style="font-size:14px; font-weight:bold; text-decoration:underline;">
+              Sale Return Report
+            </div>
+          </div>
+  
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-size:12px; font-weight: bold;">
+              Product: ${
+                selectionMode === 'dateWise' ? 'All Products' : prodName
+              }
+            </div>
+            <div style="display:flex; justify-content:space-between; width: 35%; gap: 20px;">
+              <div style="font-size:12px;">
+                <span style="font-weight: bold;">From:</span> ${startDate.toLocaleDateString(
+                  'en-US',
+                  {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  },
+                )}
+              </div>
+              <div style="font-size:12px;">
+                <span style="font-weight: bold;">To:</span> ${endDate.toLocaleDateString(
+                  'en-US',
+                  {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  },
+                )}
+              </div>
+            </div>
+          </div>
+            
+          <table style="border-collapse:collapse; width:100%; font-size:12px;">
+            <thead>
+              <tr style="background:#f0f0f0;">
+                <th style="border:1px solid #000; padding:6px;">Sr#</th>
+                <th style="border:1px solid #000; padding:6px;">Invoice No</th>
+                <th style="border:1px solid #000; padding:6px;">Return Date</th>
+                <th style="border:1px solid #000; padding:6px;">Product</th>
+                <th style="border:1px solid #000; padding:6px;">Quantity</th>
+                <th style="border:1px solid #000; padding:6px;">Price</th>
+                <th style="border:1px solid #000; padding:6px;">Total Price</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `;
+
+    await RNPrint.print({html});
   };
 
   // Product Dropdown
@@ -146,6 +292,11 @@ export default function SaleReturnReport() {
     };
   };
 
+  const totals =
+    selectionMode === 'dateWise'
+      ? calculateDataWiseTotal()
+      : calculateProductWiseTotal();
+
   useEffect(() => {
     fetchProdDropdown();
     fetchDataSaleReturn();
@@ -158,107 +309,105 @@ export default function SaleReturnReport() {
         source={require('../../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../../assets/menu.png')}
-              style={{width: 30, height: 30, tintColor: 'white'}}
-            />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text style={{color: 'white', fontSize: 22, fontWeight: 'bold'}}>
-              Sale Return Report
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Sale Return Report</Text>
           </View>
+
+          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="white" />
+          </TouchableOpacity>
         </View>
 
-        <View style={styles.dateContainer}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderWidth: 1,
-              borderColor: 'white',
-              borderRadius: 5,
-              padding: 5,
-              height: 38,
-              width: '46%',
-            }}>
-            <Text style={{marginLeft: 10, color: 'white'}}>
-              {`${startDate.toLocaleDateString()}`}
-            </Text>
-            <TouchableOpacity onPress={() => setShowStartDatePicker(true)}>
-              <Image
-                style={{
-                  height: 20,
-                  width: 20,
-                  marginLeft: 10,
-                  tintColor: 'white',
-                }}
-                source={require('../../../../assets/calendar.png')}
-              />
-            </TouchableOpacity>
-            {showStartDatePicker && (
-              <DateTimePicker
-                testID="startDatePicker"
-                value={startDate}
-                mode="date"
-                is24Hour={true}
-                display="default"
-                onChange={onStartDateChange}
-              />
-            )}
+        {/* Filter Section */}
+        <View style={styles.filterContainer}>
+          {/* Date Pickers */}
+          <View style={styles.dateContainer}>
+            <View style={styles.datePicker}>
+              <Text style={styles.dateLabel}>From:</Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowStartDatePicker(true)}>
+                <Text style={styles.dateText}>
+                  {startDate.toLocaleDateString()}
+                </Text>
+                <Icon name="calendar" size={18} color="#144272" />
+              </TouchableOpacity>
+              {showStartDatePicker && (
+                <DateTimePicker
+                  testID="startDatePicker"
+                  value={startDate}
+                  mode="date"
+                  is24Hour={true}
+                  display="default"
+                  onChange={onStartDateChange}
+                />
+              )}
+            </View>
+
+            <View style={styles.datePicker}>
+              <Text style={styles.dateLabel}>To:</Text>
+              <TouchableOpacity
+                style={styles.dateButton}
+                onPress={() => setShowEndDatePicker(true)}>
+                <Text style={styles.dateText}>
+                  {endDate.toLocaleDateString()}
+                </Text>
+                <Icon name="calendar" size={18} color="#144272" />
+              </TouchableOpacity>
+              {showEndDatePicker && (
+                <DateTimePicker
+                  testID="endDatePicker"
+                  value={endDate}
+                  mode="date"
+                  is24Hour={true}
+                  display="default"
+                  onChange={onEndDateChange}
+                />
+              )}
+            </View>
           </View>
 
-          {/* To Date */}
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              borderWidth: 1,
-              borderColor: 'white',
-              borderRadius: 5,
-              padding: 5,
-              height: 38,
-              width: '46%',
-            }}>
-            <Text style={{marginLeft: 10, color: 'white'}}>
-              {`${endDate.toLocaleDateString()}`}
-            </Text>
-            <TouchableOpacity onPress={() => setShowEndDatePicker(true)}>
-              <Image
-                style={{
-                  height: 20,
-                  width: 20,
-                  marginLeft: 10,
-                  tintColor: 'white',
-                }}
-                source={require('../../../../assets/calendar.png')}
+          {/* Radio Buttons */}
+          <View style={styles.radioContainer}>
+            <TouchableOpacity
+              style={styles.radioButton}
+              onPress={() => {
+                setSelectionMode('dateWise');
+                setProdValue('');
+              }}>
+              <RadioButton
+                value="dateWise"
+                status={selectionMode === 'dateWise' ? 'checked' : 'unchecked'}
+                color="#144272"
+                uncheckedColor="#666"
               />
+              <Text style={styles.radioText}>Data Wise Repport</Text>
             </TouchableOpacity>
-            {showEndDatePicker && (
-              <DateTimePicker
-                testID="endDatePicker"
-                value={endDate}
-                mode="date"
-                is24Hour={true}
-                display="default"
-                onChange={onEndDateChange}
-              />
-            )}
-          </View>
-        </View>
 
-        <View style={[styles.dropDownContainer, {marginTop: 10}]}>
+            <TouchableOpacity
+              style={styles.radioButton}
+              onPress={() => {
+                setSelectionMode('productWise');
+              }}>
+              <RadioButton
+                value="productWise"
+                status={
+                  selectionMode === 'productWise' ? 'checked' : 'unchecked'
+                }
+                color="#144272"
+                uncheckedColor="#666"
+              />
+              <Text style={styles.radioText}>Product Wise Report</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Dropdown */}
           <DropDownPicker
             items={transformedProd}
             open={prodOpen}
@@ -266,247 +415,191 @@ export default function SaleReturnReport() {
             value={prodValue}
             setValue={setProdValue}
             placeholder="Select Product"
-            placeholderStyle={{color: 'white'}}
-            textStyle={{color: 'white'}}
+            disabled={selectionMode === 'dateWise'}
+            placeholderStyle={{color: '#666'}}
+            textStyle={{color: '#144272'}}
             ArrowUpIconComponent={() => (
-              <Text>
-                <Icon name="chevron-up" size={15} color="white" />
-              </Text>
+              <Icon name="chevron-up" size={18} color="#144272" />
             )}
             ArrowDownIconComponent={() => (
-              <Text>
-                <Icon name="chevron-down" size={15} color="white" />
-              </Text>
+              <Icon name="chevron-down" size={18} color="#144272" />
             )}
-            style={[styles.dropdown, {zIndex: 999}]}
-            dropDownContainerStyle={{
-              backgroundColor: 'white',
-              borderColor: '#144272',
-              width: '100%',
-              marginTop: 8,
-            }}
-            labelStyle={{color: 'white'}}
-            listItemLabelStyle={{color: '#144272'}}
+            style={[
+              styles.dropdown,
+              selectionMode === 'dateWise' && styles.dropdownDisabled,
+            ]}
+            dropDownContainerStyle={styles.dropDownContainer}
           />
         </View>
 
-        <View style={[styles.row]}>
-          <TouchableOpacity
-            style={{flexDirection: 'row', alignItems: 'center'}}
-            onPress={() => {
-              setSelectionMode('allemployees');
-              setProdValue('');
-            }}>
-            <RadioButton
-              value="allemployees"
-              status={
-                selectionMode === 'allemployees' ? 'checked' : 'unchecked'
-              }
-              color="white"
-              uncheckedColor="white"
-              onPress={() => {
-                setSelectionMode('allemployees');
-                setProdValue('');
-              }}
-            />
-            <Text
-              style={{
-                color: 'white',
-              }}>
-              Data Wise Return
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={{flexDirection: 'row', alignItems: 'center'}}
-            onPress={() => {
-              setSelectionMode('singleemployee');
-              setProdValue('');
-            }}>
-            <RadioButton
-              value="singleemployee"
-              color="white"
-              uncheckedColor="white"
-              status={
-                selectionMode === 'singleemployee' ? 'checked' : 'unchecked'
-              }
-              onPress={() => {
-                setSelectionMode('singleemployee');
-                setProdValue('');
-              }}
-            />
-            <Text
-              style={{
-                color: 'white',
-              }}>
-              Product Wise Report
-            </Text>
-          </TouchableOpacity>
+        {/* Summary Cards */}
+        <View style={styles.summaryContainer}>
+          <View style={styles.innerSummaryCtx}>
+            <Text style={styles.summaryLabel}>Total Return Quantity: </Text>
+            <Text style={styles.summaryValue}>{totals.totalReturnQty}</Text>
+          </View>
+          <View style={styles.innerSummaryCtx}>
+            <Text style={styles.summaryLabel}>Total Return: </Text>
+            <Text style={styles.summaryValue}>{totals.totalReturn}</Text>
+          </View>
         </View>
 
-        <FlatList
-          data={selectionMode === 'allemployees' ? dataWiseList : prodWiseList}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({item}) => (
-            <View style={{padding: 5}}>
-              <View style={styles.table}>
-                <View style={styles.tablehead}>
-                  <Text
-                    style={{
-                      color: '#144272',
-                      fontWeight: 'bold',
-                      marginLeft: 5,
-                      marginTop: 5,
-                    }}>
-                    {item.salrd_invoice_no}
-                  </Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Return Date:</Text>
-                    <Text style={styles.text}>
-                      {new Date(item.created_at)
-                        .toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                        .replace(/ /g, '-')}
+        <View style={styles.listContainer}>
+          <FlatList
+            data={paginatedData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={styles.card}>
+                {/* Header Row */}
+                <View style={styles.headerRow}>
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.salrd_invoice_no?.charAt(0) || 'I'}
                     </Text>
                   </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>Product:</Text>
-                    <Text style={styles.text}>{item.prod_name}</Text>
+                  <View style={{flex: 1}}>
+                    <Text style={styles.productName}>
+                      {item.salrd_invoice_no}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Info Section */}
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="calendar"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Return Date</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {new Date(item.created_at).toLocaleDateString('en-US', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </Text>
                   </View>
 
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.text}>QTY:</Text>
-                    <Text style={styles.text}>{item.salrd_return_qty}</Text>
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="package-variant"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Product</Text>
+                    </View>
+                    <Text style={styles.valueText}>{item.prod_name}</Text>
                   </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      marginBottom: 5,
-                    }}>
-                    <Text style={styles.text}>Price:</Text>
-                    <Text style={styles.text}>{item.salrd_price}</Text>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="pound-box"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Quantity</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.salrd_return_qty || '0'}
+                    </Text>
                   </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      marginBottom: 5,
-                    }}>
-                    <Text style={styles.text}>Total Price:</Text>
-                    <Text style={styles.text}>{item.salrd_total_price}</Text>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="cash"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Price</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.salrd_price || '0'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="cash-multiple"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Total Price</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.salrd_total_price || '0'}
+                    </Text>
                   </View>
                 </View>
               </View>
-            </View>
-          )}
-          ListEmptyComponent={
-            <View
-              style={{
-                height: 200,
-                width: '100%',
-                marginTop: 20,
-                justifyContent: 'center',
-                alignItems: 'center',
-              }}>
-              <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
-                No record found.
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
+              </View>
+            }
+            contentContainerStyle={{paddingBottom: 70}}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
+
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
+              </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
               </Text>
             </View>
-          }
-        />
 
-        {selectionMode === 'allemployees' && (
-          <View style={styles.totalContainer}>
-            <View
-              style={{
-                flexDirection: 'row',
-              }}>
-              <Text style={styles.totalText}>Total Records:</Text>
-              <Text style={styles.totalText}>{dataWiseList.length}</Text>
-            </View>
-            {(() => {
-              const {totalReturn, totalReturnQty} = calculateDataWiseTotal();
-
-              return (
-                <View
-                  style={{
-                    flexDirection: 'column',
-                  }}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.totalText}>Total Return QTY: </Text>
-                    <Text style={styles.totalText}>{totalReturnQty}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.totalText}>Total Return: </Text>
-                    <Text style={styles.totalText}>{totalReturn}</Text>
-                  </View>
-                </View>
-              );
-            })()}
-          </View>
-        )}
-        {selectionMode === 'singleemployee' && (
-          <View style={styles.totalContainer}>
-            <View
-              style={{
-                flexDirection: 'row',
-              }}>
-              <Text style={styles.totalText}>Total Records:</Text>
-              <Text style={styles.totalText}>{prodWiseList.length}</Text>
-            </View>
-            {(() => {
-              const {totalReturn, totalReturnQty} = calculateProductWiseTotal();
-
-              return (
-                <View
-                  style={{
-                    flexDirection: 'column',
-                  }}>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.totalText}>Total Return QTY: </Text>
-                    <Text style={styles.totalText}>{totalReturnQty}</Text>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
-                    <Text style={styles.totalText}>Total Return: </Text>
-                    <Text style={styles.totalText}>{totalReturn}</Text>
-                  </View>
-                </View>
-              );
-            })()}
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
+                Next
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
       </ImageBackground>
@@ -522,92 +615,287 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
-  headerTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-  },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-  },
-  exportBtn: {
-    backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  exportText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 38,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: '100%',
-  },
-  totalContainer: {
     paddingHorizontal: 15,
-    paddingVertical: 20,
-    borderTopWidth: 1,
-    borderTopColor: 'white',
-    marginTop: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
-  totalText: {
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
+  },
+  headerTitle: {
     color: 'white',
+    fontSize: 20,
     fontWeight: 'bold',
-    fontSize: 14,
   },
-  row: {
-    flexDirection: 'row',
-    width: '90%',
-    alignSelf: 'center',
-    justifyContent: 'space-around',
+
+  // Filter Container
+  filterContainer: {
+    backgroundColor: 'rgba(255,255,255,0.95)',
+    marginHorizontal: 15,
+    marginVertical: 10,
+    borderRadius: 12,
+    padding: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 3,
+    zIndex: 1000,
   },
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '90%',
-    alignSelf: 'center',
-    marginTop: 10,
+    marginBottom: 10,
   },
-  dropDownContainer: {
+  datePicker: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  dateLabel: {
+    color: '#144272',
+    fontWeight: '600',
+    marginBottom: 5,
+    fontSize: 14,
+  },
+  dateButton: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '90%',
-    alignSelf: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#144272',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#fff',
+  },
+  dateText: {
+    color: '#144272',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  radioContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '95%',
+    marginBottom: 10,
+  },
+  radioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  radioText: {
+    color: '#144272',
+    marginLeft: -5,
+    fontWeight: '500',
+  },
+  dropdown: {
+    borderWidth: 1,
+    borderColor: '#144272',
+    minHeight: 40,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    backgroundColor: '#fff',
+  },
+  dropdownDisabled: {
+    backgroundColor: '#9a9a9a48',
+    borderColor: '#ccc',
+  },
+  dropDownContainer: {
+    backgroundColor: '#fff',
+    borderColor: '#144272',
+    zIndex: 3000,
+  },
+
+  //Summary Container Styling
+  summaryContainer: {
+    paddingHorizontal: 15,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+    marginHorizontal: 15,
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  innerSummaryCtx: {
+    flexDirection: 'row',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  summaryValue: {
+    fontSize: 16,
+    color: '#144272',
+    fontWeight: 'bold',
+  },
+
+  // Flat List Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 15,
+  },
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    zIndex: 1000,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#144272',
+    flexWrap: 'wrap',
+  },
+  subText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  infoBox: {
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    flex: 1,
+  },
+  infoIcon: {
+    marginRight: 6,
+  },
+  labelText: {
+    fontSize: 13,
+    color: '#144272',
+    fontWeight: '600',
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: '50%',
+    textAlign: 'right',
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 50,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    marginHorizontal: 20,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 16,
+    marginTop: 10,
+    fontWeight: '500',
+  },
+
+  // Pagination Styling
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    backgroundColor: '#144272',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
+  },
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    alignItems: 'center',
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
   },
 });
