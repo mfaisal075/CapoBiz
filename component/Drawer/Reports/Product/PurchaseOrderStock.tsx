@@ -27,6 +27,11 @@ interface CompletedList {
   pord_order_total: string;
   pord_status: string;
   sup_name: string;
+  pordd_prod_name: string;
+  pordd_partial_qty: string;
+  pordd_cost_price: string;
+  pordd_total_cost: string;
+  pordd_invoice_no: string;
 }
 
 export default function PurchaseOrderStock() {
@@ -56,6 +61,13 @@ export default function PurchaseOrderStock() {
   const categoryItems = [
     {label: 'Completed', value: 'Completed'},
     {label: 'Pending', value: 'Pending'},
+  ];
+
+  // Details Status Item
+  const detailOrder = [
+    {label: 'Purchase Ordered', value: 'Purchase Ordered'},
+    {label: 'Purchased', value: 'Purchased'},
+    {label: 'Pending', value: 'Purchase Order'},
   ];
 
   const onStartDateChange = (
@@ -91,10 +103,27 @@ export default function PurchaseOrderStock() {
     // Get current date
     const dateStr = new Date().toLocaleDateString();
 
-    // Build HTML table rows
-    const rows = completedList
-      .map(
-        (item, index) => `
+    // Build HTML table rows based on selection mode
+    let rows = '';
+    let tableHeaders = '';
+
+    if (selectionMode === 'purchaseOrder') {
+      // Purchase Order Mode Headers
+      tableHeaders = `
+      <tr style="background:#f0f0f0;">
+        <th style="border:1px solid #000; padding:6px;">Sr#</th>
+        <th style="border:1px solid #000; padding:6px;">Invoice No</th>
+        <th style="border:1px solid #000; padding:6px;">Supplier Name</th>
+        <th style="border:1px solid #000; padding:6px;">Order Total</th>
+        <th style="border:1px solid #000; padding:6px;">Status</th>
+        <th style="border:1px solid #000; padding:6px;">Order Date</th>
+      </tr>
+    `;
+
+      // Purchase Order Mode Rows
+      rows = completedList
+        .map(
+          (item, index) => `
       <tr>
         <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word; text-align:center;">${
           index + 1
@@ -119,74 +148,142 @@ export default function PurchaseOrderStock() {
           year: 'numeric',
         })}</td>
       </tr>`,
-      )
-      .join('');
+        )
+        .join('');
+    } else {
+      // Purchase Order Details Mode Headers
+      tableHeaders = `
+      <tr style="background:#f0f0f0;">
+        <th style="border:1px solid #000; padding:6px;">Sr#</th>
+        <th style="border:1px solid #000; padding:6px;">Invoice No</th>
+        <th style="border:1px solid #000; padding:6px;">Product Name</th>
+        <th style="border:1px solid #000; padding:6px;">Date</th>
+        <th style="border:1px solid #000; padding:6px;">Quantity</th>
+        <th style="border:1px solid #000; padding:6px;">Booking Rate</th>
+        <th style="border:1px solid #000; padding:6px;">Booking Value</th>
+        <th style="border:1px solid #000; padding:6px;">Status</th>
+      </tr>
+    `;
+
+      // Purchase Order Details Mode Rows
+      rows = completedList
+        .map(
+          (item, index) => `
+      <tr>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word; text-align:center;">${
+          index + 1
+        }</td>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+          item.pordd_invoice_no
+        }</td>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+          item.pordd_prod_name
+        }</td>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${new Date(
+          item.pord_order_date,
+        ).toLocaleDateString('en-US', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })}</td>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word; text-align:center;">${
+          item.pordd_partial_qty
+        }</td>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word; text-align:right;">${
+          item.pordd_cost_price
+        }</td>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word; text-align:right;">${
+          item.pordd_total_cost
+        }</td>
+        <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+          statusVal === 'Purchase Ordered'
+            ? 'Purchase Ordered'
+            : statusVal === 'Purchased'
+            ? 'Purchased'
+            : statusVal === 'Purchase Order'
+            ? 'Pending'
+            : ''
+        }</td>
+      </tr>`,
+        )
+        .join('');
+    }
+
+    // Determine report title based on selection mode
+    const reportTitle =
+      selectionMode === 'purchaseOrder'
+        ? 'Purchase Order Report'
+        : 'Purchase Order Details Report';
 
     // HTML Template
     const html = `
-            <html>
-              <head>
-                  <meta charset="utf-8">
-                  <title>Purchase Order Report</title>
-              </head>
-              <body style="font-family: Arial, sans-serif; padding:20px;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                    <div style="font-size:12px;">Date: ${dateStr}</div>
-                    <div style="text-align:center; flex:1; font-size:16px; font-weight:bold;">Point of Sale System</div>
-                </div>
-                    
-                <div style="text-align:center; margin-bottom:20px;">
-                    <div style="font-size:18px; font-weight:bold;">${bussName}</div>
-                    <div style="font-size:14px;">${bussAddress}</div>
-                    <div style="font-size:14px; font-weight:bold; text-decoration:underline;">
-                        Purchase Order Report
-                    </div>
-                </div>
+    <html>
+      <head>
+          <meta charset="utf-8">
+          <title>${reportTitle}</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; padding:20px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <div style="font-size:12px;">Date: ${dateStr}</div>
+            <div style="text-align:center; flex:1; font-size:16px; font-weight:bold;">Point of Sale System</div>
+        </div>
+            
+        <div style="text-align:center; margin-bottom:20px;">
+            <div style="font-size:18px; font-weight:bold;">${bussName}</div>
+            <div style="font-size:14px;">${bussAddress}</div>
+            <div style="font-size:14px; font-weight:bold; text-decoration:underline;">
+                ${reportTitle}
+            </div>
+        </div>
 
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                  <div style="font-size:12px; font-weight: bold;">Status: ${statusVal}</div>
-                  <div style="display:flex; justify-content:space-between; width: 35%; gap: 20px;">
-                  <div style="font-size:12px;">
-                    <span style="font-weight: bold;">From:</span> ${startDate.toLocaleDateString(
-                      'en-US',
-                      {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      },
-                    )}
-                  </div>
-                  <div style="font-size:12px;">
-                    <span style="font-weight: bold;">To:</span> ${endDate.toLocaleDateString(
-                      'en-US',
-                      {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      },
-                    )}
-                    </div>
-                  </div>
-                </div>
-                    
-                <table style="border-collapse:collapse; width:100%; font-size:12px;">
-                  <thead>
-                      <tr style="background:#f0f0f0;">
-                        <th style="border:1px solid #000; padding:6px;">Sr#</th>
-                        <th style="border:1px solid #000; padding:6px;">Invoice No</th>
-                        <th style="border:1px solid #000; padding:6px;">Supplier Name</th>
-                        <th style="border:1px solid #000; padding:6px;">Order Total</th>
-                        <th style="border:1px solid #000; padding:6px;">Status</th>
-                        <th style="border:1px solid #000; padding:6px;">Order Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      ${rows}
-                    </tbody>
-                  </table>
-                </body>
-              </html>
-            `;
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+          <div style="font-size:12px; font-weight: bold;">
+            Report Type: ${
+              selectionMode === 'purchaseOrder'
+                ? 'Purchase Order'
+                : 'Purchase Order Details'
+            }
+          </div>
+          <div style="font-size:12px; font-weight: bold;">Status: ${statusVal}</div>
+          <div style="display:flex; justify-content:space-between; gap: 20px;">
+            <div style="font-size:12px;">
+              <span style="font-weight: bold;">From:</span> ${startDate.toLocaleDateString(
+                'en-US',
+                {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                },
+              )}
+            </div>
+            <div style="font-size:12px;">
+              <span style="font-weight: bold;">To:</span> ${endDate.toLocaleDateString(
+                'en-US',
+                {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                },
+              )}
+            </div>
+          </div>
+        </div>
+            
+        <table style="border-collapse:collapse; width:100%; font-size:12px;">
+          <thead>
+            ${tableHeaders}
+          </thead>
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+
+        <div style="margin-top:20px; text-align:right; font-size:14px; font-weight:bold;">
+          Total: ${totals.total}
+        </div>
+      </body>
+    </html>
+  `;
 
     await RNPrint.print({html});
   };
@@ -200,15 +297,15 @@ export default function PurchaseOrderStock() {
         const res = await axios.post(`${BASE_URL}/fetch_purchaseorder_report`, {
           from,
           to,
-          status: statusVal,
+          status: selectionMode === 'purchaseOrder' ? statusVal : '',
           purchaseorder:
             selectionMode === 'purchaseOrder'
               ? 'Purchase Order'
               : 'Purchase Order Detail',
-          detailstatus: '',
+          detailstatus:
+            selectionMode === 'purchaseOrder' ? 'Purchase Order' : statusVal,
         });
         setCompletedList(res.data.purchaseorder);
-        console.log('Supplier: ', res.data.purchaseorder);
 
         setCurrentPage(1); // Reset to first page when data changes
       } catch (error) {
@@ -236,7 +333,7 @@ export default function PurchaseOrderStock() {
 
   useEffect(() => {
     fetchCompletedList();
-  }, [statusVal, endDate, startDate]);
+  }, [statusVal, endDate, startDate, detailOrder]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -267,6 +364,8 @@ export default function PurchaseOrderStock() {
               style={styles.radioButton}
               onPress={() => {
                 setSelectionMode('purchaseOrder');
+                setStatusVal('');
+                setCompletedList([]);
               }}>
               <RadioButton
                 value="purchaseOrder"
@@ -283,6 +382,8 @@ export default function PurchaseOrderStock() {
               style={styles.radioButton}
               onPress={() => {
                 setSelectionMode('purchaseOrderDetails');
+                setStatusVal('');
+                setCompletedList([]);
               }}>
               <RadioButton
                 value="purchaseOrderDetails"
@@ -300,7 +401,9 @@ export default function PurchaseOrderStock() {
 
           {/* Dropdown */}
           <DropDownPicker
-            items={categoryItems}
+            items={
+              selectionMode === 'purchaseOrder' ? categoryItems : detailOrder
+            }
             open={open}
             setOpen={setOpen}
             value={statusVal}
@@ -379,113 +482,222 @@ export default function PurchaseOrderStock() {
           <FlatList
             data={paginatedData}
             keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.sup_name?.charAt(0) || 'S'}
-                    </Text>
-                  </View>
-                  <View style={{flex: 1}}>
-                    <Text style={styles.supplierName}>{item.sup_name}</Text>
-                    <Text style={styles.subText}>
-                      Invoice: {item.pord_invoice_no}
-                    </Text>
-                  </View>
-                  {statusVal !== '' && (
-                    <View style={styles.statusBadge}>
-                      <Text style={styles.statusText}>
-                        {statusVal === 'Pending' ? 'Pending' : 'Completed'}
+            renderItem={({item}) =>
+              selectionMode === 'purchaseOrder' ? (
+                <View style={styles.card}>
+                  {/* Header Row */}
+                  <View style={styles.headerRow}>
+                    <View style={styles.avatarBox}>
+                      <Text style={styles.avatarText}>
+                        {item.sup_name?.charAt(0) || 'S'}
                       </Text>
                     </View>
-                  )}
-                </View>
-
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="receipt"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Invoice No</Text>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.supplierName}>{item.sup_name}</Text>
+                      <Text style={styles.subText}>
+                        Invoice: {item.pord_invoice_no}
+                      </Text>
                     </View>
-                    <Text style={styles.valueText}>{item.pord_invoice_no}</Text>
+                    {statusVal !== '' && (
+                      <View style={styles.statusBadge}>
+                        <Text style={styles.statusText}>
+                          {statusVal === 'Pending' ? 'Pending' : 'Completed'}
+                        </Text>
+                      </View>
+                    )}
                   </View>
 
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="account"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Supplier</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.sup_name}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="currency-usd"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Order Total</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.pord_order_total}
-                    </Text>
-                  </View>
-
-                  {statusVal !== '' && (
+                  {/* Info Section */}
+                  <View style={styles.infoBox}>
                     <View style={styles.infoRow}>
                       <View style={styles.labelRow}>
                         <Icon
-                          name="information-outline"
+                          name="account"
                           size={18}
                           color="#144272"
                           style={styles.infoIcon}
                         />
-                        <Text style={styles.labelText}>Status</Text>
+                        <Text style={styles.labelText}>Supplier</Text>
+                      </View>
+                      <Text style={styles.valueText}>{item.sup_name}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.labelRow}>
+                        <Icon
+                          name="currency-usd"
+                          size={18}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.labelText}>Order Total</Text>
                       </View>
                       <Text style={styles.valueText}>
-                        {statusVal === 'Pending' ? 'Pending' : 'Completed'}
+                        {item.pord_order_total}
                       </Text>
                     </View>
-                  )}
 
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="calendar"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Order Date</Text>
+                    {statusVal !== '' && (
+                      <View style={styles.infoRow}>
+                        <View style={styles.labelRow}>
+                          <Icon
+                            name="information-outline"
+                            size={18}
+                            color="#144272"
+                            style={styles.infoIcon}
+                          />
+                          <Text style={styles.labelText}>Status</Text>
+                        </View>
+                        <Text style={styles.valueText}>
+                          {statusVal === 'Pending' ? 'Pending' : 'Completed'}
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.labelRow}>
+                        <Icon
+                          name="calendar"
+                          size={18}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.labelText}>Order Date</Text>
+                      </View>
+                      <Text style={styles.valueText}>
+                        {new Date(item.pord_order_date).toLocaleDateString(
+                          'en-US',
+                          {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          },
+                        )}
+                      </Text>
                     </View>
-                    <Text style={styles.valueText}>
-                      {new Date(item.pord_order_date)
-                        .toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                        .replace(/ /g, '-')}
-                    </Text>
                   </View>
                 </View>
-              </View>
-            )}
+              ) : (
+                <View style={styles.card}>
+                  {/* Header Row */}
+                  <View style={styles.headerRow}>
+                    <View style={styles.avatarBox}>
+                      <Text style={styles.avatarText}>
+                        {item.pordd_prod_name?.charAt(0) || 'P'}
+                      </Text>
+                    </View>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.supplierName}>
+                        {item.pordd_prod_name}
+                      </Text>
+                      <Text style={styles.subText}>
+                        Invoice: {item.pordd_invoice_no}
+                      </Text>
+                    </View>
+                    {statusVal !== '' && (
+                      <View style={styles.statusBadge}>
+                        <Text style={styles.statusText}>
+                          {statusVal === 'Purchase Ordered'
+                            ? 'Purchase Ordered'
+                            : statusVal === 'Purchased'
+                            ? 'Purchased'
+                            : statusVal === 'Purchase Order'
+                            ? 'Pending'
+                            : ''}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+
+                  {/* Info Section */}
+                  <View style={styles.infoBox}>
+                    <View style={styles.infoRow}>
+                      <View style={styles.labelRow}>
+                        <Icon
+                          name="calendar"
+                          size={18}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.labelText}>Date</Text>
+                      </View>
+                      <Text style={styles.valueText}>
+                        {new Date(item.pord_order_date).toLocaleDateString(
+                          'en-US',
+                          {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          },
+                        )}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.labelRow}>
+                        <Icon
+                          name="cube"
+                          size={18}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.labelText}>Quantity</Text>
+                      </View>
+                      <Text style={styles.valueText}>
+                        {item.pordd_partial_qty}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.labelRow}>
+                        <Icon
+                          name="percent"
+                          size={18}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.labelText}>Booking Rate</Text>
+                      </View>
+                      <Text style={styles.valueText}>
+                        {item.pordd_cost_price}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.labelRow}>
+                        <Icon
+                          name="cash-multiple"
+                          size={18}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.labelText}>Booking Value</Text>
+                      </View>
+                      <Text style={styles.valueText}>
+                        {item.pordd_total_cost}
+                      </Text>
+                    </View>
+
+                    {statusVal !== '' && (
+                      <View style={styles.infoRow}>
+                        <View style={styles.labelRow}>
+                          <Icon
+                            name="cash-multiple"
+                            size={18}
+                            color="#144272"
+                            style={styles.infoIcon}
+                          />
+                          <Text style={styles.labelText}>Booking Value</Text>
+                        </View>
+                        <Text style={styles.valueText}>
+                          {item.pordd_total_cost}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                </View>
+              )
+            }
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Icon name="clipboard-list-outline" size={48} color="#666" />

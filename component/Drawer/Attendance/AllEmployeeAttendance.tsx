@@ -5,10 +5,8 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ImageBackground,
   SafeAreaView,
-  ScrollView,
 } from 'react-native';
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -17,57 +15,7 @@ import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
-import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-
-type Employee = {
-  id: string;
-  name: string;
-  cnic: string;
-  clockIn: Date;
-  clockOut: Date;
-  date: string;
-  status: 'Present' | 'Absent' | 'Leave';
-};
-
-const initialData: Employee[] = [
-  {
-    id: '1',
-    name: 'Haroon',
-    cnic: '11111-1111111-1',
-    clockIn: new Date(),
-    clockOut: new Date(),
-    date: '08-05-2025',
-    status: 'Leave',
-  },
-  {
-    id: '2',
-    name: 'Tahir',
-    cnic: '11111-1111444-4',
-    clockIn: new Date(),
-    clockOut: new Date(),
-    date: '08-05-2025',
-    status: 'Absent',
-  },
-  {
-    id: '3',
-    name: 'Furqan',
-    cnic: '22222-2222222-2',
-    clockIn: new Date(),
-    clockOut: new Date(),
-    date: '08-05-2025',
-    status: 'Present',
-  },
-  {
-    id: '4',
-    name: 'Fakhar',
-    cnic: '12345-6789999-9',
-    clockIn: new Date(),
-    clockOut: new Date(),
-    date: '08-05-2025',
-    status: 'Present',
-  },
-];
 
 interface AttendanceCart {
   emp_id: number;
@@ -81,14 +29,11 @@ interface AttendanceCart {
 
 export default function AllEmployeeAttendance() {
   const {openDrawer} = useDrawer();
-  const {token} = useUser();
   const [attCart, setAttCart] = useState<AttendanceCart[]>([]);
   const [clockInPickerFor, setClockInPickerFor] = useState<number | null>(null);
   const [clockOutPickerFor, setClockOutPickerFor] = useState<number | null>(
     null,
   );
-
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
 
   const [statusModalVisible, setStatusModalVisible] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
@@ -428,7 +373,6 @@ export default function AllEmployeeAttendance() {
                   </View>
                   <View style={{flex: 1}}>
                     <Text style={styles.employeeName}>{item.name}</Text>
-                    <Text style={styles.subText}>CNIC: {item.cnic}</Text>
                   </View>
                   <View
                     style={[
@@ -457,50 +401,102 @@ export default function AllEmployeeAttendance() {
                       />
                       <Text style={styles.labelText}>CNIC</Text>
                     </View>
-                    <Text style={styles.valueText}>{item.cnic}</Text>
+                    <Text style={styles.valueText}>{item.cnic ?? '--'}</Text>
                   </View>
 
+                  {/* Clock In - Only enabled when status is Present */}
                   <TouchableOpacity
-                    onPress={() => setClockInPickerFor(item.emp_id)}
-                    style={styles.infoRow}>
+                    onPress={() => {
+                      if (item.att_status === 'Present') {
+                        setClockInPickerFor(item.emp_id);
+                      }
+                    }}
+                    disabled={item.att_status !== 'Present'}
+                    style={[
+                      styles.infoRow,
+                      item.att_status !== 'Present' && styles.disabledRow,
+                    ]}>
                     <View style={styles.labelRow}>
                       <Icon
                         name="clock-in"
                         size={18}
-                        color="#144272"
+                        color={
+                          item.att_status === 'Present' ? '#144272' : '#999'
+                        }
                         style={styles.infoIcon}
                       />
-                      <Text style={styles.labelText}>Clock In</Text>
+                      <Text
+                        style={[
+                          styles.labelText,
+                          item.att_status !== 'Present' && styles.disabledText,
+                        ]}>
+                        Clock In
+                      </Text>
                     </View>
                     <View style={styles.timeContainer}>
-                      <Text style={styles.valueText}>
+                      <Text
+                        style={[
+                          styles.valueText,
+                          item.att_status !== 'Present' && styles.disabledText,
+                        ]}>
                         {item.clockin
                           ? formatTimeForDisplay(item.clockin)
                           : '—'}
                       </Text>
-                      <Icon name="pencil" size={14} color="#666" />
+                      {item.att_status === 'Present' && (
+                        <Icon name="pencil" size={14} color="#666" />
+                      )}
+                      {item.att_status !== 'Present' && (
+                        <Icon name="lock" size={14} color="#999" />
+                      )}
                     </View>
                   </TouchableOpacity>
 
+                  {/* Clock Out - Only enabled when status is Present */}
                   <TouchableOpacity
-                    onPress={() => setClockOutPickerFor(item.emp_id)}
-                    style={styles.infoRow}>
+                    onPress={() => {
+                      if (item.att_status === 'Present') {
+                        setClockOutPickerFor(item.emp_id);
+                      }
+                    }}
+                    disabled={item.att_status !== 'Present'}
+                    style={[
+                      styles.infoRow,
+                      item.att_status !== 'Present' && styles.disabledRow,
+                    ]}>
                     <View style={styles.labelRow}>
                       <Icon
                         name="clock-out"
                         size={18}
-                        color="#144272"
+                        color={
+                          item.att_status === 'Present' ? '#144272' : '#999'
+                        }
                         style={styles.infoIcon}
                       />
-                      <Text style={styles.labelText}>Clock Out</Text>
+                      <Text
+                        style={[
+                          styles.labelText,
+                          item.att_status !== 'Present' && styles.disabledText,
+                        ]}>
+                        Clock Out
+                      </Text>
                     </View>
                     <View style={styles.timeContainer}>
-                      <Text style={styles.valueText}>
+                      <Text
+                        style={[
+                          styles.valueText,
+                          item.att_status !== 'Present' && styles.disabledText,
+                        ]}>
                         {item.clockout
                           ? formatTimeForDisplay(item.clockout)
                           : '—'}
                       </Text>
-                      <Icon name="pencil" size={14} color="#666" />
+                      {item.att_status === 'Present' && (
+                        <Icon name="pencil" size={14} color="#666" />
+                      )}
+                      {item.att_status !== 'Present' && (
+                        <Icon name="lock" size={14} color="#999" />
+                      )}
                     </View>
                   </TouchableOpacity>
 
@@ -545,30 +541,36 @@ export default function AllEmployeeAttendance() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Date Time Pickers */}
-                {clockInPickerFor === item.emp_id && (
-                  <DateTimePicker
-                    value={getDateFrom12HourTime(item.clockin)}
-                    mode="time"
-                    is24Hour={false}
-                    display="default"
-                    onChange={(event, selectedDate) =>
-                      onClockInChangeForItem(item.emp_id, event, selectedDate)
-                    }
-                  />
-                )}
+                {/* Date Time Pickers - Only show when status is Present */}
+                {clockInPickerFor === item.emp_id &&
+                  item.att_status === 'Present' && (
+                    <DateTimePicker
+                      value={getDateFrom12HourTime(item.clockin)}
+                      mode="time"
+                      is24Hour={false}
+                      display="default"
+                      onChange={(event, selectedDate) =>
+                        onClockInChangeForItem(item.emp_id, event, selectedDate)
+                      }
+                    />
+                  )}
 
-                {clockOutPickerFor === item.emp_id && (
-                  <DateTimePicker
-                    value={getDateFrom12HourTime(item.clockout)}
-                    mode="time"
-                    is24Hour={false}
-                    display="default"
-                    onChange={(event, selectedDate) =>
-                      onClockOutChangeForItem(item.emp_id, event, selectedDate)
-                    }
-                  />
-                )}
+                {clockOutPickerFor === item.emp_id &&
+                  item.att_status === 'Present' && (
+                    <DateTimePicker
+                      value={getDateFrom12HourTime(item.clockout)}
+                      mode="time"
+                      is24Hour={false}
+                      display="default"
+                      onChange={(event, selectedDate) =>
+                        onClockOutChangeForItem(
+                          item.emp_id,
+                          event,
+                          selectedDate,
+                        )
+                      }
+                    />
+                  )}
               </View>
             )}
             ListEmptyComponent={
@@ -641,6 +643,8 @@ export default function AllEmployeeAttendance() {
             </View>
           </View>
         )}
+
+        <Toast />
       </ImageBackground>
     </SafeAreaView>
   );
@@ -832,6 +836,12 @@ const styles = StyleSheet.create({
   submitContainer: {
     paddingHorizontal: 15,
     paddingVertical: 10,
+  },
+  disabledRow: {
+    opacity: 0.5,
+  },
+  disabledText: {
+    color: '#999',
   },
   submitButton: {
     backgroundColor: '#144272',

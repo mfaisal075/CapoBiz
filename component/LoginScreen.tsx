@@ -74,7 +74,7 @@ const LoginScreen: React.FC = () => {
           autoHide: true,
           visibilityTime: 2500,
         });
-      } else if (data.status === 202) {
+      } else if (response.status === 200 && data.status === 202) {
         Toast.show({
           type: 'error',
           text1: 'Login failed',
@@ -312,6 +312,8 @@ const LoginScreen: React.FC = () => {
             </TouchableOpacity>
           </Animated.View>
         </Animated.View>
+
+        <Toast />
       </ImageBackground>
     </View>
   );

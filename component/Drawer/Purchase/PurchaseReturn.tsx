@@ -498,7 +498,7 @@ export default function PurchaseReturn() {
           },
         },
       );
-      if (res.status === 200 && res.data.status) {
+      if (res.status === 200 && res.data.status === 200) {
         Toast.show({
           type: 'success',
           text1: 'Order completed successfully!',
@@ -506,10 +506,19 @@ export default function PurchaseReturn() {
         setWithInvcList([]);
         setOrderTotal(0);
         emptyCartWithInvc();
+      } else if (res.status === 200 && res.data.status === 204) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: "The return quantity can't be available in stock!",
+          visibilityTime: 2000,
+        });
       } else {
         Toast.show({
           type: 'error',
-          text1: 'Failed to complete order',
+          text1: 'Warning!',
+          text2: 'Failed to complete order',
+          visibilityTime: 2000,
         });
       }
     } catch (error) {
@@ -531,14 +540,11 @@ export default function PurchaseReturn() {
     }
 
     try {
-      const res = await axios.post(
-        `${BASE_URL}/completepurchasereturn`,
-        {
-          supp_id: currentpsupplier,
-          refrence_no: '',
-          date: expireDate.toISOString().split('T')[0],
-        },
-      );
+      const res = await axios.post(`${BASE_URL}/completepurchasereturn`, {
+        supp_id: currentpsupplier,
+        refrence_no: '',
+        date: expireDate.toISOString().split('T')[0],
+      });
       if (res.status === 200 && res.data.status === 200) {
         Toast.show({
           type: 'success',
@@ -1144,7 +1150,7 @@ export default function PurchaseReturn() {
               style={styles.floatingCartBtn}
               onPress={() => setModalVisible('Cart')}>
               <Icon name="shopping-cart" size={24} color="white" />
-              {(withoutInvcList.length > 0) && (
+              {withoutInvcList.length > 0 && (
                 <View style={styles.cartBadge}>
                   <Text style={styles.cartBadgeText}>
                     {withInvcList.length + withoutInvcList.length}

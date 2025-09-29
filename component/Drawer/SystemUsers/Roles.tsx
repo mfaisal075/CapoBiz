@@ -148,6 +148,13 @@ export default function Roles() {
         setEditRole('');
         setedit(!edit);
         handleFetchRoles();
+      } else if (res.status === 200 && data.status === 201) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This role already exist!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -196,6 +203,13 @@ export default function Roles() {
         handleFetchRoles();
         setcustomer(!customer);
         setRole('');
+      } else if (res.status === 200 && data.status === 201) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This role already exist!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -688,7 +702,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
 
-  // Add Customer Modal Styles
+  // Add Role Modal Styles
   addCustomerModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -726,15 +740,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
-  addCustomerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  addCustomerField: {
-    flex: 1,
-    marginHorizontal: 5,
-  },
   addCustomerFullRow: {
     marginBottom: 15,
   },
@@ -754,35 +759,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     backgroundColor: '#f9f9f9',
-  },
-  addCustomerDropdownRow: {
-    marginBottom: 15,
-  },
-  addCustomerDropdownField: {
-    flex: 1,
-  },
-  addCustomerDropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    minHeight: 42,
-    zIndex: 999,
-  },
-  addCustomerDropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    zIndex: 1000,
-    maxHeight: 160,
-  },
-  addCustomerDropdownText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  addCustomerDropdownPlaceholder: {
-    color: '#999',
-    fontSize: 14,
   },
   addCustomerSubmitBtn: {
     flexDirection: 'row',

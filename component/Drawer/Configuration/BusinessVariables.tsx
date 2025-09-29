@@ -4,19 +4,20 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
   ScrollView,
   FlatList,
   TextInput,
+  Modal,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import Modal from 'react-native-modal';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import LottieView from 'lottie-react-native';
 
 interface BusinessDetails {
   id: number;
@@ -67,26 +68,6 @@ export default function BusinessVariables() {
     }));
   };
 
-  const [isModalV, setModalV] = useState(false);
-  const tglModal = () => {
-    setModalV(!isModalV);
-  };
-
-  {
-    /*edit*/
-  }
-  const [edit, setedit] = useState(false);
-
-  const toggleedit = () => {
-    setedit(!edit);
-  };
-
-  const [btncustomeraditarea, setbtncustomereditarea] = useState(false);
-
-  const togglebtncustomereditarea = () => {
-    setbtncustomereditarea(!btncustomeraditarea);
-  };
-
   const fetchBusinesses = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchcomp`);
@@ -95,6 +76,20 @@ export default function BusinessVariables() {
       console.log(error);
     }
   };
+
+  // Pagination for Customer
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const currentData = busDetails;
+  const totalRecords = currentData.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const paginatedData = currentData.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
 
   // Fetch Business Details to Edit it
   const editBusiness = async (id: any) => {
@@ -124,9 +119,7 @@ export default function BusinessVariables() {
       !editBus.bus_name.trim() ||
       !editBus.bus_name_ur.trim() ||
       !editBus.bus_address.trim() ||
-      !editBus.bus_address_ur.trim() ||
-      !editBus.bus_contact1.trim() ||
-      !editBus.bus_email.trim()
+      !editBus.bus_contact1.trim()
     ) {
       Toast.show({
         type: 'error',
@@ -158,9 +151,10 @@ export default function BusinessVariables() {
         },
       );
 
+      const data = res.data;
       console.log('Response:', res.status, res.data);
 
-      if (res.status === 200) {
+      if (res.status === 200 && data.status === 200) {
         Toast.show({
           type: 'success',
           text1: 'Updated!',
@@ -197,7 +191,7 @@ export default function BusinessVariables() {
 
       const data = res.data;
 
-      if (res.status === 200 && data.statsu === 200) {
+      if (res.status === 200 && data.status === 200) {
         Toast.show({
           type: 'success',
           text1: 'Deleted',
@@ -222,406 +216,374 @@ export default function BusinessVariables() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Business Variables
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Business Variables</Text>
           </View>
-        </View>
 
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Copy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export CSV</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export Excel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Print</Text>
+          <TouchableOpacity
+            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}>
+            <Icon name="plus" size={24} color="transparent" />
           </TouchableOpacity>
         </View>
 
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
-            data={busDetails}
+            data={paginatedData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <ScrollView
-                style={{
-                  padding: 5,
-                }}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text
-                      style={{
-                        color: '#144272',
-                        fontWeight: 'bold',
-                        marginLeft: 5,
-                        marginTop: 5,
-                      }}>
-                      {item.bus_name}
-                    </Text>
-
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'center',
-                      }}>
-                      <TouchableOpacity
-                        onPress={() => {
-                          setModal('Edit');
-                          editBusiness(item.id);
-                        }}>
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginTop: 8,
-                          }}
-                          source={require('../../../assets/edit.png')}
-                        />
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        onPress={() => {
-                          setModal('Delete');
-                          setSelectedBus(item.id);
-                        }}>
-                        <Image
-                          style={{
-                            tintColor: '#144272',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginRight: 5,
-                            marginTop: 8,
-                          }}
-                          source={require('../../../assets/delete.png')}
-                        />
-                      </TouchableOpacity>
+              <View style={styles.card}>
+                {/* Header Row */}
+                <View style={styles.headerRow}>
+                  <View style={styles.headerTxtContainer}>
+                    <View style={styles.avatarBox}>
+                      <Text style={styles.avatarText}>
+                        {item.bus_name?.charAt(0) || 'B'}
+                      </Text>
                     </View>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.productName}>{item.bus_name}</Text>
+                    </View>
+                  </View>
+                  <View style={styles.actionContainer}>
+                    <TouchableOpacity
+                      style={styles.acctionBtn}
+                      onPress={() => {
+                        setModal('Edit');
+                        editBusiness(item.id);
+                      }}>
+                      <Icon name="pencil" size={20} color={'#144272'} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.acctionBtn}
+                      onPress={() => {
+                        setModal('Delete');
+                      }}>
+                      <Icon name="delete" size={20} color={'red'} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Info Section */}
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="translate"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Urdu Name</Text>
+                    </View>
+                    <Text style={styles.valueText}>{item.bus_name_ur}</Text>
                   </View>
 
                   <View style={styles.infoRow}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Urdu Name:</Text>
-                      <Text style={styles.text}>{item.bus_name_ur}</Text>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="phone"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Contact</Text>
                     </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Contact:</Text>
-                      <Text style={styles.text}>{item.bus_contact1}</Text>
+                    <Text style={styles.valueText}>{item.bus_contact1}</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="mail"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Email</Text>
                     </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.text}>Email:</Text>
-                      <Text style={styles.text}>{item.bus_email ?? '--'}</Text>
+                    <Text style={styles.valueText}>{item.bus_email}</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="alphabetical"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Language</Text>
                     </View>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={[styles.value, {marginBottom: 5}]}>
-                        Language:
-                      </Text>
-                      <Text style={[styles.value, {marginBottom: 5}]}>
-                        {item.bus_language}
-                      </Text>
-                    </View>
+                    <Text style={styles.valueText}>{item.bus_language}</Text>
                   </View>
                 </View>
-              </ScrollView>
+              </View>
             )}
             ListEmptyComponent={
-              <View
-                style={{
-                  height: 300,
-                  width: '100%',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: 'bold',
-                    color: '#fff',
-                  }}>
-                  No data found in the database!
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
+            contentContainerStyle={{paddingBottom: 90}}
+            showsVerticalScrollIndicator={false}
           />
         </View>
 
-        {/*delete*/}
-        <Modal isVisible={modal === 'Delete'}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: 'auto',
-              maxHeight: 220,
-              borderRadius: 5,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/info.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Are you sure?
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              You won't be able to revert this record!
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setModal('')}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 100,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
+        {/* Delete Modal */}
+        <Modal visible={modal === 'Delete'} transparent animationType="fade">
+          <View style={styles.addCustomerModalOverlay}>
+            <View style={styles.deleteModalContainer}>
+              <View style={styles.delAnim}>
+                <LottieView
+                  style={{flex: 1}}
+                  source={require('../../../assets/warning.json')}
+                  autoPlay
+                  loop={false}
+                />
+              </View>
+
+              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
+              <Text style={styles.deleteModalMessage}>
+                You won't be able to revert this record!
+              </Text>
+
+              <View style={styles.deleteModalActions}>
+                <TouchableOpacity
+                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
+                  onPress={() => {
+                    setModal('');
                   }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
+                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
                     Cancel
                   </Text>
-                </View>
-              </TouchableOpacity>
+                </TouchableOpacity>
 
-              <TouchableOpacity onPress={delBusiness}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 100,
-                    height: 30,
-                    padding: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    Yes, delete it
-                  </Text>
-                </View>
-              </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
+                  onPress={delBusiness}>
+                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </Modal>
 
-        {/*Edit Modal*/}
-        <Modal isVisible={modal === 'Edit'}>
-          <ScrollView
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 320,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Update Company
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setModal('');
-                  setEditBus(initialEditBusiness);
-                }}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
+        {/* Edit Modal */}
+        <Modal visible={modal === 'Edit'} transparent animationType="slide">
+          <View style={styles.addCustomerModalOverlay}>
+            <ScrollView style={styles.addCustomerModalContainer}>
+              <View style={styles.addCustomerHeader}>
+                <Text style={styles.addCustomerTitle}>Update Company</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setModal('');
+                    setEditBus(initialEditBusiness);
                   }}
-                  source={require('../../../assets/cross.png')}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Name"
-                value={editBus.bus_name}
-                onChangeText={t => editOnChange('bus_name', t)}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Urdu Name"
-                value={editBus.bus_name_ur}
-                onChangeText={t => editOnChange('bus_name_ur', t)}
-              />
-            </View>
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Address"
-                value={editBus.bus_address}
-                onChangeText={t => editOnChange('bus_address', t)}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Urdu Address"
-                value={editBus.bus_address_ur}
-                onChangeText={t => editOnChange('bus_address_ur', t)}
-              />
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 1"
-                keyboardType="numeric"
-                maxLength={11}
-                value={editBus.bus_contact1}
-                onChangeText={t => editOnChange('bus_contact1', t)}
-              />
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 2"
-                maxLength={11}
-                keyboardType="numeric"
-                value={editBus.bus_contact2}
-                onChangeText={t => editOnChange('bus_contact2', t)}
-              />
-            </View>
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Contact 3"
-                keyboardType="numeric"
-                maxLength={11}
-                value={editBus.bus_contact3}
-                onChangeText={t => editOnChange('bus_contact3', t)}
-              />
-            </View>
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={[
-                  styles.productinput,
-                  {color: '#000', backgroundColor: '#c2bfbfff'},
-                ]}
-                placeholderTextColor="#144272"
-                placeholder="Business Email"
-                value={editBus.bus_email}
-                editable={false}
-              />
-            </View>
-
-            <TouchableOpacity onPress={updateBusiness}>
-              <View
-                style={{
-                  backgroundColor: '#144272',
-                  height: 30,
-                  width: 140,
-                  margin: 10,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignSelf: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Update Company
-                </Text>
+                  style={styles.addCustomerCloseBtn}>
+                  <Icon name="close" size={20} color="#144272" />
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          </ScrollView>
+
+              <View style={styles.addCustomerForm}>
+                {/* Name Row */}
+                <View style={styles.addCustomerRow}>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Name *</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      placeholder="Enter company name"
+                      value={editBus.bus_name}
+                      onChangeText={t => editOnChange('bus_name', t)}
+                    />
+                  </View>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Urdu Name</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      placeholder="Enter Urdu name"
+                      value={editBus.bus_name_ur}
+                      onChangeText={t => editOnChange('bus_name_ur', t)}
+                    />
+                  </View>
+                </View>
+
+                {/* Address Row */}
+                <View style={styles.addCustomerRow}>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Address *</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      placeholder="Enter address"
+                      value={editBus.bus_address}
+                      onChangeText={t => editOnChange('bus_address', t)}
+                    />
+                  </View>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Urdu Address</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      placeholder="Enter Urdu address"
+                      value={editBus.bus_address_ur}
+                      onChangeText={t => editOnChange('bus_address_ur', t)}
+                    />
+                  </View>
+                </View>
+
+                {/* Contact 1 & 2 Row */}
+                <View style={styles.addCustomerRow}>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Contact 1</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      placeholder="0300-1234567"
+                      keyboardType="phone-pad"
+                      maxLength={12}
+                      value={editBus.bus_contact1}
+                      onChangeText={text => {
+                        let cleaned = text.replace(/[^0-9-]/g, '');
+                        cleaned = cleaned.replace(/-/g, '');
+                        if (cleaned.length > 4)
+                          cleaned =
+                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                        editOnChange('bus_contact1', cleaned);
+                      }}
+                    />
+                  </View>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Contact 2</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      placeholder="0300-1234567"
+                      keyboardType="phone-pad"
+                      maxLength={12}
+                      value={editBus.bus_contact2}
+                      onChangeText={text => {
+                        let cleaned = text.replace(/[^0-9-]/g, '');
+                        cleaned = cleaned.replace(/-/g, '');
+                        if (cleaned.length > 4)
+                          cleaned =
+                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                        editOnChange('bus_contact2', cleaned);
+                      }}
+                    />
+                  </View>
+                </View>
+
+                {/* Contact 3 & Email Row */}
+                <View style={styles.addCustomerRow}>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Contact 3</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      placeholder="0300-1234567"
+                      keyboardType="phone-pad"
+                      maxLength={12}
+                      value={editBus.bus_contact3}
+                      onChangeText={text => {
+                        let cleaned = text.replace(/[^0-9-]/g, '');
+                        cleaned = cleaned.replace(/-/g, '');
+                        if (cleaned.length > 4)
+                          cleaned =
+                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                        editOnChange('bus_contact3', cleaned);
+                      }}
+                    />
+                  </View>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Business Email</Text>
+                    <TextInput
+                      style={[
+                        styles.addCustomerInput,
+                        {backgroundColor: '#f0f0f0'},
+                      ]}
+                      placeholderTextColor="#999"
+                      placeholder="business@example.com"
+                      value={editBus.bus_email}
+                      editable={false}
+                    />
+                  </View>
+                </View>
+
+                {/* Update Button */}
+                <TouchableOpacity
+                  style={styles.addCustomerSubmitBtn}
+                  onPress={updateBusiness}>
+                  <Icon name="office-building" size={20} color="white" />
+                  <Text style={styles.addCustomerSubmitText}>
+                    Update Company
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+            <Toast />
+          </View>
         </Modal>
+
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
+              </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() =>
+                setCurrentPage(prev => Math.min(prev + 1, totalPages))
+              }
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
+                Next
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ImageBackground>
     </SafeAreaView>
   );
@@ -635,97 +597,366 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
-  headerTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  header: {
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
+  headerBtn: {
     padding: 8,
-    marginVertical: 8,
-    color: 'white',
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
   },
-  inputSmall: {
+  headerCenter: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
-  label: {
-    fontWeight: 'bold',
-    fontSize: 16,
+  headerTitle: {
     color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
   },
 
-  inputRow: {
+  // Flat List Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 15,
+  },
+  card: {
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
+    marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    zIndex: 1000,
+  },
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
     justifyContent: 'space-between',
-    marginLeft: 10,
-    marginRight: 10,
+  },
+  headerTxtContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '50%',
+  },
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#144272',
+    flexWrap: 'wrap',
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'space-between',
+  },
+  acctionBtn: {
+    padding: 8,
+    backgroundColor: '#14417212',
+    borderRadius: 8,
+  },
+  subText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
+  },
+  infoBox: {
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 12,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    flex: 1,
+  },
+  infoIcon: {
+    marginRight: 6,
+  },
+  labelText: {
+    fontSize: 13,
+    color: '#144272',
+    fontWeight: '600',
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: '50%',
+    textAlign: 'right',
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 50,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    marginHorizontal: 20,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 16,
+    marginTop: 10,
+    fontWeight: '500',
   },
 
-  productinput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 6,
-    padding: 8,
-  },
-  headerButtons: {
+  // Pagination Styling
+  paginationContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-  },
-  exportBtn: {
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
   },
-  exportText: {
-    color: 'white',
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    alignItems: 'center',
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
+  },
+
+  //Delete Modal
+  deleteModalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  deleteModalIcon: {
+    width: 60,
+    height: 60,
+    tintColor: '#144272',
+    marginBottom: 15,
+  },
+  deleteModalTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
+    color: '#144272',
+    marginBottom: 8,
+  },
+  deleteModalMessage: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  deleteModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  deleteModalBtn: {
+    flex: 1,
+    marginHorizontal: 5,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  deleteModalBtnText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  delAnim: {
+    width: 120,
+    height: 120,
+    marginBottom: 15,
+  },
+
+  // Add Customer Modal Styles
+  addCustomerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  addCustomerModalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  addCustomerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  addCustomerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#144272',
+  },
+  addCustomerCloseBtn: {
+    padding: 5,
+  },
+  addCustomerForm: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  addCustomerRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  addCustomerField: {
+    flex: 1,
+    marginHorizontal: 5,
+  },
+  addCustomerFullRow: {
+    marginBottom: 15,
+  },
+  addCustomerLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#144272',
+    marginBottom: 5,
+  },
+  addCustomerInput: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    height: 45,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#333',
+    backgroundColor: '#f9f9f9',
+  },
+  addCustomerDropdownRow: {
+    marginBottom: 15,
+  },
+  addCustomerDropdownField: {
+    flex: 1,
+  },
+  addCustomerDropdown: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    backgroundColor: '#f9f9f9',
+    minHeight: 42,
+    zIndex: 999,
+  },
+  addCustomerDropdownContainer: {
+    backgroundColor: 'white',
+    borderColor: '#e0e0e0',
+    borderRadius: 8,
+    zIndex: 1000,
+    maxHeight: 160,
+  },
+  addCustomerDropdownText: {
+    color: '#333',
+    fontSize: 14,
+  },
+  addCustomerDropdownPlaceholder: {
+    color: '#999',
+    fontSize: 14,
+  },
+  addCustomerSubmitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#144272',
+    borderRadius: 10,
+    paddingVertical: 15,
+    marginTop: 20,
+  },
+  addCustomerSubmitText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
   },
 });

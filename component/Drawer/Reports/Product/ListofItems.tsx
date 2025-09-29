@@ -29,6 +29,7 @@ interface AllProductList {
   pcat_name: string;
   ums_name: string;
   prod_sub_uom: string;
+  prod_sub_qty: string;
 }
 
 interface Category {
@@ -385,7 +386,11 @@ export default function ListofItems() {
                       />
                       <Text style={styles.labelText}>Quantity</Text>
                     </View>
-                    <Text style={styles.valueText}>{item.prod_qty}</Text>
+                    <Text>
+                      {item.prod_sub_qty
+                        ? `${item.prod_qty} - ${item.prod_sub_qty}`
+                        : item.prod_qty}
+                    </Text>
                   </View>
 
                   <View style={styles.infoRow}>

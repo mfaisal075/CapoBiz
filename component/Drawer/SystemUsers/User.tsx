@@ -108,10 +108,6 @@ export default function User() {
   };
 
   const [isModalV, setModalV] = useState(false);
-  const tglModal = (id: number) => {
-    setSelectedUser(id);
-    setModalV(!isModalV);
-  };
 
   // Pagination for Customer
   const [currentPage, setCurrentPage] = useState(1);
@@ -233,6 +229,27 @@ export default function User() {
         setRoleValue(null);
         setcustomer(false);
         handleFetchData();
+      } else if (res.status === 200 && data.status === 404) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Email Already Exists!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 405) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'CNIC Already Exists!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 406) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This Contact No. Already Exists!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -334,6 +351,27 @@ export default function User() {
         setSelectedUser(null);
         handleFetchData();
         setRoleValue(null);
+      } else if (res.status === 200 && data.status === 404) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'Email Already Exists!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 405) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'CNIC Already Exists!',
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 406) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This Contact No. Already Exists!',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       console.log(error);
@@ -911,102 +949,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
-  },
-  headerTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  lastrow: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderBottomEndRadius: 10,
-    borderBottomLeftRadius: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    color: 'white',
-  },
-  inputSmall: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: 'white',
-  },
-  addButton: {
-    marginLeft: 8,
-    alignSelf: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 60,
-  },
-  completeButton: {
-    marginTop: 16,
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 320,
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 35,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: 285,
-  },
-  productinput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 6,
-    padding: 8,
-    height: 40,
   },
 
   // Flat List Styling

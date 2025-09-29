@@ -4,19 +4,20 @@ import {
   View,
   SafeAreaView,
   ImageBackground,
-  Image,
   TouchableOpacity,
   ScrollView,
   FlatList,
   TextInput,
+  Modal,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import Modal from 'react-native-modal';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import LottieView from 'lottie-react-native';
 
 interface Areas {
   id: number;
@@ -42,13 +43,9 @@ export default function CustomerArea() {
   };
 
   const [isModalV, setModalV] = useState(false);
-  const tglModal = async (id: number) => {
-    setSelectedArea(id);
-    setModalV(!isModalV);
-  };
   const [edit, setedit] = useState(false);
 
-  const toggleedit = async (id: number) => {
+  const toggleEdit = async (id: number) => {
     try {
       const res = await axios.get(
         `${BASE_URL}/editarea?id=${id}&_token=${token}`,
@@ -65,6 +62,20 @@ export default function CustomerArea() {
       console.log(error);
     }
   };
+
+  // Pagination for Customer
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
+
+  const currentData = areas;
+  const totalRecords = currentData.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
+
+  // Slice data for pagination
+  const paginatedData = currentData.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
 
   // Delete Area
   const handleDeleteArea = async () => {
@@ -93,7 +104,47 @@ export default function CustomerArea() {
 
   // Update Area
   const handleUpdateArea = async () => {
+    if (!editArea) {
+      Toast.show({
+        type: 'error',
+        text1: 'Missing Field',
+        text2: 'Area field can not empty.',
+        autoHide: true,
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
+    const specialCharRegex = /[^a-zA-Z0-9 _-]/;
+    if (specialCharRegex.test(editArea)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Area Name',
+        text2: 'Special characters are not allowed in the area name.',
+        autoHide: true,
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
     try {
+      // Check Uniqueness
+      const reschk = await axios.post(`${BASE_URL}/uniquearea`, {
+        area: editArea.trim(),
+      });
+
+      const check = reschk.data;
+
+      if (reschk.status === 200 && check.status === 0) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This area already exists!',
+          visibilityTime: 2000,
+        });
+        return;
+      }
+
       const res = await axios.post(`${BASE_URL}/updatearea`, {
         area_id: selectedArea,
         area_name: editArea.trim(),
@@ -146,7 +197,37 @@ export default function CustomerArea() {
       });
       return;
     }
+
+    const specialCharRegex = /[^a-zA-Z0-9 _-]/;
+    if (specialCharRegex.test(area)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Area Name',
+        text2: 'Special characters are not allowed in the area name.',
+        autoHide: true,
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
     try {
+      // Check Uniqueness
+      const res = await axios.post(`${BASE_URL}/uniquearea`, {
+        area: area.trim(),
+      });
+
+      const check = res.data;
+
+      if (res.status === 200 && check.status === 0) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This area already exists!',
+          visibilityTime: 2000,
+        });
+        return;
+      }
+
       const response = await axios.post(`${BASE_URL}/addarea`, {
         area_name: area.trim(),
       });
@@ -180,375 +261,253 @@ export default function CustomerArea() {
         source={require('../../../assets/screen.jpg')}
         resizeMode="cover"
         style={styles.background}>
-        <View
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            padding: 5,
-            justifyContent: 'space-between',
-          }}>
-          <TouchableOpacity onPress={openDrawer}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              style={{
-                width: 30,
-                height: 30,
-                tintColor: 'white',
-              }}
-            />
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
+            <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: 22,
-                fontWeight: 'bold',
-              }}>
-              Areas{' '}
-            </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Areas</Text>
           </View>
-          <TouchableOpacity onPress={togglecustomer}>
-            <Image
-              style={{
-                tintColor: 'white',
-                width: 18,
-                height: 18,
-                alignSelf: 'center',
-                marginRight: 5,
-              }}
-              source={require('../../../assets/add.png')}
-            />
+
+          <TouchableOpacity style={styles.headerBtn} onPress={togglecustomer}>
+            <Icon name="plus" size={24} color="white" />
           </TouchableOpacity>
         </View>
 
-        <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Copy</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export CSV</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Export Excel</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.exportBtn}>
-            <Text style={styles.exportText}>Print</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
-            data={areas}
+            data={paginatedData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <ScrollView
-                style={{
-                  padding: 5,
-                }}>
-                <View style={styles.table}>
-                  <View style={styles.tablehead}>
-                    <Text
-                      style={{
-                        color: 'white',
-                        fontWeight: 'bold',
-                        marginLeft: 5,
-                        marginTop: 5,
-                      }}>
-                      {item.area_name}
-                    </Text>
-
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'center',
-                      }}>
-                      <TouchableOpacity onPress={() => toggleedit(item.id)}>
-                        <Image
-                          style={{
-                            tintColor: 'white',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginTop: 8,
-                          }}
-                          source={require('../../../assets/edit.png')}
-                        />
-                      </TouchableOpacity>
-
-                      <TouchableOpacity onPress={() => tglModal(item.id)}>
-                        <Image
-                          style={{
-                            tintColor: 'white',
-                            width: 15,
-                            height: 15,
-                            alignSelf: 'center',
-                            marginRight: 5,
-                            marginTop: 8,
-                          }}
-                          source={require('../../../assets/delete.png')}
-                        />
-                      </TouchableOpacity>
+              <View style={styles.card}>
+                {/* Header Row */}
+                <View style={styles.headerRow}>
+                  <View style={styles.headerTxtContainer}>
+                    <View style={styles.avatarBox}>
+                      <Text style={styles.avatarText}>
+                        {item.area_name?.charAt(0) || 'A'}
+                      </Text>
+                    </View>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.productName}>{item.area_name}</Text>
                     </View>
                   </View>
+                  <View style={styles.actionContainer}>
+                    <TouchableOpacity
+                      style={styles.acctionBtn}
+                      onPress={() => {
+                        toggleEdit(item.id);
+                      }}>
+                      <Icon name="pencil" size={20} color={'#144272'} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.acctionBtn}
+                      onPress={() => {
+                        setModalV(!isModalV);
+                        setSelectedArea(item.id);
+                      }}>
+                      <Icon name="delete" size={20} color={'red'} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </ScrollView>
+
+                {/* Info Section */}
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="map"
+                        size={18}
+                        color="#144272"
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Area Name</Text>
+                    </View>
+                    <Text style={styles.valueText}>{item.area_name}</Text>
+                  </View>
+                </View>
+              </View>
             )}
             ListEmptyComponent={
-              <View
-                style={{
-                  width: '100%',
-                  height: 300,
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                }}>
-                <Text style={{fontSize: 16, fontWeight: 'bold', color: '#fff'}}>
-                  No data found in the database.
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
+            contentContainerStyle={{paddingBottom: 90}}
+            showsVerticalScrollIndicator={false}
           />
         </View>
 
-        <Modal isVisible={customer}>
-          <ScrollView
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 140,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Add New Area
-              </Text>
-              <TouchableOpacity
-                onPress={() => {
-                  setcustomer(!customer);
-                  setArea('');
-                }}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
+        {/* Add Area Modal */}
+        <Modal visible={customer} transparent animationType="slide">
+          <View style={styles.addCustomerModalOverlay}>
+            <ScrollView style={styles.addCustomerModalContainer}>
+              <View style={styles.addCustomerHeader}>
+                <Text style={styles.addCustomerTitle}>Add New Area</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setcustomer(!customer);
+                    setArea('');
                   }}
-                  source={require('../../../assets/cross.png')}
-                />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Area"
-                value={area}
-                onChangeText={text => setArea(text)}
-              />
-            </View>
-
-            <TouchableOpacity
-              onPress={() => {
-                handleAddArea();
-              }}>
-              <View
-                style={{
-                  backgroundColor: '#144272',
-                  height: 30,
-                  width: 120,
-                  margin: 10,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignSelf: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Add Area
-                </Text>
+                  style={styles.addCustomerCloseBtn}>
+                  <Icon name="close" size={20} color="#144272" />
+                </TouchableOpacity>
               </View>
-            </TouchableOpacity>
-          </ScrollView>
-        </Modal>
 
-        {/*delete*/}
-        <Modal isVisible={isModalV}>
-          <View
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: 'auto',
-              maxHeight: 220,
-              borderRadius: 5,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-            }}>
-            <Image
-              style={{
-                width: 60,
-                height: 60,
-                tintColor: '#144272',
-                alignSelf: 'center',
-                marginTop: 30,
-              }}
-              source={require('../../../assets/info.png')}
-            />
-            <Text
-              style={{
-                fontWeight: 'bold',
-                fontSize: 22,
-                textAlign: 'center',
-                marginTop: 10,
-                color: '#144272',
-              }}>
-              Are you sure?
-            </Text>
-            <Text
-              style={{
-                color: '#144272',
-                textAlign: 'center',
-              }}>
-              You won't be able to revert this record!
-            </Text>
-            <View
-              style={{
-                flexDirection: 'row',
-                marginTop: 10,
-                justifyContent: 'center',
-              }}>
-              <TouchableOpacity onPress={() => setModalV(!isModalV)}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 100,
-                    height: 30,
-                    padding: 5,
-                    marginRight: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    Cancel
-                  </Text>
+              <View style={styles.addCustomerForm}>
+                <View style={styles.addCustomerFullRow}>
+                  <Text style={styles.addCustomerLabel}>Area Name *</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter area name"
+                    value={area}
+                    onChangeText={text => setArea(text)}
+                  />
                 </View>
-              </TouchableOpacity>
 
-              <TouchableOpacity onPress={() => handleDeleteArea()}>
-                <View
-                  style={{
-                    backgroundColor: '#144272',
-                    borderRadius: 5,
-                    width: 100,
-                    height: 30,
-                    padding: 5,
-                  }}>
-                  <Text
-                    style={{
-                      color: 'white',
-                      textAlign: 'center',
-                    }}>
-                    Yes, delete it
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={styles.addCustomerSubmitBtn}
+                  onPress={handleAddArea}>
+                  <Icon name="account-plus-outline" size={20} color="white" />
+                  <Text style={styles.addCustomerSubmitText}>Add Area</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+            <Toast />
           </View>
         </Modal>
 
-        {/*edit*/}
-        <Modal isVisible={edit}>
-          <ScrollView
-            style={{
-              flex: 1,
-              backgroundColor: 'white',
-              width: '98%',
-              maxHeight: 140,
-              borderRadius: 10,
-              borderWidth: 1,
-              borderColor: '#144272',
-              overflow: 'hidden',
-              alignSelf: 'center',
-            }}>
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                margin: 10,
-              }}>
-              <Text
-                style={{
-                  color: '#144272',
-                  fontWeight: 'bold',
-                  fontSize: 16,
-                }}>
-                Edit Area
-              </Text>
-              <TouchableOpacity onPress={() => setedit(!edit)}>
-                <Image
-                  style={{
-                    width: 15,
-                    height: 15,
-                  }}
-                  source={require('../../../assets/cross.png')}
+        {/* Delete Area Modal */}
+        <Modal visible={isModalV} transparent animationType="fade">
+          <View style={styles.addCustomerModalOverlay}>
+            <View style={styles.deleteModalContainer}>
+              <View style={styles.delAnim}>
+                <LottieView
+                  style={{flex: 1}}
+                  source={require('../../../assets/warning.json')}
+                  autoPlay
+                  loop={false}
                 />
-              </TouchableOpacity>
-            </View>
-
-            <View style={[styles.row, {marginLeft: 10, marginRight: 10}]}>
-              <TextInput
-                style={styles.productinput}
-                placeholderTextColor={'#144272'}
-                placeholder="Area"
-                value={editArea}
-                onChangeText={text => setEditArea(text)}
-              />
-            </View>
-
-            <TouchableOpacity onPress={() => handleUpdateArea()}>
-              <View
-                style={{
-                  backgroundColor: '#144272',
-                  height: 30,
-                  width: 100,
-                  margin: 10,
-                  borderRadius: 10,
-                  justifyContent: 'center',
-                  alignSelf: 'center',
-                }}>
-                <Text
-                  style={{
-                    color: 'white',
-                    textAlign: 'center',
-                  }}>
-                  Update Area
-                </Text>
               </View>
-            </TouchableOpacity>
-          </ScrollView>
+
+              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
+              <Text style={styles.deleteModalMessage}>
+                You won't be able to revert this record!
+              </Text>
+
+              <View style={styles.deleteModalActions}>
+                <TouchableOpacity
+                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
+                  onPress={() => setModalV(!isModalV)}>
+                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
+                  onPress={handleDeleteArea}>
+                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <Toast />
+          </View>
         </Modal>
 
-        <Toast />
+        {/* Edit Area Modal */}
+        <Modal visible={edit} transparent animationType="slide">
+          <View style={styles.addCustomerModalOverlay}>
+            <ScrollView style={styles.addCustomerModalContainer}>
+              <View style={styles.addCustomerHeader}>
+                <Text style={styles.addCustomerTitle}>Edit Area</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setedit(!edit);
+                    setArea('');
+                    setSelectedArea(null);
+                  }}
+                  style={styles.addCustomerCloseBtn}>
+                  <Icon name="close" size={20} color="#144272" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.addCustomerForm}>
+                <View style={styles.addCustomerFullRow}>
+                  <Text style={styles.addCustomerLabel}>Area Name *</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter area name"
+                    value={editArea}
+                    onChangeText={t => setEditArea(t)}
+                  />
+                </View>
+
+                <TouchableOpacity
+                  style={styles.addCustomerSubmitBtn}
+                  onPress={handleUpdateArea}>
+                  <Icon name="account-edit" size={20} color="white" />
+                  <Text style={styles.addCustomerSubmitText}>Update Area</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+            <Toast />
+          </View>
+        </Modal>
+
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
+              </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() =>
+                setCurrentPage(prev => Math.min(prev + 1, totalPages))
+              }
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
+                Next
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
       </ImageBackground>
     </SafeAreaView>
   );
@@ -562,180 +521,322 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
-  headerTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
+  header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
-  text: {
-    marginLeft: 5,
+  headerBtn: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
+  },
+  headerTitle: {
     color: 'white',
-    marginRight: 5,
+    fontSize: 20,
+    fontWeight: 'bold',
   },
-  value: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  infoRow: {
-    marginTop: 5,
-  },
-  lastrow: {
-    backgroundColor: 'white',
-    height: 30,
-    overflow: 'hidden',
-    borderBottomEndRadius: 10,
-    borderBottomLeftRadius: 10,
+
+  // Flat List Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 15,
   },
   card: {
-    borderColor: '#144272',
-    backgroundColor: 'white',
-    height: 'auto',
-    borderRadius: 12,
-    elevation: 15,
-    marginBottom: 5,
-    padding: 10,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
+    backgroundColor: '#ffffffde',
+    borderRadius: 16,
     marginVertical: 8,
-    color: 'white',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 3},
+    elevation: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    zIndex: 1000,
   },
-  inputSmall: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: 'white',
-    borderRadius: 6,
-    padding: 8,
-  },
-  label: {
-    fontWeight: 'bold',
-    fontSize: 16,
-    color: 'white',
-  },
-  addButton: {
-    marginLeft: 8,
-    alignSelf: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 60,
-  },
-  completeButton: {
-    marginTop: 16,
-    backgroundColor: 'white',
-    borderRadius: 15,
-    width: 320,
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: 'white',
-    minHeight: 35,
-    borderRadius: 6,
-    padding: 8,
-    marginVertical: 8,
-    backgroundColor: 'transparent',
-    width: 285,
-  },
-  inputRow: {
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
     justifyContent: 'space-between',
-    marginLeft: 10,
-    marginRight: 10,
   },
-  search: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    height: 40,
-  },
-  productinput: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 6,
-    padding: 8,
-  },
-  cardContainer: {
-    margin: 20,
-    padding: 16,
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-    paddingBottom: 24,
-    marginBottom: 40,
-  },
-  customerImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
-    borderColor: '#144272',
-  },
-  noImageText: {
-    color: '#144272',
-    fontStyle: 'italic',
-  },
-  infoGrid: {
+  headerTxtContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    width: '50%',
+  },
+  avatarBox: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    color: '#fff',
+    fontWeight: '700',
+    fontSize: 18,
+  },
+  productName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#144272',
     flexWrap: 'wrap',
+  },
+  actionContainer: {
+    flexDirection: 'row',
+    gap: 10,
     justifyContent: 'space-between',
   },
-  labl: {
-    width: '68%',
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 4,
+  acctionBtn: {
+    padding: 8,
+    backgroundColor: '#14417212',
+    borderRadius: 8,
   },
-  valu: {
-    width: '68%',
-    marginBottom: 8,
-    color: '#144272',
+  subText: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 2,
   },
-  headerButtons: {
+  infoBox: {
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 12,
+  },
+  infoRow: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  exportBtn: {
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+    flex: 1,
+  },
+  infoIcon: {
+    marginRight: 6,
+  },
+  labelText: {
+    fontSize: 13,
+    color: '#144272',
+    fontWeight: '600',
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: '50%',
+    textAlign: 'right',
+    fontWeight: '500',
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 50,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    marginHorizontal: 20,
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 16,
+    marginTop: 10,
+    fontWeight: '500',
+  },
+
+  // Pagination Styling
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    position: 'absolute',
+    bottom: 0,
+    width: '100%',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
   },
-  exportText: {
-    color: 'white',
+  pageButton: {
+    backgroundColor: '#fff',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
+  },
+  pageButtonDisabled: {
+    backgroundColor: '#ddd',
+  },
+  pageButtonText: {
+    color: '#144272',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  pageButtonTextDisabled: {
+    color: '#777',
+  },
+  pageIndicator: {
+    alignItems: 'center',
+  },
+  pageIndicatorText: {
+    color: '#fff',
+    fontWeight: '500',
+    fontSize: 14,
+  },
+  pageCurrent: {
+    fontWeight: '700',
+    color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
+  },
+
+  // Add Customer Modal Styles
+  addCustomerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  addCustomerModalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    maxHeight: '40%',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+  },
+  addCustomerHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e0e0e0',
+  },
+  addCustomerTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
+    color: '#144272',
+  },
+  addCustomerCloseBtn: {
+    padding: 5,
+  },
+  addCustomerForm: {
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  addCustomerFullRow: {
+    marginBottom: 15,
+  },
+  addCustomerLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#144272',
+    marginBottom: 5,
+  },
+  addCustomerInput: {
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+    height: 45,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#333',
+    backgroundColor: '#f9f9f9',
+  },
+  addCustomerSubmitBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#144272',
+    borderRadius: 10,
+    paddingVertical: 15,
+    marginTop: 20,
+  },
+  addCustomerSubmitText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+
+  //Delete Modal
+  deleteModalContainer: {
+    backgroundColor: 'white',
+    borderRadius: 15,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 10,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  deleteModalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#144272',
+    marginBottom: 8,
+  },
+  deleteModalMessage: {
+    fontSize: 14,
+    color: '#555',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  deleteModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+  },
+  deleteModalBtn: {
+    flex: 1,
+    marginHorizontal: 5,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  deleteModalBtnText: {
+    color: 'white',
+    fontSize: 15,
+    fontWeight: 'bold',
+  },
+  delAnim: {
+    width: 120,
+    height: 120,
+    marginBottom: 15,
   },
 });

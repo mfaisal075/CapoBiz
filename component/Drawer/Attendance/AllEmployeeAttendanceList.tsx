@@ -278,8 +278,14 @@ export default function AllEmployeeAttendanceList() {
     try {
       const res = await axios.post(`${BASE_URL}/add_attendance`, {
         emp_id: addAttendance.emp,
-        clockin: formatTime(addAttendance.clockIn),
-        clockout: formatTime(addAttendance.clockOut),
+        clockin:
+          addAttendance.status === 'Present'
+            ? formatTime(addAttendance.clockIn)
+            : '',
+        clockout:
+          addAttendance.status === 'Present'
+            ? formatTime(addAttendance.clockOut)
+            : '',
         date: formatDateForAPI(addAttendance.date),
         att_status: addAttendance.status,
       });
@@ -408,7 +414,6 @@ export default function AllEmployeeAttendanceList() {
             <Icon name="plus-circle" size={24} color="white" />
           </TouchableOpacity>
         </View>
-
         {/* Employee List */}
         <View style={styles.listContainer}>
           <FlatList
@@ -550,7 +555,6 @@ export default function AllEmployeeAttendanceList() {
             showsVerticalScrollIndicator={false}
           />
         </View>
-
         {/* Pagination Controls */}
         {totalRecords > 0 && (
           <View style={styles.paginationContainer}>
@@ -665,34 +669,89 @@ export default function AllEmployeeAttendanceList() {
                 listMode="SCROLLVIEW"
               />
 
-              {/* Clock In/Out */}
+              {/* Clock In/Out - Only enabled when status is Present */}
               <View style={styles.timeRow}>
                 <TouchableOpacity
-                  style={styles.timeInput}
-                  onPress={() => setShowClockInPickerAdd(true)}>
-                  <Text style={styles.timeLabel}>Clock In:</Text>
-                  <Text style={styles.timeValue}>
+                  style={[
+                    styles.timeInput,
+                    addAttendance.status !== 'Present' &&
+                      styles.disabledTimeInput,
+                  ]}
+                  onPress={() => {
+                    if (addAttendance.status === 'Present') {
+                      setShowClockInPickerAdd(true);
+                    }
+                  }}
+                  disabled={addAttendance.status !== 'Present'}>
+                  <Text
+                    style={[
+                      styles.timeLabel,
+                      addAttendance.status !== 'Present' && styles.disabledText,
+                    ]}>
+                    Clock In:
+                  </Text>
+                  <Text
+                    style={[
+                      styles.timeValue,
+                      addAttendance.status !== 'Present' && styles.disabledText,
+                    ]}>
                     {addAttendance.clockIn.toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
                   </Text>
+                  {addAttendance.status !== 'Present' && (
+                    <Icon
+                      name="lock"
+                      size={16}
+                      color="#999"
+                      style={{marginLeft: 6}}
+                    />
+                  )}
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.timeInput}
-                  onPress={() => setShowClockOutPickerAdd(true)}>
-                  <Text style={styles.timeLabel}>Clock Out:</Text>
-                  <Text style={styles.timeValue}>
+                  style={[
+                    styles.timeInput,
+                    addAttendance.status !== 'Present' &&
+                      styles.disabledTimeInput,
+                  ]}
+                  onPress={() => {
+                    if (addAttendance.status === 'Present') {
+                      setShowClockOutPickerAdd(true);
+                    }
+                  }}
+                  disabled={addAttendance.status !== 'Present'}>
+                  <Text
+                    style={[
+                      styles.timeLabel,
+                      addAttendance.status !== 'Present' && styles.disabledText,
+                    ]}>
+                    Clock Out:
+                  </Text>
+                  <Text
+                    style={[
+                      styles.timeValue,
+                      addAttendance.status !== 'Present' && styles.disabledText,
+                    ]}>
                     {addAttendance.clockOut.toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
                   </Text>
+                  {addAttendance.status !== 'Present' && (
+                    <Icon
+                      name="lock"
+                      size={16}
+                      color="#999"
+                      style={{marginLeft: 6}}
+                    />
+                  )}
                 </TouchableOpacity>
               </View>
 
-              {showClockInPickerAdd && (
+              {/* Only show time pickers when status is Present */}
+              {showClockInPickerAdd && addAttendance.status === 'Present' && (
                 <DateTimePicker
                   value={addAttendance.clockIn}
                   mode="time"
@@ -701,7 +760,7 @@ export default function AllEmployeeAttendanceList() {
                   onChange={onClockInChangeAdd}
                 />
               )}
-              {showClockOutPickerAdd && (
+              {showClockOutPickerAdd && addAttendance.status === 'Present' && (
                 <DateTimePicker
                   value={addAttendance.clockOut}
                   mode="time"
@@ -805,34 +864,93 @@ export default function AllEmployeeAttendanceList() {
                 listMode="SCROLLVIEW"
               />
 
-              {/* Clock In/Out */}
+              {/* Clock In/Out - Only enabled when status is Present */}
               <View style={styles.timeRow}>
                 <TouchableOpacity
-                  style={styles.timeInput}
-                  onPress={() => setShowClockInPicker(true)}>
-                  <Text style={styles.timeLabel}>Clock In:</Text>
-                  <Text style={styles.timeValue}>
+                  style={[
+                    styles.timeInput,
+                    editAttendance.status !== 'Present' &&
+                      styles.disabledTimeInput,
+                  ]}
+                  onPress={() => {
+                    if (editAttendance.status === 'Present') {
+                      setShowClockInPicker(true);
+                    }
+                  }}
+                  disabled={editAttendance.status !== 'Present'}>
+                  <Text
+                    style={[
+                      styles.timeLabel,
+                      editAttendance.status !== 'Present' &&
+                        styles.disabledText,
+                    ]}>
+                    Clock In:
+                  </Text>
+                  <Text
+                    style={[
+                      styles.timeValue,
+                      editAttendance.status !== 'Present' &&
+                        styles.disabledText,
+                    ]}>
                     {editAttendance.clockIn.toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
                   </Text>
+                  {editAttendance.status !== 'Present' && (
+                    <Icon
+                      name="lock"
+                      size={16}
+                      color="#999"
+                      style={{marginLeft: 6}}
+                    />
+                  )}
                 </TouchableOpacity>
 
                 <TouchableOpacity
-                  style={styles.timeInput}
-                  onPress={() => setShowClockOutPicker(true)}>
-                  <Text style={styles.timeLabel}>Clock Out:</Text>
-                  <Text style={styles.timeValue}>
+                  style={[
+                    styles.timeInput,
+                    editAttendance.status !== 'Present' &&
+                      styles.disabledTimeInput,
+                  ]}
+                  onPress={() => {
+                    if (editAttendance.status === 'Present') {
+                      setShowClockOutPicker(true);
+                    }
+                  }}
+                  disabled={editAttendance.status !== 'Present'}>
+                  <Text
+                    style={[
+                      styles.timeLabel,
+                      editAttendance.status !== 'Present' &&
+                        styles.disabledText,
+                    ]}>
+                    Clock Out:
+                  </Text>
+                  <Text
+                    style={[
+                      styles.timeValue,
+                      editAttendance.status !== 'Present' &&
+                        styles.disabledText,
+                    ]}>
                     {editAttendance.clockOut.toLocaleTimeString([], {
                       hour: '2-digit',
                       minute: '2-digit',
                     })}
                   </Text>
+                  {editAttendance.status !== 'Present' && (
+                    <Icon
+                      name="lock"
+                      size={16}
+                      color="#999"
+                      style={{marginLeft: 6}}
+                    />
+                  )}
                 </TouchableOpacity>
               </View>
 
-              {showClockInPicker && (
+              {/* Only show time pickers when status is Present */}
+              {showClockInPicker && editAttendance.status === 'Present' && (
                 <DateTimePicker
                   value={editAttendance.clockIn}
                   mode="time"
@@ -841,7 +959,7 @@ export default function AllEmployeeAttendanceList() {
                   onChange={onClockInChange}
                 />
               )}
-              {showClockOutPicker && (
+              {showClockOutPicker && editAttendance.status === 'Present' && (
                 <DateTimePicker
                   value={editAttendance.clockOut}
                   mode="time"
@@ -883,7 +1001,6 @@ export default function AllEmployeeAttendanceList() {
             </ScrollView>
           </View>
         </Modal>
-
         {/*Delete Confirmation Modal*/}
         <Modal isVisible={modal === 'Delete'}>
           <View style={styles.deleteModalContainer}>
@@ -1260,6 +1377,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
     marginLeft: 8,
+  },
+  disabledTimeInput: {
+    opacity: 0.5,
+    backgroundColor: '#f5f5f5',
+  },
+  disabledText: {
+    color: '#999',
   },
 
   // Delete Modal Styles
