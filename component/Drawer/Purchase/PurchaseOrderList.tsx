@@ -237,7 +237,7 @@ export default function PurchaseOrderList() {
         </View>
 
         {/* Flatlist */}
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
@@ -322,54 +322,58 @@ export default function PurchaseOrderList() {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 290, paddingTop: 10}}
+            contentContainerStyle={{paddingBottom: 120, paddingTop: 10}}
+            showsVerticalScrollIndicator={false}
           />
         </View>
-      </ImageBackground>
 
-      {/* Pagination Controls */}
-      {totalRecords > 0 && (
-        <View style={styles.paginationContainer}>
-          <TouchableOpacity
-            disabled={currentPage === 1}
-            onPress={() => setCurrentPage(prev => prev - 1)}
-            style={[
-              styles.pageButton,
-              currentPage === 1 && styles.pageButtonDisabled,
-            ]}>
-            <Text
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
               style={[
-                styles.pageButtonText,
-                currentPage === 1 && styles.pageButtonTextDisabled,
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
               ]}>
-              Prev
-            </Text>
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
+                Prev
+              </Text>
+            </TouchableOpacity>
 
-          <View style={styles.pageIndicator}>
-            <Text style={styles.pageIndicatorText}>
-              Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-              {totalPages}
-            </Text>
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
+              </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
+                Next
+              </Text>
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity
-            disabled={currentPage === totalPages}
-            onPress={() => setCurrentPage(prev => prev + 1)}
-            style={[
-              styles.pageButton,
-              currentPage === totalPages && styles.pageButtonDisabled,
-            ]}>
-            <Text
-              style={[
-                styles.pageButtonText,
-                currentPage === totalPages && styles.pageButtonTextDisabled,
-              ]}>
-              Next
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </ImageBackground>
 
       {/* View Modal */}
       <Modal
@@ -645,8 +649,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFD166',
   },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
+  },
 
   // Flatlist styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,

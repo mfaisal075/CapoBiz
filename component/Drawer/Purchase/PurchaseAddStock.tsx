@@ -883,6 +883,8 @@ export default function PurchaseAddStock() {
             <Toast />
           </SafeAreaView>
         </Modal>
+
+        <Toast />
       </ImageBackground>
     </SafeAreaView>
   );

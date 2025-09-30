@@ -200,7 +200,7 @@ export default function PurchaseList() {
         </View>
 
         {/* Flatlist */}
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
             data={currentData}
             keyExtractor={(item, index) => `${item.prch_invoice_no}_${index}`}
@@ -264,7 +264,7 @@ export default function PurchaseList() {
 
                     <View style={styles.infoRow}>
                       <View style={styles.labelRow}>
-                        <Icon name="scale-balance" size={16} color="#144272" />
+                        <Icon name="wallet" size={16} color="#144272" />
                         <Text style={styles.infoText}>Balance:</Text>
                       </View>
                       <Text style={styles.infoValue}>{item.prch_balance}</Text>
@@ -280,7 +280,7 @@ export default function PurchaseList() {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 220, paddingTop: 10}}
+            contentContainerStyle={{paddingBottom: 110, paddingTop: 10}}
           />
         </View>
       </ImageBackground>
@@ -309,6 +309,7 @@ export default function PurchaseList() {
               Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
               {totalPages}
             </Text>
+            <Text style={styles.totalText}>Total: {totalRecords} records</Text>
           </View>
 
           <TouchableOpacity
@@ -650,8 +651,18 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFD166',
   },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
+  },
 
   // Flatlist styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,

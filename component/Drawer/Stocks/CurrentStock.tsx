@@ -142,173 +142,184 @@ export default function CurrentStock() {
           />
         </View>
 
+        {/* Summary Cards */}
+        <View style={styles.summaryContainer}>
+          <View style={styles.innerSummaryCtx}>
+            <Text style={styles.summaryLabel}>Total Cost: </Text>
+            <Text style={styles.summaryValue}>{totalCost.toFixed(2)}</Text>
+          </View>
+          <View style={styles.innerSummaryCtx}>
+            <Text style={styles.summaryLabel}>Total Retail: </Text>
+            <Text style={styles.summaryValue}>{totalRetail.toFixed(2)}</Text>
+          </View>
+        </View>
+
         {/* Product List */}
-        <FlatList
-          data={currentData}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({item}) => {
-            const qty = parseFloat(item.prod_qty) || 0;
-            const subQty = parseFloat(item.prod_sub_qty) || '';
-            const costPrice = parseFloat(item.prod_costprice) || 0;
-            const retailPrice = parseFloat(item.prod_fretailprice) || 0;
-            const itemTotalCost = qty * costPrice;
-            const itemTotalRetail = qty * retailPrice;
+        <View style={styles.listContainer}>
+          <FlatList
+            data={currentData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => {
+              const qty = parseFloat(item.prod_qty) || 0;
+              const subQty = parseFloat(item.prod_sub_qty) || '';
+              const costPrice = parseFloat(item.prod_costprice) || 0;
+              const retailPrice = parseFloat(item.prod_fretailprice) || 0;
+              const itemTotalCost = qty * costPrice;
+              const itemTotalRetail = qty * retailPrice;
 
-            return (
-              <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.prod_name?.charAt(0) || 'P'}
-                    </Text>
+              return (
+                <View style={styles.card}>
+                  {/* Header Row */}
+                  <View style={styles.headerRow}>
+                    <View style={styles.avatarBox}>
+                      <Text style={styles.avatarText}>
+                        {item.prod_name?.charAt(0) || 'P'}
+                      </Text>
+                    </View>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.name}>{item.prod_name}</Text>
+                      <Text style={styles.subText}>
+                        {item.pcat_name || 'No category'}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={{flex: 1}}>
-                    <Text style={styles.name}>{item.prod_name}</Text>
-                    <Text style={styles.subText}>
-                      {item.pcat_name || 'No category'}
-                    </Text>
+
+                  {/* Info */}
+                  <View style={styles.infoBox}>
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoLeft}>
+                        <Icon
+                          name="cube-outline"
+                          size={16}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.infoText}>Quantity:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
+                        {`${qty}${subQty ? `-${subQty}` : ''}`}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoLeft}>
+                        <Icon
+                          name="cash"
+                          size={16}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.infoText}>Cost Price:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
+                        {costPrice.toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoLeft}>
+                        <Icon
+                          name="calculator"
+                          size={16}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.infoText}>Total Cost:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
+                        {itemTotalCost.toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoLeft}>
+                        <Icon
+                          name="tag-outline"
+                          size={16}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.infoText}>Retail Price:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
+                        {retailPrice.toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoLeft}>
+                        <Icon
+                          name="cash-multiple"
+                          size={16}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.infoText}>Total Retail:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
+                        {itemTotalRetail.toFixed(2)}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-
-                {/* Info */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="cube-outline"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Quantity:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>
-                      {`${qty}${subQty ? `-${subQty}` : ''}`}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="cash"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Cost Price:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>{costPrice.toFixed(2)}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="calculator"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Total Cost:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>
-                      {itemTotalCost.toFixed(2)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="tag-outline"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Retail Price:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>
-                      {retailPrice.toFixed(2)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="cash-multiple"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Total Retail:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>
-                      {itemTotalRetail.toFixed(2)}
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            );
-          }}
-          ListEmptyComponent={
-            <View style={{alignItems: 'center', marginTop: 20}}>
-              <Text style={{color: '#fff', fontSize: 14}}>No Stock found.</Text>
-            </View>
-          }
-          contentContainerStyle={{paddingBottom: 70}}
-        />
-
-        {/* Bottom Bar: Totals + Pagination */}
-        {totalRecords > 0 && (
-          <View style={styles.bottomBar}>
-            {/* Totals */}
-            <View>
-              <Text style={styles.totalText}>
-                Total Cost: {totalCost.toFixed(2)}
-              </Text>
-              <Text style={styles.totalText}>
-                Total Retail: {totalRetail.toFixed(2)}
-              </Text>
-            </View>
-
-            {/* Pagination */}
-            <View style={styles.paginationRow}>
-              <TouchableOpacity
-                disabled={currentPage === 1}
-                onPress={() => setCurrentPage(prev => prev - 1)}
-                style={[
-                  styles.pageButton,
-                  currentPage === 1 && styles.pageButtonDisabled,
-                ]}>
-                <Text
-                  style={[
-                    styles.pageButtonText,
-                    currentPage === 1 && styles.pageButtonTextDisabled,
-                  ]}>
-                  Prev
+              );
+            }}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>
+                  No Stock found.
                 </Text>
-              </TouchableOpacity>
+              </View>
+            }
+            contentContainerStyle={{paddingBottom: 110}}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
 
-              <Text style={styles.pageIndicator}>
-                <Text style={styles.pageCurrent}>{currentPage}</Text> /{' '}
+        {/* Pagination Controls */}
+        {totalRecords > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
                 {totalPages}
               </Text>
-
-              <TouchableOpacity
-                disabled={currentPage === totalPages}
-                onPress={() => setCurrentPage(prev => prev + 1)}
-                style={[
-                  styles.pageButton,
-                  currentPage === totalPages && styles.pageButtonDisabled,
-                ]}>
-                <Text
-                  style={[
-                    styles.pageButtonText,
-                    currentPage === totalPages && styles.pageButtonTextDisabled,
-                  ]}>
-                  Next
-                </Text>
-              </TouchableOpacity>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
+              </Text>
             </View>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
+                Next
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
       </ImageBackground>
@@ -363,6 +374,10 @@ const styles = StyleSheet.create({
   },
 
   // Card
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,
@@ -430,37 +445,35 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
 
-  // Bottom bar (Totals + Pagination)
-  bottomBar: {
+  // Pagination Styling
+  paginationContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
-    paddingHorizontal: 15,
+    paddingHorizontal: 20,
     backgroundColor: '#144272',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
     bottom: 0,
     width: '100%',
-  },
-  totalText: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  paginationRow: {
-    width: '55%',
-    flexDirection: 'row',
-    justifyContent: 'space-evenly',
-    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: -2},
+    elevation: 6,
   },
   pageButton: {
     backgroundColor: '#fff',
-    paddingVertical: 5,
-    paddingHorizontal: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
     borderRadius: 20,
-    marginHorizontal: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 2,
   },
   pageButtonDisabled: {
     backgroundColor: '#ddd',
@@ -468,17 +481,53 @@ const styles = StyleSheet.create({
   pageButtonText: {
     color: '#144272',
     fontWeight: '600',
+    fontSize: 14,
   },
   pageButtonTextDisabled: {
     color: '#777',
   },
   pageIndicator: {
+    alignItems: 'center',
+  },
+  pageIndicatorText: {
     color: '#fff',
-    fontWeight: '600',
+    fontWeight: '500',
     fontSize: 14,
   },
   pageCurrent: {
     fontWeight: '700',
     color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
+  },
+
+  //Summary Container Styling
+  summaryContainer: {
+    paddingHorizontal: 15,
+    marginBottom: 10,
+    backgroundColor: '#fff',
+    marginHorizontal: 15,
+    borderRadius: 12,
+    paddingVertical: 10,
+  },
+  innerSummaryCtx: {
+    flexDirection: 'row',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '500',
+  },
+  summaryValue: {
+    fontSize: 16,
+    color: '#144272',
+    fontWeight: 'bold',
   },
 });

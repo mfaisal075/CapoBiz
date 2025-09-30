@@ -112,7 +112,7 @@ export default function DeletedProducts() {
           </TouchableOpacity>
         </View>
 
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
@@ -232,7 +232,7 @@ export default function DeletedProducts() {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 120}}
+            contentContainerStyle={{paddingBottom: 130}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -364,6 +364,10 @@ const styles = StyleSheet.create({
   },
 
   // Flat List styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,

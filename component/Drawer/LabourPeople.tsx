@@ -490,7 +490,7 @@ export default function LabourPeople() {
           </TouchableOpacity>
         </View>
 
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
@@ -603,7 +603,7 @@ export default function LabourPeople() {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 120}}
+            contentContainerStyle={{paddingBottom: 110}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -1370,6 +1370,10 @@ const styles = StyleSheet.create({
   },
 
   // FlatList Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,

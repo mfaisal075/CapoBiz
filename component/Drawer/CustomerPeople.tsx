@@ -21,7 +21,6 @@ import {useUser} from '../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
-import successAnimation from '../../assets/success.json';
 
 interface EditCustomer {
   id: number;
@@ -176,6 +175,7 @@ export default function CustomerPeople() {
   const [areaData, setAreaData] = useState<AreaData[]>([]);
   const [enableBal, setEnableBal] = useState<string[]>([]);
   const [editForm, setEditForm] = useState<EditCustomer>(initialEditCustomer);
+  const [modalVisible, setModalVisible] = useState('');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -206,15 +206,6 @@ export default function CustomerPeople() {
     }));
   };
 
-  {
-    /*customer*/
-  }
-  const [customer, setcustomer] = useState(false);
-
-  const togglecustomer = () => {
-    setcustomer(!customer);
-  };
-
   const [customerType, setcustomerType] = useState(false);
   const [custType, setCustType] = useState<string | null>('');
 
@@ -228,15 +219,9 @@ export default function CustomerPeople() {
     {label: 'Recievable', value: 'recievable'},
   ];
 
-  const [isModalV, setModalV] = useState(false);
-  const tglModal = () => {
-    setModalV(!isModalV);
-  };
-
   {
     /*edit*/
   }
-  const [edit, setedit] = useState(false);
 
   const toggleedit = async (id: number) => {
     try {
@@ -246,7 +231,7 @@ export default function CustomerPeople() {
       setEditForm(res.data);
       setCurrentEdit(res.data.cust_type_id);
       setCustEditArea(res.data.cust_area_id);
-      setedit(!edit);
+      setModalVisible('Edit');
     } catch (error) {
       console.log(error);
     }
@@ -256,12 +241,6 @@ export default function CustomerPeople() {
   const [currentEdit, setCurrentEdit] = useState<string | null>('');
   const [customereditArea, setcustomereditArea] = useState(false);
   const [custEditArea, setCustEditArea] = useState<string | null>('');
-
-  const [view, setview] = useState(false);
-
-  const toggleview = () => {
-    setview(!view);
-  };
 
   // Fetch Customer
   const fetchCustomers = async () => {
@@ -291,7 +270,7 @@ export default function CustomerPeople() {
         });
 
         setSelectedCustomer(null);
-        tglModal();
+        setModalVisible('');
         fetchCustomers();
       }
     } catch (error) {
@@ -421,7 +400,7 @@ export default function CustomerPeople() {
         setCustType('');
         setEnableBal([]);
         setcurrentpaymentType('');
-        setcustomer(false);
+        setModalVisible('');
       } else if (res.status === 200 && data.status === 203) {
         Toast.show({
           type: 'error',
@@ -514,7 +493,7 @@ export default function CustomerPeople() {
         setEditForm(initialEditCustomer);
         setCurrentEdit('');
         setCustEditArea('');
-        setedit(!edit);
+        setModalVisible('');
       } else if (res.status === 200 && data.status === 202) {
         Toast.show({
           type: 'error',
@@ -563,12 +542,14 @@ export default function CustomerPeople() {
             <Text style={styles.headerTitle}>Customer</Text>
           </View>
 
-          <TouchableOpacity onPress={togglecustomer} style={[styles.headerBtn]}>
+          <TouchableOpacity
+            onPress={() => setModalVisible('Add')}
+            style={[styles.headerBtn]}>
             <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
@@ -592,7 +573,7 @@ export default function CustomerPeople() {
                   <View style={styles.actionRow}>
                     <TouchableOpacity
                       onPress={() => {
-                        toggleview();
+                        setModalVisible('View');
                         const fetchDetails = async (id: number) => {
                           try {
                             const res = await axios.get(
@@ -624,7 +605,7 @@ export default function CustomerPeople() {
 
                     <TouchableOpacity
                       onPress={() => {
-                        tglModal();
+                        setModalVisible('Delete');
                         setSelectedCustomer(item.id);
                       }}>
                       <Icon
@@ -637,7 +618,6 @@ export default function CustomerPeople() {
                   </View>
                 </View>
 
-                {/* Info Section */}
                 {/* Info Section */}
                 <View style={styles.infoBox}>
                   <View style={styles.infoRow}>
@@ -679,20 +659,23 @@ export default function CustomerPeople() {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 110}}
+            contentContainerStyle={{paddingBottom: 100}}
             showsVerticalScrollIndicator={false}
           />
         </View>
 
         {/*Add Customer Modal*/}
-        <Modal visible={customer} transparent animationType="slide">
+        <Modal
+          visible={modalVisible === 'Add'}
+          transparent
+          animationType="slide">
           <View style={styles.addCustomerModalOverlay}>
             <ScrollView style={styles.addCustomerModalContainer}>
               <View style={styles.addCustomerHeader}>
                 <Text style={styles.addCustomerTitle}>Add New Customer</Text>
                 <TouchableOpacity
                   onPress={() => {
-                    setcustomer(!customer);
+                    setModalVisible('');
                     setAddForm(initialAddCustomer);
                   }}
                   style={styles.addCustomerCloseBtn}>
@@ -963,7 +946,10 @@ export default function CustomerPeople() {
         </Modal>
 
         {/*Delete*/}
-        <Modal visible={isModalV} transparent animationType="fade">
+        <Modal
+          visible={modalVisible === 'Delete'}
+          transparent
+          animationType="fade">
           <View style={styles.addCustomerModalOverlay}>
             <View style={styles.deleteModalContainer}>
               <View style={styles.delAnim}>
@@ -987,7 +973,7 @@ export default function CustomerPeople() {
               <View style={styles.deleteModalActions}>
                 <TouchableOpacity
                   style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
-                  onPress={() => setModalV(!isModalV)}>
+                  onPress={() => setModalVisible('')}>
                   <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
                     Cancel
                   </Text>
@@ -1004,14 +990,17 @@ export default function CustomerPeople() {
         </Modal>
 
         {/*Edit*/}
-        <Modal visible={edit} transparent animationType="slide">
+        <Modal
+          visible={modalVisible === 'Edit'}
+          transparent
+          animationType="slide">
           <View style={styles.addCustomerModalOverlay}>
             <ScrollView style={styles.addCustomerModalContainer}>
               {/* Header */}
               <View style={styles.addCustomerHeader}>
                 <Text style={styles.addCustomerTitle}>Edit Customer</Text>
                 <TouchableOpacity
-                  onPress={() => setedit(!edit)}
+                  onPress={() => setModalVisible('')}
                   style={styles.addCustomerCloseBtn}>
                   <Icon name="close" size={20} color="#144272" />
                 </TouchableOpacity>
@@ -1269,7 +1258,10 @@ export default function CustomerPeople() {
         </Modal>
 
         {/* View Modal*/}
-        <Modal visible={view} transparent animationType="slide">
+        <Modal
+          visible={modalVisible === 'View'}
+          transparent
+          animationType="slide">
           <View style={styles.addCustomerModalOverlay}>
             <ScrollView style={styles.addCustomerModalContainer}>
               {/* Header */}
@@ -1277,7 +1269,7 @@ export default function CustomerPeople() {
                 <Text style={styles.addCustomerTitle}>Customer Details</Text>
                 <TouchableOpacity
                   onPress={() => {
-                    setview(!view);
+                    setModalVisible('');
                     setSelectedCust([]);
                   }}
                   style={styles.addCustomerCloseBtn}>
@@ -1457,6 +1449,8 @@ export default function CustomerPeople() {
             </TouchableOpacity>
           </View>
         )}
+
+        <Toast />
       </ImageBackground>
     </SafeAreaView>
   );
@@ -1494,6 +1488,10 @@ const styles = StyleSheet.create({
   },
 
   // FlatList Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,

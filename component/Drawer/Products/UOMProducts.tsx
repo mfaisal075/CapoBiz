@@ -227,76 +227,78 @@ export default function UOMProducts() {
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={currentData}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({item}) => (
-            <View style={styles.card}>
-              {/* Header Row */}
-              <View style={styles.headerRow}>
-                {/* Avatar Circle */}
-                <View style={styles.avatarBox}>
-                  <Text style={styles.avatarText}>
-                    {item.ums_name?.charAt(0).toUpperCase() || 'U'}
-                  </Text>
-                </View>
+        <View style={styles.listContainer}>
+          <FlatList
+            data={currentData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={styles.card}>
+                {/* Header Row */}
+                <View style={styles.headerRow}>
+                  {/* Avatar Circle */}
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.ums_name?.charAt(0).toUpperCase() || 'U'}
+                    </Text>
+                  </View>
 
-                {/* UOM Info */}
-                <View style={{flex: 1}}>
-                  <Text style={styles.name}>{item.ums_name}</Text>
-                  <Text style={styles.subText}>Unit of Measure</Text>
-                </View>
+                  {/* UOM Info */}
+                  <View style={{flex: 1}}>
+                    <Text style={styles.name}>{item.ums_name}</Text>
+                    <Text style={styles.subText}>Unit of Measure</Text>
+                  </View>
 
-                {/* Actions */}
-                <View style={styles.actionRow}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModalVisible('Edit');
-                      const fetchSignleUmo = async (id: number) => {
-                        try {
-                          const res = await axios.get(
-                            `${BASE_URL}/edituom?id=${id}&_token=${token}`,
-                          );
-                          setEditUmo(res.data.ums_name);
-                          setSelectedUmo(res.data.id);
-                        } catch (error) {
-                          console.log(error);
-                        }
-                      };
-                      fetchSignleUmo(item.id);
-                    }}>
-                    <Icon
-                      name="pencil"
-                      size={20}
-                      color="#144272"
-                      style={styles.actionIcon}
-                    />
-                  </TouchableOpacity>
+                  {/* Actions */}
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('Edit');
+                        const fetchSignleUmo = async (id: number) => {
+                          try {
+                            const res = await axios.get(
+                              `${BASE_URL}/edituom?id=${id}&_token=${token}`,
+                            );
+                            setEditUmo(res.data.ums_name);
+                            setSelectedUmo(res.data.id);
+                          } catch (error) {
+                            console.log(error);
+                          }
+                        };
+                        fetchSignleUmo(item.id);
+                      }}>
+                      <Icon
+                        name="pencil"
+                        size={20}
+                        color="#144272"
+                        style={styles.actionIcon}
+                      />
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModalVisible('Delete');
-                      setSelectedUmo(item.id);
-                    }}>
-                    <Icon
-                      name="delete"
-                      size={20}
-                      color="#144272"
-                      style={styles.actionIcon}
-                    />
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('Delete');
+                        setSelectedUmo(item.id);
+                      }}>
+                      <Icon
+                        name="delete"
+                        size={20}
+                        color="#144272"
+                        style={styles.actionIcon}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
-          )}
-          ListEmptyComponent={
-            <View style={{alignItems: 'center', marginTop: 20}}>
-              <Text style={{color: '#fff', fontSize: 14}}>No UOM found.</Text>
-            </View>
-          }
-          contentContainerStyle={{paddingBottom: 60}}
-          showsVerticalScrollIndicator={false}
-        />
+            )}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>No UOM found.</Text>
+              </View>
+            }
+            contentContainerStyle={{paddingBottom: 90}}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
 
         {/*Delete Umo*/}
         <Modal
@@ -513,46 +515,12 @@ const styles = StyleSheet.create({
   background: {
     flex: 1,
   },
-  headerTextContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
-  },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-    justifyContent: 'space-between',
-    marginLeft: 10,
-    marginRight: 10,
-  },
-  search: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: '#144272',
-    color: '#000',
-    borderRadius: 5,
-    paddingHorizontal: 10,
-    height: 40,
-  },
 
   // FlatList Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,

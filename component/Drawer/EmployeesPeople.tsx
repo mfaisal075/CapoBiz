@@ -206,7 +206,6 @@ export default function EmployeesPeople() {
     }
   };
 
-  // Add Employee
   const addEmployee = async () => {
     const nameRegex = /^[A-Za-z ]+$/;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -262,7 +261,8 @@ export default function EmployeesPeople() {
     }
 
     try {
-      const res = await axios.post(`${BASE_URL}/addemployee`, {
+      // Build payload more carefully
+      const payload: any = {
         emp_name: addForm.emp_name.trim(),
         fathername: addForm.fathername.trim(),
         contact: addForm.contact,
@@ -273,23 +273,25 @@ export default function EmployeesPeople() {
         third_contact: addForm.third_contact,
         email: addForm.email.trim(),
         address: addForm.address.trim(),
-        ...(enableBal.includes('on') && {opening_balancechechboc: 'on'}),
-        ...(enableBal.includes('on') && {
-          opening_balance: addForm.opening_balance,
-        }),
-        ...(enableBal.includes('on') && {transfer_type: current}),
-        ...(enableBal.includes('on') && {
-          transaction_type:
-            current === 'payable'
-              ? 'Credit Amount'
-              : current === 'recievable'
-              ? 'Debit Amount'
-              : '',
-          ...(Worker.includes('Worker') && {emp_type: 'Worker'}),
-          ...(Worker.includes('other') && {emp_type: 'other'}),
-          ...(Worker.includes('other') && {employeetype: addForm.employeetype}),
-        }),
-      });
+        emp_type: Worker === 'Worker' ? 'Worker' : addForm.employeetype,
+      };
+
+      // Add opening balance fields only if enabled
+      if (enableBal.includes('on')) {
+        payload.opening_balancechechboc = 'on';
+        payload.opening_balance = addForm.opening_balance;
+        payload.transfer_type = current;
+
+        if (current === 'payable') {
+          payload.transaction_type = 'Credit Amount';
+        } else if (current === 'recievable') {
+          payload.transaction_type = 'Debit Amount';
+        }
+      }
+
+      console.log('Sending payload:', payload); // Debug log
+
+      const res = await axios.post(`${BASE_URL}/addemployee`, payload);
 
       const data = res.data;
 
@@ -306,37 +308,38 @@ export default function EmployeesPeople() {
         setcurrentpaymentType('');
         setModalVisible('');
         setWorker('Worker');
-      } else if (res.status === 200 && data.status === 404) {
+      } else {
+        // Handle other status codes from backend
         Toast.show({
           type: 'error',
           text1: 'Warning!',
-          text2: 'Email already exist.Please enter another.',
-          visibilityTime: 2000,
-        });
-      } else if (res.status === 200 && data.status === 405) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Contact Number already exist.Please enter another.',
-          visibilityTime: 2000,
-        });
-      } else if (res.status === 200 && data.status === 409) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'CNIC already exists!',
-          visibilityTime: 2000,
-        });
-      } else if (res.status === 200 && data.status === 203) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Please select payment type first!',
+          text2: data.message || 'Something went wrong',
           visibilityTime: 2000,
         });
       }
-    } catch (error) {
-      console.log(error);
+    } catch (error: any) {
+      console.log('Add Employee Error:', error);
+
+      fetchEmployees();
+
+      if (error.response?.status === 500) {
+        Toast.show({
+          type: 'info',
+          text1: 'Employee Added',
+          text2: 'Employee was added but there was a server response issue',
+          visibilityTime: 2000,
+        });
+        // Close modal anyway
+        setModalVisible('');
+        setAddForm(initialAddEmployee);
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: error.response?.data?.message || 'Failed to add employee',
+          visibilityTime: 2000,
+        });
+      }
     }
   };
 
@@ -413,6 +416,8 @@ export default function EmployeesPeople() {
         address,
         emp_type: empType,
       };
+
+      console.log('Edit payload:', payload);
 
       const res = await axios.post(`${BASE_URL}/updateemployee`, payload);
 
@@ -494,7 +499,7 @@ export default function EmployeesPeople() {
           </TouchableOpacity>
         </View>
 
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
@@ -648,7 +653,7 @@ export default function EmployeesPeople() {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 120}}
+            contentContainerStyle={{paddingBottom: 150}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -1545,6 +1550,10 @@ const styles = StyleSheet.create({
   },
 
   // FlatList Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,

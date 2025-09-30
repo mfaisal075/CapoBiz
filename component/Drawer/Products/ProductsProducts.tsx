@@ -767,207 +767,209 @@ export default function CustomerPeople() {
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={currentData}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({item}) => (
-            <View style={styles.card}>
-              {/* Header Row */}
-              <View style={styles.headerRow}>
-                {/* Avatar Circle */}
-                <View style={styles.avatarBox}>
-                  <Text style={styles.avatarText}>
-                    {item.prod_name?.charAt(0) || 'P'}
-                  </Text>
+        <View style={styles.listContainer}>
+          <FlatList
+            data={currentData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={styles.card}>
+                {/* Header Row */}
+                <View style={styles.headerRow}>
+                  {/* Avatar Circle */}
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.prod_name?.charAt(0) || 'P'}
+                    </Text>
+                  </View>
+
+                  {/* Product Info */}
+                  <View style={{flex: 1}}>
+                    <Text style={styles.name}>{item.prod_name}</Text>
+                    <Text style={styles.subText}>
+                      {item.pcat_name || 'No category'}
+                    </Text>
+                  </View>
+
+                  {/* Actions */}
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('ViewProd');
+                        const fetchSingleProd = async (id: number) => {
+                          try {
+                            const res = await axios.get(
+                              `${BASE_URL}/productsshow?id=${id}&_token=${token}`,
+                            );
+                            setViewProd([res.data]);
+                          } catch (error) {
+                            console.log(error);
+                          }
+                        };
+                        fetchSingleProd(item.id);
+                      }}>
+                      <Icon
+                        style={styles.actionIcon}
+                        name="eye"
+                        size={20}
+                        color="#144272"
+                      />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('EditProd');
+                        const fetchProdData = async (id: number) => {
+                          try {
+                            const res = await axios.get(
+                              `${BASE_URL}/editproduct?id=${id}&_token=${token}`,
+                            );
+                            setEditForm(res.data.pro);
+                            setEditCatValue(
+                              res.data.pro.prod_pcat_id
+                                ? String(res.data.pro.prod_pcat_id)
+                                : '',
+                            );
+                            setEditUomValue(
+                              res.data.uom.ums_name
+                                ? String(res.data.uom.ums_name)
+                                : '',
+                            );
+                            setEditSupValue(
+                              res.data.pro.prod_sup_id
+                                ? String(res.data.pro.prod_sup_id)
+                                : '',
+                            );
+                            setEditSubUmoValue(
+                              res.data.pro.prod_sub_uom
+                                ? String(res.data.pro.prod_sub_uom)
+                                : '',
+                            );
+                          } catch (error) {
+                            console.log(error);
+                          }
+                        };
+                        fetchProdData(item.id);
+                      }}>
+                      <Icon
+                        style={styles.actionIcon}
+                        name="pencil"
+                        size={20}
+                        color="#144272"
+                      />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('DeleteProd');
+                        setSelectedProd(item.id);
+                      }}>
+                      <Icon
+                        style={styles.actionIcon}
+                        name="delete"
+                        size={20}
+                        color="#144272"
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
 
-                {/* Product Info */}
-                <View style={{flex: 1}}>
-                  <Text style={styles.name}>{item.prod_name}</Text>
-                  <Text style={styles.subText}>
-                    {item.pcat_name || 'No category'}
-                  </Text>
-                </View>
+                {/* Info Box */}
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="barcode"
+                        size={18}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Barcode</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.prod_UPC_EAN || 'N/A'}
+                    </Text>
+                  </View>
 
-                {/* Actions */}
-                <View style={styles.actionRow}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModalVisible('ViewProd');
-                      const fetchSingleProd = async (id: number) => {
-                        try {
-                          const res = await axios.get(
-                            `${BASE_URL}/productsshow?id=${id}&_token=${token}`,
-                          );
-                          setViewProd([res.data]);
-                        } catch (error) {
-                          console.log(error);
-                        }
-                      };
-                      fetchSingleProd(item.id);
-                    }}>
-                    <Icon
-                      style={styles.actionIcon}
-                      name="eye"
-                      size={20}
-                      color="#144272"
-                    />
-                  </TouchableOpacity>
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="cash"
+                        size={18}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Cost</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.prod_costprice || '0'}
+                    </Text>
+                  </View>
 
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModalVisible('EditProd');
-                      const fetchProdData = async (id: number) => {
-                        try {
-                          const res = await axios.get(
-                            `${BASE_URL}/editproduct?id=${id}&_token=${token}`,
-                          );
-                          setEditForm(res.data.pro);
-                          setEditCatValue(
-                            res.data.pro.prod_pcat_id
-                              ? String(res.data.pro.prod_pcat_id)
-                              : '',
-                          );
-                          setEditUomValue(
-                            res.data.uom.ums_name
-                              ? String(res.data.uom.ums_name)
-                              : '',
-                          );
-                          setEditSupValue(
-                            res.data.pro.prod_sup_id
-                              ? String(res.data.pro.prod_sup_id)
-                              : '',
-                          );
-                          setEditSubUmoValue(
-                            res.data.pro.prod_sub_uom
-                              ? String(res.data.pro.prod_sub_uom)
-                              : '',
-                          );
-                        } catch (error) {
-                          console.log(error);
-                        }
-                      };
-                      fetchProdData(item.id);
-                    }}>
-                    <Icon
-                      style={styles.actionIcon}
-                      name="pencil"
-                      size={20}
-                      color="#144272"
-                    />
-                  </TouchableOpacity>
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="tag"
+                        size={18}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Retail</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.prod_retailprice || '0'}
+                    </Text>
+                  </View>
 
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModalVisible('DeleteProd');
-                      setSelectedProd(item.id);
-                    }}>
-                    <Icon
-                      style={styles.actionIcon}
-                      name="delete"
-                      size={20}
-                      color="#144272"
-                    />
-                  </TouchableOpacity>
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="cube"
+                        size={18}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Quantity</Text>
+                    </View>
+                    <Text style={styles.valueText}>{item.prod_qty || 0}</Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="calendar"
+                        size={18}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Expiry</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.prod_expirydate
+                        ? new Date(item.prod_expirydate).toLocaleDateString(
+                            'en-US',
+                            {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            },
+                          )
+                        : 'No expiry'}
+                    </Text>
+                  </View>
                 </View>
               </View>
-
-              {/* Info Box */}
-              <View style={styles.infoBox}>
-                <View style={styles.infoRow}>
-                  <View style={styles.labelRow}>
-                    <Icon
-                      name="barcode"
-                      size={18}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.labelText}>Barcode</Text>
-                  </View>
-                  <Text style={styles.valueText}>
-                    {item.prod_UPC_EAN || 'N/A'}
-                  </Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <View style={styles.labelRow}>
-                    <Icon
-                      name="cash"
-                      size={18}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.labelText}>Cost</Text>
-                  </View>
-                  <Text style={styles.valueText}>
-                    {item.prod_costprice || '0'}
-                  </Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <View style={styles.labelRow}>
-                    <Icon
-                      name="tag"
-                      size={18}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.labelText}>Retail</Text>
-                  </View>
-                  <Text style={styles.valueText}>
-                    {item.prod_retailprice || '0'}
-                  </Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <View style={styles.labelRow}>
-                    <Icon
-                      name="cube"
-                      size={18}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.labelText}>Quantity</Text>
-                  </View>
-                  <Text style={styles.valueText}>{item.prod_qty || 0}</Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <View style={styles.labelRow}>
-                    <Icon
-                      name="calendar"
-                      size={18}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.labelText}>Expiry</Text>
-                  </View>
-                  <Text style={styles.valueText}>
-                    {item.prod_expirydate
-                      ? new Date(item.prod_expirydate).toLocaleDateString(
-                          'en-US',
-                          {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          },
-                        )
-                      : 'No expiry'}
-                  </Text>
-                </View>
+            )}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>
+                  No products found.
+                </Text>
               </View>
-            </View>
-          )}
-          ListEmptyComponent={
-            <View style={{alignItems: 'center', marginTop: 20}}>
-              <Text style={{color: '#fff', fontSize: 14}}>
-                No products found.
-              </Text>
-            </View>
-          }
-          contentContainerStyle={{paddingBottom: 60}}
-          showsVerticalScrollIndicator={false}
-        />
+            }
+            contentContainerStyle={{paddingBottom: 100}}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
 
         {/*Delete Modal*/}
         <Modal
@@ -2413,6 +2415,10 @@ const styles = StyleSheet.create({
   },
 
   // FlatList Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,

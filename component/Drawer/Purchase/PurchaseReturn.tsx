@@ -545,7 +545,10 @@ export default function PurchaseReturn() {
         refrence_no: '',
         date: expireDate.toISOString().split('T')[0],
       });
-      if (res.status === 200 && res.data.status === 200) {
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
         Toast.show({
           type: 'success',
           text1: 'Order completed successfully!',
@@ -556,7 +559,7 @@ export default function PurchaseReturn() {
         setSupData(initialSupplierData);
 
         setCurrentpsupplier('');
-      } else if (res.status === 200 && res.data.status === 202) {
+      } else if (res.status === 200 && data.status === 202) {
         Toast.show({
           type: 'error',
           text1: 'Warning!',

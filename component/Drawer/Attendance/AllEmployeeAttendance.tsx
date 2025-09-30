@@ -52,8 +52,9 @@ export default function AllEmployeeAttendance() {
   // Fetch Attendance Cart Data
   const fetchData = async () => {
     try {
-      await addToEmpAttendanceCart(); // await here
+      await addToEmpAttendanceCart();
       const res = await axios.get(`${BASE_URL}/loadcartemp`);
+      console.log('📥 LOADED EMPLOYEE DATA:', res.data.carsession);
       setAttCart(res.data.carsession);
     } catch (error) {
       console.log(error);
@@ -97,19 +98,36 @@ export default function AllEmployeeAttendance() {
   const getDateFrom12HourTime = (timeString: string) => {
     if (!timeString) return new Date();
 
-    // Normalize: remove weird spaces and uppercase AM/PM
-    const normalized = timeString.replace(/\s+/g, ' ').trim().toUpperCase();
+    try {
+      // If it's already in 24-hour format (HH:mm)
+      if (/^\d{1,2}:\d{2}$/.test(timeString)) {
+        const [hours, minutes] = timeString.split(':').map(Number);
+        const date = new Date();
+        date.setHours(hours, minutes, 0, 0);
+        return date;
+      }
 
-    const parts = normalized.split(' ');
-    if (parts.length < 2) return new Date();
+      // If it's in 12-hour format with AM/PM
+      const normalized = timeString.replace(/\s+/g, ' ').trim().toUpperCase();
+      const parts = normalized.split(' ');
 
-    const [time, modifier] = parts;
-    let [hours, minutes] = time.split(':').map(Number);
+      if (parts.length >= 2) {
+        const [time, modifier] = parts;
+        let [hours, minutes] = time.split(':').map(Number);
 
-    if (modifier === 'PM' && hours < 12) hours += 12;
-    if (modifier === 'AM' && hours === 12) hours = 0;
+        if (modifier === 'PM' && hours < 12) hours += 12;
+        if (modifier === 'AM' && hours === 12) hours = 0;
 
-    return new Date(1970, 0, 1, hours, minutes);
+        const date = new Date();
+        date.setHours(hours, minutes, 0, 0);
+        return date;
+      }
+
+      return new Date();
+    } catch (error) {
+      console.log('Error parsing time:', error, timeString);
+      return new Date();
+    }
   };
 
   const onClockInChangeForItem = async (
@@ -117,32 +135,35 @@ export default function AllEmployeeAttendance() {
     event: DateTimePickerEvent,
     selectedDate?: Date,
   ) => {
-    // Close the picker
     setClockInPickerFor(null);
-
     if (!selectedDate) return;
 
-    // Convert Date to "HH:mm" format
     const hours = selectedDate.getHours().toString().padStart(2, '0');
     const minutes = selectedDate.getMinutes().toString().padStart(2, '0');
     const timeString = `${hours}:${minutes}`;
 
-    // Update local state immediately
+    console.log('🕒 CLOCK IN UPDATE:', {
+      emp_id,
+      newTime: timeString,
+      selectedDate: selectedDate.toString(),
+    });
+
+    // Update local state
     setAttCart(prev =>
       prev.map(emp =>
         emp.emp_id === emp_id ? {...emp, clockin: timeString} : emp,
       ),
     );
 
-    // Call API to update backend
+    // API call
     try {
       await axios.post(`${BASE_URL}/updateattendance`, {
         id: emp_id,
         clockin: timeString,
       });
-      console.log(`Clock in updated for employee ${emp_id}: ${timeString}`);
+      console.log(`✅ Clock in updated for employee ${emp_id}: ${timeString}`);
     } catch (error) {
-      console.log('Error updating clock in:', error);
+      console.log('❌ Error updating clock in:', error);
     }
   };
 
@@ -251,6 +272,7 @@ export default function AllEmployeeAttendance() {
       const res = await axios.post(`${BASE_URL}/empcompleteattendance`);
 
       const data = res.data;
+      console.log('Response: ', data);
 
       if (res.status === 200 && data.status === 200) {
         await axios.get(`${BASE_URL}/emptyattendancecart`);
@@ -541,10 +563,10 @@ export default function AllEmployeeAttendance() {
                   </TouchableOpacity>
                 </View>
 
-                {/* Date Time Pickers - Only show when status is Present */}
                 {clockInPickerFor === item.emp_id &&
                   item.att_status === 'Present' && (
                     <DateTimePicker
+                      key={`clockin-${item.emp_id}-${item.clockin}`} // Force re-render when time changes
                       value={getDateFrom12HourTime(item.clockin)}
                       mode="time"
                       is24Hour={false}
@@ -558,6 +580,7 @@ export default function AllEmployeeAttendance() {
                 {clockOutPickerFor === item.emp_id &&
                   item.att_status === 'Present' && (
                     <DateTimePicker
+                      key={`clockout-${item.emp_id}-${item.clockout}`} // Force re-render when time changes
                       value={getDateFrom12HourTime(item.clockout)}
                       mode="time"
                       is24Hour={false}
@@ -722,7 +745,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     flex: 1,
-    paddingHorizontal: 15,
+    paddingHorizontal: 8,
   },
   card: {
     backgroundColor: '#ffffffde',

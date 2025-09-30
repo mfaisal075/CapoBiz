@@ -98,6 +98,7 @@ export default function CategoryProducts() {
         id: selectedCate?.id,
       });
       const data = res.data;
+      console.log(data);
 
       if (res.status === 200 && data.status === 200) {
         Toast.show({
@@ -108,6 +109,14 @@ export default function CategoryProducts() {
         fetchCatDropdown();
         setSelectedCate(null);
         setModal('');
+      } else if (res.status === 200 && data.status === 201) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2:
+            'You have products in this category, cannot delete this category!.',
+          visibilityTime: 2000,
+        });
       }
     } catch (error) {
       Toast.show({
@@ -185,74 +194,76 @@ export default function CategoryProducts() {
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={currentData}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({item}) => (
-            <View style={styles.card}>
-              {/* Header Row */}
-              <View style={styles.headerRow}>
-                {/* Avatar Circle */}
-                <View style={styles.avatarBox}>
-                  <Text style={styles.avatarText}>
-                    {item.pcat_name?.charAt(0).toUpperCase() || 'C'}
-                  </Text>
-                </View>
+        <View style={styles.listContainer}>
+          <FlatList
+            data={currentData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={styles.card}>
+                {/* Header Row */}
+                <View style={styles.headerRow}>
+                  {/* Avatar Circle */}
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.pcat_name?.charAt(0).toUpperCase() || 'C'}
+                    </Text>
+                  </View>
 
-                {/* Category Info */}
-                <View style={{flex: 1}}>
-                  <Text style={styles.name}>{item.pcat_name}</Text>
-                  <Text style={styles.subText}>Category</Text>
-                </View>
+                  {/* Category Info */}
+                  <View style={{flex: 1}}>
+                    <Text style={styles.name}>{item.pcat_name}</Text>
+                    <Text style={styles.subText}>Category</Text>
+                  </View>
 
-                {/* Actions */}
-                <View style={styles.actionRow}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModal('editCategory');
-                      setEditCate(item.pcat_name);
-                      setSelectedCate({
-                        id: item.id,
-                        pcat_name: item.pcat_name,
-                      });
-                    }}>
-                    <Icon
-                      name="pencil"
-                      size={20}
-                      color="#144272"
-                      style={styles.actionIcon}
-                    />
-                  </TouchableOpacity>
+                  {/* Actions */}
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModal('editCategory');
+                        setEditCate(item.pcat_name);
+                        setSelectedCate({
+                          id: item.id,
+                          pcat_name: item.pcat_name,
+                        });
+                      }}>
+                      <Icon
+                        name="pencil"
+                        size={20}
+                        color="#144272"
+                        style={styles.actionIcon}
+                      />
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModal('delCategory');
-                      setSelectedCate({
-                        id: item.id,
-                        pcat_name: item.pcat_name,
-                      });
-                    }}>
-                    <Icon
-                      name="delete"
-                      size={20}
-                      color="#144272"
-                      style={styles.actionIcon}
-                    />
-                  </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModal('delCategory');
+                        setSelectedCate({
+                          id: item.id,
+                          pcat_name: item.pcat_name,
+                        });
+                      }}>
+                      <Icon
+                        name="delete"
+                        size={20}
+                        color="#144272"
+                        style={styles.actionIcon}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
-            </View>
-          )}
-          ListEmptyComponent={
-            <View style={{alignItems: 'center', marginTop: 20}}>
-              <Text style={{color: '#fff', fontSize: 14}}>
-                No categories found.
-              </Text>
-            </View>
-          }
-          contentContainerStyle={{paddingBottom: 50}}
-          showsVerticalScrollIndicator={false}
-        />
+            )}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>
+                  No categories found.
+                </Text>
+              </View>
+            }
+            contentContainerStyle={{paddingBottom: 100}}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
 
         {/*Delete Category*/}
         <Modal
@@ -471,6 +482,10 @@ const styles = StyleSheet.create({
   },
 
   // FlatList Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,

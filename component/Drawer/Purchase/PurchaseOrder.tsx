@@ -694,11 +694,22 @@ export default function PurchaseOrder() {
                         </Text>
                       </View>
 
-                      <View
-                        style={[
-                          styles.cartItemDetails,
-                          {justifyContent: 'flex-end'},
-                        ]}>
+                      <View style={[styles.cartItemDetails]}>
+                        <Text
+                          style={[
+                            styles.detailText,
+                            {fontSize: 12, fontWeight: '700'},
+                          ]}>
+                          Expiry Date:{' '}
+                          {new Date(item.expiry_date).toLocaleDateString(
+                            'en-US',
+                            {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            },
+                          )}
+                        </Text>
                         <TouchableOpacity
                           onPress={() => removeAddToCart(item.prod_id)}
                           style={styles.deleteBtn}>
@@ -733,6 +744,8 @@ export default function PurchaseOrder() {
             <Toast />
           </SafeAreaView>
         </Modal>
+
+        <Toast />
       </ImageBackground>
     </SafeAreaView>
   );

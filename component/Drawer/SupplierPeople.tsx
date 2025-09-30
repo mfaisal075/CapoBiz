@@ -233,7 +233,7 @@ export default function SupplierPeople() {
   const handleAddSupplier = async () => {
     const nameRegex = /^[A-Za-z ]+$/;
 
-    if (!addForm.comp_name || !addForm.supp_name) {
+    if (!addForm.comp_name || !addForm.supp_name || !addForm.contact) {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
@@ -524,7 +524,7 @@ export default function SupplierPeople() {
           </TouchableOpacity>
         </View>
 
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
@@ -647,7 +647,7 @@ export default function SupplierPeople() {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 120}}
+            contentContainerStyle={{paddingBottom: 110}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -747,7 +747,7 @@ export default function SupplierPeople() {
 
                 <View style={styles.addCustomerRow}>
                   <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 1</Text>
+                    <Text style={styles.addCustomerLabel}>Contact 1 *</Text>
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholderTextColor="#999"
@@ -1378,6 +1378,8 @@ export default function SupplierPeople() {
             </TouchableOpacity>
           </View>
         )}
+
+        <Toast />
       </ImageBackground>
     </SafeAreaView>
   );
@@ -1415,6 +1417,10 @@ const styles = StyleSheet.create({
   },
 
   // FlatList Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,

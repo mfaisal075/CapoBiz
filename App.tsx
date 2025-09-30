@@ -393,8 +393,8 @@ function App(): React.JSX.Element {
 
           <DrawerModal />
         </NavigationContainer>
-        <Toast />
       </DrawerProvider>
+      <Toast />
     </UserProvider>
   );
 }

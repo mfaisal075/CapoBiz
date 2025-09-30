@@ -119,142 +119,148 @@ export default function ReOrderProductStock() {
             placeholderStyle={{color: '#666'}}
             textStyle={{color: '#144272'}}
             ArrowUpIconComponent={() => (
-              <Icon name="keyboard-arrow-up" size={18} color="#144272" />
+              <Icon name="chevron-up" size={18} color="#144272" />
             )}
             ArrowDownIconComponent={() => (
-              <Icon name="keyboard-arrow-down" size={18} color="#144272" />
+              <Icon name="chevron-down" size={18} color="#144272" />
             )}
             style={styles.dropdown}
             dropDownContainerStyle={styles.dropDownContainer}
           />
         </View>
 
-        <FlatList
-          data={currentData}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({item}) => {
-            const qty = parseFloat(item.prod_qty) || 0;
-            const reorderedQty = parseFloat(item.prod_reorder_qty) || 0;
-            const costPrice = parseFloat(item.prod_costprice) || 0;
-            const retailPrice = parseFloat(item.prod_retailprice) || 0;
-            const itemTotalCost = qty * costPrice;
-            const itemTotalRetail = qty * retailPrice;
+        <View style={styles.listContainer}>
+          <FlatList
+            data={currentData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => {
+              const qty = parseFloat(item.prod_qty) || 0;
+              const reorderedQty = parseFloat(item.prod_reorder_qty) || 0;
+              const costPrice = parseFloat(item.prod_costprice) || 0;
+              const retailPrice = parseFloat(item.prod_retailprice) || 0;
+              const itemTotalCost = qty * costPrice;
+              const itemTotalRetail = qty * retailPrice;
 
-            return (
-              <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.prod_name?.charAt(0) || 'P'}
-                    </Text>
+              return (
+                <View style={styles.card}>
+                  {/* Header Row */}
+                  <View style={styles.headerRow}>
+                    <View style={styles.avatarBox}>
+                      <Text style={styles.avatarText}>
+                        {item.prod_name?.charAt(0) || 'P'}
+                      </Text>
+                    </View>
+                    <View style={{flex: 1}}>
+                      <Text style={styles.name}>{item.prod_name}</Text>
+                      <Text style={styles.subText}>
+                        {item.pcat_name || 'No category'}
+                      </Text>
+                    </View>
                   </View>
-                  <View style={{flex: 1}}>
-                    <Text style={styles.name}>{item.prod_name}</Text>
-                    <Text style={styles.subText}>
-                      {item.pcat_name || 'No category'}
-                    </Text>
+
+                  {/* Info */}
+                  <View style={styles.infoBox}>
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoLeft}>
+                        <Icon
+                          name="cube-outline"
+                          size={16}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.infoText}>Quantity:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>{qty}</Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoLeft}>
+                        <Icon
+                          name="reload"
+                          size={16}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.infoText}>Reorder:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
+                        {reorderedQty.toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoLeft}>
+                        <Icon
+                          name="cash"
+                          size={16}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.infoText}>Cost Price:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
+                        {costPrice.toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoLeft}>
+                        <Icon
+                          name="calculator"
+                          size={16}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.infoText}>Total Cost:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
+                        {itemTotalCost.toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoLeft}>
+                        <Icon
+                          name="tag-outline"
+                          size={16}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.infoText}>Retail Price:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
+                        {retailPrice.toFixed(2)}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      <View style={styles.infoLeft}>
+                        <Icon
+                          name="cash-multiple"
+                          size={16}
+                          color="#144272"
+                          style={styles.infoIcon}
+                        />
+                        <Text style={styles.infoText}>Total Retail:</Text>
+                      </View>
+                      <Text style={styles.infoValue}>
+                        {itemTotalRetail.toFixed(2)}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-
-                {/* Info */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="cube-outline"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Quantity:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>{qty}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="reload"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Reorder:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>
-                      {reorderedQty.toFixed(2)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="cash"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Cost Price:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>{costPrice.toFixed(2)}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="calculator"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Total Cost:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>
-                      {itemTotalCost.toFixed(2)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="tag-outline"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Retail Price:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>
-                      {retailPrice.toFixed(2)}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="cash-multiple"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Total Retail:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>
-                      {itemTotalRetail.toFixed(2)}
-                    </Text>
-                  </View>
-                </View>
+              );
+            }}
+            ListEmptyComponent={
+              <View style={{alignItems: 'center', marginTop: 20}}>
+                <Text style={{color: '#fff', fontSize: 14}}>
+                  No Stock found.
+                </Text>
               </View>
-            );
-          }}
-          ListEmptyComponent={
-            <View style={{alignItems: 'center', marginTop: 20}}>
-              <Text style={{color: '#fff', fontSize: 14}}>No Stock found.</Text>
-            </View>
-          }
-          contentContainerStyle={{paddingBottom: 60}}
-        />
+            }
+            contentContainerStyle={{paddingBottom: 60}}
+          />
+        </View>
 
         {/* Pagination Controls */}
         {totalRecords > 0 && (
@@ -279,6 +285,9 @@ export default function ReOrderProductStock() {
               <Text style={styles.pageIndicatorText}>
                 Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
                 {totalPages}
+              </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
               </Text>
             </View>
 
@@ -351,6 +360,10 @@ const styles = StyleSheet.create({
   },
 
   // Card
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,
@@ -513,5 +526,11 @@ const styles = StyleSheet.create({
   pageCurrent: {
     fontWeight: '700',
     color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
   },
 });

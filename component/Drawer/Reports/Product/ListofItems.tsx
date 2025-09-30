@@ -576,7 +576,7 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     flex: 1,
-    paddingHorizontal: 15,
+    paddingHorizontal: 8,
   },
   card: {
     backgroundColor: '#ffffffde',
