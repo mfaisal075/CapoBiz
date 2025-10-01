@@ -547,6 +547,8 @@ export default function PurchaseReturn() {
       });
 
       const data = res.data;
+      console.log(data);
+      
 
       if (res.status === 200 && data.status === 200) {
         Toast.show({

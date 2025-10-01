@@ -20,6 +20,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../CTX/UserContext';
 import RNPrint from 'react-native-print';
+import LinearGradient from 'react-native-linear-gradient';
 
 interface Customers {
   id: number;
@@ -153,6 +154,7 @@ interface AreaData {
 
 export default function POS() {
   const {token} = useUser();
+  const {bussName, bussAddress, bussContact} = useUser();
   const paidInputRef = React.useRef<TextInput>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -564,8 +566,10 @@ export default function POS() {
 
       const res = await axios.post(`${BASE_URL}/salecheckout`, payload);
       const data = res.data;
+      console.log(res.status);
+      console.log(res.data.status);
 
-      if (res.status === 200 && data.status) {
+      if (res.status === 200 && data.status === 200) {
         Toast.show({
           type: 'success',
           text1: 'Sale completed successfully',
@@ -578,6 +582,8 @@ export default function POS() {
         }
 
         setSelectedInvc(res.data.invoice_no);
+        console.log(res.data);
+
         singleInvc(res.data.invoice_no);
         setModalVisible('View');
 
@@ -603,6 +609,20 @@ export default function POS() {
         setCurrentVal('');
         setNote('');
         setCustData(initialCustomersData);
+      } else if (res.status === 200 && data.status === 201) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: "Payment Amount' cannot be less than 'Net Payables",
+          visibilityTime: 2000,
+        });
+      } else if (res.status === 200 && data.status === 202) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'For the transaction please add some product in cart.',
+          visibilityTime: 2000,
+        });
       } else {
         Toast.show({
           type: 'error',
@@ -950,10 +970,11 @@ export default function POS() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={['#071A2D', '#0F2D4E']}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -1517,15 +1538,9 @@ export default function POS() {
               </View>
 
               <ScrollView style={styles.invoiceContent}>
-                <Text style={styles.shopName}>
-                  {invoiceData?.config.bus_name}
-                </Text>
-                <Text style={styles.shopAddress}>
-                  {invoiceData?.config?.bus_address}
-                </Text>
-                <Text style={styles.phone}>
-                  {invoiceData?.config?.bus_contact1}
-                </Text>
+                <Text style={styles.shopName}>{bussName ?? 'N/A'}</Text>
+                <Text style={styles.shopAddress}>{bussAddress ?? 'N/A'}</Text>
+                <Text style={styles.phone}>{bussContact ?? 'N/A'}</Text>
 
                 <View style={styles.invoiceInfoRow}>
                   <Text style={styles.receiptNumber}>
@@ -1887,7 +1902,9 @@ export default function POS() {
             </ScrollView>
           </View>
         </Modal>
-      </ImageBackground>
+
+        <Toast />
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -1897,7 +1914,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
 
@@ -1938,15 +1955,15 @@ const styles = StyleSheet.create({
 
   // Card Styles
   card: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(15, 45, 78, 0.9)',
     borderRadius: 15,
     padding: 20,
     marginVertical: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.15)',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.4,
     shadowRadius: 8,
     elevation: 8,
   },

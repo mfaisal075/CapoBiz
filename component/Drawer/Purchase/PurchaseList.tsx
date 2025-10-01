@@ -55,6 +55,12 @@ interface InvoicePurchaseDetails {
   prchd_total_cost: string;
   sup_name: string;
   sup_company_name: string;
+  prch_trans_id: string;
+}
+
+interface Transporter {
+  id: number;
+  trans_name: string;
 }
 
 export default function PurchaseList() {
@@ -67,6 +73,7 @@ export default function PurchaseList() {
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [invcData, setInvcData] = useState<InvoiceData | null>(null);
   const [invcDetails, setInvcDetails] = useState<InvoicePurchaseDetails[]>([]);
+  const [trans, setTrans] = useState<Transporter[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -112,6 +119,16 @@ export default function PurchaseList() {
     }
   };
 
+  // Fetch Transporter
+  const fetchTransporters = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchTransportersdata`);
+      setTrans(res.data.transporter);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   // Fetch Invoice
   const fetchIncv = async (invc: string) => {
     try {
@@ -127,6 +144,7 @@ export default function PurchaseList() {
 
   useEffect(() => {
     fetchInvoices();
+    fetchTransporters();
   }, [startDate, endDate]);
 
   return (
@@ -410,15 +428,27 @@ export default function PurchaseList() {
                   </Text>
                 </View>
                 <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Company</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails[0]?.sup_company_name ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
                   <Text style={styles.infoLabel}>Supplier</Text>
                   <Text style={styles.infoValue}>
                     {invcDetails[0]?.sup_name ?? 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Company</Text>
+                  <Text style={styles.infoLabel}>Transporter</Text>
                   <Text style={styles.infoValue}>
-                    {invcDetails[0]?.sup_company_name ?? 'N/A'}
+                    {invcDetails[0]?.prch_trans_id !== null
+                      ? trans.find(
+                          tran =>
+                            tran.id.toString() ===
+                            invcDetails[0]?.prch_trans_id?.toString(),
+                        )?.trans_name ?? 'N/A'
+                      : 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoCard}>

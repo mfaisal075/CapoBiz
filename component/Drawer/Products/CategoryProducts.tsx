@@ -251,6 +251,22 @@ export default function CategoryProducts() {
                     </TouchableOpacity>
                   </View>
                 </View>
+
+                {/* Info Box */}
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="tag"
+                        size={18}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>Category ID (In DB)</Text>
+                    </View>
+                    <Text style={styles.valueText}>{item.id || 'N/A'}</Text>
+                  </View>
+                </View>
               </View>
             )}
             ListEmptyComponent={
@@ -426,6 +442,9 @@ export default function CategoryProducts() {
                 Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
                 {totalPages}
               </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
+              </Text>
             </View>
 
             <TouchableOpacity
@@ -537,6 +556,40 @@ const styles = StyleSheet.create({
     height: 20,
     marginHorizontal: 4,
   },
+  infoBox: {
+    marginTop: 10,
+    backgroundColor: '#F6F9FC',
+    borderRadius: 12,
+    padding: 10,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexShrink: 1,
+  },
+  infoIcon: {
+    width: 18,
+    height: 18,
+    tintColor: '#144272',
+    marginRight: 6,
+  },
+  labelText: {
+    fontSize: 13,
+    color: '#144272',
+    fontWeight: '600',
+  },
+  valueText: {
+    fontSize: 13,
+    color: '#333',
+    maxWidth: '60%',
+    textAlign: 'right',
+  },
 
   // Pagination Component
   paginationContainer: {
@@ -590,6 +643,12 @@ const styles = StyleSheet.create({
   pageCurrent: {
     fontWeight: '700',
     color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
   },
 
   // Add Customer Modal Styles

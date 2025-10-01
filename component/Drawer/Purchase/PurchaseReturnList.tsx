@@ -21,6 +21,7 @@ interface PurchaseReturn {
   prchr_return_invoice_no: string;
   prchr_return_amount: string;
   created_at: string;
+  prchr_prch_invoice: string;
 }
 
 interface ReturnData {
@@ -281,6 +282,24 @@ export default function PurchaseReturnList() {
                       {/* Right side: Value */}
                       <Text style={styles.infoValue}>
                         PKR {item.prchr_return_amount}
+                      </Text>
+                    </View>
+
+                    <View style={styles.infoRow}>
+                      {/* Left side: Icon + Label */}
+                      <View style={styles.labelRow}>
+                        <Icon
+                          name="receipt"
+                          size={16}
+                          color={'#144272'}
+                          style={{marginRight: 6}}
+                        />
+                        <Text style={styles.infoText}>Purchase Invoice:</Text>
+                      </View>
+
+                      {/* Right side: Value */}
+                      <Text style={styles.infoValue}>
+                        {item?.prchr_prch_invoice ?? '--'}
                       </Text>
                     </View>
                   </View>

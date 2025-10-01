@@ -12,7 +12,6 @@ import {
   Animated,
 } from 'react-native';
 import React, {useEffect, useRef, useState} from 'react';
-import {useNavigation} from '@react-navigation/native';
 import {useDrawer} from '../../DrawerContext';
 import {Checkbox} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -847,7 +846,16 @@ export default function PurchaseAddStock() {
 
                       <View style={styles.cartItemDetails}>
                         <Text style={styles.detailText}>
-                          Expiry: {item.prod_expiry_date}
+                          Expiry:{' '}
+                          {item.prod_expiry_date
+                            ? `${new Date(
+                                item.prod_expiry_date,
+                              ).toLocaleDateString('en-US', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric',
+                              })}`
+                            : 'No expiry date'}
                         </Text>
                         <TouchableOpacity
                           onPress={() => delCartItem(item.prod_id)}

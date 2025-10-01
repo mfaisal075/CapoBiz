@@ -208,7 +208,7 @@ export default function ExpiredProductStock() {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 100}}
+            contentContainerStyle={{paddingBottom: 110}}
             showsVerticalScrollIndicator={false}
           />
         </View>

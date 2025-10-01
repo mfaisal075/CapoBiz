@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Image,
   ImageBackground,
+  ActivityIndicator,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import axios from 'axios';
@@ -19,6 +20,7 @@ const LoginScreen: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [hidePassword, setHidePassword] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   const managePasswordVisibility = () => {
     setHidePassword(!hidePassword);
@@ -44,6 +46,8 @@ const LoginScreen: React.FC = () => {
       });
       return;
     }
+
+    setLoading(true);
 
     try {
       const response = await axios.post(`${BASE_URL}/userlogin`, {
@@ -147,6 +151,8 @@ const LoginScreen: React.FC = () => {
           visibilityTime: 2500,
         });
       }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -247,6 +253,7 @@ const LoginScreen: React.FC = () => {
                 placeholderTextColor="#144272"
                 onChangeText={text => setUsername(text)}
                 value={username}
+                editable={!loading}
               />
             </View>
           </Animated.View>
@@ -278,9 +285,12 @@ const LoginScreen: React.FC = () => {
                 secureTextEntry={hidePassword}
                 onChangeText={setPassword}
                 value={password}
+                editable={!loading}
               />
 
-              <TouchableOpacity onPress={managePasswordVisibility}>
+              <TouchableOpacity
+                onPress={managePasswordVisibility}
+                disabled={loading}>
                 <Image
                   style={{
                     width: 20,
@@ -303,12 +313,17 @@ const LoginScreen: React.FC = () => {
               transform: [{translateY: buttonTranslate}],
             }}>
             <TouchableOpacity
-              onPress={() => {
-                // navigation.navigate('Dashboard' as never);
-                handleLogin();
-              }}
-              style={styles.loginButton}>
-              <Text style={styles.loginButtonText}>Login</Text>
+              onPress={handleLogin}
+              style={[
+                styles.loginButton,
+                loading && styles.loginButtonDisabled,
+              ]}
+              disabled={loading}>
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.loginButtonText}>Login</Text>
+              )}
             </TouchableOpacity>
           </Animated.View>
         </Animated.View>
@@ -354,6 +369,9 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 10,
     alignItems: 'center',
+  },
+  loginButtonDisabled: {
+    opacity: 0.7,
   },
   loginButtonText: {
     color: '#fff',

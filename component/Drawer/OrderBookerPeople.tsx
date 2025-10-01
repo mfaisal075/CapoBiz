@@ -987,6 +987,9 @@ export default function OrderBookerPeople() {
                 Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
                 {totalPages}
               </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
+              </Text>
             </View>
 
             <TouchableOpacity
@@ -1190,6 +1193,12 @@ const styles = StyleSheet.create({
   pageCurrent: {
     fontWeight: '700',
     color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
   },
 
   // Add Modal Styling

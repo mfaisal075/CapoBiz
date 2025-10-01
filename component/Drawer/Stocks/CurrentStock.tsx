@@ -143,7 +143,7 @@ export default function CurrentStock() {
         </View>
 
         {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
+        {/* <View style={styles.summaryContainer}>
           <View style={styles.innerSummaryCtx}>
             <Text style={styles.summaryLabel}>Total Cost: </Text>
             <Text style={styles.summaryValue}>{totalCost.toFixed(2)}</Text>
@@ -152,7 +152,7 @@ export default function CurrentStock() {
             <Text style={styles.summaryLabel}>Total Retail: </Text>
             <Text style={styles.summaryValue}>{totalRetail.toFixed(2)}</Text>
           </View>
-        </View>
+        </View> */}
 
         {/* Product List */}
         <View style={styles.listContainer}>

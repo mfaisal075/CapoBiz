@@ -253,8 +253,8 @@ export default function EmployeesPeople() {
     if (Worker === 'other' && !addForm.employeetype.trim()) {
       Toast.show({
         type: 'error',
-        text1: 'Missing Fields',
-        text2: 'Please fill all required fields.',
+        text1: 'Missing Type',
+        text2: 'Please add employee type.',
         visibilityTime: 2000,
       });
       return;
@@ -653,7 +653,7 @@ export default function EmployeesPeople() {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 150}}
+            contentContainerStyle={{paddingBottom: 110}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -825,7 +825,7 @@ export default function EmployeesPeople() {
 
                 {/* Worker / Other */}
                 <View style={styles.addEmployeeFullRow}>
-                  <Text style={styles.addEmployeeLabel}>Employee Type</Text>
+                  <Text style={styles.addEmployeeLabel}>Employee Type *</Text>
                   <View style={{flexDirection: 'row', alignItems: 'center'}}>
                     <RadioButton
                       value="Worker"
@@ -1135,6 +1135,9 @@ export default function EmployeesPeople() {
                 </View>
 
                 {/* Worker Type */}
+                <Text style={[styles.addEmployeeLabel, {marginLeft: 10}]}>
+                  Employee Type *
+                </Text>
                 <View style={{flexDirection: 'row', marginBottom: 15}}>
                   <TouchableOpacity
                     style={{
@@ -1380,6 +1383,9 @@ export default function EmployeesPeople() {
               <Text style={styles.pageIndicatorText}>
                 Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
                 {totalPages}
+              </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
               </Text>
             </View>
 
@@ -1696,6 +1702,12 @@ const styles = StyleSheet.create({
   pageCurrent: {
     fontWeight: '700',
     color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
   },
 
   //Delete Modal
