@@ -25,15 +25,18 @@ interface Profiles {
 }
 
 interface ViewProfile {
-  id: number;
-  fixprf_area_id: number;
-  fixprf_business_account_name: string;
-  fixprf_title: string;
-  fixprf_business_address: string;
-  fixprf_tehsil: string;
-  fixprf_district: string;
-  fixprf_mobile: string;
-  fixprf_status: string;
+  expenseprofile: {
+    id: number;
+    fixprf_area_id: number;
+    fixprf_business_account_name: string;
+    fixprf_title: string;
+    fixprf_business_address: string;
+    fixprf_tehsil: string;
+    fixprf_district: string;
+    fixprf_mobile: string;
+    fixprf_status: string;
+  };
+  area: string;
 }
 
 export default function FixedAccountsPeople() {
@@ -41,8 +44,7 @@ export default function FixedAccountsPeople() {
   const {openDrawer} = useDrawer();
   const [profiles, setProfiles] = useState<Profiles[]>([]);
   const [modalVisible, setModalVisible] = useState('');
-  const [viewProfile, setViewProfile] = useState<ViewProfile[]>([]);
-  const [showSuccess, setShowSuccess] = useState(false);
+  const [viewProfile, setViewProfile] = useState<ViewProfile | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -129,7 +131,7 @@ export default function FixedAccountsPeople() {
                             const res = await axios.get(
                               `${BASE_URL}/expenseprofileshow?id=${id}&_token=${token}`,
                             );
-                            setViewProfile([res.data.expenseprofile]);
+                            setViewProfile(res.data);
                           } catch (error) {
                             console.log(error);
                           }
@@ -210,76 +212,76 @@ export default function FixedAccountsPeople() {
                 <TouchableOpacity
                   onPress={() => {
                     setModalVisible('');
-                    setViewProfile([]);
+                    setViewProfile(null);
                   }}
                   style={styles.addCustomerCloseBtn}>
                   <Icon name="close" size={20} color="#144272" />
                 </TouchableOpacity>
               </View>
 
-              {viewProfile.length > 0 && (
-                <View style={styles.customerDetailsWrapper}>
-                  {/* Optional Profile Image */}
-                  <View style={styles.customerImageWrapper}>
-                    <View style={styles.customerNoImage}>
-                      <Icon name="account" size={40} color="#999" />
-                      <Text style={styles.customerNoImageText}>No Image</Text>
-                    </View>
-                  </View>
-
-                  {/* Info Fields */}
-                  <View style={styles.customerInfoBox}>
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Name</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProfile[0]?.fixprf_business_account_name ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Title</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProfile[0]?.fixprf_title ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Contact</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProfile[0]?.fixprf_mobile ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Area</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProfile[0]?.fixprf_area_id ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>District</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProfile[0]?.fixprf_district ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Tehsil</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProfile[0]?.fixprf_tehsil ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Address</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProfile[0]?.fixprf_business_address ?? 'N/A'}
-                      </Text>
-                    </View>
+              <View style={styles.customerDetailsWrapper}>
+                {/* Optional Profile Image */}
+                <View style={styles.customerImageWrapper}>
+                  <View style={styles.customerNoImage}>
+                    <Icon name="account" size={40} color="#999" />
+                    <Text style={styles.customerNoImageText}>No Image</Text>
                   </View>
                 </View>
-              )}
+
+                {/* Info Fields */}
+                <View style={styles.customerInfoBox}>
+                  <View style={styles.customerInfoRow}>
+                    <Text style={styles.customerInfoLabel}>Name</Text>
+                    <Text style={styles.customerInfoValue}>
+                      {viewProfile?.expenseprofile
+                        ?.fixprf_business_account_name ?? 'N/A'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.customerInfoRow}>
+                    <Text style={styles.customerInfoLabel}>Title</Text>
+                    <Text style={styles.customerInfoValue}>
+                      {viewProfile?.expenseprofile.fixprf_title ?? 'N/A'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.customerInfoRow}>
+                    <Text style={styles.customerInfoLabel}>Contact</Text>
+                    <Text style={styles.customerInfoValue}>
+                      {viewProfile?.expenseprofile?.fixprf_mobile ?? 'N/A'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.customerInfoRow}>
+                    <Text style={styles.customerInfoLabel}>Area</Text>
+                    <Text style={styles.customerInfoValue}>
+                      {viewProfile?.area ?? 'N/A'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.customerInfoRow}>
+                    <Text style={styles.customerInfoLabel}>District</Text>
+                    <Text style={styles.customerInfoValue}>
+                      {viewProfile?.expenseprofile?.fixprf_district ?? 'N/A'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.customerInfoRow}>
+                    <Text style={styles.customerInfoLabel}>Tehsil</Text>
+                    <Text style={styles.customerInfoValue}>
+                      {viewProfile?.expenseprofile?.fixprf_tehsil ?? 'N/A'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.customerInfoRow}>
+                    <Text style={styles.customerInfoLabel}>Address</Text>
+                    <Text style={styles.customerInfoValue}>
+                      {viewProfile?.expenseprofile?.fixprf_business_address ??
+                        'N/A'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
             </ScrollView>
           </View>
         </Modal>

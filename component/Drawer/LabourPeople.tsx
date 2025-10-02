@@ -549,21 +549,6 @@ export default function LabourPeople() {
                   <View style={styles.infoRow}>
                     <View style={styles.labelRow}>
                       <Icon
-                        name="phone"
-                        size={18}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Phone</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.labr_contact || '--'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
                         name="id-card"
                         size={18}
                         color={'#144272'}

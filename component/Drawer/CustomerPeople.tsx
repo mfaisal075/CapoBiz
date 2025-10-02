@@ -21,6 +21,7 @@ import {useUser} from '../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
+import LinearGradient from 'react-native-linear-gradient';
 
 interface EditCustomer {
   id: number;
@@ -260,6 +261,8 @@ export default function CustomerPeople() {
       });
 
       const data = res.data;
+      console.log(res.status);
+      console.log(data.status);
 
       if (res.status === 200 && data.status === 200) {
         Toast.show({
@@ -529,10 +532,11 @@ export default function CustomerPeople() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={['#1E3A8A', '#20B2AA']}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
             <Icon name="menu" size={24} color="white" />
@@ -623,15 +627,30 @@ export default function CustomerPeople() {
                   <View style={styles.infoRow}>
                     <View style={styles.labelRow}>
                       <Icon
-                        name="phone"
+                        name="mail"
                         size={20}
                         color={'#144272'}
                         style={styles.infoIcon}
                       />
-                      <Text style={styles.labelText}>Phone</Text>
+                      <Text style={styles.labelText}>Email</Text>
                     </View>
                     <Text style={styles.valueText}>
-                      {item.cust_contact || 'N/A'}
+                      {item.cust_email || 'N/A'}
+                    </Text>
+                  </View>
+
+                  <View style={styles.infoRow}>
+                    <View style={styles.labelRow}>
+                      <Icon
+                        name="id-card"
+                        size={20}
+                        color={'#144272'}
+                        style={styles.infoIcon}
+                      />
+                      <Text style={styles.labelText}>CNIC</Text>
+                    </View>
+                    <Text style={styles.valueText}>
+                      {item.cust_cnic || 'N/A'}
                     </Text>
                   </View>
 
@@ -690,7 +709,6 @@ export default function CustomerPeople() {
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholderTextColor="#999"
-                      placeholder="Enter customer name"
                       value={addForm.name}
                       onChangeText={t => onChange('name', t)}
                     />
@@ -700,7 +718,6 @@ export default function CustomerPeople() {
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholderTextColor="#999"
-                      placeholder="Enter father name"
                       value={addForm.father_name}
                       onChangeText={t => onChange('father_name', t)}
                     />
@@ -713,7 +730,6 @@ export default function CustomerPeople() {
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholderTextColor="#999"
-                      placeholder="0300-1234567"
                       value={addForm.contact}
                       keyboardType="phone-pad"
                       maxLength={12}
@@ -733,7 +749,6 @@ export default function CustomerPeople() {
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholderTextColor="#999"
-                      placeholder="customer@example.com"
                       value={addForm.email}
                       keyboardType="email-address"
                       onChangeText={t => onChange('email', t)}
@@ -741,24 +756,21 @@ export default function CustomerPeople() {
                   </View>
                 </View>
 
-                <View style={styles.addCustomerFullRow}>
-                  <Text style={styles.addCustomerLabel}>Address</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter complete address"
-                    value={addForm.address}
-                    onChangeText={t => onChange('address', t)}
-                  />
-                </View>
-
                 <View style={styles.addCustomerRow}>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Address</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      value={addForm.address}
+                      onChangeText={t => onChange('address', t)}
+                    />
+                  </View>
                   <View style={styles.addCustomerField}>
                     <Text style={styles.addCustomerLabel}>CNIC</Text>
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholderTextColor="#999"
-                      placeholder="12345-1234567-1"
                       keyboardType="numeric"
                       maxLength={15}
                       value={addForm.cnic}
@@ -776,12 +788,25 @@ export default function CustomerPeople() {
                       }}
                     />
                   </View>
+                </View>
+
+                <View style={styles.addCustomerRow}>
                   <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 2</Text>
+                    <Text style={styles.addCustomerLabel}>
+                      Contact Person 1
+                    </Text>
                     <TextInput
                       style={styles.addCustomerInput}
                       placeholderTextColor="#999"
-                      placeholder="Alternative contact"
+                      value={addForm.contact_person_one}
+                      onChangeText={t => onChange('contact_person_one', t)}
+                    />
+                  </View>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Contact </Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
                       value={addForm.sec_contact}
                       keyboardType="phone-pad"
                       maxLength={12}
@@ -793,6 +818,39 @@ export default function CustomerPeople() {
                             cleaned.slice(0, 4) + '-' + cleaned.slice(4);
                         if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
                         onChange('sec_contact', cleaned);
+                      }}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.addCustomerRow}>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>
+                      Contact Person 2
+                    </Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      value={addForm.contact_person_two}
+                      onChangeText={t => onChange('contact_person_two', t)}
+                    />
+                  </View>
+                  <View style={styles.addCustomerField}>
+                    <Text style={styles.addCustomerLabel}>Contact</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      value={addForm.third_contact}
+                      keyboardType="phone-pad"
+                      maxLength={12}
+                      onChangeText={t => {
+                        let cleaned = t.replace(/[^0-9-]/g, '');
+                        cleaned = cleaned.replace(/-/g, '');
+                        if (cleaned.length > 4)
+                          cleaned =
+                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                        onChange('third_contact', cleaned);
                       }}
                     />
                   </View>
@@ -1262,147 +1320,110 @@ export default function CustomerPeople() {
           visible={modalVisible === 'View'}
           transparent
           animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              {/* Header */}
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Customer Details</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setSelectedCust([]);
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
-
-              {selectedCust.length > 0 && (
-                <View style={styles.customerDetailsWrapper}>
-                  {/* Profile Image */}
-                  <View style={styles.customerImageWrapper}>
-                    {selectedCust[0].cust.cust_image ? (
-                      <Image
-                        source={{uri: selectedCust[0].cust.cust_image}}
-                        style={styles.customerImage}
-                        resizeMode="cover"
-                      />
-                    ) : (
-                      <View style={styles.customerNoImage}>
-                        <Icon name="account" size={40} color="#999" />
-                        <Text style={styles.customerNoImageText}>No Image</Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Info Fields */}
-                  <View style={styles.customerInfoBox}>
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Customer Name
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.cust.cust_name}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Father Name</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.cust.cust_fathername ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Email</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.cust.cust_email ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Contact</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.cust.cust_contact ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Contact Person 1
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.cust?.cust_contact_person_one ??
-                          'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Contact Person 2
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.cust?.cust_contact_person_two ??
-                          'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>CNIC</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.cust?.cust_cnic ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Address</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.cust?.cust_address ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Area</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.area?.area_name ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Type</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.type?.custtyp_name ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Opening Balance
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.cust?.cust_opening_balance ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Payment Type</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.cust?.cust_payment_type ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Transaction Type
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {selectedCust[0]?.cust?.cust_transaction_type ?? 'N/A'}
-                      </Text>
-                    </View>
-                  </View>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <ScrollView contentContainerStyle={styles.modalContent}>
+                {/* Header */}
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalHeaderTitle}>Customer Details</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setModalVisible('');
+                      setSelectedCust([]);
+                    }}
+                    style={styles.closeBtn}>
+                    <Icon name="close" size={22} color="#144272" />
+                  </TouchableOpacity>
                 </View>
-              )}
-            </ScrollView>
+
+                {selectedCust.length > 0 && (
+                  <View style={styles.customerDetailsWrapper}>
+                    {/* Profile Image */}
+                    <View style={styles.customerImageWrapper}>
+                      {selectedCust[0].cust.cust_image ? (
+                        <Image
+                          source={{uri: selectedCust[0].cust.cust_image}}
+                          style={styles.customerImage}
+                          resizeMode="cover"
+                        />
+                      ) : (
+                        <View style={styles.customerNoImage}>
+                          <Icon name="account" size={40} color="#bbb" />
+                          <Text style={styles.customerNoImageText}>
+                            No Image
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+
+                    {/* Info Fields */}
+                    <View style={styles.modalInfoBox}>
+                      {[
+                        {
+                          label: 'Customer Name',
+                          value: selectedCust[0]?.cust.cust_name,
+                        },
+                        {
+                          label: 'Father Name',
+                          value: selectedCust[0]?.cust.cust_fathername,
+                        },
+                        {
+                          label: 'Email',
+                          value: selectedCust[0]?.cust.cust_email,
+                        },
+                        {
+                          label: 'Customer Contact',
+                          value: selectedCust[0]?.cust.cust_contact,
+                        },
+                        {
+                          label: 'Contact Person 1',
+                          value: selectedCust[0]?.cust?.cust_contact_person_one,
+                        },
+                        {
+                          label: 'Contact Person 2',
+                          value: selectedCust[0]?.cust?.cust_contact_person_two,
+                        },
+                        {
+                          label: 'CNIC',
+                          value: selectedCust[0]?.cust?.cust_cnic,
+                        },
+                        {
+                          label: 'Address',
+                          value: selectedCust[0]?.cust?.cust_address,
+                        },
+                        {
+                          label: 'Area',
+                          value: selectedCust[0]?.area?.area_name,
+                        },
+                        {
+                          label: 'Type',
+                          value: selectedCust[0]?.type?.custtyp_name,
+                        },
+                        {
+                          label: 'Opening Balance',
+                          value: selectedCust[0]?.cust?.cust_opening_balance,
+                        },
+                        {
+                          label: 'Payment Type',
+                          value: selectedCust[0]?.cust?.cust_payment_type,
+                        },
+                        {
+                          label: 'Transaction Type',
+                          value: selectedCust[0]?.cust?.cust_transaction_type,
+                        },
+                      ].map((item, index) => (
+                        <View key={index} style={styles.modalInfoRow}>
+                          <Text style={styles.infoLabel}>{item.label}</Text>
+                          <Text style={styles.infoValue}>
+                            {item.value || 'N/A'}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
+            </View>
           </View>
         </Modal>
 
@@ -1452,7 +1473,7 @@ export default function CustomerPeople() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -1484,7 +1505,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
 
@@ -1496,7 +1517,7 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#ffffffde',
     borderRadius: 16,
-    marginVertical: 8,
+    marginVertical: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 6,
@@ -1591,7 +1612,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: 'rgba(30, 58, 138, 1)',
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -1604,7 +1625,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: '#20B2AA',
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1618,7 +1639,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#FFFFFF',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -1811,26 +1832,62 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
 
-  // View Modal Styling
-  customerDetailsWrapper: {
-    padding: 20,
+  // View Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
+  modalCard: {
+    width: '90%',
+    maxHeight: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 10,
+    paddingHorizontal: 10,
+  },
+  modalHeaderTitle: {
+    color: '#144272',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  closeBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  customerDetailsWrapper: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
   customerImageWrapper: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   customerImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 3,
     borderColor: '#144272',
   },
   customerNoImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#f0f0f0',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -1841,26 +1898,26 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 4,
   },
-  customerInfoBox: {
+  modalInfoBox: {
     width: '100%',
     marginTop: 10,
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    padding: 12,
   },
-  customerInfoRow: {
+  modalInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e0e0e0',
-    paddingBottom: 6,
+    marginBottom: 10,
   },
-  customerInfoLabel: {
+  infoLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#144272',
   },
-  customerInfoValue: {
+  infoValue: {
     fontSize: 14,
-    color: '#333',
+    color: '#555',
     flexShrink: 1,
     textAlign: 'right',
   },

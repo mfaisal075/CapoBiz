@@ -29,6 +29,7 @@ interface Employee {
   emp_contact: string;
   emp_cnic: string;
   emp_email: string;
+  emp_type: string;
 }
 
 interface EmployeeView {
@@ -514,9 +515,7 @@ export default function EmployeesPeople() {
 
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.emp_name}</Text>
-                    <Text style={styles.subText}>
-                      {item.emp_contact || 'No contact'}
-                    </Text>
+                    <Text style={styles.subText}>{item.emp_type || 'N/A'}</Text>
                   </View>
 
                   {/* Actions */}

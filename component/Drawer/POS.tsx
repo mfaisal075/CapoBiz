@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   ScrollView,
   TouchableOpacity,
   TextInput,
@@ -171,10 +170,6 @@ export default function POS() {
   }));
   const [custData, setCustData] = useState<CustomersData>(initialCustomersData);
   const [labDropdown, setLabDropdown] = useState<Labour[]>([]);
-  const transformedLab = labDropdown.map(lab => ({
-    label: lab.labr_name,
-    value: lab.id.toString(),
-  }));
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [builty, setBuilty] = useState<BuiltyAddress>(initialBuiltyAddress);
   const [orderTotal, setOrderTotal] = useState('');
@@ -192,51 +187,18 @@ export default function POS() {
   const [invcSaleDetails, setInvcSaleDetails] = useState<InvoiceSaleDetails[]>(
     [],
   );
-  const [addForm, setAddForm] = useState<AddCustomer>(initialAddCustomer);
-  const [custTypeOpen, setCustTypeOpen] = useState(false);
-  const [custType, setCustType] = useState<string | null>('');
-  const [types, setTypes] = useState<TypeData[]>([]);
-  const transformedTypes = types.map(item => ({
-    label: item.custtyp_name,
-    value: item.id,
-  }));
-  const [areaData, setAreaData] = useState<AreaData[]>([]);
-  const [custArea, setCustArea] = useState<string | null>('');
-  const [custAreaOpen, setCustAreaOpen] = useState(false);
-  const transformedAreas = areaData.map(item => ({
-    label: item.area_name,
-    value: item.id,
-  }));
 
   // Cart Animation
   const bounceAnim = useRef(new Animated.Value(0)).current;
 
-  // Add Customer Form On Change
-  const onChange = (field: keyof AddCustomer, value: string) => {
-    setAddForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const builtyOnChange = (field: keyof BuiltyAddress, value: string) => {
-    setBuilty(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
   const [isOpen, setIsOpen] = useState(false);
   const [currentValue, setCurrentValue] = useState<string | null>('');
   const [uomItems, setUomItems] = useState<{label: string; value: string}[]>(
     [],
   );
-
   const [Open, setOpen] = useState(false);
-  const [currentVal, setCurrentVal] = useState<string | null>('');
-
-  const [Labour, setLabour] = useState(false);
+  const [currentVal, setCurrentVal] = useState<string | ''>('');
   const [currentLabour, setCurrentLabour] = useState<string | null>('');
-
   const {openDrawer} = useDrawer();
   const [discountType, setDiscountType] = React.useState<'cash' | 'percent'>(
     'cash',
@@ -300,12 +262,20 @@ export default function POS() {
     }
 
     try {
-      const res = await axios.post(`${BASE_URL}/addtocart`, {
-        search_name: selectedProduct.value,
-        prod_id: selectedProduct.prod_id,
-        qty: quantity,
-        uom: currentValue,
-        unitprice: price,
+      const formData = new FormData();
+      formData.append('search_name', selectedProduct.value);
+      formData.append('prod_id', selectedProduct.prod_id);
+      formData.append('qty', selectedProduct.prod_qty);
+      formData.append('uom', currentValue);
+      formData.append('qty', quantity);
+      formData.append('unitprice', price);
+
+      console.log(formData);
+
+      const res = await axios.post(`${BASE_URL}/addtocart`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
 
       const data = res.data;
@@ -332,28 +302,28 @@ export default function POS() {
           type: 'error',
           text1: 'Warning!',
           text2: 'Product has been expired!',
-          visibilityTime: 2000,
+          visibilityTime: 3000,
         });
       } else if (res.status === 200 && data.status === 201) {
         Toast.show({
           type: 'error',
           text1: 'Warning!',
           text2: 'The require quantity is not available!',
-          visibilityTime: 2000,
+          visibilityTime: 3000,
         });
       } else if (res.status === 200 && data.status === 202) {
         Toast.show({
           type: 'error',
           text1: 'Warning!',
           text2: 'The require quantity is not available anymore!',
-          visibilityTime: 2000,
+          visibilityTime: 3000,
         });
       } else if (res.status === 200 && data.status === 203) {
         Toast.show({
           type: 'error',
           text1: 'Warning!',
           text2: 'Quantity should be greater than 0!',
-          visibilityTime: 2000,
+          visibilityTime: 3000,
         });
       }
     } catch (error) {
@@ -395,15 +365,6 @@ export default function POS() {
       } catch (error) {
         console.log(error);
       }
-    }
-  };
-
-  const fetchLabDropdown = async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/fetchlaboursdropdown`);
-      setLabDropdown(res.data);
-    } catch (error) {
-      console.log(error);
     }
   };
 
@@ -614,14 +575,14 @@ export default function POS() {
           type: 'error',
           text1: 'Warning!',
           text2: "Payment Amount' cannot be less than 'Net Payables",
-          visibilityTime: 2000,
+          visibilityTime: 3000,
         });
       } else if (res.status === 200 && data.status === 202) {
         Toast.show({
           type: 'error',
           text1: 'Warning!',
           text2: 'For the transaction please add some product in cart.',
-          visibilityTime: 2000,
+          visibilityTime: 3000,
         });
       } else {
         Toast.show({
@@ -638,72 +599,6 @@ export default function POS() {
         text1: 'Sale checkout failed',
         text2: error.response?.data?.message || 'Please try again.',
       });
-    }
-  };
-
-  const fetchAreas = async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/fetchareadata`);
-      setAreaData(res.data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const fetchType = async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/fetchtypedata`);
-      setTypes(res.data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const addCustomer = async () => {
-    if (
-      !addForm.name.trim() ||
-      !addForm.contact.trim() ||
-      !addForm.address.trim()
-    ) {
-      Toast.show({
-        type: 'error',
-        text1: 'Missing Fields',
-        text2: 'Please fill all required fields.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-    try {
-      const res = await axios.post(`${BASE_URL}/addcustomer`, {
-        cust_name: addForm.name.trim(),
-        fathername: addForm.father_name.trim(),
-        contact: addForm.contact.trim(),
-        email: addForm.email.trim(),
-        sec_contact: addForm.sec_contact,
-        third_contact: addForm.third_contact,
-        cnic: addForm.cnic.trim(),
-        address: addForm.address.trim(),
-        cust_type: custType,
-        cust_area: custArea,
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Added!',
-          text2: 'Customer has been Added successfully',
-          visibilityTime: 1500,
-        });
-        fetchCustDropdown();
-        setAddForm(initialAddCustomer);
-        setCustArea('');
-        setCustType('');
-        setModalVisible('');
-      }
-    } catch (error) {
-      console.log();
     }
   };
 
@@ -877,10 +772,7 @@ export default function POS() {
   useEffect(() => {
     fetchCustDropdown();
     fetchCustData();
-    fetchLabDropdown();
-    fetchType();
     loadCartItems();
-    fetchAreas();
 
     const discountValue = parseFloat(discount) || 0;
     let calculatedDiscount = 0;
@@ -971,7 +863,7 @@ export default function POS() {
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
-        colors={['#071A2D', '#0F2D4E']}
+        colors={['#1E3A8A', '#20B2AA']}
         style={styles.gradientBackground}
         start={{x: 0, y: 0}}
         end={{x: 1, y: 1}}>
@@ -1009,19 +901,19 @@ export default function POS() {
                     setSelectedProduct(item);
 
                     const uomOptions = [
-                      {label: item.ums_name, value: item.ums_name},
+                      {label: item.ums_name, value: item.prod_ums_id},
                     ];
 
                     if (item.prod_have_sub_uom === 'Y' && item.prod_sub_uom) {
                       uomOptions.push({
                         label: item.prod_sub_uom,
-                        value: item.prod_sub_uom,
+                        value: item.prod_ums_id,
                       });
                     }
 
                     setProdStock(item.prod_qty);
                     setUomItems(uomOptions);
-                    setCurrentValue(item.ums_name);
+                    setCurrentValue(item.prod_ums_id);
                     setQuantity('1');
                     setPrice(item.prod_price);
                     setShowResults(false);
@@ -1058,23 +950,11 @@ export default function POS() {
             <View style={styles.productInfoRow}>
               <View style={styles.productInfoItem}>
                 <Text style={styles.label}>Product</Text>
-                <TextInput
-                  style={[styles.infoInput, styles.disabledInput]}
-                  value={prodName}
-                  editable={false}
-                  placeholder="Selected product"
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                />
+                <Text style={styles.value}>{prodName || 'N/A'}</Text>
               </View>
               <View style={styles.productInfoItem}>
                 <Text style={styles.label}>Stock</Text>
-                <TextInput
-                  style={[styles.infoInput, styles.disabledInput]}
-                  value={prodStock}
-                  editable={false}
-                  placeholder="Available"
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                />
+                <Text style={styles.value}>{prodStock || 'N/A'}</Text>
               </View>
             </View>
 
@@ -1165,7 +1045,7 @@ export default function POS() {
                   style={styles.modernDropdown}
                   dropDownContainerStyle={[
                     styles.modernDropdownContainer,
-                    {maxHeight: 150},
+                    {maxHeight: 150, zIndex: 3000},
                   ]}
                   ArrowUpIconComponent={() => (
                     <Icon name="keyboard-arrow-up" size={25} color="#fff" />
@@ -1180,129 +1060,20 @@ export default function POS() {
                   listItemLabelStyle={{color: '#144272'}}
                 />
               </View>
-              <TouchableOpacity
-                onPress={() => setModalVisible('AddCustomer')}
-                style={styles.addCustomerBtn}>
-                <Icon name="person-add" size={20} color="white" />
-              </TouchableOpacity>
             </View>
 
             <View style={styles.customerInfoGrid}>
               <View style={styles.customerInfoItem}>
-                <Text style={styles.label}>Name</Text>
-                <TextInput
-                  style={[styles.infoInput, styles.disabledInput]}
-                  value={custData.name}
-                  editable={false}
-                  placeholder="Customer name"
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                />
+                <Text style={styles.label}>Name:</Text>
+                <Text style={styles.value}>{custData?.name || 'N/A'}</Text>
               </View>
               <View style={styles.customerInfoItem}>
-                <Text style={styles.label}>Contact</Text>
-                <TextInput
-                  style={[styles.infoInput, styles.disabledInput]}
-                  value={custData.contact}
-                  editable={false}
-                  placeholder="Phone number"
-                  placeholderTextColor="rgba(255,255,255,0.5)"
-                />
+                <Text style={styles.label}>Contact:</Text>
+                <Text style={styles.value}>{custData?.contact || 'N/A'}</Text>
               </View>
-            </View>
-
-            <View style={styles.fullWidthItem}>
-              <Text style={styles.label}>Address</Text>
-              <TextInput
-                style={[styles.infoInput, styles.disabledInput]}
-                value={custData.address}
-                editable={false}
-                placeholder="Customer address"
-                placeholderTextColor="rgba(255,255,255,0.5)"
-              />
-            </View>
-          </View>
-
-          {/* Delivery Information Card */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Icon name="local-shipping" size={24} color="white" />
-              <Text style={styles.cardTitle}>Delivery Information</Text>
-            </View>
-
-            <View style={styles.fullWidthItem}>
-              <Text style={styles.label}>Labour</Text>
-              <DropDownPicker
-                items={transformedLab}
-                open={Labour}
-                setOpen={setLabour}
-                value={currentLabour}
-                setValue={setCurrentLabour}
-                placeholder="Select Labour"
-                style={styles.modernDropdown}
-                dropDownContainerStyle={[
-                  styles.modernDropdownContainer,
-                  {maxHeight: 130},
-                ]}
-                ArrowUpIconComponent={() => (
-                  <Icon name="keyboard-arrow-up" size={25} color="#fff" />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon name="keyboard-arrow-down" size={25} color="#fff" />
-                )}
-                textStyle={styles.dropdownText}
-                placeholderStyle={styles.dropdownPlaceholder}
-                listMode="SCROLLVIEW"
-                labelStyle={{color: '#fff'}}
-                listItemLabelStyle={{color: '#144272'}}
-              />
-            </View>
-
-            <View style={styles.deliveryGrid}>
-              <View style={styles.deliveryItem}>
-                <Text style={styles.label}>Builty Address</Text>
-                <TextInput
-                  style={styles.deliveryInput}
-                  placeholderTextColor="rgba(255,255,255,0.7)"
-                  placeholder="Delivery address"
-                  value={builty.builtyAdd}
-                  onChangeText={t => builtyOnChange('builtyAdd', t)}
-                />
-              </View>
-              <View style={styles.deliveryItem}>
-                <Text style={styles.label}>Contact</Text>
-                <TextInput
-                  style={styles.deliveryInput}
-                  placeholderTextColor="rgba(255,255,255,0.7)"
-                  placeholder="Contact number"
-                  keyboardType="phone-pad"
-                  value={builty.builtyCont}
-                  onChangeText={t => builtyOnChange('builtyCont', t)}
-                />
-              </View>
-            </View>
-
-            <View style={styles.chargesGrid}>
-              <View style={styles.chargeItem}>
-                <Text style={styles.label}>Freight</Text>
-                <TextInput
-                  style={styles.chargeInput}
-                  placeholderTextColor="rgba(255,255,255,0.7)"
-                  placeholder="0"
-                  keyboardType="numeric"
-                  value={builty.freight}
-                  onChangeText={t => builtyOnChange('freight', t)}
-                />
-              </View>
-              <View style={styles.chargeItem}>
-                <Text style={styles.label}>Labour Expense</Text>
-                <TextInput
-                  style={styles.chargeInput}
-                  placeholderTextColor="rgba(255,255,255,0.7)"
-                  placeholder="0"
-                  keyboardType="numeric"
-                  value={builty.labourExpanse}
-                  onChangeText={t => builtyOnChange('labourExpanse', t)}
-                />
+              <View style={styles.customerInfoItem}>
+                <Text style={styles.label}>Address:</Text>
+                <Text style={styles.value}>{custData?.address || 'N/A'}</Text>
               </View>
             </View>
           </View>
@@ -1706,203 +1477,6 @@ export default function POS() {
           </View>
         </Modal>
 
-        {/* Add Customer Modal */}
-        <Modal
-          visible={modalVisible === 'AddCustomer'}
-          transparent
-          animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Add New Customer</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setAddForm(initialAddCustomer);
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.addCustomerForm}>
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Customer Name *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter customer name"
-                      value={addForm.name}
-                      onChangeText={t => onChange('name', t)}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Father Name</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter father name"
-                      value={addForm.father_name}
-                      onChangeText={t => onChange('father_name', t)}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="0300-1234567"
-                      value={addForm.contact}
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4) {
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        }
-                        if (cleaned.length > 12) {
-                          cleaned = cleaned.slice(0, 12);
-                        }
-                        onChange('contact', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Email</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="customer@example.com"
-                      value={addForm.email}
-                      keyboardType="email-address"
-                      onChangeText={t => onChange('email', t)}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.addCustomerFullRow}>
-                  <Text style={styles.addCustomerLabel}>Address *</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter complete address"
-                    value={addForm.address}
-                    onChangeText={t => onChange('address', t)}
-                  />
-                </View>
-
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>CNIC</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="12345-1234567-1"
-                      keyboardType="numeric"
-                      maxLength={15}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 5) {
-                          cleaned =
-                            cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                        }
-                        if (cleaned.length > 13) {
-                          cleaned =
-                            cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                        }
-                        if (cleaned.length > 15) {
-                          cleaned = cleaned.slice(0, 15);
-                        }
-                        onChange('cnic', cleaned);
-                      }}
-                      value={addForm.cnic}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 2</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Alternative contact"
-                      value={addForm.sec_contact}
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4) {
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        }
-                        if (cleaned.length > 12) {
-                          cleaned = cleaned.slice(0, 12);
-                        }
-                        onChange('sec_contact', cleaned);
-                      }}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.addCustomerDropdownRow}>
-                  <View style={styles.addCustomerDropdownField}>
-                    <Text style={styles.addCustomerLabel}>Customer Type</Text>
-                    <DropDownPicker
-                      items={transformedTypes}
-                      open={custTypeOpen}
-                      setOpen={setCustTypeOpen}
-                      value={custType}
-                      setValue={setCustType}
-                      placeholder="Select type"
-                      style={styles.addCustomerDropdown}
-                      dropDownContainerStyle={
-                        styles.addCustomerDropdownContainer
-                      }
-                      textStyle={styles.addCustomerDropdownText}
-                      placeholderStyle={styles.addCustomerDropdownPlaceholder}
-                      listMode="SCROLLVIEW"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.addCustomerDropdownRow}>
-                  <View style={styles.addCustomerDropdownField}>
-                    <Text style={styles.addCustomerLabel}>Area</Text>
-                    <DropDownPicker
-                      items={transformedAreas}
-                      open={custAreaOpen}
-                      setOpen={setCustAreaOpen}
-                      value={custArea}
-                      setValue={setCustArea}
-                      placeholder="Select area"
-                      style={styles.addCustomerDropdown}
-                      dropDownContainerStyle={
-                        styles.addCustomerDropdownContainer
-                      }
-                      textStyle={styles.addCustomerDropdownText}
-                      placeholderStyle={styles.addCustomerDropdownPlaceholder}
-                      listMode="SCROLLVIEW"
-                    />
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.addCustomerSubmitBtn}
-                  onPress={addCustomer}>
-                  <Icon name="person-add" size={20} color="white" />
-                  <Text style={styles.addCustomerSubmitText}>Add Customer</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </Modal>
-
         <Toast />
       </LinearGradient>
     </SafeAreaView>
@@ -2031,19 +1605,29 @@ const styles = StyleSheet.create({
 
   // Product Information
   productInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     marginBottom: 15,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
   },
   productInfoItem: {
-    flex: 1,
-    marginHorizontal: 5,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 8,
   },
   label: {
     color: 'white',
     fontSize: 14,
     fontWeight: '600',
-    marginBottom: 5,
+  },
+  value: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '300',
   },
   infoInput: {
     borderWidth: 1,
@@ -2151,58 +1735,22 @@ const styles = StyleSheet.create({
 
   // Customer Info Grid
   customerInfoGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     marginBottom: 15,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
   },
   customerInfoItem: {
-    flex: 1,
-    marginHorizontal: 5,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 8,
   },
   fullWidthItem: {
     marginBottom: 15,
-  },
-
-  // Delivery Information
-  deliveryGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  deliveryItem: {
-    flex: 1,
-    marginHorizontal: 5,
-  },
-  deliveryInput: {
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: 'white',
-    fontSize: 14,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-
-  // Charges Grid
-  chargesGrid: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  chargeItem: {
-    flex: 1,
-    marginHorizontal: 5,
-  },
-  chargeInput: {
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: 'white',
-    fontSize: 14,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    textAlign: 'center',
   },
 
   // Order Summary
@@ -2288,7 +1836,7 @@ const styles = StyleSheet.create({
   },
   netPayableValue: {
     color: '#4CAF50',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
   },
 
@@ -2296,12 +1844,12 @@ const styles = StyleSheet.create({
   paymentSection: {
     flexDirection: 'row',
     alignItems: 'flex-end',
+    justifyContent: 'space-between',
     marginBottom: 15,
     marginTop: 10,
   },
   paidInputContainer: {
-    flex: 2,
-    marginRight: 15,
+    width: '60%',
   },
   paidInput: {
     borderWidth: 2,
@@ -2314,7 +1862,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(76, 175, 80, 0.1)',
   },
   balanceContainer: {
-    flex: 1,
     alignItems: 'center',
   },
   balanceLabel: {
@@ -2760,117 +2307,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   printBtnText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-
-  // Add Customer Modal Styles
-  addCustomerModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  addCustomerModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  addCustomerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  addCustomerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#144272',
-  },
-  addCustomerCloseBtn: {
-    padding: 5,
-  },
-  addCustomerForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  addCustomerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  addCustomerField: {
-    flex: 1,
-    marginHorizontal: 5,
-  },
-  addCustomerFullRow: {
-    marginBottom: 15,
-  },
-  addCustomerLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-    marginBottom: 5,
-  },
-  addCustomerInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
-  },
-  addCustomerDropdownRow: {
-    marginBottom: 15,
-  },
-  addCustomerDropdownField: {
-    flex: 1,
-  },
-  addCustomerDropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    minHeight: 42,
-    zIndex: 999,
-  },
-  addCustomerDropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    zIndex: 1000,
-    maxHeight: 160,
-  },
-  addCustomerDropdownText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  addCustomerDropdownPlaceholder: {
-    color: '#999',
-    fontSize: 14,
-  },
-  addCustomerSubmitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#144272',
-    borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 20,
-  },
-  addCustomerSubmitText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',

@@ -540,7 +540,7 @@ export default function SupplierPeople() {
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.sup_name}</Text>
                     <Text style={styles.subText}>
-                      {item.sup_company_name || 'No company'}
+                      {item.sup_contact || 'N/A'}
                     </Text>
                   </View>
 
@@ -605,21 +605,6 @@ export default function SupplierPeople() {
                     </View>
                     <Text style={styles.valueText}>
                       {item.sup_agancy_name || 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="phone"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Phone</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.sup_contact || 'N/A'}
                     </Text>
                   </View>
 
@@ -1359,6 +1344,9 @@ export default function SupplierPeople() {
                 Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
                 {totalPages}
               </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
+              </Text>
             </View>
 
             <TouchableOpacity
@@ -1562,6 +1550,12 @@ const styles = StyleSheet.create({
   pageCurrent: {
     fontWeight: '700',
     color: '#FFD166',
+  },
+  totalText: {
+    color: '#fff',
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
   },
 
   // Add Customer Modal Styles
