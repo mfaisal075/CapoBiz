@@ -18,6 +18,8 @@ import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface UMOs {
   id: number;
@@ -205,10 +207,11 @@ export default function UOMProducts() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
             <Icon name="menu" size={24} color="white" />
@@ -233,22 +236,24 @@ export default function UOMProducts() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  {/* Avatar Circle */}
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
                   <View style={styles.avatarBox}>
                     <Text style={styles.avatarText}>
-                      {item.ums_name?.charAt(0).toUpperCase() || 'U'}
+                      {item.ums_name?.charAt(0) || 'U'}
                     </Text>
                   </View>
 
-                  {/* UOM Info */}
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.ums_name}</Text>
-                    <Text style={styles.subText}>Unit of Measure</Text>
+                    {/* Category */}
+                    <Text style={styles.subText}>
+                      <Icon name="tag" size={12} color="#666" />{' '}
+                      {item.id || 'No category'}
+                    </Text>
                   </View>
 
-                  {/* Actions */}
+                  {/* Actions on right */}
                   <View style={styles.actionRow}>
                     <TouchableOpacity
                       onPress={() => {
@@ -266,49 +271,23 @@ export default function UOMProducts() {
                         };
                         fetchSignleUmo(item.id);
                       }}>
-                      <Icon
-                        name="pencil"
-                        size={20}
-                        color="#144272"
-                        style={styles.actionIcon}
-                      />
+                      <Icon name="pencil" size={20} color={'#144272'} />
                     </TouchableOpacity>
-
                     <TouchableOpacity
                       onPress={() => {
                         setModalVisible('Delete');
                         setSelectedUmo(item.id);
                       }}>
-                      <Icon
-                        name="delete"
-                        size={20}
-                        color="#144272"
-                        style={styles.actionIcon}
-                      />
+                      <Icon name="delete" size={20} color={'#144272'} />
                     </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Info Box */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="tag"
-                        size={18}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>UOM ID (In DB)</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.id || 'N/A'}</Text>
                   </View>
                 </View>
               </View>
             )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>No UOM found.</Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
             contentContainerStyle={{paddingBottom: 90}}
@@ -499,7 +478,7 @@ export default function UOMProducts() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -531,7 +510,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
 
@@ -541,89 +520,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   avatarText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 14,
   },
   name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
     marginTop: 2,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    marginLeft: 10,
   },
-  actionIcon: {
-    tintColor: '#144272',
-    width: 20,
-    height: 20,
-    marginHorizontal: 4,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 50,
+    backgroundColor: '#fff',
+    borderRadius: 15,
   },
-  infoBox: {
+  emptyText: {
     marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  infoIcon: {
-    width: 18,
-    height: 18,
-    tintColor: '#144272',
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '60%',
-    textAlign: 'right',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Pagination Component
@@ -633,7 +587,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -646,7 +600,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -660,7 +614,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },

@@ -23,6 +23,8 @@ import BASE_URL from '../../BASE_URL';
 import axios from 'axios';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface Supplier {
   id: number;
@@ -350,10 +352,11 @@ export default function PurchaseOrder() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        resizeMode="cover"
-        style={styles.background}
-        source={require('../../../assets/screen.jpg')}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -372,7 +375,9 @@ export default function PurchaseOrder() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scrollContainer}>
+        <ScrollView
+          style={styles.mainContent}
+          showsVerticalScrollIndicator={false}>
           {/* Product Search Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Search Product</Text>
@@ -746,7 +751,7 @@ export default function PurchaseOrder() {
         </Modal>
 
         <Toast />
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -756,7 +761,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -780,17 +785,24 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
   },
-  scrollContainer: {
+
+  // Main Content
+  mainContent: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 15,
   },
   section: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
+    backgroundColor: 'rgba(15, 45, 78, 0.9)',
+    borderRadius: 15,
     padding: 20,
     marginVertical: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(255,255,255,0.15)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
   },
   sectionTitle: {
     fontSize: 18,
@@ -909,25 +921,29 @@ const styles = StyleSheet.create({
     maxHeight: 200,
   },
   supplierInfo: {
-    marginTop: 16,
+    marginVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
   },
   supplierCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 8,
-    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   supplierLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-    marginBottom: 4,
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   supplierValue: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '300',
   },
 
   // Modal Styles

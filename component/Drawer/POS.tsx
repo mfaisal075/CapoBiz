@@ -20,6 +20,7 @@ import Toast from 'react-native-toast-message';
 import {useUser} from '../CTX/UserContext';
 import RNPrint from 'react-native-print';
 import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../Colors';
 
 interface Customers {
   id: number;
@@ -863,7 +864,7 @@ export default function POS() {
   return (
     <SafeAreaView style={styles.container}>
       <LinearGradient
-        colors={['#1E3A8A', '#20B2AA']}
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
         style={styles.gradientBackground}
         start={{x: 0, y: 0}}
         end={{x: 1, y: 1}}>

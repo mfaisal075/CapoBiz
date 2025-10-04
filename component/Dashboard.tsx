@@ -87,6 +87,7 @@ export default function Dashboard(): JSX.Element {
 
         // Getting bussiness details
         const bus = await axios.get(`${BASE_URL}/dashboaddata`);
+        
 
         setBussName(bus.data?.businessdata?.bus_name ?? '');
         setBussAddress(bus.data?.businessdata?.bus_address ?? '');

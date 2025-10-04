@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
-import {Checkbox} from 'react-native-paper';
+import {Avatar, Checkbox} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {useUser} from '../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -21,6 +21,8 @@ import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import Toast from 'react-native-toast-message';
 import LottieView from 'lottie-react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../Colors';
 
 interface ShowSupplierData {
   id: number;
@@ -118,9 +120,8 @@ export default function SupplierPeople() {
   const {token} = useUser();
   const [supplierData, setSupplierData] = useState<SupplierData[] | []>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<number | null>(null);
-  const [showSupplierData, setShowSupplierData] = useState<
-    ShowSupplierData[] | []
-  >([]);
+  const [showSupplierData, setShowSupplierData] =
+    useState<ShowSupplierData | null>();
   const [editForm, setEditForm] = useState<EditSupplier>(initialEditSupplier);
   const [areaDropdown, setAreaDropdown] = useState<AreaDropDown[] | []>([]);
   const [areaOpen, setAreaOpen] = useState(false);
@@ -217,12 +218,8 @@ export default function SupplierPeople() {
         },
       );
 
-      const data = Array.isArray(res.data.supp)
-        ? res.data.supp
-        : [res.data.supp];
-
-      setViewModalArea(res.data.area);
-      setShowSupplierData(data);
+      setViewModalArea(res.data.area ? res.data.area.area_name : '');
+      setShowSupplierData(res.data.supp);
       setview(!view);
     } catch (error) {
       console.log(error);
@@ -506,10 +503,11 @@ export default function SupplierPeople() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
             <Icon name="menu" size={24} color="white" />
@@ -530,109 +528,53 @@ export default function SupplierPeople() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Avatar + Name */}
-                <View style={styles.headerRow}>
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
                   <View style={styles.avatarBox}>
                     <Text style={styles.avatarText}>
                       {item.sup_name?.charAt(0) || 'S'}
                     </Text>
                   </View>
+
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.sup_name}</Text>
+                    {/* small details inline */}
                     <Text style={styles.subText}>
-                      {item.sup_contact || 'N/A'}
+                      <Icon name="phone" size={12} color="#666" />{' '}
+                      {item.sup_contact || 'No contact'}
                     </Text>
-                  </View>
-
-                  {/* Actions */}
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity onPress={() => toggleview(item.id)}>
-                      <Icon
-                        style={styles.actionIcon}
-                        name="eye"
-                        size={20}
-                        color={'#144272'}
-                      />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => toggleedit(item.id)}>
-                      <Icon
-                        style={styles.actionIcon}
-                        name="pencil"
-                        size={20}
-                        color={'#144272'}
-                      />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity onPress={() => tglModal(item.id)}>
-                      <Icon
-                        style={styles.actionIcon}
-                        size={20}
-                        name="delete"
-                        color={'#144272'}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Info Section */}
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="office-building"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Company</Text>
-                    </View>
-                    <Text style={styles.valueText}>
+                    <Text style={styles.subText}>
+                      <Icon name="office-building" size={12} color="#666" />{' '}
                       {item.sup_company_name || 'N/A'}
                     </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="briefcase"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Agency</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.sup_agancy_name || 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="map-marker"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Area</Text>
-                    </View>
-                    <Text style={styles.valueText}>
+                    <Text style={styles.subText}>
+                      <Icon name="map-marker" size={12} color="#666" />{' '}
                       {item.area_name || 'N/A'}
                     </Text>
+                  </View>
+
+                  {/* Actions on right */}
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity onPress={() => toggleview(item.id)}>
+                      <Icon name="eye" size={20} color={'#144272'} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => toggleedit(item.id)}>
+                      <Icon name="pencil" size={20} color={'#144272'} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => tglModal(item.id)}>
+                      <Icon name="delete" size={20} color={'#144272'} />
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
             )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>
-                  No suppliers found.
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 110}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -677,139 +619,124 @@ export default function SupplierPeople() {
                 </View>
 
                 {/* Company + Agency */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Company Name *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter company name"
-                      value={addForm.comp_name}
-                      onChangeText={text =>
-                        handleAddInputChange('comp_name', text)
-                      }
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Agency Name</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter agency name"
-                      value={addForm.agencyname}
-                      onChangeText={text =>
-                        handleAddInputChange('agencyname', text)
-                      }
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Company Name *</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter company name"
+                    value={addForm.comp_name}
+                    onChangeText={text =>
+                      handleAddInputChange('comp_name', text)
+                    }
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Agency Name</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter agency name"
+                    value={addForm.agencyname}
+                    onChangeText={text =>
+                      handleAddInputChange('agencyname', text)
+                    }
+                  />
                 </View>
 
                 {/* Supplier Name + Contact 1 */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Supplier Name *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter supplier name"
-                      value={addForm.supp_name}
-                      onChangeText={text =>
-                        handleAddInputChange('supp_name', text)
-                      }
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Email</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="example@gmail.com"
-                      value={addForm.email}
-                      onChangeText={text => handleAddInputChange('email', text)}
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Supplier Name *</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter supplier name"
+                    value={addForm.supp_name}
+                    onChangeText={text =>
+                      handleAddInputChange('supp_name', text)
+                    }
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Email</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="example@gmail.com"
+                    value={addForm.email}
+                    onChangeText={text => handleAddInputChange('email', text)}
+                  />
                 </View>
 
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 1 *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter contact"
-                      keyboardType="phone-pad"
-                      value={addForm.contact}
-                      maxLength={12}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleAddInputChange('contact', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 2</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter contact"
-                      keyboardType="phone-pad"
-                      value={addForm.sec_contact}
-                      maxLength={12}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleAddInputChange('sec_contact', cleaned);
-                      }}
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact 1 *</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter contact"
+                    keyboardType="phone-pad"
+                    value={addForm.contact}
+                    maxLength={12}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleAddInputChange('contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact 2</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter contact"
+                    keyboardType="phone-pad"
+                    value={addForm.sec_contact}
+                    maxLength={12}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleAddInputChange('sec_contact', cleaned);
+                    }}
+                  />
                 </View>
 
                 {/* Contact 2 + Contact 3 */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 3</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter contact"
-                      keyboardType="phone-pad"
-                      value={addForm.third_contact}
-                      maxLength={12}
-                      onChangeText={text => {
-                        let cleaned = text.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleAddInputChange('third_contact', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Address</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter address"
-                      value={addForm.address}
-                      onChangeText={text =>
-                        handleAddInputChange('address', text)
-                      }
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact 3</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter contact"
+                    keyboardType="phone-pad"
+                    value={addForm.third_contact}
+                    maxLength={12}
+                    onChangeText={text => {
+                      let cleaned = text.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleAddInputChange('third_contact', cleaned);
+                    }}
+                  />
                 </View>
-
-                {/* Address */}
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Address</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter address"
+                    value={addForm.address}
+                    onChangeText={text => handleAddInputChange('address', text)}
+                  />
+                </View>
 
                 {/* Supplier Area */}
                 <View style={styles.addCustomerDropdownRow}>
@@ -1013,139 +940,128 @@ export default function SupplierPeople() {
                 </View>
 
                 {/* Company + Agency */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Company Name *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter company name"
-                      value={editForm.sup_company_name}
-                      onChangeText={text =>
-                        handleEditInputChange('sup_company_name', text)
-                      }
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Agency Name</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter agency name"
-                      value={editForm.sup_agancy_name}
-                      onChangeText={text =>
-                        handleEditInputChange('sup_agancy_name', text)
-                      }
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Company Name *</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter company name"
+                    value={editForm.sup_company_name}
+                    onChangeText={text =>
+                      handleEditInputChange('sup_company_name', text)
+                    }
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Agency Name</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter agency name"
+                    value={editForm.sup_agancy_name}
+                    onChangeText={text =>
+                      handleEditInputChange('sup_agancy_name', text)
+                    }
+                  />
                 </View>
 
                 {/* Name + Contact 1 */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Supplier Name *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Supplier Name"
-                      value={editForm.sup_name}
-                      onChangeText={text =>
-                        handleEditInputChange('sup_name', text)
-                      }
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Email</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="supplier@example.com"
-                      value={editForm.sup_email}
-                      keyboardType="email-address"
-                      onChangeText={text =>
-                        handleEditInputChange('sup_email', text)
-                      }
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Supplier Name *</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Supplier Name"
+                    value={editForm.sup_name}
+                    onChangeText={text =>
+                      handleEditInputChange('sup_name', text)
+                    }
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Email</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="supplier@example.com"
+                    value={editForm.sup_email}
+                    keyboardType="email-address"
+                    onChangeText={text =>
+                      handleEditInputChange('sup_email', text)
+                    }
+                  />
                 </View>
 
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter contact"
-                      keyboardType="phone-pad"
-                      value={editForm.sup_contact}
-                      maxLength={12}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleEditInputChange('sup_contact', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 2</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter contact"
-                      keyboardType="phone-pad"
-                      value={editForm.sup_sec_contact}
-                      maxLength={12}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleEditInputChange('sup_sec_contact', cleaned);
-                      }}
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter contact"
+                    keyboardType="phone-pad"
+                    value={editForm.sup_contact}
+                    maxLength={12}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleEditInputChange('sup_contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact 2</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter contact"
+                    keyboardType="phone-pad"
+                    value={editForm.sup_sec_contact}
+                    maxLength={12}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleEditInputChange('sup_sec_contact', cleaned);
+                    }}
+                  />
                 </View>
 
                 {/* Contact 2 + Contact 3 */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 3</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter contact"
-                      keyboardType="phone-pad"
-                      value={editForm.sup_third_contact}
-                      maxLength={12}
-                      onChangeText={text => {
-                        let cleaned = text.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleEditInputChange('sup_third_contact', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Address</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter address"
-                      value={editForm.sup_address}
-                      onChangeText={text =>
-                        handleEditInputChange('sup_address', text)
-                      }
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact 3</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter contact"
+                    keyboardType="phone-pad"
+                    value={editForm.sup_third_contact}
+                    maxLength={12}
+                    onChangeText={text => {
+                      let cleaned = text.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleEditInputChange('sup_third_contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Address</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter address"
+                    value={editForm.sup_address}
+                    onChangeText={text =>
+                      handleEditInputChange('sup_address', text)
+                    }
+                  />
                 </View>
 
                 {/* Supplier Area */}
@@ -1187,136 +1103,106 @@ export default function SupplierPeople() {
 
         {/* Supplier View Modal */}
         <Modal visible={view} transparent animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              {/* Header */}
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Supplier Details</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setview(!view);
-                    setShowSupplierData([]);
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <ScrollView contentContainerStyle={styles.modalContent}>
+                {/* Header */}
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalHeaderTitle}>Customer Details</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setview(!view);
+                    }}
+                    style={styles.closeBtn}>
+                    <Icon name="close" size={22} color="#144272" />
+                  </TouchableOpacity>
+                </View>
 
-              {showSupplierData.length > 0 && (
                 <View style={styles.customerDetailsWrapper}>
                   {/* Profile Image */}
                   <View style={styles.customerImageWrapper}>
-                    {showSupplierData[0]?.sup_image ? (
-                      <Image
-                        source={{uri: showSupplierData[0]?.sup_image}}
+                    {showSupplierData?.sup_image ? (
+                      <Avatar.Image
+                        size={110}
+                        source={{uri: showSupplierData.sup_image}}
                         style={styles.customerImage}
-                        resizeMode="cover"
                       />
                     ) : (
-                      <View style={styles.customerNoImage}>
-                        <Icon name="account" size={40} color="#999" />
-                        <Text style={styles.customerNoImageText}>No Image</Text>
-                      </View>
+                      <Avatar.Icon
+                        size={110}
+                        icon="account"
+                        style={[
+                          styles.customerNoImage,
+                          {backgroundColor: '#e0f2fe'},
+                        ]}
+                        color="#144272"
+                      />
                     )}
                   </View>
 
                   {/* Info Fields */}
-                  <View style={styles.customerInfoBox}>
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Company Name</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {showSupplierData[0]?.sup_company_name ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Agency Name</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {showSupplierData[0]?.sup_agancy_name ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Supplier Name
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {showSupplierData[0]?.sup_name ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Contact 1</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {showSupplierData[0]?.sup_contact ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Contact 2</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {showSupplierData[0]?.sup_sec_contact ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Contact 3</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {showSupplierData[0]?.sup_third_contact ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Email</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {showSupplierData[0]?.sup_email ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Supplier Area
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewModalArea?.area_name ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Address</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {showSupplierData[0]?.sup_address ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Opening Balance
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {showSupplierData[0]?.sup_opening_balance ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Payment Type</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {showSupplierData[0]?.sup_payment_type ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Transaction Type
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {showSupplierData[0]?.sup_transaction_type ?? 'N/A'}
-                      </Text>
-                    </View>
+                  <View style={styles.modalInfoBox}>
+                    {[
+                      {
+                        label: 'Supplier Name',
+                        value: showSupplierData?.sup_name,
+                      },
+                      {
+                        label: 'Agency Name',
+                        value: showSupplierData?.sup_agancy_name,
+                      },
+                      {
+                        label: 'Company Name',
+                        value: showSupplierData?.sup_company_name,
+                      },
+                      {
+                        label: 'Contact 1',
+                        value: showSupplierData?.sup_contact,
+                      },
+                      {
+                        label: 'Contact 2',
+                        value: showSupplierData?.sup_sec_contact,
+                      },
+                      {
+                        label: 'Contact 3',
+                        value: showSupplierData?.sup_third_contact,
+                      },
+                      {
+                        label: 'Email',
+                        value: showSupplierData?.sup_email,
+                      },
+                      {
+                        label: 'Supplier Area',
+                        value: viewModalArea,
+                      },
+                      {
+                        label: 'Address',
+                        value: showSupplierData?.sup_address,
+                      },
+                      {
+                        label: 'Opening Balance',
+                        value: showSupplierData?.sup_opening_balance,
+                      },
+                      {
+                        label: 'Payment Type',
+                        value: showSupplierData?.sup_payment_type,
+                      },
+                      {
+                        label: 'Transaction Type',
+                        value: showSupplierData?.sup_transaction_type,
+                      },
+                    ].map((item, index) => (
+                      <View key={index} style={styles.modalInfoRow}>
+                        <Text style={styles.infoLabel}>{item.label}</Text>
+                        <Text style={styles.infoValue}>
+                          {item.value || 'N/A'}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
-              )}
-            </ScrollView>
+              </ScrollView>
+            </View>
           </View>
         </Modal>
 
@@ -1368,7 +1254,7 @@ export default function SupplierPeople() {
         )}
 
         <Toast />
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -1400,7 +1286,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
 
@@ -1410,92 +1296,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    padding: 14,
-    marginVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   avatarText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 14,
   },
   name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
     marginTop: 2,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    marginLeft: 10,
   },
-  actionIcon: {
-    tintColor: '#144272',
-    width: 20,
-    height: 20,
-    marginHorizontal: 4,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 50,
+    backgroundColor: '#fff',
+    borderRadius: 15,
   },
-  infoBox: {
+  emptyText: {
     marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoText: {
-    flex: 1,
-    color: '#333',
-    fontSize: 13,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  infoIcon: {
-    width: 18,
-    height: 18,
-    tintColor: '#144272',
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '60%',
-    textAlign: 'right',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Pagination Component
@@ -1505,7 +1363,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -1518,7 +1376,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1532,7 +1390,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -1603,7 +1461,7 @@ const styles = StyleSheet.create({
   },
   addCustomerField: {
     flex: 1,
-    marginHorizontal: 5,
+    marginBottom: 5,
   },
   addCustomerFullRow: {
     marginBottom: 15,
@@ -1670,26 +1528,62 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  //Vew Modal Styling
-  customerDetailsWrapper: {
-    padding: 20,
+  // View Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
+  modalCard: {
+    width: '90%',
+    maxHeight: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 10,
+    paddingHorizontal: 10,
+  },
+  modalHeaderTitle: {
+    color: '#144272',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  closeBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  customerDetailsWrapper: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
   customerImageWrapper: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   customerImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 3,
     borderColor: '#144272',
   },
   customerNoImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#f0f0f0',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -1700,26 +1594,26 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 4,
   },
-  customerInfoBox: {
+  modalInfoBox: {
     width: '100%',
     marginTop: 10,
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    padding: 12,
   },
-  customerInfoRow: {
+  modalInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e0e0e0',
-    paddingBottom: 6,
+    marginBottom: 10,
   },
-  customerInfoLabel: {
+  infoLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#144272',
   },
-  customerInfoValue: {
+  infoValue: {
     fontSize: 14,
-    color: '#333',
+    color: '#555',
     flexShrink: 1,
     textAlign: 'right',
   },

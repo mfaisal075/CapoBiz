@@ -3,8 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
-  Image,
   TouchableOpacity,
   ScrollView,
   FlatList,
@@ -13,7 +11,7 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import {Checkbox} from 'react-native-paper';
+import {Avatar, Checkbox} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
@@ -23,6 +21,8 @@ import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface Products {
   id: number;
@@ -30,6 +30,7 @@ interface Products {
   prod_UPC_EAN: string;
   prod_costprice: string;
   prod_retailprice: string;
+  prod_sub_qty: string;
   prod_expirydate: string;
   prod_qty: string;
   pcat_name: string;
@@ -216,7 +217,7 @@ const initialEditProduct: EditProduct = {
 export default function CustomerPeople() {
   const {token} = useUser();
   const [products, setProducts] = useState<Products[]>([]);
-  const [viewProd, setViewProd] = useState<ViewProduct[]>([]);
+  const [viewProd, setViewProd] = useState<ViewProduct | null>(null);
   const [modalVisible, setModalVisible] = useState('');
   const [selectedProd, setSelectedProd] = useState<number | null>(null);
   const [addForm, setAddForm] = useState<AddProduct>(initialAddProduct);
@@ -745,10 +746,11 @@ export default function CustomerPeople() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
             <Icon name="menu" size={24} color="white" />
@@ -773,24 +775,38 @@ export default function CustomerPeople() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  {/* Avatar Circle */}
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
                   <View style={styles.avatarBox}>
                     <Text style={styles.avatarText}>
                       {item.prod_name?.charAt(0) || 'P'}
                     </Text>
                   </View>
 
-                  {/* Product Info */}
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.prod_name}</Text>
+                    {/* Category */}
                     <Text style={styles.subText}>
+                      <Icon name="shape" size={12} color="#666" />{' '}
                       {item.pcat_name || 'No category'}
+                    </Text>
+                    {/* Quantity */}
+                    <Text style={styles.subText}>
+                      <Icon name="cube-outline" size={12} color="#666" />{' '}
+                      {`${item.prod_qty} ${
+                        item.prod_sub_qty && parseFloat(item.prod_sub_qty) > 0
+                          ? ` - ${item.prod_sub_qty}`
+                          : ''
+                      }`}
+                    </Text>
+                    {/* Retail Price */}
+                    <Text style={styles.subText}>
+                      <Icon name="currency-usd" size={12} color="#666" />{' '}
+                      {item.prod_retailprice || 'N/A'}
                     </Text>
                   </View>
 
-                  {/* Actions */}
+                  {/* Actions on right */}
                   <View style={styles.actionRow}>
                     <TouchableOpacity
                       onPress={() => {
@@ -800,21 +816,15 @@ export default function CustomerPeople() {
                             const res = await axios.get(
                               `${BASE_URL}/productsshow?id=${id}&_token=${token}`,
                             );
-                            setViewProd([res.data]);
+                            setViewProd(res.data);
                           } catch (error) {
                             console.log(error);
                           }
                         };
                         fetchSingleProd(item.id);
                       }}>
-                      <Icon
-                        style={styles.actionIcon}
-                        name="eye"
-                        size={20}
-                        color="#144272"
-                      />
+                      <Icon name="eye" size={20} color={'#144272'} />
                     </TouchableOpacity>
-
                     <TouchableOpacity
                       onPress={() => {
                         setModalVisible('EditProd');
@@ -850,123 +860,26 @@ export default function CustomerPeople() {
                         };
                         fetchProdData(item.id);
                       }}>
-                      <Icon
-                        style={styles.actionIcon}
-                        name="pencil"
-                        size={20}
-                        color="#144272"
-                      />
+                      <Icon name="pencil" size={20} color={'#144272'} />
                     </TouchableOpacity>
-
                     <TouchableOpacity
                       onPress={() => {
                         setModalVisible('DeleteProd');
                         setSelectedProd(item.id);
                       }}>
-                      <Icon
-                        style={styles.actionIcon}
-                        name="delete"
-                        size={20}
-                        color="#144272"
-                      />
+                      <Icon name="delete" size={20} color={'#144272'} />
                     </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Info Box */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="barcode"
-                        size={18}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Barcode</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.prod_UPC_EAN || 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="cash"
-                        size={18}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Cost</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.prod_costprice || '0'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="tag"
-                        size={18}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Retail</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.prod_retailprice || '0'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="cube"
-                        size={18}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Quantity</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.prod_qty || 0}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="calendar"
-                        size={18}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Expiry</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.prod_expirydate
-                        ? new Date(item.prod_expirydate).toLocaleDateString(
-                            'en-US',
-                            {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            },
-                          )
-                        : 'No expiry'}
-                    </Text>
                   </View>
                 </View>
               </View>
             )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>
-                  No products found.
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 100}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -1020,174 +933,131 @@ export default function CustomerPeople() {
           visible={modalVisible === 'ViewProd'}
           transparent
           animationType="slide">
-          <View style={styles.addProductModalOverlay}>
-            <ScrollView style={styles.addProductModalContainer}>
-              {/* Header */}
-              <View style={styles.addProductHeader}>
-                <Text style={styles.addProductTitle}>Product Details</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setViewProd([]);
-                  }}
-                  style={styles.addProductCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <ScrollView contentContainerStyle={styles.modalContent}>
+                {/* Header */}
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalHeaderTitle}>Customer Details</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setModalVisible('');
+                      setViewProd(null);
+                    }}
+                    style={styles.closeBtn}>
+                    <Icon name="close" size={22} color="#144272" />
+                  </TouchableOpacity>
+                </View>
 
-              {viewProd.length > 0 && (
                 <View style={styles.customerDetailsWrapper}>
-                  {/* Product Image */}
+                  {/* Profile Image */}
                   <View style={styles.customerImageWrapper}>
-                    {viewProd[0]?.pro?.prod_image ? (
-                      <Image
-                        source={{uri: viewProd[0].pro.prod_image}}
+                    {viewProd?.pro.prod_image ? (
+                      <Avatar.Image
+                        size={110}
+                        source={{uri: viewProd.pro.prod_image}}
                         style={styles.customerImage}
-                        resizeMode="cover"
                       />
                     ) : (
-                      <View style={styles.customerNoImage}>
-                        <Icon name="package-variant" size={40} color="#999" />
-                        <Text style={styles.customerNoImageText}>No Image</Text>
-                      </View>
+                      <Avatar.Icon
+                        size={110}
+                        icon="package-variant"
+                        style={[
+                          styles.customerNoImage,
+                          {backgroundColor: '#e0f2fe'},
+                        ]}
+                        color="#144272"
+                      />
                     )}
                   </View>
 
                   {/* Info Fields */}
-                  <View style={styles.customerInfoBox}>
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Product Name</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_name ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Second Name</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_generic_name ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>UPC / EAN</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_UPC_EAN ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Expiry Date</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_expirydate ?? 'No expiry date'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Reorder Qty</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_reorder_qty ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Category</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.cat?.pcat_name ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>UOM</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.uom?.ums_name ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Sub UOM</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_sub_uom ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Master UOM</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_master_uom ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Equivalent</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_equivalent ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Sub UOM Price
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_sub_price ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Manage Stock</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_manage_stock ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Opening Quantity
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_qty ?? '0'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Cost Price</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_costprice ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Retail Price</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_retailprice ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Discount (%)</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_discount ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Final Price</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.pro?.prod_fretailprice ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Supplier</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewProd[0]?.supp?.sup_name ?? 'N/A'}
-                      </Text>
-                    </View>
+                  <View style={styles.modalInfoBox}>
+                    {[
+                      {
+                        label: 'Product Name',
+                        value: viewProd?.pro?.prod_name,
+                      },
+                      {
+                        label: 'Second Name',
+                        value: viewProd?.pro?.prod_generic_name,
+                      },
+                      {
+                        label: 'UPC / EAN',
+                        value: viewProd?.pro?.prod_UPC_EAN,
+                      },
+                      {
+                        label: 'Expiry Date',
+                        value: viewProd?.pro?.prod_expirydate,
+                      },
+                      {
+                        label: 'Reorder Qty',
+                        value: viewProd?.pro?.prod_reorder_qty,
+                      },
+                      {
+                        label: 'Category',
+                        value: viewProd?.cat?.pcat_name,
+                      },
+                      {
+                        label: 'UOM',
+                        value: viewProd?.uom?.ums_name,
+                      },
+                      {
+                        label: 'Sub UOM',
+                        value: viewProd?.pro?.prod_sub_uom,
+                      },
+                      {
+                        label: 'Master UOM',
+                        value: viewProd?.pro?.prod_master_uom,
+                      },
+                      {
+                        label: 'Equivalent',
+                        value: viewProd?.pro?.prod_equivalent,
+                      },
+                      {
+                        label: 'Sub UOM Price',
+                        value: viewProd?.pro?.prod_sub_price,
+                      },
+                      {
+                        label: 'Manage Stock',
+                        value: viewProd?.pro?.prod_manage_stock,
+                      },
+                      {
+                        label: 'Opening Quantity',
+                        value: viewProd?.pro?.prod_qty,
+                      },
+                      {
+                        label: 'Cost Price',
+                        value: viewProd?.pro?.prod_costprice,
+                      },
+                      {
+                        label: 'Retail Price',
+                        value: viewProd?.pro?.prod_retailprice,
+                      },
+                      {
+                        label: 'Discount (%)',
+                        value: viewProd?.pro?.prod_discount,
+                      },
+                      {
+                        label: 'Final Price',
+                        value: viewProd?.pro?.prod_fretailprice,
+                      },
+                      {
+                        label: 'Supplier',
+                        value: viewProd?.supp?.sup_name,
+                      },
+                    ].map((item, index) => (
+                      <View key={index} style={styles.modalInfoRow}>
+                        <Text style={styles.infoLabel}>{item.label}</Text>
+                        <Text style={styles.infoValue}>
+                          {item.value || 'N/A'}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
-              )}
-            </ScrollView>
+              </ScrollView>
+            </View>
           </View>
         </Modal>
 
@@ -1223,27 +1093,26 @@ export default function CustomerPeople() {
 
               <View style={styles.addProductForm}>
                 {/* Product Name and Generic Name */}
-                <View style={styles.addProductRow}>
-                  <View style={styles.addProductField}>
-                    <Text style={styles.addProductLabel}>Product Name *</Text>
-                    <TextInput
-                      style={styles.addProductInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter product name"
-                      value={addForm.product_name}
-                      onChangeText={t => onChnage('product_name', t)}
-                    />
-                  </View>
-                  <View style={styles.addProductField}>
-                    <Text style={styles.addProductLabel}>Generic Name</Text>
-                    <TextInput
-                      style={styles.addProductInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter generic name"
-                      value={addForm.generic_name}
-                      onChangeText={t => onChnage('generic_name', t)}
-                    />
-                  </View>
+
+                <View style={styles.addProductField}>
+                  <Text style={styles.addProductLabel}>Product Name *</Text>
+                  <TextInput
+                    style={styles.addProductInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter product name"
+                    value={addForm.product_name}
+                    onChangeText={t => onChnage('product_name', t)}
+                  />
+                </View>
+                <View style={styles.addProductField}>
+                  <Text style={styles.addProductLabel}>Generic Name</Text>
+                  <TextInput
+                    style={styles.addProductInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter generic name"
+                    value={addForm.generic_name}
+                    onChangeText={t => onChnage('generic_name', t)}
+                  />
                 </View>
 
                 {/* Auto Barcode Generation */}
@@ -1281,7 +1150,7 @@ export default function CustomerPeople() {
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.addProductFullRow}>
+                <View style={styles.addProductField}>
                   <Text style={styles.addProductLabel}>Barcode/UPC *</Text>
                   <TextInput
                     style={[
@@ -1309,7 +1178,7 @@ export default function CustomerPeople() {
                 </View>
 
                 {/* Expiry Settings */}
-                <View style={styles.addProductFullRow}>
+                <View style={styles.addProductField}>
                   <TouchableOpacity
                     style={styles.addProductCheckboxRow}
                     activeOpacity={0.7}
@@ -1362,7 +1231,7 @@ export default function CustomerPeople() {
                 )}
 
                 {/* Category and UOM */}
-                <View style={styles.addProductDropdownRow}>
+                <View style={styles.addProductField}>
                   <View style={styles.addProductDropdownField}>
                     <Text style={styles.addProductLabel}>Category *</Text>
                     <View style={styles.addProductDropdownContainer}>
@@ -1391,7 +1260,7 @@ export default function CustomerPeople() {
                   </View>
                 </View>
 
-                <View style={styles.addProductDropdownRow}>
+                <View style={styles.addProductField}>
                   <View style={styles.addProductDropdownField}>
                     <Text style={styles.addProductLabel}>
                       Unit of Measure *
@@ -1423,7 +1292,7 @@ export default function CustomerPeople() {
                 </View>
 
                 {/* Stock Management */}
-                <View style={styles.addProductFullRow}>
+                <View style={styles.addProductField}>
                   <TouchableOpacity
                     style={styles.addProductCheckboxRow}
                     activeOpacity={0.7}
@@ -1446,148 +1315,142 @@ export default function CustomerPeople() {
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.addProductRow}>
-                  <View style={styles.addProductField}>
-                    <Text style={styles.addProductLabel}>Opening Quantity</Text>
-                    <TextInput
-                      style={[
-                        styles.addProductInput,
-                        manageStock.includes('on') &&
-                          styles.addProductDisabledInput,
-                      ]}
-                      placeholderTextColor="#999"
-                      placeholder="Enter opening quantity"
-                      value={
-                        manageStock.includes('on') ? '0' : addForm.opening_qty
-                      }
-                      editable={!manageStock.includes('on')}
-                      onChangeText={t => {
-                        if (!manageStock.includes('on'))
-                          onChnage('opening_qty', t);
-                      }}
-                      keyboardType="number-pad"
-                    />
-                  </View>
-                  <View style={styles.addProductField}>
-                    <Text style={styles.addProductLabel}>Re-Order Level</Text>
-                    <TextInput
-                      style={[
-                        styles.addProductInput,
-                        manageStock.includes('on') &&
-                          styles.addProductDisabledInput,
-                      ]}
-                      placeholderTextColor="#999"
-                      placeholder="Enter reorder level"
-                      value={
-                        manageStock.includes('on') ? '0' : addForm.reorder_qty
-                      }
-                      editable={!manageStock.includes('on')}
-                      onChangeText={t => {
-                        if (!manageStock.includes('on'))
-                          onChnage('reorder_qty', t);
-                      }}
-                      keyboardType="numeric"
-                    />
-                  </View>
+                <View style={styles.addProductField}>
+                  <Text style={styles.addProductLabel}>Opening Quantity</Text>
+                  <TextInput
+                    style={[
+                      styles.addProductInput,
+                      manageStock.includes('on') &&
+                        styles.addProductDisabledInput,
+                    ]}
+                    placeholderTextColor="#999"
+                    placeholder="Enter opening quantity"
+                    value={
+                      manageStock.includes('on') ? '0' : addForm.opening_qty
+                    }
+                    editable={!manageStock.includes('on')}
+                    onChangeText={t => {
+                      if (!manageStock.includes('on'))
+                        onChnage('opening_qty', t);
+                    }}
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <View style={styles.addProductField}>
+                  <Text style={styles.addProductLabel}>Re-Order Level</Text>
+                  <TextInput
+                    style={[
+                      styles.addProductInput,
+                      manageStock.includes('on') &&
+                        styles.addProductDisabledInput,
+                    ]}
+                    placeholderTextColor="#999"
+                    placeholder="Enter reorder level"
+                    value={
+                      manageStock.includes('on') ? '0' : addForm.reorder_qty
+                    }
+                    editable={!manageStock.includes('on')}
+                    onChangeText={t => {
+                      if (!manageStock.includes('on'))
+                        onChnage('reorder_qty', t);
+                    }}
+                    keyboardType="numeric"
+                  />
                 </View>
 
                 {/* Pricing */}
-                <View style={styles.addProductRow}>
-                  <View style={styles.addProductField}>
-                    <Text style={styles.addProductLabel}>Cost Price *</Text>
-                    <TextInput
-                      style={styles.addProductInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter cost price"
-                      value={addForm.cost_price}
-                      keyboardType="numeric"
-                      onChangeText={t => {
-                        onChnage('cost_price', t);
-                        // Calculate final price if possible
-                        const cost = parseFloat(t) || 0;
-                        const retail = parseFloat(addForm.retail_price) || 0;
-                        const discount = parseFloat(addForm.discount) || 0;
-                        const final =
-                          retail > 0
-                            ? (retail - (retail * discount) / 100).toFixed(2)
-                            : (cost - (cost * discount) / 100).toFixed(2);
-                        setAddForm(prev => ({
-                          ...prev,
-                          final_price: isNaN(Number(final)) ? '' : final,
-                        }));
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addProductField}>
-                    <Text style={styles.addProductLabel}>Retail Price *</Text>
-                    <TextInput
-                      style={styles.addProductInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter retail price"
-                      value={addForm.retail_price}
-                      keyboardType="numeric"
-                      onChangeText={t => {
-                        onChnage('retail_price', t);
-                        // Calculate final price if possible
-                        const cost = parseFloat(addForm.cost_price) || 0;
-                        const retail = parseFloat(t) || 0;
-                        const discount = parseFloat(addForm.discount) || 0;
-                        const final =
-                          retail > 0
-                            ? (retail - (retail * discount) / 100).toFixed(2)
-                            : (cost - (cost * discount) / 100).toFixed(2);
-                        setAddForm(prev => ({
-                          ...prev,
-                          final_price: isNaN(Number(final)) ? '' : final,
-                        }));
-                      }}
-                    />
-                  </View>
+                <View style={styles.addProductField}>
+                  <Text style={styles.addProductLabel}>Cost Price *</Text>
+                  <TextInput
+                    style={styles.addProductInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter cost price"
+                    value={addForm.cost_price}
+                    keyboardType="numeric"
+                    onChangeText={t => {
+                      onChnage('cost_price', t);
+                      // Calculate final price if possible
+                      const cost = parseFloat(t) || 0;
+                      const retail = parseFloat(addForm.retail_price) || 0;
+                      const discount = parseFloat(addForm.discount) || 0;
+                      const final =
+                        retail > 0
+                          ? (retail - (retail * discount) / 100).toFixed(2)
+                          : (cost - (cost * discount) / 100).toFixed(2);
+                      setAddForm(prev => ({
+                        ...prev,
+                        final_price: isNaN(Number(final)) ? '' : final,
+                      }));
+                    }}
+                  />
+                </View>
+                <View style={styles.addProductField}>
+                  <Text style={styles.addProductLabel}>Retail Price *</Text>
+                  <TextInput
+                    style={styles.addProductInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter retail price"
+                    value={addForm.retail_price}
+                    keyboardType="numeric"
+                    onChangeText={t => {
+                      onChnage('retail_price', t);
+                      // Calculate final price if possible
+                      const cost = parseFloat(addForm.cost_price) || 0;
+                      const retail = parseFloat(t) || 0;
+                      const discount = parseFloat(addForm.discount) || 0;
+                      const final =
+                        retail > 0
+                          ? (retail - (retail * discount) / 100).toFixed(2)
+                          : (cost - (cost * discount) / 100).toFixed(2);
+                      setAddForm(prev => ({
+                        ...prev,
+                        final_price: isNaN(Number(final)) ? '' : final,
+                      }));
+                    }}
+                  />
                 </View>
 
-                <View style={styles.addProductRow}>
-                  <View style={styles.addProductField}>
-                    <Text style={styles.addProductLabel}>Discount (%)</Text>
-                    <TextInput
-                      style={styles.addProductInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter discount percentage"
-                      value={addForm.discount}
-                      keyboardType="numeric"
-                      onChangeText={t => {
-                        onChnage('discount', t);
-                        // Calculate final price if possible
-                        const cost = parseFloat(addForm.cost_price) || 0;
-                        const retail = parseFloat(addForm.retail_price) || 0;
-                        const discount = parseFloat(t) || 0;
-                        const final =
-                          retail > 0
-                            ? (retail - (retail * discount) / 100).toFixed(2)
-                            : (cost - (cost * discount) / 100).toFixed(2);
-                        setAddForm(prev => ({
-                          ...prev,
-                          final_price: isNaN(Number(final)) ? '' : final,
-                        }));
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addProductField}>
-                    <Text style={styles.addProductLabel}>Final Price</Text>
-                    <TextInput
-                      style={[
-                        styles.addProductInput,
-                        styles.addProductDisabledInput,
-                      ]}
-                      placeholder="Calculated automatically"
-                      value={addForm.final_price || '0.00'}
-                      editable={false}
-                      placeholderTextColor="#999"
-                    />
-                  </View>
+                <View style={styles.addProductField}>
+                  <Text style={styles.addProductLabel}>Discount (%)</Text>
+                  <TextInput
+                    style={styles.addProductInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter discount percentage"
+                    value={addForm.discount}
+                    keyboardType="numeric"
+                    onChangeText={t => {
+                      onChnage('discount', t);
+                      // Calculate final price if possible
+                      const cost = parseFloat(addForm.cost_price) || 0;
+                      const retail = parseFloat(addForm.retail_price) || 0;
+                      const discount = parseFloat(t) || 0;
+                      const final =
+                        retail > 0
+                          ? (retail - (retail * discount) / 100).toFixed(2)
+                          : (cost - (cost * discount) / 100).toFixed(2);
+                      setAddForm(prev => ({
+                        ...prev,
+                        final_price: isNaN(Number(final)) ? '' : final,
+                      }));
+                    }}
+                  />
+                </View>
+                <View style={styles.addProductField}>
+                  <Text style={styles.addProductLabel}>Final Price</Text>
+                  <TextInput
+                    style={[
+                      styles.addProductInput,
+                      styles.addProductDisabledInput,
+                    ]}
+                    placeholder="Calculated automatically"
+                    value={addForm.final_price || '0.00'}
+                    editable={false}
+                    placeholderTextColor="#999"
+                  />
                 </View>
 
                 {/* Supplier Section */}
-                <View style={styles.addProductFullRow}>
+                <View style={styles.addProductField}>
                   <TouchableOpacity
                     style={styles.addProductCheckboxRow}
                     activeOpacity={0.7}
@@ -1784,31 +1647,30 @@ export default function CustomerPeople() {
 
               <View style={styles.editProductForm}>
                 {/* Product Name and Generic Name */}
-                <View style={styles.editProductRow}>
-                  <View style={styles.editProductField}>
-                    <Text style={styles.editProductLabel}>Product Name *</Text>
-                    <TextInput
-                      style={styles.editProductInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter product name"
-                      value={editForm.prod_name}
-                      onChangeText={t => editOnChnage('prod_name', t)}
-                    />
-                  </View>
-                  <View style={styles.editProductField}>
-                    <Text style={styles.editProductLabel}>Generic Name</Text>
-                    <TextInput
-                      style={styles.editProductInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter generic name"
-                      value={editForm.prod_generic_name}
-                      onChangeText={t => editOnChnage('prod_generic_name', t)}
-                    />
-                  </View>
+
+                <View style={styles.editProductField}>
+                  <Text style={styles.editProductLabel}>Product Name *</Text>
+                  <TextInput
+                    style={styles.editProductInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter product name"
+                    value={editForm.prod_name}
+                    onChangeText={t => editOnChnage('prod_name', t)}
+                  />
+                </View>
+                <View style={styles.editProductField}>
+                  <Text style={styles.editProductLabel}>Generic Name</Text>
+                  <TextInput
+                    style={styles.editProductInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter generic name"
+                    value={editForm.prod_generic_name}
+                    onChangeText={t => editOnChnage('prod_generic_name', t)}
+                  />
                 </View>
 
                 {/* Auto Barcode Generation */}
-                <View style={styles.editProductFullRow}>
+                <View style={styles.editProductField}>
                   <TouchableOpacity
                     style={styles.editProductCheckboxRow}
                     activeOpacity={0.7}
@@ -1842,7 +1704,7 @@ export default function CustomerPeople() {
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.editProductFullRow}>
+                <View style={styles.editProductField}>
                   <Text style={styles.editProductLabel}>Barcode/UPC *</Text>
                   <TextInput
                     style={[
@@ -1869,7 +1731,7 @@ export default function CustomerPeople() {
                 </View>
 
                 {/* Expiry Settings */}
-                <View style={styles.editProductFullRow}>
+                <View style={styles.editProductField}>
                   <TouchableOpacity
                     style={styles.editProductCheckboxRow}
                     activeOpacity={0.7}
@@ -1891,7 +1753,7 @@ export default function CustomerPeople() {
                 </View>
 
                 {expiry.includes('on') && (
-                  <View style={styles.editProductFullRow}>
+                  <View style={styles.editProductField}>
                     <Text style={styles.editProductLabel}>Expiry Date</Text>
                     <TouchableOpacity
                       style={[
@@ -1931,36 +1793,34 @@ export default function CustomerPeople() {
                 )}
 
                 {/* Category and UOM */}
-                <View style={styles.editProductDropdownRow}>
-                  <View style={styles.editProductDropdownField}>
-                    <Text style={styles.editProductLabel}>Category *</Text>
-                    <View style={styles.editProductDropdownContainer}>
-                      <DropDownPicker
-                        items={transformedCat}
-                        open={editCatOpen}
-                        setOpen={setEditCatOpen}
-                        value={editCatValue}
-                        setValue={setEditCatValue}
-                        placeholder="Select category"
-                        placeholderStyle={styles.editProductDropdownPlaceholder}
-                        textStyle={styles.editProductDropdownText}
-                        ArrowUpIconComponent={() => (
-                          <Icon name="chevron-up" size={18} color="#144272" />
-                        )}
-                        ArrowDownIconComponent={() => (
-                          <Icon name="chevron-down" size={18} color="#144272" />
-                        )}
-                        style={styles.editProductDropdown}
-                        dropDownContainerStyle={styles.editProductDropdownList}
-                        labelStyle={styles.editProductDropdownText}
-                        listItemLabelStyle={styles.editProductDropdownText}
-                        listMode="SCROLLVIEW"
-                      />
-                    </View>
+                <View style={styles.editProductField}>
+                  <Text style={styles.editProductLabel}>Category *</Text>
+                  <View style={styles.editProductDropdownContainer}>
+                    <DropDownPicker
+                      items={transformedCat}
+                      open={editCatOpen}
+                      setOpen={setEditCatOpen}
+                      value={editCatValue}
+                      setValue={setEditCatValue}
+                      placeholder="Select category"
+                      placeholderStyle={styles.editProductDropdownPlaceholder}
+                      textStyle={styles.editProductDropdownText}
+                      ArrowUpIconComponent={() => (
+                        <Icon name="chevron-up" size={18} color="#144272" />
+                      )}
+                      ArrowDownIconComponent={() => (
+                        <Icon name="chevron-down" size={18} color="#144272" />
+                      )}
+                      style={styles.editProductDropdown}
+                      dropDownContainerStyle={styles.editProductDropdownList}
+                      labelStyle={styles.editProductDropdownText}
+                      listItemLabelStyle={styles.editProductDropdownText}
+                      listMode="SCROLLVIEW"
+                    />
                   </View>
                 </View>
 
-                <View style={styles.editProductDropdownRow}>
+                <View style={styles.editProductField}>
                   <View style={styles.editProductDropdownField}>
                     <Text style={styles.editProductLabel}>
                       Unit of Measure *
@@ -1992,7 +1852,7 @@ export default function CustomerPeople() {
                 </View>
 
                 {/* Stock Management */}
-                <View style={styles.editProductFullRow}>
+                <View style={styles.editProductField}>
                   <TouchableOpacity
                     style={styles.editProductCheckboxRow}
                     activeOpacity={0.7}
@@ -2015,156 +1875,142 @@ export default function CustomerPeople() {
                   </TouchableOpacity>
                 </View>
 
-                <View style={styles.editProductRow}>
-                  <View style={styles.editProductField}>
-                    <Text style={styles.editProductLabel}>
-                      Opening Quantity
-                    </Text>
-                    <TextInput
-                      style={[
-                        styles.editProductInput,
-                        manageStock.includes('on') &&
-                          styles.editProductDisabledInput,
-                      ]}
-                      placeholderTextColor="#999"
-                      placeholder="Enter opening quantity"
-                      value={
-                        manageStock.includes('on') ? '0' : editForm.prod_qty
-                      }
-                      editable={!manageStock.includes('on')}
-                      onChangeText={t => {
-                        if (!manageStock.includes('on'))
-                          editOnChnage('prod_qty', t);
-                      }}
-                      keyboardType="number-pad"
-                    />
-                  </View>
-                  <View style={styles.editProductField}>
-                    <Text style={styles.editProductLabel}>Re-Order Level</Text>
-                    <TextInput
-                      style={[
-                        styles.editProductInput,
-                        manageStock.includes('on') &&
-                          styles.editProductDisabledInput,
-                      ]}
-                      placeholderTextColor="#999"
-                      placeholder="Enter reorder level"
-                      value={
-                        manageStock.includes('on')
-                          ? '0'
-                          : editForm.prod_reorder_qty
-                      }
-                      editable={!manageStock.includes('on')}
-                      onChangeText={t => {
-                        if (!manageStock.includes('on'))
-                          editOnChnage('prod_reorder_qty', t);
-                      }}
-                      keyboardType="numeric"
-                    />
-                  </View>
+                <View style={styles.editProductField}>
+                  <Text style={styles.editProductLabel}>Opening Quantity</Text>
+                  <TextInput
+                    style={[
+                      styles.editProductInput,
+                      manageStock.includes('on') &&
+                        styles.editProductDisabledInput,
+                    ]}
+                    placeholderTextColor="#999"
+                    placeholder="Enter opening quantity"
+                    value={manageStock.includes('on') ? '0' : editForm.prod_qty}
+                    editable={!manageStock.includes('on')}
+                    onChangeText={t => {
+                      if (!manageStock.includes('on'))
+                        editOnChnage('prod_qty', t);
+                    }}
+                    keyboardType="number-pad"
+                  />
+                </View>
+                <View style={styles.editProductField}>
+                  <Text style={styles.editProductLabel}>Re-Order Level</Text>
+                  <TextInput
+                    style={[
+                      styles.editProductInput,
+                      manageStock.includes('on') &&
+                        styles.editProductDisabledInput,
+                    ]}
+                    placeholderTextColor="#999"
+                    placeholder="Enter reorder level"
+                    value={
+                      manageStock.includes('on')
+                        ? '0'
+                        : editForm.prod_reorder_qty
+                    }
+                    editable={!manageStock.includes('on')}
+                    onChangeText={t => {
+                      if (!manageStock.includes('on'))
+                        editOnChnage('prod_reorder_qty', t);
+                    }}
+                    keyboardType="numeric"
+                  />
                 </View>
 
                 {/* Pricing */}
-                <View style={styles.editProductRow}>
-                  <View style={styles.editProductField}>
-                    <Text style={styles.editProductLabel}>Cost Price *</Text>
-                    <TextInput
-                      style={styles.editProductInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter cost price"
-                      value={editForm.prod_costprice}
-                      keyboardType="numeric"
-                      onChangeText={t => {
-                        editOnChnage('prod_costprice', t);
-                        // Calculate final price if possible
-                        const cost = parseFloat(t) || 0;
-                        const retail =
-                          parseFloat(editForm.prod_retailprice) || 0;
-                        const discount =
-                          parseFloat(editForm.prod_discount) || 0;
-                        const final =
-                          retail > 0
-                            ? (retail - (retail * discount) / 100).toFixed(2)
-                            : (cost - (cost * discount) / 100).toFixed(2);
-                        setEditForm(prev => ({
-                          ...prev,
-                          prod_fretailprice: isNaN(Number(final)) ? '' : final,
-                        }));
-                      }}
-                    />
-                  </View>
-                  <View style={styles.editProductField}>
-                    <Text style={styles.editProductLabel}>Retail Price *</Text>
-                    <TextInput
-                      style={styles.editProductInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter retail price"
-                      value={editForm.prod_retailprice}
-                      keyboardType="numeric"
-                      onChangeText={t => {
-                        editOnChnage('prod_retailprice', t);
-                        // Calculate final price if possible
-                        const cost = parseFloat(editForm.prod_costprice) || 0;
-                        const retail = parseFloat(t) || 0;
-                        const discount =
-                          parseFloat(editForm.prod_discount) || 0;
-                        const final =
-                          retail > 0
-                            ? (retail - (retail * discount) / 100).toFixed(2)
-                            : (cost - (cost * discount) / 100).toFixed(2);
-                        setEditForm(prev => ({
-                          ...prev,
-                          prod_fretailprice: isNaN(Number(final)) ? '' : final,
-                        }));
-                      }}
-                    />
-                  </View>
+                <View style={styles.editProductField}>
+                  <Text style={styles.editProductLabel}>Cost Price *</Text>
+                  <TextInput
+                    style={styles.editProductInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter cost price"
+                    value={editForm.prod_costprice}
+                    keyboardType="numeric"
+                    onChangeText={t => {
+                      editOnChnage('prod_costprice', t);
+                      // Calculate final price if possible
+                      const cost = parseFloat(t) || 0;
+                      const retail = parseFloat(editForm.prod_retailprice) || 0;
+                      const discount = parseFloat(editForm.prod_discount) || 0;
+                      const final =
+                        retail > 0
+                          ? (retail - (retail * discount) / 100).toFixed(2)
+                          : (cost - (cost * discount) / 100).toFixed(2);
+                      setEditForm(prev => ({
+                        ...prev,
+                        prod_fretailprice: isNaN(Number(final)) ? '' : final,
+                      }));
+                    }}
+                  />
+                </View>
+                <View style={styles.editProductField}>
+                  <Text style={styles.editProductLabel}>Retail Price *</Text>
+                  <TextInput
+                    style={styles.editProductInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter retail price"
+                    value={editForm.prod_retailprice}
+                    keyboardType="numeric"
+                    onChangeText={t => {
+                      editOnChnage('prod_retailprice', t);
+                      // Calculate final price if possible
+                      const cost = parseFloat(editForm.prod_costprice) || 0;
+                      const retail = parseFloat(t) || 0;
+                      const discount = parseFloat(editForm.prod_discount) || 0;
+                      const final =
+                        retail > 0
+                          ? (retail - (retail * discount) / 100).toFixed(2)
+                          : (cost - (cost * discount) / 100).toFixed(2);
+                      setEditForm(prev => ({
+                        ...prev,
+                        prod_fretailprice: isNaN(Number(final)) ? '' : final,
+                      }));
+                    }}
+                  />
                 </View>
 
-                <View style={styles.editProductRow}>
-                  <View style={styles.editProductField}>
-                    <Text style={styles.editProductLabel}>Discount (%)</Text>
-                    <TextInput
-                      style={styles.editProductInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter discount percentage"
-                      value={editForm.prod_discount}
-                      keyboardType="numeric"
-                      onChangeText={t => {
-                        editOnChnage('prod_discount', t);
-                        // Calculate final price if possible
-                        const cost = parseFloat(editForm.prod_costprice) || 0;
-                        const retail =
-                          parseFloat(editForm.prod_retailprice) || 0;
-                        const discount = parseFloat(t) || 0;
-                        const final =
-                          retail > 0
-                            ? (retail - (retail * discount) / 100).toFixed(2)
-                            : (cost - (cost * discount) / 100).toFixed(2);
-                        setEditForm(prev => ({
-                          ...prev,
-                          prod_fretailprice: isNaN(Number(final)) ? '' : final,
-                        }));
-                      }}
-                    />
-                  </View>
-                  <View style={styles.editProductField}>
-                    <Text style={styles.editProductLabel}>Final Price</Text>
-                    <TextInput
-                      style={[
-                        styles.editProductInput,
-                        styles.editProductDisabledInput,
-                      ]}
-                      placeholder="Calculated automatically"
-                      value={editForm.prod_fretailprice || '0.00'}
-                      editable={false}
-                      placeholderTextColor="#999"
-                    />
-                  </View>
+                <View style={styles.editProductField}>
+                  <Text style={styles.editProductLabel}>Discount (%)</Text>
+                  <TextInput
+                    style={styles.editProductInput}
+                    placeholderTextColor="#999"
+                    placeholder="Enter discount percentage"
+                    value={editForm.prod_discount}
+                    keyboardType="numeric"
+                    onChangeText={t => {
+                      editOnChnage('prod_discount', t);
+                      // Calculate final price if possible
+                      const cost = parseFloat(editForm.prod_costprice) || 0;
+                      const retail = parseFloat(editForm.prod_retailprice) || 0;
+                      const discount = parseFloat(t) || 0;
+                      const final =
+                        retail > 0
+                          ? (retail - (retail * discount) / 100).toFixed(2)
+                          : (cost - (cost * discount) / 100).toFixed(2);
+                      setEditForm(prev => ({
+                        ...prev,
+                        prod_fretailprice: isNaN(Number(final)) ? '' : final,
+                      }));
+                    }}
+                  />
+                </View>
+                <View style={styles.editProductField}>
+                  <Text style={styles.editProductLabel}>Final Price</Text>
+                  <TextInput
+                    style={[
+                      styles.editProductInput,
+                      styles.editProductDisabledInput,
+                    ]}
+                    placeholder="Calculated automatically"
+                    value={editForm.prod_fretailprice || '0.00'}
+                    editable={false}
+                    placeholderTextColor="#999"
+                  />
                 </View>
 
                 {/* Supplier Section */}
-                <View style={styles.editProductFullRow}>
+                <View style={styles.editProductField}>
                   <TouchableOpacity
                     style={styles.editProductCheckboxRow}
                     activeOpacity={0.7}
@@ -2216,7 +2062,7 @@ export default function CustomerPeople() {
                 )}
 
                 {/* Sub UOM Section */}
-                <View style={styles.editProductFullRow}>
+                <View style={styles.editProductField}>
                   <TouchableOpacity
                     style={styles.editProductCheckboxRow}
                     activeOpacity={0.7}
@@ -2275,47 +2121,45 @@ export default function CustomerPeople() {
                       </View>
                     </View>
 
-                    <View style={styles.editProductRow}>
-                      <View style={styles.editProductField}>
-                        <Text style={styles.editProductLabel}>Equivalence</Text>
-                        <TextInput
-                          style={[
-                            styles.editProductInput,
-                            !subUom.includes('on') &&
-                              styles.editProductDisabledInput,
-                          ]}
-                          placeholderTextColor="#999"
-                          placeholder="Enter equivalence"
-                          keyboardType="number-pad"
-                          value={editForm.prod_equivalent}
-                          editable={subUom.includes('on')}
-                          onChangeText={t => {
-                            if (subUom.includes('on'))
-                              editOnChnage('prod_equivalent', t);
-                          }}
-                        />
-                      </View>
-                      <View style={styles.editProductField}>
-                        <Text style={styles.editProductLabel}>
-                          Sub UOM Sale Price
-                        </Text>
-                        <TextInput
-                          style={[
-                            styles.editProductInput,
-                            !subUom.includes('on') &&
-                              styles.editProductDisabledInput,
-                          ]}
-                          placeholderTextColor="#999"
-                          placeholder="Enter sale price"
-                          keyboardType="number-pad"
-                          value={editForm.prod_sub_price}
-                          editable={subUom.includes('on')}
-                          onChangeText={t => {
-                            if (subUom.includes('on'))
-                              editOnChnage('prod_sub_price', t);
-                          }}
-                        />
-                      </View>
+                    <View style={styles.editProductField}>
+                      <Text style={styles.editProductLabel}>Equivalence</Text>
+                      <TextInput
+                        style={[
+                          styles.editProductInput,
+                          !subUom.includes('on') &&
+                            styles.editProductDisabledInput,
+                        ]}
+                        placeholderTextColor="#999"
+                        placeholder="Enter equivalence"
+                        keyboardType="number-pad"
+                        value={editForm.prod_equivalent}
+                        editable={subUom.includes('on')}
+                        onChangeText={t => {
+                          if (subUom.includes('on'))
+                            editOnChnage('prod_equivalent', t);
+                        }}
+                      />
+                    </View>
+                    <View style={styles.editProductField}>
+                      <Text style={styles.editProductLabel}>
+                        Sub UOM Sale Price
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.editProductInput,
+                          !subUom.includes('on') &&
+                            styles.editProductDisabledInput,
+                        ]}
+                        placeholderTextColor="#999"
+                        placeholder="Enter sale price"
+                        keyboardType="number-pad"
+                        value={editForm.prod_sub_price}
+                        editable={subUom.includes('on')}
+                        onChangeText={t => {
+                          if (subUom.includes('on'))
+                            editOnChnage('prod_sub_price', t);
+                        }}
+                      />
                     </View>
                   </>
                 )}
@@ -2381,7 +2225,7 @@ export default function CustomerPeople() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -2413,7 +2257,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
 
@@ -2423,94 +2267,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   avatarText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 14,
   },
   name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
     marginTop: 2,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    marginLeft: 10,
   },
-  actionIcon: {
-    tintColor: '#144272',
-    width: 20,
-    height: 20,
-    marginHorizontal: 4,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 50,
+    backgroundColor: '#fff',
+    borderRadius: 15,
   },
-  infoBox: {
+  emptyText: {
     marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoText: {
-    flex: 1,
-    color: '#333',
-    fontSize: 13,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  infoIcon: {
-    width: 18,
-    height: 18,
-    tintColor: '#144272',
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '60%',
-    textAlign: 'right',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Pagination Component
@@ -2520,7 +2334,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -2533,7 +2347,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -2547,7 +2361,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -2618,7 +2432,7 @@ const styles = StyleSheet.create({
   },
   addProductField: {
     flex: 1,
-    marginHorizontal: 5,
+    marginBottom: 5,
   },
   addProductFullRow: {
     marginBottom: 15,
@@ -2726,6 +2540,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
+
   //Delete Modal
   deleteModalContainer: {
     backgroundColor: 'white',
@@ -2825,17 +2640,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
-  editProductRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
   editProductField: {
     flex: 1,
-    marginHorizontal: 5,
-  },
-  editProductFullRow: {
-    marginBottom: 15,
+    marginBottom: 5,
   },
   editProductLabel: {
     fontSize: 14,
@@ -2941,26 +2748,62 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
 
-  // View Modal Styling
-  customerDetailsWrapper: {
-    padding: 20,
+  // View Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
+  modalCard: {
+    width: '90%',
+    maxHeight: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 10,
+    paddingHorizontal: 10,
+  },
+  modalHeaderTitle: {
+    color: '#144272',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  closeBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  customerDetailsWrapper: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
   customerImageWrapper: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   customerImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 3,
     borderColor: '#144272',
   },
   customerNoImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#f0f0f0',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -2971,26 +2814,26 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 4,
   },
-  customerInfoBox: {
+  modalInfoBox: {
     width: '100%',
     marginTop: 10,
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    padding: 12,
   },
-  customerInfoRow: {
+  modalInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e0e0e0',
-    paddingBottom: 6,
+    marginBottom: 10,
   },
-  customerInfoLabel: {
+  infoLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#144272',
   },
-  customerInfoValue: {
+  infoValue: {
     fontSize: 14,
-    color: '#333',
+    color: '#555',
     flexShrink: 1,
     textAlign: 'right',
   },

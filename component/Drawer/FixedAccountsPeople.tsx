@@ -15,6 +15,9 @@ import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import {useUser} from '../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../Colors';
+import {Avatar} from 'react-native-paper';
 
 interface Profiles {
   id: number;
@@ -39,12 +42,18 @@ interface ViewProfile {
   area: string;
 }
 
+interface Areas {
+  id: number;
+  area_name: string;
+}
+
 export default function FixedAccountsPeople() {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [profiles, setProfiles] = useState<Profiles[]>([]);
   const [modalVisible, setModalVisible] = useState('');
   const [viewProfile, setViewProfile] = useState<ViewProfile | null>(null);
+  const [areas, setAreas] = useState<Areas[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -69,15 +78,32 @@ export default function FixedAccountsPeople() {
     }
   };
 
+  // Fetch Areas
+  const fetchAreas = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fetchareas`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      setAreas(res.data.area);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   useEffect(() => {
     fetchProfiles();
+    fetchAreas();
   }, []);
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
             <Icon name="menu" size={24} color="white" />
@@ -101,31 +127,34 @@ export default function FixedAccountsPeople() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Header Row (Avatar + Name + Actions) */}
-                <View style={styles.headerRow}>
-                  {/* Avatar */}
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
                   <View style={styles.avatarBox}>
                     <Text style={styles.avatarText}>
-                      {item.fixprf_business_account_name?.charAt(0) || 'U'}
+                      {item.fixprf_business_account_name?.charAt(0) || 'F'}
                     </Text>
                   </View>
 
-                  {/* Name + Title */}
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>
-                      {item.fixprf_business_account_name || 'N/A'}
+                      {item.fixprf_business_account_name}
+                    </Text>
+                    {/* small details inline */}
+                    <Text style={styles.subText}>
+                      <Icon name="phone" size={12} color="#666" />{' '}
+                      {item.fixprf_mobile || 'No contact'}
                     </Text>
                     <Text style={styles.subText}>
+                      <Icon name="briefcase" size={12} color="#666" />{' '}
                       {item.fixprf_title || 'No title'}
                     </Text>
                   </View>
 
-                  {/* Actions */}
+                  {/* Actions on right */}
                   <View style={styles.actionRow}>
-                    {/* View */}
                     <TouchableOpacity
                       onPress={() => {
-                        setModalVisible('ViewProfile');
+                        setModalVisible('View');
                         const fetchProfileData = async (id: number) => {
                           try {
                             const res = await axios.get(
@@ -138,151 +167,99 @@ export default function FixedAccountsPeople() {
                         };
                         fetchProfileData(item.id);
                       }}>
-                      <Icon
-                        style={styles.actionIcon}
-                        name="eye"
-                        size={20}
-                        color={'#144272'}
-                      />
+                      <Icon name="eye" size={20} color={'#144272'} />
                     </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="phone"
-                        size={18}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Mobile</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.fixprf_mobile || '--'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="map-marker"
-                        size={18}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Address</Text>
-                    </View>
-                    <Text
-                      style={styles.valueText}
-                      numberOfLines={1}
-                      ellipsizeMode="tail">
-                      {item.fixprf_business_address || '--'}
-                    </Text>
                   </View>
                 </View>
               </View>
             )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>
-                  No Account found.
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 110}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
 
         {/* Expense Profile View Modal */}
         <Modal
-          visible={modalVisible === 'ViewProfile'}
+          visible={modalVisible === 'View'}
           transparent
           animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              {/* Header */}
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>
-                  Expense Profile Details
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setViewProfile(null);
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.customerDetailsWrapper}>
-                {/* Optional Profile Image */}
-                <View style={styles.customerImageWrapper}>
-                  <View style={styles.customerNoImage}>
-                    <Icon name="account" size={40} color="#999" />
-                    <Text style={styles.customerNoImageText}>No Image</Text>
-                  </View>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <ScrollView contentContainerStyle={styles.modalContent}>
+                {/* Header */}
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalHeaderTitle}>Customer Details</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setModalVisible('');
+                      setViewProfile(null);
+                    }}
+                    style={styles.closeBtn}>
+                    <Icon name="close" size={22} color="#144272" />
+                  </TouchableOpacity>
                 </View>
 
-                {/* Info Fields */}
-                <View style={styles.customerInfoBox}>
-                  <View style={styles.customerInfoRow}>
-                    <Text style={styles.customerInfoLabel}>Name</Text>
-                    <Text style={styles.customerInfoValue}>
-                      {viewProfile?.expenseprofile
-                        ?.fixprf_business_account_name ?? 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.customerInfoRow}>
-                    <Text style={styles.customerInfoLabel}>Title</Text>
-                    <Text style={styles.customerInfoValue}>
-                      {viewProfile?.expenseprofile.fixprf_title ?? 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.customerInfoRow}>
-                    <Text style={styles.customerInfoLabel}>Contact</Text>
-                    <Text style={styles.customerInfoValue}>
-                      {viewProfile?.expenseprofile?.fixprf_mobile ?? 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.customerInfoRow}>
-                    <Text style={styles.customerInfoLabel}>Area</Text>
-                    <Text style={styles.customerInfoValue}>
-                      {viewProfile?.area ?? 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.customerInfoRow}>
-                    <Text style={styles.customerInfoLabel}>District</Text>
-                    <Text style={styles.customerInfoValue}>
-                      {viewProfile?.expenseprofile?.fixprf_district ?? 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.customerInfoRow}>
-                    <Text style={styles.customerInfoLabel}>Tehsil</Text>
-                    <Text style={styles.customerInfoValue}>
-                      {viewProfile?.expenseprofile?.fixprf_tehsil ?? 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.customerInfoRow}>
-                    <Text style={styles.customerInfoLabel}>Address</Text>
-                    <Text style={styles.customerInfoValue}>
-                      {viewProfile?.expenseprofile?.fixprf_business_address ??
-                        'N/A'}
-                    </Text>
+                <View style={styles.customerDetailsWrapper}>
+                  {/* Info Fields */}
+                  <View style={styles.modalInfoBox}>
+                    {[
+                      {
+                        label: 'Name',
+                        value:
+                          viewProfile?.expenseprofile
+                            .fixprf_business_account_name,
+                      },
+                      {
+                        label: 'Title',
+                        value: viewProfile?.expenseprofile.fixprf_title,
+                      },
+                      {
+                        label: 'Contact',
+                        value: viewProfile?.expenseprofile.fixprf_mobile,
+                      },
+                      {
+                        label: 'Area',
+                        value: `${
+                          areas.find(
+                            area =>
+                              area.id.toString() ===
+                              String(
+                                viewProfile?.expenseprofile.fixprf_area_id,
+                              ),
+                          )?.area_name || 'N/A'
+                        }`,
+                      },
+                      {
+                        label: 'District',
+                        value: viewProfile?.expenseprofile.fixprf_district,
+                      },
+                      {
+                        label: 'Tehsil',
+                        value: viewProfile?.expenseprofile.fixprf_tehsil,
+                      },
+                      {
+                        label: 'Address',
+                        value:
+                          viewProfile?.expenseprofile.fixprf_business_address,
+                      },
+                    ].map((item, index) => (
+                      <View key={index} style={styles.modalInfoRow}>
+                        <Text style={styles.infoLabel}>{item.label}</Text>
+                        <Text style={styles.infoValue}>
+                          {item.value || 'N/A'}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
-              </View>
-            </ScrollView>
+              </ScrollView>
+            </View>
           </View>
         </Modal>
 
@@ -332,7 +309,7 @@ export default function FixedAccountsPeople() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -364,7 +341,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
 
@@ -374,94 +351,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   avatarText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 14,
   },
   name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
     marginTop: 2,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    marginLeft: 10,
   },
-  actionIcon: {
-    tintColor: '#144272',
-    width: 20,
-    height: 20,
-    marginHorizontal: 4,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 50,
+    backgroundColor: '#fff',
+    borderRadius: 15,
   },
-  infoBox: {
+  emptyText: {
     marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoText: {
-    flex: 1,
-    color: '#333',
-    fontSize: 13,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  infoIcon: {
-    width: 18,
-    height: 18,
-    tintColor: '#144272',
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '60%',
-    textAlign: 'right',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Pagination Component
@@ -471,7 +418,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -484,7 +431,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -498,7 +445,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -524,79 +471,93 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
 
-  addCustomerModalOverlay: {
+  // Modal Styling
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
-  addCustomerModalContainer: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    width: '95%',
+  modalCard: {
+    width: '90%',
     maxHeight: '85%',
-    padding: 15,
-    elevation: 5,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
   },
-  addCustomerHeader: {
+  modalContent: {
+    padding: 20,
+  },
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-    paddingBottom: 8,
+    paddingBottom: 10,
+    paddingHorizontal: 10,
   },
-  addCustomerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+  modalHeaderTitle: {
     color: '#144272',
+    fontSize: 18,
+    fontWeight: '700',
   },
-  addCustomerCloseBtn: {
-    padding: 5,
+  closeBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   customerDetailsWrapper: {
     alignItems: 'center',
+    marginTop: 20,
   },
   customerImageWrapper: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    marginBottom: 16,
+  },
+  customerImage: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 3,
+    borderColor: '#144272',
+  },
+  customerNoImage: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
     backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
     borderWidth: 1,
     borderColor: '#ddd',
   },
-  customerNoImage: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   customerNoImageText: {
     fontSize: 12,
-    color: '#888',
-    marginTop: 5,
+    color: '#999',
+    marginTop: 4,
   },
-  customerInfoBox: {
+  modalInfoBox: {
     width: '100%',
+    marginTop: 10,
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    padding: 12,
   },
-  customerInfoRow: {
+  modalInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    marginBottom: 10,
   },
-  customerInfoLabel: {
+  infoLabel: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '600',
     color: '#144272',
   },
-  customerInfoValue: {
+  infoValue: {
     fontSize: 14,
-    color: '#333',
-    maxWidth: '60%',
+    color: '#555',
+    flexShrink: 1,
     textAlign: 'right',
   },
 });

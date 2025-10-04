@@ -13,7 +13,7 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
-import {Checkbox} from 'react-native-paper';
+import {Avatar, Checkbox} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
@@ -21,6 +21,8 @@ import BASE_URL from '../BASE_URL';
 import {useUser} from '../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import LottieView from 'lottie-react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../Colors';
 
 interface Transporter {
   id: number;
@@ -110,9 +112,8 @@ export default function TransporterPeople() {
   const [selectedTransporter, setSelectedTransporter] = useState<number | null>(
     null,
   );
-  const [viewTransporters, setViewTransporters] = useState<ViewTransporter[]>(
-    [],
-  );
+  const [viewTransporters, setViewTransporters] =
+    useState<ViewTransporter | null>(null);
   const [editForm, setEditForm] = useState<EditForm>(initialEditForm);
   const [addForm, setAddForm] = useState<AddForm>(initialAddForm);
   const [enableBal, setEnableBal] = useState<string[]>([]);
@@ -207,8 +208,7 @@ export default function TransporterPeople() {
         },
       );
 
-      const data = Array.isArray(res.data) ? res.data : [res.data];
-      setViewTransporters(data);
+      setViewTransporters(res.data);
       setview(!view);
     } catch (error) {
       console.log(error);
@@ -479,10 +479,11 @@ export default function TransporterPeople() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
             <Icon name="menu" size={24} color="white" />
@@ -503,96 +504,53 @@ export default function TransporterPeople() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Header Row (Avatar + Name + Actions) */}
-                <View style={styles.headerRow}>
-                  {/* Avatar */}
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
                   <View style={styles.avatarBox}>
                     <Text style={styles.avatarText}>
                       {item.trans_name?.charAt(0) || 'T'}
                     </Text>
                   </View>
 
-                  {/* Name + Contact */}
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.trans_name}</Text>
+                    {/* small details inline */}
                     <Text style={styles.subText}>
+                      <Icon name="phone" size={12} color="#666" />{' '}
                       {item.trans_contact || 'No contact'}
                     </Text>
+                    <Text style={styles.subText}>
+                      <Icon name="mail" size={12} color="#666" />{' '}
+                      {item.trans_email || 'N/A'}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Icon name="map-marker" size={12} color="#666" />{' '}
+                      {item.trans_address || 'N/A'}
+                    </Text>
                   </View>
 
-                  {/* Actions */}
+                  {/* Actions on right */}
                   <View style={styles.actionRow}>
                     <TouchableOpacity onPress={() => toggleview(item.id)}>
-                      <Icon
-                        style={styles.actionIcon}
-                        name="eye"
-                        size={20}
-                        color={'#144272'}
-                      />
+                      <Icon name="eye" size={20} color={'#144272'} />
                     </TouchableOpacity>
-
                     <TouchableOpacity onPress={() => toggleedit(item.id)}>
-                      <Icon
-                        style={styles.actionIcon}
-                        name="pencil"
-                        size={20}
-                        color={'#144272'}
-                      />
+                      <Icon name="pencil" size={20} color={'#144272'} />
                     </TouchableOpacity>
-
                     <TouchableOpacity onPress={() => tglModal(item.id)}>
-                      <Icon
-                        style={styles.actionIcon}
-                        name="delete"
-                        size={20}
-                        color={'#144272'}
-                      />
+                      <Icon name="delete" size={20} color={'#144272'} />
                     </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="id-card"
-                        size={18}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>CNIC</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.trans_cnic || '--'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="email"
-                        size={18}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Email</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.trans_email || '--'}
-                    </Text>
                   </View>
                 </View>
               </View>
             )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>
-                  No Transporters found.
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 110}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -617,181 +575,145 @@ export default function TransporterPeople() {
               {/* Form */}
               <View style={styles.addCustomerForm}>
                 {/* Row 1: Name */}
-                <View style={styles.addCustomerFullRow}>
+                <View style={styles.addCustomerField}>
                   <Text style={styles.addCustomerLabel}>
                     Transporter Name *
                   </Text>
                   <TextInput
                     style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter transporter name"
                     value={addForm.trans_name}
                     onChangeText={t => handleAddInputChange('trans_name', t)}
                   />
                 </View>
 
                 {/* Row 2: CNIC + Contact */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>CNIC</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="12345-1234567-1"
-                      keyboardType="numeric"
-                      maxLength={15}
-                      value={addForm.cnic}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 5)
-                          cleaned =
-                            cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                        if (cleaned.length > 13)
-                          cleaned =
-                            cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                        if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                        handleAddInputChange('cnic', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="0300-1234567"
-                      maxLength={12}
-                      keyboardType="phone-pad"
-                      value={addForm.contact}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleAddInputChange('contact', cleaned);
-                      }}
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>CNIC</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    keyboardType="numeric"
+                    maxLength={15}
+                    value={addForm.cnic}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 5)
+                        cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
+                      if (cleaned.length > 13)
+                        cleaned =
+                          cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
+                      if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
+                      handleAddInputChange('cnic', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    maxLength={12}
+                    keyboardType="phone-pad"
+                    value={addForm.contact}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleAddInputChange('contact', cleaned);
+                    }}
+                  />
                 </View>
 
                 {/* Row 3: Email + Contact Person 1 */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Email</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="transporter@example.com"
-                      value={addForm.email}
-                      keyboardType="email-address"
-                      onChangeText={t => handleAddInputChange('email', t)}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>
-                      Contact Person 1
-                    </Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Alternative contact"
-                      maxLength={12}
-                      keyboardType="phone-pad"
-                      value={addForm.contact_person_one}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleAddInputChange('contact_person_one', cleaned);
-                      }}
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Email</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    value={addForm.email}
+                    keyboardType="email-address"
+                    onChangeText={t => handleAddInputChange('email', t)}
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact Person 1</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    maxLength={12}
+                    keyboardType="phone-pad"
+                    value={addForm.contact_person_one}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleAddInputChange('contact_person_one', cleaned);
+                    }}
+                  />
                 </View>
 
                 {/* Row 4: Contact 1 + Contact Person 2 */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 1</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Alternative contact"
-                      maxLength={12}
-                      keyboardType="phone-pad"
-                      value={addForm.sec_contact}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleAddInputChange('sec_contact', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>
-                      Contact Person 2
-                    </Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Alternative contact"
-                      maxLength={12}
-                      keyboardType="phone-pad"
-                      value={addForm.contact_person_two}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleAddInputChange('contact_person_two', cleaned);
-                      }}
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact 1</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    maxLength={12}
+                    keyboardType="phone-pad"
+                    value={addForm.sec_contact}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleAddInputChange('sec_contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact Person 2</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    maxLength={12}
+                    keyboardType="phone-pad"
+                    value={addForm.contact_person_two}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleAddInputChange('contact_person_two', cleaned);
+                    }}
+                  />
                 </View>
 
                 {/* Row 5: Contact 2 + Address */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 2</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Alternative contact"
-                      maxLength={12}
-                      keyboardType="phone-pad"
-                      value={addForm.third_contact}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleAddInputChange('third_contact', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Address</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter complete address"
-                      value={addForm.address}
-                      onChangeText={t => handleAddInputChange('address', t)}
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact 2</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    maxLength={12}
+                    keyboardType="phone-pad"
+                    value={addForm.third_contact}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleAddInputChange('third_contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Address</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    value={addForm.address}
+                    onChangeText={t => handleAddInputChange('address', t)}
+                  />
                 </View>
 
                 <View style={{marginBottom: 15}}>
@@ -966,191 +888,153 @@ export default function TransporterPeople() {
               {/* Form */}
               <View style={styles.addCustomerForm}>
                 {/* Name */}
-                <View style={styles.addCustomerFullRow}>
+                <View style={styles.addCustomerField}>
                   <Text style={styles.addCustomerLabel}>
                     Transporter Name *
                   </Text>
                   <TextInput
                     style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter transporter name"
                     value={editForm.trans_name}
                     onChangeText={t => handleEditInputChange('trans_name', t)}
                   />
                 </View>
 
                 {/* CNIC + Contact */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>CNIC</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="12345-1234567-1"
-                      keyboardType="numeric"
-                      maxLength={15}
-                      value={editForm.trans_cnic}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 5)
-                          cleaned =
-                            cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                        if (cleaned.length > 13)
-                          cleaned =
-                            cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                        if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                        handleEditInputChange('trans_cnic', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="0300-1234567"
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      value={editForm.trans_contact}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleEditInputChange('trans_contact', cleaned);
-                      }}
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>CNIC</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    keyboardType="numeric"
+                    maxLength={15}
+                    value={editForm.trans_cnic}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 5)
+                        cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
+                      if (cleaned.length > 13)
+                        cleaned =
+                          cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
+                      if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
+                      handleEditInputChange('trans_cnic', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    value={editForm.trans_contact}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleEditInputChange('trans_contact', cleaned);
+                    }}
+                  />
                 </View>
 
                 {/* Email + Contact Person 1 */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Email</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="transporter@example.com"
-                      keyboardType="email-address"
-                      value={editForm.trans_email}
-                      onChangeText={t =>
-                        handleEditInputChange('trans_email', t)
-                      }
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>
-                      Contact Person 1
-                    </Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Alternative contact"
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      value={editForm.trans_contact_person_one}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleEditInputChange(
-                          'trans_contact_person_one',
-                          cleaned,
-                        );
-                      }}
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Email</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    keyboardType="email-address"
+                    value={editForm.trans_email}
+                    onChangeText={t => handleEditInputChange('trans_email', t)}
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact Person 1</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    value={editForm.trans_contact_person_one}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleEditInputChange(
+                        'trans_contact_person_one',
+                        cleaned,
+                      );
+                    }}
+                  />
                 </View>
 
                 {/* Contact 1 + Contact Person 2 */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 1</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Alternative contact"
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      value={editForm.trans_sec_contact}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleEditInputChange('trans_sec_contact', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>
-                      Contact Person 2
-                    </Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Alternative contact"
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      value={editForm.trans_contact_person_two}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleEditInputChange(
-                          'trans_contact_person_two',
-                          cleaned,
-                        );
-                      }}
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact 1</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    value={editForm.trans_sec_contact}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleEditInputChange('trans_sec_contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact Person 2</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    value={editForm.trans_contact_person_two}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleEditInputChange(
+                        'trans_contact_person_two',
+                        cleaned,
+                      );
+                    }}
+                  />
                 </View>
 
                 {/* Contact 2 + Address */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 2</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Alternative contact"
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      value={editForm.trans_third_contact}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleEditInputChange('trans_third_contact', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Address</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter address"
-                      value={editForm.trans_address}
-                      onChangeText={t =>
-                        handleEditInputChange('trans_address', t)
-                      }
-                    />
-                  </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Contact 2</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    value={editForm.trans_third_contact}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleEditInputChange('trans_third_contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addCustomerField}>
+                  <Text style={styles.addCustomerLabel}>Address</Text>
+                  <TextInput
+                    style={styles.addCustomerInput}
+                    value={editForm.trans_address}
+                    onChangeText={t =>
+                      handleEditInputChange('trans_address', t)
+                    }
+                  />
                 </View>
 
                 {/* Submit */}
@@ -1170,138 +1054,106 @@ export default function TransporterPeople() {
 
         {/* View Transporter Modal */}
         <Modal visible={view} transparent animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              {/* Header */}
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Transporter Details</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setview(!view);
-                    setSelectedTransporter(null);
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <ScrollView contentContainerStyle={styles.modalContent}>
+                {/* Header */}
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalHeaderTitle}>Customer Details</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setview(!view);
+                    }}
+                    style={styles.closeBtn}>
+                    <Icon name="close" size={22} color="#144272" />
+                  </TouchableOpacity>
+                </View>
 
-              {viewTransporters.length > 0 && (
                 <View style={styles.customerDetailsWrapper}>
                   {/* Profile Image */}
                   <View style={styles.customerImageWrapper}>
-                    {viewTransporters[0]?.trans_image ? (
-                      <Image
-                        source={{uri: viewTransporters[0]?.trans_image}}
+                    {viewTransporters?.trans_image ? (
+                      <Avatar.Image
+                        size={110}
+                        source={{uri: viewTransporters.trans_image}}
                         style={styles.customerImage}
-                        resizeMode="cover"
                       />
                     ) : (
-                      <View style={styles.customerNoImage}>
-                        <Icon name="truck" size={40} color="#999" />
-                        <Text style={styles.customerNoImageText}>No Image</Text>
-                      </View>
+                      <Avatar.Icon
+                        size={110}
+                        icon="account"
+                        style={[
+                          styles.customerNoImage,
+                          {backgroundColor: '#e0f2fe'},
+                        ]}
+                        color="#144272"
+                      />
                     )}
                   </View>
 
                   {/* Info Fields */}
-                  <View style={styles.customerInfoBox}>
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Transporter Name
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewTransporters[0]?.trans_name ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Contact</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewTransporters[0]?.trans_contact ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>CNIC</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewTransporters[0]?.trans_cnic ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Email</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewTransporters[0]?.trans_email ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Contact 1</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewTransporters[0]?.trans_sec_contact ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Contact 2</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewTransporters[0]?.trans_third_contact ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Contact Person 1
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewTransporters[0]?.trans_contact_person_one ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Contact Person 2
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewTransporters[0]?.trans_contact_person_two ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Address</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewTransporters[0]?.trans_address ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Opening Balance
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewTransporters[0]?.trans_opening_balance ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Payment Type</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewTransporters[0]?.trans_payment_type ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Transaction Type
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewTransporters[0]?.trans_transaction_type ?? 'N/A'}
-                      </Text>
-                    </View>
+                  <View style={styles.modalInfoBox}>
+                    {[
+                      {
+                        label: 'Transporter Name',
+                        value: viewTransporters?.trans_name,
+                      },
+                      {
+                        label: 'Contact',
+                        value: viewTransporters?.trans_contact,
+                      },
+                      {
+                        label: 'CNIC',
+                        value: viewTransporters?.trans_cnic,
+                      },
+                      {
+                        label: 'Email',
+                        value: viewTransporters?.trans_email,
+                      },
+                      {
+                        label: 'Contact Person 1',
+                        value: viewTransporters?.trans_contact_person_one,
+                      },
+                      {
+                        label: 'Contact 1',
+                        value: viewTransporters?.trans_sec_contact,
+                      },
+                      {
+                        label: 'Contact Person 2',
+                        value: viewTransporters?.trans_contact_person_two,
+                      },
+                      {
+                        label: 'Contact 2',
+                        value: viewTransporters?.trans_third_contact,
+                      },
+                      {
+                        label: 'Address',
+                        value: viewTransporters?.trans_address,
+                      },
+                      {
+                        label: 'Opening Balance',
+                        value: viewTransporters?.trans_opening_balance,
+                      },
+                      {
+                        label: 'Payment Type',
+                        value: viewTransporters?.trans_payment_type,
+                      },
+                      {
+                        label: 'Transaction Type',
+                        value: viewTransporters?.trans_transaction_type,
+                      },
+                    ].map((item, index) => (
+                      <View key={index} style={styles.modalInfoRow}>
+                        <Text style={styles.infoLabel}>{item.label}</Text>
+                        <Text style={styles.infoValue}>
+                          {item.value || 'N/A'}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
-              )}
-            </ScrollView>
+              </ScrollView>
+            </View>
           </View>
         </Modal>
 
@@ -1351,7 +1203,7 @@ export default function TransporterPeople() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -1383,7 +1235,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
 
@@ -1393,94 +1245,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   avatarText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 14,
   },
   name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
     marginTop: 2,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    marginLeft: 10,
   },
-  actionIcon: {
-    tintColor: '#144272',
-    width: 20,
-    height: 20,
-    marginHorizontal: 4,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 50,
+    backgroundColor: '#fff',
+    borderRadius: 15,
   },
-  infoBox: {
+  emptyText: {
     marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoText: {
-    flex: 1,
-    color: '#333',
-    fontSize: 13,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  infoIcon: {
-    width: 18,
-    height: 18,
-    tintColor: '#144272',
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '60%',
-    textAlign: 'right',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Pagination Component
@@ -1490,7 +1312,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -1503,7 +1325,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1517,7 +1339,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -1588,7 +1410,7 @@ const styles = StyleSheet.create({
   },
   addCustomerField: {
     flex: 1,
-    marginHorizontal: 5,
+    marginBottom: 5,
   },
   addCustomerFullRow: {
     marginBottom: 15,
@@ -1710,26 +1532,62 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
 
-  // View Modal Styling
-  customerDetailsWrapper: {
-    padding: 20,
+  // View Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
+  modalCard: {
+    width: '90%',
+    maxHeight: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 10,
+    paddingHorizontal: 10,
+  },
+  modalHeaderTitle: {
+    color: '#144272',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  closeBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  customerDetailsWrapper: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
   customerImageWrapper: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   customerImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 3,
     borderColor: '#144272',
   },
   customerNoImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#f0f0f0',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -1740,26 +1598,26 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 4,
   },
-  customerInfoBox: {
+  modalInfoBox: {
     width: '100%',
     marginTop: 10,
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    padding: 12,
   },
-  customerInfoRow: {
+  modalInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e0e0e0',
-    paddingBottom: 6,
+    marginBottom: 10,
   },
-  customerInfoLabel: {
+  infoLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#144272',
   },
-  customerInfoValue: {
+  infoValue: {
     fontSize: 14,
-    color: '#333',
+    color: '#555',
     flexShrink: 1,
     textAlign: 'right',
   },

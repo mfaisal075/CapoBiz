@@ -15,6 +15,8 @@ import BASE_URL from '../../BASE_URL';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
 import Toast from 'react-native-toast-message';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface Products {
   id: number;
@@ -92,10 +94,11 @@ export default function DeletedProducts() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
             <Icon name="menu" size={24} color="white" />
@@ -118,121 +121,53 @@ export default function DeletedProducts() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Header Row with Avatar + Product Name */}
-                <View style={styles.headerRow}>
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
                   <View style={styles.avatarBox}>
                     <Text style={styles.avatarText}>
                       {item.prod_name?.charAt(0) || 'P'}
                     </Text>
                   </View>
+
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.prod_name}</Text>
+                    {/* Category */}
                     <Text style={styles.subText}>
+                      <Icon name="shape" size={12} color="#666" />{' '}
                       {item.pcat_name || 'No category'}
                     </Text>
-                  </View>
-
-                  {/* Status Icon (Tick for deleted products) */}
-                  <TouchableOpacity
-                    style={styles.actionRow}
-                    onPress={() => {
-                      setModalVisible('Activate');
-                      setSelectedProd(item.id);
-                    }}>
-                    <Icon
-                      style={styles.actionIcon}
-                      name="check-circle"
-                      size={25}
-                      color={'green'}
-                    />
-                  </TouchableOpacity>
-                </View>
-
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="barcode"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Barcode:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>
-                      {item.prod_UPC_EAN || 'N/A'}
+                    {/* Quantity */}
+                    <Text style={styles.subText}>
+                      <Icon name="cube-outline" size={12} color="#666" />{' '}
+                      {item.prod_qty || 'N/A'}
+                    </Text>
+                    {/* Retail Price */}
+                    <Text style={styles.subText}>
+                      <Icon name="currency-usd" size={12} color="#666" />{' '}
+                      {item.prod_retailprice || 'N/A'}
                     </Text>
                   </View>
 
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="cash"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Cost:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>{item.prod_costprice}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="tag-outline"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Retail Price:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>
-                      {item.prod_retailprice}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="cube-outline"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Quantity:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>
-                      {item?.prod_qty ?? '0'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.infoLeft}>
-                      <Icon
-                        name="calendar-clock"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.infoText}>Expiry:</Text>
-                    </View>
-                    <Text style={styles.infoValue}>
-                      {item?.prod_expirydate ?? 'No expiry date'}
-                    </Text>
+                  {/* Actions on right */}
+                  <View style={styles.actionRow}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('Activate');
+                        setSelectedProd(item.id);
+                      }}>
+                      <Icon name="check-circle" size={22} color={'green'} />
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
             )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>
-                  No Deleted Product found.
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 110}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -330,7 +265,7 @@ export default function DeletedProducts() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -362,92 +297,74 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
 
-  // Flat List styling
+  // FlatList Styling
   listContainer: {
     flex: 1,
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   avatarText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 14,
   },
   name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
     marginTop: 2,
   },
   actionRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    marginLeft: 10,
   },
-  actionIcon: {
-    tintColor: '#144272',
-    width: 25,
-    height: 25,
-    marginHorizontal: 4,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 50,
+    backgroundColor: '#fff',
+    borderRadius: 15,
   },
-  infoBox: {
+  emptyText: {
     marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  infoLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  infoIcon: {
-    marginRight: 6,
-  },
-  infoText: {
-    color: '#144272',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  infoValue: {
-    color: '#333',
-    fontSize: 13,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   //Delete Modal
@@ -518,7 +435,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -531,7 +448,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -545,7 +462,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },

@@ -3,8 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
-  Image,
   TouchableOpacity,
   ScrollView,
   FlatList,
@@ -13,7 +11,7 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
-import {Checkbox, RadioButton} from 'react-native-paper';
+import {Avatar, Checkbox, RadioButton} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
@@ -21,6 +19,8 @@ import {useUser} from '../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../Colors';
 
 interface Employee {
   id: number;
@@ -126,7 +126,7 @@ export default function EmployeesPeople() {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [employeeData, setEmployeeData] = useState<Employee[]>([]);
-  const [viewEmp, setViewEmp] = useState<EmployeeView[]>([]);
+  const [viewEmp, setViewEmp] = useState<EmployeeView | null>(null);
   const [modalVisible, setModalVisible] = useState('');
   const [selectedEmp, setSelectedEmp] = useState<number | null>(null);
   const [addForm, setAddForm] = useState<AddEmployeeForm>(initialAddEmployee);
@@ -479,10 +479,11 @@ export default function EmployeesPeople() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -506,7 +507,8 @@ export default function EmployeesPeople() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                <View style={styles.headerRow}>
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
                   <View style={styles.avatarBox}>
                     <Text style={styles.avatarText}>
                       {item.emp_name?.charAt(0) || 'E'}
@@ -515,10 +517,22 @@ export default function EmployeesPeople() {
 
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.emp_name}</Text>
-                    <Text style={styles.subText}>{item.emp_type || 'N/A'}</Text>
+                    {/* small details inline */}
+                    <Text style={styles.subText}>
+                      <Icon name="phone" size={12} color="#666" />{' '}
+                      {item.emp_contact || 'No contact'}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Icon name="mail" size={12} color="#666" />{' '}
+                      {item.emp_email || 'N/A'}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Icon name="map-marker" size={12} color="#666" />{' '}
+                      {item.emp_address || 'N/A'}
+                    </Text>
                   </View>
 
-                  {/* Actions */}
+                  {/* Actions on right */}
                   <View style={styles.actionRow}>
                     <TouchableOpacity
                       onPress={() => {
@@ -528,21 +542,15 @@ export default function EmployeesPeople() {
                             const res = await axios.get(
                               `${BASE_URL}/employeesshow?id=${id}&_token=${token}`,
                             );
-                            setViewEmp([res.data]);
+                            setViewEmp(res.data);
                           } catch (error) {
                             console.log(error);
                           }
                         };
                         fetchDetails(item.id);
                       }}>
-                      <Icon
-                        style={styles.actionIcon}
-                        name="eye"
-                        size={20}
-                        color={'#144272'}
-                      />
+                      <Icon name="eye" size={20} color={'#144272'} />
                     </TouchableOpacity>
-
                     <TouchableOpacity
                       onPress={() => {
                         setModalVisible('EditEmp');
@@ -558,101 +566,26 @@ export default function EmployeesPeople() {
                         };
                         fetchEditData(item.id);
                       }}>
-                      <Icon
-                        style={styles.actionIcon}
-                        name="pencil"
-                        size={20}
-                        color={'#144272'}
-                      />
+                      <Icon name="pencil" size={20} color={'#144272'} />
                     </TouchableOpacity>
-
                     <TouchableOpacity
                       onPress={() => {
                         setModalVisible('EmpDelete');
                         setSelectedEmp(item.id);
                       }}>
-                      <Icon
-                        style={styles.actionIcon}
-                        name="delete"
-                        size={20}
-                        color={'#144272'}
-                      />
+                      <Icon name="delete" size={20} color={'#144272'} />
                     </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="email"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Email</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.emp_email || 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="phone"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Phone</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.emp_contact || 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="card-account-details"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>CNIC</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.emp_cnic || 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="map-marker"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Address</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.emp_address || 'N/A'}
-                    </Text>
                   </View>
                 </View>
               </View>
             )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>
-                  No Employee found.
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 110}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -680,146 +613,159 @@ export default function EmployeesPeople() {
 
               <View style={styles.addEmployeeForm}>
                 {/* Row 1 */}
-                <View style={styles.addEmployeeRow}>
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>Employee Name *</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter employee name"
-                      value={addForm.emp_name}
-                      onChangeText={t => onChange('emp_name', t)}
-                    />
-                  </View>
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>Father Name</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter father name"
-                      value={addForm.fathername}
-                      onChangeText={t => onChange('fathername', t)}
-                    />
-                  </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Employee Name *</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={addForm.emp_name}
+                    onChangeText={t => onChange('emp_name', t)}
+                  />
+                </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Father Name</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={addForm.fathername}
+                    onChangeText={t => onChange('fathername', t)}
+                  />
                 </View>
 
                 {/* Row 2 */}
-                <View style={styles.addEmployeeRow}>
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>Email</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholderTextColor="#999"
-                      placeholder="example@mail.com"
-                      value={addForm.email}
-                      onChangeText={t => onChange('email', t)}
-                    />
-                  </View>
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>Address</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter address"
-                      value={addForm.address}
-                      onChangeText={t => onChange('address', t)}
-                    />
-                  </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Email</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={addForm.email}
+                    onChangeText={t => onChange('email', t)}
+                  />
+                </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Address</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={addForm.address}
+                    onChangeText={t => onChange('address', t)}
+                  />
                 </View>
 
                 {/* Row 3 */}
-                <View style={styles.addEmployeeRow}>
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>Contact</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholderTextColor="#999"
-                      placeholder="0300-1234567"
-                      value={addForm.contact}
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9]/g, ''); // keep only digits
-                        if (cleaned.length > 4) {
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        }
-                        if (cleaned.length > 12) {
-                          cleaned = cleaned.slice(0, 12);
-                        }
-                        onChange('contact', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>CNIC</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholderTextColor="#999"
-                      placeholder="12345-1234567-1"
-                      value={addForm.cnic}
-                      keyboardType="numeric"
-                      maxLength={15}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 5)
-                          cleaned =
-                            cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                        if (cleaned.length > 13)
-                          cleaned =
-                            cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                        if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                        onChange('cnic', cleaned);
-                      }}
-                    />
-                  </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Contact</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={addForm.contact}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9]/g, ''); // keep only digits
+                      if (cleaned.length > 4) {
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      }
+                      if (cleaned.length > 12) {
+                        cleaned = cleaned.slice(0, 12);
+                      }
+                      onChange('contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>CNIC</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={addForm.cnic}
+                    keyboardType="numeric"
+                    maxLength={15}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 5)
+                        cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
+                      if (cleaned.length > 13)
+                        cleaned =
+                          cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
+                      if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
+                      onChange('cnic', cleaned);
+                    }}
+                  />
                 </View>
 
                 {/* Extra Contacts */}
-                <View style={styles.addEmployeeRow}>
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>
-                      Contact Person One
-                    </Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholder="0300-1234567"
-                      value={addForm.contact_person_one}
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        onChange('contact_person_one', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>
-                      Contact Person Two
-                    </Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholder="0300-1234567"
-                      value={addForm.contact_person_two}
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        onChange('contact_person_two', cleaned);
-                      }}
-                    />
-                  </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>
+                    Contact Person One
+                  </Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={addForm.contact_person_one}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      onChange('contact_person_one', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Contact</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={addForm.sec_contact}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9]/g, ''); // keep only digits
+                      if (cleaned.length > 4) {
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      }
+                      if (cleaned.length > 12) {
+                        cleaned = cleaned.slice(0, 12);
+                      }
+                      onChange('sec_contact', cleaned);
+                    }}
+                  />
+                </View>
+
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>
+                    Contact Person Two
+                  </Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={addForm.contact_person_two}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      onChange('contact_person_two', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Contact</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={addForm.third_contact}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9]/g, ''); // keep only digits
+                      if (cleaned.length > 4) {
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      }
+                      if (cleaned.length > 12) {
+                        cleaned = cleaned.slice(0, 12);
+                      }
+                      onChange('third_contact', cleaned);
+                    }}
+                  />
                 </View>
 
                 {/* Worker / Other */}
@@ -990,147 +936,148 @@ export default function EmployeesPeople() {
               {/* Form */}
               <View style={styles.addEmployeeForm}>
                 {/* Row 1 */}
-                <View style={styles.addEmployeeRow}>
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>Employee Name *</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholder="Enter employee name"
-                      placeholderTextColor="#999"
-                      value={editForm.emp_name}
-                      onChangeText={t => editOnchange('emp_name', t)}
-                    />
-                  </View>
-
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>Father Name</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholder="Enter father name"
-                      placeholderTextColor="#999"
-                      value={editForm.emp_fathername}
-                      onChangeText={t => editOnchange('emp_fathername', t)}
-                    />
-                  </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Employee Name *</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={editForm.emp_name}
+                    onChangeText={t => editOnchange('emp_name', t)}
+                  />
+                </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Father Name</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={editForm.emp_fathername}
+                    onChangeText={t => editOnchange('emp_fathername', t)}
+                  />
                 </View>
 
                 {/* Row 2 */}
-                <View style={styles.addEmployeeRow}>
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>Email</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholder="employee@example.com"
-                      placeholderTextColor="#999"
-                      value={editForm.emp_email}
-                      onChangeText={t => editOnchange('emp_email', t)}
-                      keyboardType="email-address"
-                    />
-                  </View>
-
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>Address</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholder="Enter address"
-                      placeholderTextColor="#999"
-                      value={editForm.emp_address}
-                      onChangeText={t => editOnchange('emp_address', t)}
-                    />
-                  </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Email</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={editForm.emp_email}
+                    onChangeText={t => editOnchange('emp_email', t)}
+                    keyboardType="email-address"
+                  />
+                </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Address</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={editForm.emp_address}
+                    onChangeText={t => editOnchange('emp_address', t)}
+                  />
                 </View>
 
                 {/* Row 3 */}
-                <View style={styles.addEmployeeRow}>
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>Contact</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholder="0300-1234567"
-                      placeholderTextColor="#999"
-                      value={editForm.emp_contact}
-                      maxLength={12}
-                      keyboardType="phone-pad"
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9]/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        editOnchange('emp_contact', cleaned);
-                      }}
-                    />
-                  </View>
-
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>CNIC</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholder="12345-1234567-1"
-                      placeholderTextColor="#999"
-                      value={editForm.emp_cnic}
-                      maxLength={15}
-                      keyboardType="number-pad"
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9]/g, '');
-                        if (cleaned.length > 5)
-                          cleaned =
-                            cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                        if (cleaned.length > 13)
-                          cleaned =
-                            cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                        if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                        editOnchange('emp_cnic', cleaned);
-                      }}
-                    />
-                  </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Contact</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={editForm.emp_contact}
+                    maxLength={12}
+                    keyboardType="phone-pad"
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9]/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      editOnchange('emp_contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>CNIC</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={editForm.emp_cnic}
+                    maxLength={15}
+                    keyboardType="number-pad"
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9]/g, '');
+                      if (cleaned.length > 5)
+                        cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
+                      if (cleaned.length > 13)
+                        cleaned =
+                          cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
+                      if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
+                      editOnchange('emp_cnic', cleaned);
+                    }}
+                  />
                 </View>
 
                 {/* Row 4 */}
-                <View style={styles.addEmployeeRow}>
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>
-                      Contact Person One
-                    </Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholder="0300-xxxxxxx"
-                      placeholderTextColor="#999"
-                      value={editForm.emp_contact_person_one}
-                      maxLength={12}
-                      keyboardType="phone-pad"
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9]/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        editOnchange('emp_contact_person_one', cleaned);
-                      }}
-                    />
-                  </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>
+                    Contact Person One
+                  </Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={editForm.emp_contact_person_one}
+                    maxLength={12}
+                    keyboardType="phone-pad"
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9]/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      editOnchange('emp_contact_person_one', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Contact</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={editForm.emp_sec_contact}
+                    maxLength={12}
+                    keyboardType="phone-pad"
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9]/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      editOnchange('emp_sec_contact', cleaned);
+                    }}
+                  />
+                </View>
 
-                  <View style={styles.addEmployeeField}>
-                    <Text style={styles.addEmployeeLabel}>
-                      Contact Person Two
-                    </Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholder="0300-xxxxxxx"
-                      placeholderTextColor="#999"
-                      value={editForm.emp_contact_person_two}
-                      maxLength={12}
-                      keyboardType="phone-pad"
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9]/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        editOnchange('emp_contact_person_two', cleaned);
-                      }}
-                    />
-                  </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>
+                    Contact Person Two
+                  </Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={editForm.emp_contact_person_two}
+                    maxLength={12}
+                    keyboardType="phone-pad"
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9]/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      editOnchange('emp_contact_person_two', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={styles.addEmployeeField}>
+                  <Text style={styles.addEmployeeLabel}>Contact</Text>
+                  <TextInput
+                    style={styles.addEmployeeInput}
+                    value={editForm.emp_third_contact}
+                    maxLength={12}
+                    keyboardType="phone-pad"
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9]/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      editOnchange('emp_third_contact', cleaned);
+                    }}
+                  />
                 </View>
 
                 {/* Worker Type */}
@@ -1204,158 +1151,115 @@ export default function EmployeesPeople() {
           visible={modalVisible === 'View Employee'}
           transparent
           animationType="slide">
-          <View style={styles.addEmployeeModalOverlay}>
-            <ScrollView style={styles.addEmployeeModalContainer}>
-              {/* Header */}
-              <View style={styles.addEmployeeHeader}>
-                <Text style={styles.addEmployeeTitle}>Employee Details</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setViewEmp([]);
-                  }}
-                  style={styles.addEmployeeCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <ScrollView contentContainerStyle={styles.modalContent}>
+                {/* Header */}
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalHeaderTitle}>Customer Details</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setModalVisible('');
+                      setViewEmp(null);
+                    }}
+                    style={styles.closeBtn}>
+                    <Icon name="close" size={22} color="#144272" />
+                  </TouchableOpacity>
+                </View>
 
-              {viewEmp.length > 0 && (
                 <View style={styles.customerDetailsWrapper}>
                   {/* Profile Image */}
                   <View style={styles.customerImageWrapper}>
-                    {viewEmp[0].emp_image ? (
-                      <Image
-                        source={{uri: viewEmp[0].emp_image}}
+                    {viewEmp?.emp_image ? (
+                      <Avatar.Image
+                        size={110}
+                        source={{uri: viewEmp.emp_image}}
                         style={styles.customerImage}
-                        resizeMode="cover"
                       />
                     ) : (
-                      <View style={styles.customerNoImage}>
-                        <Icon name="account" size={40} color="#999" />
-                        <Text style={styles.customerNoImageText}>No Image</Text>
-                      </View>
+                      <Avatar.Icon
+                        size={110}
+                        icon="account"
+                        style={[
+                          styles.customerNoImage,
+                          {backgroundColor: '#e0f2fe'},
+                        ]}
+                        color="#144272"
+                      />
                     )}
                   </View>
 
-                  {/* Info Box */}
-                  <View style={styles.customerInfoBox}>
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Employee Name
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_name}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Father Name</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_fathername ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Contact</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_contact ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Email</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_email ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Second Contact
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_sec_contact ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Third Contact
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_third_contact ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Contact Person One
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_contact_person_one ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Contact Person Two
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_contact_person_two ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>CNIC</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_cnic ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Address</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_address ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Employee Type
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_type ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Opening Balance
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_opening_balance ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>Payment Type</Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_payment_type ?? 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.customerInfoRow}>
-                      <Text style={styles.customerInfoLabel}>
-                        Transaction Type
-                      </Text>
-                      <Text style={styles.customerInfoValue}>
-                        {viewEmp[0]?.emp_transaction_type ?? 'N/A'}
-                      </Text>
-                    </View>
+                  {/* Info Fields */}
+                  <View style={styles.modalInfoBox}>
+                    {[
+                      {
+                        label: 'Employee Name',
+                        value: viewEmp?.emp_name,
+                      },
+                      {
+                        label: 'Father Name',
+                        value: viewEmp?.emp_fathername,
+                      },
+                      {
+                        label: 'Contact',
+                        value: viewEmp?.emp_contact,
+                      },
+                      {
+                        label: 'Email',
+                        value: viewEmp?.emp_email,
+                      },
+                      {
+                        label: 'Contact Person 1',
+                        value: viewEmp?.emp_contact_person_one,
+                      },
+                      {
+                        label: 'Contact',
+                        value: viewEmp?.emp_sec_contact,
+                      },
+                      {
+                        label: 'Contact Person 2',
+                        value: viewEmp?.emp_contact_person_two,
+                      },
+                      {
+                        label: 'Contact',
+                        value: viewEmp?.emp_third_contact,
+                      },
+                      {
+                        label: 'CNIC',
+                        value: viewEmp?.emp_cnic,
+                      },
+                      {
+                        label: 'Address',
+                        value: viewEmp?.emp_address,
+                      },
+                      {
+                        label: 'Employee Type',
+                        value: viewEmp?.emp_type,
+                      },
+                      {
+                        label: 'Opening Balance',
+                        value: viewEmp?.emp_opening_balance,
+                      },
+                      {
+                        label: 'Transaction Type',
+                        value: viewEmp?.emp_transaction_type,
+                      },
+                      {
+                        label: 'Payment Type',
+                        value: viewEmp?.emp_payment_type,
+                      },
+                    ].map((item, index) => (
+                      <View key={index} style={styles.modalInfoRow}>
+                        <Text style={styles.infoLabel}>{item.label}</Text>
+                        <Text style={styles.infoValue}>
+                          {item.value || 'N/A'}
+                        </Text>
+                      </View>
+                    ))}
                   </View>
                 </View>
-              )}
-            </ScrollView>
+              </ScrollView>
+            </View>
           </View>
         </Modal>
 
@@ -1405,7 +1309,7 @@ export default function EmployeesPeople() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -1437,7 +1341,7 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
 
@@ -1479,14 +1383,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
-  addEmployeeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
   addEmployeeField: {
     flex: 1,
-    marginHorizontal: 5,
+    marginBottom: 5,
   },
   addEmployeeFullRow: {
     marginBottom: 15,
@@ -1560,93 +1459,64 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   avatarText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 14,
   },
   name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
     marginTop: 2,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    marginLeft: 10,
   },
-  actionIcon: {
-    width: 20,
-    height: 20,
-    marginHorizontal: 4,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 50,
+    backgroundColor: '#fff',
+    borderRadius: 15,
   },
-  infoBox: {
+  emptyText: {
     marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoText: {
-    flex: 1,
-    color: '#333',
-    fontSize: 13,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  infoIcon: {
-    width: 18,
-    height: 18,
-    tintColor: '#144272',
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '60%',
-    textAlign: 'right',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Pagination Component
@@ -1656,7 +1526,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -1669,7 +1539,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1683,7 +1553,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -1765,25 +1635,61 @@ const styles = StyleSheet.create({
   },
 
   // View Modal Styling
-  customerDetailsWrapper: {
-    padding: 20,
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
+  modalCard: {
+    width: '90%',
+    maxHeight: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 10,
+    paddingHorizontal: 10,
+  },
+  modalHeaderTitle: {
+    color: '#144272',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  closeBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  customerDetailsWrapper: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
   customerImageWrapper: {
-    marginBottom: 20,
+    marginBottom: 16,
   },
   customerImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 2,
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 3,
     borderColor: '#144272',
   },
   customerNoImage: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: '#f0f0f0',
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: '#f5f5f5',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
@@ -1794,26 +1700,26 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 4,
   },
-  customerInfoBox: {
+  modalInfoBox: {
     width: '100%',
     marginTop: 10,
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    padding: 12,
   },
-  customerInfoRow: {
+  modalInfoRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e0e0e0',
-    paddingBottom: 6,
+    marginBottom: 10,
   },
-  customerInfoLabel: {
+  infoLabel: {
     fontSize: 14,
     fontWeight: '600',
     color: '#144272',
   },
-  customerInfoValue: {
+  infoValue: {
     fontSize: 14,
-    color: '#333',
+    color: '#555',
     flexShrink: 1,
     textAlign: 'right',
   },

@@ -16,6 +16,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface PurchaseList {
   prch_invoice_no: string;
@@ -149,10 +151,11 @@ export default function PurchaseList() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -217,136 +220,63 @@ export default function PurchaseList() {
           </View>
         </View>
 
-        {/* Flatlist */}
         <View style={styles.listContainer}>
           <FlatList
             data={currentData}
-            keyExtractor={(item, index) => `${item.prch_invoice_no}_${index}`}
-            renderItem={({item}) => {
-              return (
-                <View style={styles.card}>
-                  {/* Header Row */}
-                  <View style={styles.headerRow}>
-                    <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {item.prch_invoice_no?.charAt(0) || 'P'}
-                      </Text>
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.name}>{item.prch_invoice_no}</Text>
-                      <Text style={styles.subText}>
-                        {new Date(item.prch_date).toLocaleDateString('en-US', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </Text>
-                    </View>
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={styles.card}>
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.prch_invoice_no?.charAt(0) || 'I'}
+                    </Text>
+                  </View>
 
-                    {/* View Action */}
+                  <View style={{flex: 1}}>
+                    <Text style={styles.name}>{item.prch_invoice_no}</Text>
+                    {/* Category */}
+                    <Text style={styles.subText}>
+                      <Icon name="calendar" size={12} color="#666" />{' '}
+                      {item.prch_date || 'No category'}
+                    </Text>
+                    {/* Quantity */}
+                    <Text style={styles.subText}>
+                      <Icon name="cash-multiple" size={12} color="#666" />{' '}
+                      {item.prch_order_total}
+                    </Text>
+                    {/* Retail Price */}
+                    <Text style={styles.subText}>
+                      <Icon name="check-circle" size={12} color="#666" />{' '}
+                      {parseFloat(item.prch_paid_amount).toFixed(2) || 'N/A'}
+                    </Text>
+                  </View>
+
+                  {/* Actions on right */}
+                  <View style={styles.actionRow}>
                     <TouchableOpacity
                       onPress={() => {
                         setModalVisible('View');
                         fetchIncv(item.prch_invoice_no);
                       }}>
-                      <Icon
-                        name="receipt"
-                        size={20}
-                        color={'#144272'}
-                        style={{marginLeft: 10}}
-                      />
+                      <Icon name="receipt" size={20} color={'#144272'} />
                     </TouchableOpacity>
                   </View>
-
-                  {/* Info Section */}
-                  <View style={styles.infoBox}>
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon name="cash-multiple" size={16} color="#144272" />
-                        <Text style={styles.infoText}>Order Total:</Text>
-                      </View>
-                      <Text style={styles.infoValue}>
-                        {item.prch_order_total}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon name="cash-check" size={16} color="#144272" />
-                        <Text style={styles.infoText}>Paid Amount:</Text>
-                      </View>
-                      <Text style={styles.infoValue}>
-                        {item.prch_paid_amount}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon name="wallet" size={16} color="#144272" />
-                        <Text style={styles.infoText}>Balance:</Text>
-                      </View>
-                      <Text style={styles.infoValue}>{item.prch_balance}</Text>
-                    </View>
-                  </View>
                 </View>
-              );
-            }}
+              </View>
+            )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>
-                  No record present in the database for this Date range!
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 110, paddingTop: 10}}
+            contentContainerStyle={{paddingBottom: 90}}
+            showsVerticalScrollIndicator={false}
           />
         </View>
-      </ImageBackground>
-
-      {/* Pagination Controls */}
-      {totalRecords > 0 && (
-        <View style={styles.paginationContainer}>
-          <TouchableOpacity
-            disabled={currentPage === 1}
-            onPress={() => setCurrentPage(prev => prev - 1)}
-            style={[
-              styles.pageButton,
-              currentPage === 1 && styles.pageButtonDisabled,
-            ]}>
-            <Text
-              style={[
-                styles.pageButtonText,
-                currentPage === 1 && styles.pageButtonTextDisabled,
-              ]}>
-              Prev
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.pageIndicator}>
-            <Text style={styles.pageIndicatorText}>
-              Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-              {totalPages}
-            </Text>
-            <Text style={styles.totalText}>Total: {totalRecords} records</Text>
-          </View>
-
-          <TouchableOpacity
-            disabled={currentPage === totalPages}
-            onPress={() => setCurrentPage(prev => prev + 1)}
-            style={[
-              styles.pageButton,
-              currentPage === totalPages && styles.pageButtonDisabled,
-            ]}>
-            <Text
-              style={[
-                styles.pageButtonText,
-                currentPage === totalPages && styles.pageButtonTextDisabled,
-              ]}>
-              Next
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      </LinearGradient>
 
       {/* View Modal */}
       <Modal
@@ -593,6 +523,51 @@ export default function PurchaseList() {
           </View>
         </View>
       </Modal>
+
+      {/* Pagination Controls */}
+      {totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => prev - 1)}
+            style={[
+              styles.pageButton,
+              currentPage === 1 && styles.pageButtonDisabled,
+            ]}>
+            <Text
+              style={[
+                styles.pageButtonText,
+                currentPage === 1 && styles.pageButtonTextDisabled,
+              ]}>
+              Prev
+            </Text>
+          </TouchableOpacity>
+
+          <View style={styles.pageIndicator}>
+            <Text style={styles.pageIndicatorText}>
+              Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+              {totalPages}
+            </Text>
+            <Text style={styles.totalText}>Total: {totalRecords} records</Text>
+          </View>
+
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() => setCurrentPage(prev => prev + 1)}
+            style={[
+              styles.pageButton,
+              currentPage === totalPages && styles.pageButtonDisabled,
+            ]}>
+            <Text
+              style={[
+                styles.pageButtonText,
+                currentPage === totalPages && styles.pageButtonTextDisabled,
+              ]}>
+              Next
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -602,7 +577,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -635,7 +610,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -648,7 +623,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -662,7 +637,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -688,75 +663,70 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
 
-  // Flatlist styling
+  // FlatList Styling
   listContainer: {
     flex: 1,
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 10,
-    padding: 12,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   avatarText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
+    fontWeight: '600',
+    fontSize: 14,
   },
   name: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
+    marginTop: 2,
   },
-  infoBox: {
-    marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  infoText: {
-    color: '#144272',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  infoValue: {
-    fontSize: 13,
-    color: '#1A1A1A',
-    fontWeight: '600',
-  },
-  labelRow: {
+  actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    alignSelf: 'flex-start',
+    gap: 8,
+    marginLeft: 10,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 50,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Date Fields
@@ -813,8 +783,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#F9F9F9',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
   },
   modalContainer: {
     backgroundColor: '#FAFBFC',
@@ -847,8 +815,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   invoiceIconContainer: {
-    width: 48,
-    height: 48,
+    width: 46,
+    height: 46,
     backgroundColor: '#E8F4FD',
     borderRadius: 12,
     justifyContent: 'center',
@@ -937,6 +905,11 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.5,
     marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#1A1A1A',
+    fontWeight: '600',
   },
 
   // Table Section
