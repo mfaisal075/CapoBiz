@@ -18,6 +18,8 @@ import {useUser} from '../../CTX/UserContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import DropDownPicker from 'react-native-dropdown-picker';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface Orders {
   id: number;
@@ -135,10 +137,11 @@ export default function SalesOrderList() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -156,9 +159,10 @@ export default function SalesOrderList() {
             <Icon name="mail" size={24} color="transparent" />
           </TouchableOpacity>
         </View>
+
         <View style={styles.dateContainer}>
           <View style={styles.dateInputWrapper}>
-            <Text style={styles.dateLabel}>From Date</Text>
+            <Text style={styles.dateLabel}>From:</Text>
             <TouchableOpacity
               style={styles.dateInputBox}
               onPress={() => setShowStartDatePicker(true)}>
@@ -180,7 +184,7 @@ export default function SalesOrderList() {
           </View>
 
           <View style={styles.dateInputWrapper}>
-            <Text style={styles.dateLabel}>To Date</Text>
+            <Text style={styles.dateLabel}>To:</Text>
             <TouchableOpacity
               style={styles.dateInputBox}
               onPress={() => setShowEndDatePicker(true)}>
@@ -225,83 +229,55 @@ export default function SalesOrderList() {
         </View>
 
         {/* Flatlist */}
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => {
-              return (
-                <View style={styles.card}>
-                  {/* Header Row */}
-                  <View style={styles.headerRow}>
-                    <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {item.salord_invoice_no?.charAt(0) || 'S'}
-                      </Text>
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.name}>{item.salord_invoice_no}</Text>
-                      <Text style={styles.subText}>
-                        {new Date(item.salord_date).toLocaleDateString(
-                          'en-US',
-                          {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          },
-                        )}
-                      </Text>
-                    </View>
-
-                    {/* View Action */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('View');
-                        getOrderInvoice(item.id);
-                      }}>
-                      <Icon
-                        name="eye"
-                        size={20}
-                        color={'#144272'}
-                        style={{marginLeft: 10}}
-                      />
-                    </TouchableOpacity>
+            renderItem={({item}) => (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => {
+                  setModalVisible('View');
+                  getOrderInvoice(item.id);
+                }}>
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
+                  <View>
+                    <Text style={styles.name}>{item.salord_invoice_no}</Text>
+                    <Text style={styles.subText}>
+                      <Icon name="cash-multiple" size={12} color="#666" />{' '}
+                      {item.order_total}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Icon name="account" size={12} color="#666" />{' '}
+                      {item.cust_name || 'N/A'}
+                    </Text>
                   </View>
 
-                  {/* Info Section */}
-                  <View style={styles.infoBox}>
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon name="account" size={16} color="#144272" />
-                        <Text style={styles.infoText}>Customer:</Text>
-                      </View>
-                      <Text style={styles.infoValue}>
-                        {item.cust_name || 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon name="cash-multiple" size={16} color="#144272" />
-                        <Text style={styles.infoText}>Order Total:</Text>
-                      </View>
-                      <Text style={styles.infoValue}>{item.order_total}</Text>
-                    </View>
+                  <View style={{alignSelf: 'flex-start'}}>
+                    <Text style={[styles.subText, {fontWeight: '700'}]}>
+                      <Icon name="calendar" size={12} color="#666" />{' '}
+                      {new Date(item.salord_date).toLocaleDateString('en-US', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </Text>
                   </View>
                 </View>
-              );
-            }}
+              </TouchableOpacity>
+            )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>
-                  No record present in the database for this Date range!
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 280, paddingTop: 10}}
+            contentContainerStyle={{paddingBottom: 90}}
+            showsVerticalScrollIndicator={false}
           />
         </View>
-      </ImageBackground>
+      </LinearGradient>
 
       {/* Pagination Controls */}
       {totalRecords > 0 && (
@@ -327,6 +303,7 @@ export default function SalesOrderList() {
               Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
               {totalPages}
             </Text>
+            <Text style={styles.totalText}>Total: {totalRecords} records</Text>
           </View>
 
           <TouchableOpacity
@@ -346,7 +323,7 @@ export default function SalesOrderList() {
           </TouchableOpacity>
         </View>
       )}
-
+      
       {/* View Modal */}
       <Modal
         visible={modalVisible === 'View'}
@@ -537,7 +514,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -570,7 +547,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -583,7 +560,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -597,7 +574,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -616,67 +593,61 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFD166',
   },
-
-  // Flatlist styling
-  card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 10,
-    padding: 12,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
+  totalText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
+  },
+
+  // FlatList Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   name: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
+    marginTop: 2,
   },
-  infoBox: {
-    marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  infoText: {
-    color: '#144272',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  labelRow: {
-    flexDirection: 'row',
+  emptyContainer: {
     alignItems: 'center',
-    gap: 4,
+    alignSelf: 'center',
+    justifyContent: 'center',
+    paddingVertical: '65%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    width: '96%',
+    marginTop: 8
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Date Fields
@@ -685,7 +656,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 15,
     marginTop: 15,
-    marginBottom: 10,
+    marginBottom: 5,
   },
   dateInputWrapper: {
     flex: 0.48,

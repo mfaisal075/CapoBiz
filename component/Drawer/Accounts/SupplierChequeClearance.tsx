@@ -19,6 +19,8 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import LottieView from 'lottie-react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface Suppliers {
   id: number;
@@ -176,10 +178,11 @@ const SupplierChequeClearance = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -335,15 +338,18 @@ const SupplierChequeClearance = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Cheque Number</Text>
-                    <Text style={styles.readOnlyInput}>
-                      {loadchequeData.chi_number}
-                    </Text>
-                  </View>
-                  <View style={styles.inputContainer}>
                     <Text style={styles.inputLabel}>Amount</Text>
                     <Text style={styles.readOnlyInput}>
                       Rs. {loadchequeData.chi_amount}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.inputRow}>
+                  <View style={styles.inputContainer}>
+                    <Text style={styles.inputLabel}>Cheque Number</Text>
+                    <Text style={styles.readOnlyInput}>
+                      {loadchequeData.chi_number}
                     </Text>
                   </View>
                 </View>
@@ -457,7 +463,7 @@ const SupplierChequeClearance = () => {
             </View>
           </View>
         </Modal>
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 };
@@ -467,7 +473,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -496,7 +502,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   section: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(15, 45, 78, 0.8)',
     borderRadius: 16,
     padding: 20,
     marginVertical: 8,

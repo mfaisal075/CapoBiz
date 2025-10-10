@@ -7,13 +7,20 @@ import {
   Animated,
   TouchableOpacity,
   Image,
-  ImageBackground,
   ActivityIndicator,
+  Dimensions,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import {useNavigation} from '@react-navigation/native';
 import axios from 'axios';
 import BASE_URL from './BASE_URL';
 import Toast from 'react-native-toast-message';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from './Colors';
+import LottieView from 'lottie-react-native';
+
+const {height, width} = Dimensions.get('window');
 
 const LoginScreen: React.FC = () => {
   const navigation = useNavigation();
@@ -22,10 +29,7 @@ const LoginScreen: React.FC = () => {
   const [hidePassword, setHidePassword] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const managePasswordVisibility = () => {
-    setHidePassword(!hidePassword);
-  };
-
+  // Animation refs
   const formOpacity = useRef(new Animated.Value(0)).current;
   const formTranslateY = useRef(new Animated.Value(40)).current;
   const emailOpacity = useRef(new Animated.Value(0)).current;
@@ -34,6 +38,11 @@ const LoginScreen: React.FC = () => {
   const emailTranslate = useRef(new Animated.Value(20)).current;
   const passwordTranslate = useRef(new Animated.Value(20)).current;
   const buttonTranslate = useRef(new Animated.Value(20)).current;
+  const lottieAnim = useRef<LottieView>(null);
+
+  const managePasswordVisibility = () => {
+    setHidePassword(!hidePassword);
+  };
 
   const handleLogin = async () => {
     if (!username || !password) {
@@ -155,73 +164,82 @@ const LoginScreen: React.FC = () => {
       setLoading(false);
     }
   };
+  // --- End of handleLogin function ---
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(formOpacity, {
-        toValue: 1,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-      Animated.timing(formTranslateY, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    setTimeout(() => {
+    lottieAnim.current?.play();
+    Animated.stagger(200, [
+      Animated.parallel([
+        Animated.timing(formOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(formTranslateY, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+      ]),
       Animated.parallel([
         Animated.timing(emailOpacity, {
           toValue: 1,
-          duration: 400,
+          duration: 500,
           useNativeDriver: true,
         }),
         Animated.timing(emailTranslate, {
           toValue: 0,
-          duration: 400,
+          duration: 500,
           useNativeDriver: true,
         }),
-      ]).start();
-    }, 300);
-
-    setTimeout(() => {
+      ]),
       Animated.parallel([
         Animated.timing(passwordOpacity, {
           toValue: 1,
-          duration: 400,
+          duration: 500,
           useNativeDriver: true,
         }),
         Animated.timing(passwordTranslate, {
           toValue: 0,
-          duration: 400,
+          duration: 500,
           useNativeDriver: true,
         }),
-      ]).start();
-    }, 600);
-
-    setTimeout(() => {
+      ]),
       Animated.parallel([
         Animated.timing(buttonOpacity, {
           toValue: 1,
-          duration: 400,
+          duration: 500,
           useNativeDriver: true,
         }),
         Animated.timing(buttonTranslate, {
           toValue: 0,
-          duration: 400,
+          duration: 500,
           useNativeDriver: true,
         }),
-      ]).start();
-    }, 900);
+      ]),
+    ]).start();
   }, []);
 
   return (
-    <View style={styles.container}>
-      <ImageBackground
-        source={require('../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+    <LinearGradient
+      colors={['#2A652B', '#57B959']}
+      style={styles.gradientBackground}
+      start={{x: 0, y: 0}}
+      end={{x: 1, y: 1}}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.container}>
+        <View style={styles.animationContainer}>
+          <LottieView
+            ref={lottieAnim}
+            source={require('../assets/white_cart.json')}
+            autoPlay
+            loop
+            style={styles.lottieAnimation}
+            resizeMode="contain"
+          />
+        </View>
+
         <Animated.View
           style={[
             styles.formContainer,
@@ -230,30 +248,28 @@ const LoginScreen: React.FC = () => {
               transform: [{translateY: formTranslateY}],
             },
           ]}>
-          <Text style={styles.title}>Welcome Back</Text>
+          <Text style={styles.title}>CapoBiz POS</Text>
+          <Text style={styles.subtitle}>Sign in to your account</Text>
 
           <Animated.View
             style={{
               opacity: emailOpacity,
               transform: [{translateY: emailTranslate}],
             }}>
-            <View style={styles.input}>
+            <View style={styles.inputContainer}>
               <Image
-                style={{
-                  width: 20,
-                  height: 20,
-                  tintColor: '#144272',
-                  alignSelf: 'center',
-                }}
+                style={styles.inputIcon}
                 source={require('../assets/user.png')}
               />
               <TextInput
-                style={{flex: 1, color: '#144272'}}
-                placeholder="Username"
-                placeholderTextColor="#144272"
-                onChangeText={text => setUsername(text)}
+                style={styles.textInput}
+                placeholder="Email or Username"
+                placeholderTextColor="#E0E0E0"
+                onChangeText={setUsername}
                 value={username}
                 editable={!loading}
+                autoCapitalize="none"
+                keyboardType="email-address"
               />
             </View>
           </Animated.View>
@@ -263,40 +279,27 @@ const LoginScreen: React.FC = () => {
               opacity: passwordOpacity,
               transform: [{translateY: passwordTranslate}],
             }}>
-            <View
-              style={[
-                styles.input,
-                {flexDirection: 'row', alignItems: 'center'},
-              ]}>
+            <View style={styles.inputContainer}>
               <Image
-                style={{
-                  width: 20,
-                  height: 20,
-                  tintColor: '#144272',
-                  marginRight: 10,
-                }}
+                style={styles.inputIcon}
                 source={require('../assets/padlock.png')}
               />
-
               <TextInput
-                style={{flex: 1, color: '#144272'}}
+                style={styles.textInput}
                 placeholder="Password"
-                placeholderTextColor="#144272"
+                placeholderTextColor="#E0E0E0"
                 secureTextEntry={hidePassword}
                 onChangeText={setPassword}
                 value={password}
                 editable={!loading}
+                autoCapitalize="none"
               />
-
               <TouchableOpacity
                 onPress={managePasswordVisibility}
-                disabled={loading}>
+                disabled={loading}
+                style={styles.visibilityToggle}>
                 <Image
-                  style={{
-                    width: 20,
-                    height: 20,
-                    tintColor: '#144272',
-                  }}
+                  style={styles.visibilityIcon}
                   source={
                     hidePassword
                       ? require('../assets/hide.png')
@@ -306,6 +309,10 @@ const LoginScreen: React.FC = () => {
               </TouchableOpacity>
             </View>
           </Animated.View>
+
+          <TouchableOpacity style={styles.forgotPasswordContainer}>
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </TouchableOpacity>
 
           <Animated.View
             style={{
@@ -320,67 +327,127 @@ const LoginScreen: React.FC = () => {
               ]}
               disabled={loading}>
               {loading ? (
-                <ActivityIndicator size="small" color="#fff" />
+                <ActivityIndicator size="small" color="#144272" />
               ) : (
-                <Text style={styles.loginButtonText}>Login</Text>
+                <Text style={styles.loginButtonText}>Sign In</Text>
               )}
             </TouchableOpacity>
           </Animated.View>
         </Animated.View>
-
-        <Toast />
-      </ImageBackground>
-    </View>
+      </KeyboardAvoidingView>
+      <Toast />
+    </LinearGradient>
   );
 };
 
 export default LoginScreen;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    width: '100%',
+  },
+  gradientBackground: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  animationContainer: {
+    flex: 0.65, // Takes up more space
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lottieAnimation: {
+    width: width * 0.4, // Responsive width
+    height: '100%',
   },
   formContainer: {
-    width: '80%',
-    backgroundColor: '#fff',
-    padding: 24,
-    borderRadius: 16,
-    elevation: 5,
+    flex: 1,
+    width: '100%',
+    paddingHorizontal: 25,
   },
   title: {
-    fontSize: 24,
+    fontSize: 32,
     fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 20,
+    color: backgroundColors.light,
+    marginBottom: 10,
+    textAlign: 'center',
+    textShadowColor: 'rgba(0, 0, 0, 0.25)',
+    textShadowOffset: {width: 0, height: 2},
+    textShadowRadius: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: backgroundColors.gray,
+    marginBottom: 30,
     textAlign: 'center',
   },
-  input: {
-    height: 48,
-    borderColor: '#144272',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    marginBottom: 16,
-    fontSize: 16,
-    color: '#000',
+  inputContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
+    height: 55,
+    borderRadius: 15,
+    paddingHorizontal: 15,
+    marginBottom: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)', // Glassmorphism effect
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  inputIcon: {
+    width: 22,
+    height: 22,
+    tintColor: backgroundColors.light,
+    marginRight: 15,
+  },
+  textInput: {
+    flex: 1,
+    color: backgroundColors.light,
+    fontSize: 16,
+    paddingVertical: 0,
+  },
+  visibilityToggle: {
+    padding: 5,
+  },
+  visibilityIcon: {
+    width: 22,
+    height: 22,
+    tintColor: backgroundColors.light,
+  },
+  forgotPasswordContainer: {
+    alignSelf: 'flex-end',
+    marginBottom: 20,
+  },
+  forgotPasswordText: {
+    color: backgroundColors.light,
+    fontSize: 14,
   },
   loginButton: {
-    backgroundColor: '#144272',
-    paddingVertical: 14,
-    borderRadius: 10,
+    backgroundColor: backgroundColors.light,
+    paddingVertical: 16,
+    borderRadius: 15,
     alignItems: 'center',
+    shadowColor: backgroundColors.dark,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
   },
   loginButtonDisabled: {
     opacity: 0.7,
   },
   loginButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
+    color: backgroundColors.primary, // Using a dark color from your original palette
+    fontSize: 18,
+    fontWeight: '700',
   },
-  background: {
-    flex: 1,
+  signupContainer: {
+    flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
+    marginTop: 30,
   },
 });

@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
 } from 'react-native';
@@ -17,6 +16,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../../CTX/UserContext';
+import backgroundColors from '../../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
 
 interface AllProductList {
   id: number;
@@ -224,10 +225,11 @@ export default function ListofItems() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -306,6 +308,7 @@ export default function ListofItems() {
               selectionMode === 'allproducts' && styles.dropdownDisabled,
             ]}
             dropDownContainerStyle={styles.dropDownContainer}
+            listMode='MODAL'
           />
         </View>
 
@@ -316,123 +319,37 @@ export default function ListofItems() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
+                {/* Avatar + Name + Details */}
+                <View style={styles.row}>
                   <View style={styles.avatarBox}>
                     <Text style={styles.avatarText}>
                       {item.prod_name?.charAt(0) || 'P'}
                     </Text>
                   </View>
-                  <View style={{flex: 1}}>
-                    <Text style={styles.productName}>{item.prod_name}</Text>
-                    <Text style={styles.subText}>{item.pcat_name}</Text>
-                  </View>
-                </View>
 
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="barcode"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>BarCode</Text>
-                    </View>
-                    <Text style={styles.valueText}>
+                  <View style={{flex: 1}}>
+                    <Text style={styles.name}>{item.prod_name}</Text>
+                    {/* Category */}
+                    <Text style={styles.subText}>
+                      <Icon name="shape" size={12} color="#666" />{' '}
+                      {item.pcat_name || 'No category'}
+                    </Text>
+                    {/* Barcode */}
+                    <Text style={styles.subText}>
+                      <Icon name="barcode" size={12} color="#666" />{' '}
                       {item.prod_UPC_EAN || 'N/A'}
                     </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="package-variant"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>UOM</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.ums_name || 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="package-variant-closed"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>SubUOM</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.prod_sub_uom || 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="cube-outline"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Quantity</Text>
-                    </View>
-                    <Text>
+                    {/* Quantity */}
+                    <Text style={styles.subText}>
+                      <Icon name="cube-outline" size={12} color="#666" />{' '}
                       {item.prod_sub_qty
                         ? `${item.prod_qty} - ${item.prod_sub_qty}`
                         : item.prod_qty}
                     </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="refresh"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Reorder Qty</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.prod_reorder_qty || 'NILL'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="currency-usd"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Cost Price</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.prod_costprice}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="tag"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Sale Price</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.prod_retailprice}
+                    {/* Sale Price */}
+                    <Text style={styles.subText}>
+                      <Icon name="currency-usd" size={12} color="#666" />{' '}
+                      {parseFloat(item.prod_retailprice).toFixed(2) || 'N/A'}
                     </Text>
                   </View>
                 </View>
@@ -444,7 +361,7 @@ export default function ListofItems() {
                 <Text style={styles.emptyText}>No products found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 80}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -495,7 +412,7 @@ export default function ListofItems() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -505,9 +422,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -523,24 +442,25 @@ const styles = StyleSheet.create({
   headerCenter: {
     flex: 1,
     alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
+
+  // Filter Container
   filterContainer: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: '#fff',
     marginHorizontal: 15,
-    marginVertical: 10,
+    marginVertical: 8,
     borderRadius: 12,
     padding: 15,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
     zIndex: 1000,
   },
   radioContainer: {
@@ -557,6 +477,8 @@ const styles = StyleSheet.create({
     marginLeft: -5,
     fontWeight: '500',
   },
+
+  // Dropdown
   dropdown: {
     borderWidth: 1,
     borderColor: '#144272',
@@ -572,102 +494,68 @@ const styles = StyleSheet.create({
   dropDownContainer: {
     backgroundColor: '#fff',
     borderColor: '#144272',
-    zIndex: 3000,
   },
+
+  // FlatList Styling
   listContainer: {
     flex: 1,
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    zIndex: 1000,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   avatarText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 14,
   },
-  productName: {
+  name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
-    flexWrap: 'wrap',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
     marginTop: 2,
-  },
-  infoBox: {
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-    flex: 1,
-  },
-  infoIcon: {
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '50%',
-    textAlign: 'right',
-    fontWeight: '500',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 50,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginHorizontal: 20,
+    paddingVertical: '75%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    marginTop: 8,
+    width: '96%',
+    alignSelf: 'center',
   },
   emptyText: {
-    color: '#666',
-    fontSize: 16,
     marginTop: 10,
-    fontWeight: '500',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Pagination Styling
@@ -677,7 +565,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -690,7 +578,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -704,7 +592,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },

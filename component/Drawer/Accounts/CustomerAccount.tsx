@@ -18,6 +18,8 @@ import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import BASE_URL from '../../BASE_URL';
 import axios from 'axios';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface Customers {
   id: number;
@@ -84,6 +86,12 @@ export default function CustomerAccount() {
   >('withoutDetails');
   const bounceAnim = useRef(new Animated.Value(0)).current;
 
+  // Pagination states
+  const [currentPageWithout, setCurrentPageWithout] = useState(1);
+  const [currentPageWith, setCurrentPageWith] = useState(1);
+  const [currentPageAll, setCurrentPageAll] = useState(1);
+  const ITEMS_PER_PAGE = 5;
+
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
       setShowDatePicker(null);
@@ -98,6 +106,17 @@ export default function CustomerAccount() {
       }
     }
     setShowDatePicker(null);
+  };
+
+  // Pagination helper functions
+  const getPaginatedData = (data: any[], currentPage: number) => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return data.slice(startIndex, endIndex);
+  };
+
+  const getTotalPages = (dataLength: number) => {
+    return Math.ceil(dataLength / ITEMS_PER_PAGE);
   };
 
   // Fetch Customer dropdown
@@ -134,6 +153,7 @@ export default function CustomerAccount() {
     try {
       const res = await axios.get(`${BASE_URL}/allcustomeraccount`);
       setAllCustAccount(res.data.cust);
+      setCurrentPageAll(1); // Reset to first page on data fetch
     } catch (error) {
       console.log(error);
     }
@@ -175,6 +195,7 @@ export default function CustomerAccount() {
       setAccountDetailsWithout(res.data.cust);
       setChequeCount(res.data.no_of_chqs);
       setChequeAmount(res.data.chq[0]?.chi_amount || 0);
+      setCurrentPageWithout(1); // Reset to first page on data fetch
     } catch (error) {
       console.log(error);
     }
@@ -191,6 +212,7 @@ export default function CustomerAccount() {
         to,
       });
       setAccountDetailsWith(res.data.cust);
+      setCurrentPageWith(1); // Reset to first page on data fetch
     } catch (error) {
       console.log(error);
     }
@@ -216,6 +238,59 @@ export default function CustomerAccount() {
     };
   };
 
+  // Pagination Component
+  const PaginationControls = ({
+    currentPage,
+    totalPages,
+    onPageChange,
+  }: {
+    currentPage: number;
+    totalPages: number;
+    onPageChange: (page: number) => void;
+  }) => {
+    if (totalPages <= 1) return null;
+
+    return (
+      <View style={styles.paginationContainer}>
+        <TouchableOpacity
+          style={[
+            styles.paginationBtn,
+            currentPage === 1 && styles.paginationBtnDisabled,
+          ]}
+          onPress={() => onPageChange(currentPage - 1)}
+          disabled={currentPage === 1}>
+          <Icon
+            name="chevron-left"
+            size={20}
+            color={currentPage === 1 ? 'rgba(255,255,255,0.3)' : 'white'}
+          />
+        </TouchableOpacity>
+
+        <View style={styles.paginationInfo}>
+          <Text style={styles.paginationText}>
+            Page {currentPage} of {totalPages}
+          </Text>
+        </View>
+
+        <TouchableOpacity
+          style={[
+            styles.paginationBtn,
+            currentPage === totalPages && styles.paginationBtnDisabled,
+          ]}
+          onPress={() => onPageChange(currentPage + 1)}
+          disabled={currentPage === totalPages}>
+          <Icon
+            name="chevron-right"
+            size={20}
+            color={
+              currentPage === totalPages ? 'rgba(255,255,255,0.3)' : 'white'
+            }
+          />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   useEffect(() => {
     fetchCustDropdown();
     getCustData();
@@ -226,10 +301,11 @@ export default function CustomerAccount() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -284,7 +360,10 @@ export default function CustomerAccount() {
           {/* Action Buttons */}
           <View style={[styles.toggleBtnContainer, {marginVertical: 5}]}>
             <TouchableOpacity
-              style={[styles.actionBtn, {backgroundColor: '#144272'}]}
+              style={[
+                styles.actionBtn,
+                {backgroundColor: backgroundColors.primary},
+              ]}
               onPress={() => {
                 closeDrawer();
                 navigation.navigate('AddCustomerPayment' as never);
@@ -293,7 +372,10 @@ export default function CustomerAccount() {
               <Text style={styles.actionBtnText}>Add Payment</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionBtn, {backgroundColor: '#144272'}]}
+              style={[
+                styles.actionBtn,
+                {backgroundColor: backgroundColors.primary},
+              ]}
               onPress={() => {
                 closeDrawer();
                 navigation.navigate('ChequeClearance' as never);
@@ -443,8 +525,87 @@ export default function CustomerAccount() {
                       </Text>
                     </View>
                   ) : (
+                    <>
+                      <FlatList
+                        data={getPaginatedData(
+                          accountDetailsWithout,
+                          currentPageWithout,
+                        )}
+                        keyExtractor={item => item.id}
+                        scrollEnabled={false}
+                        renderItem={({item}) => (
+                          <View style={styles.transactionCard}>
+                            <View style={styles.transactionHeader}>
+                              <Text style={styles.invoiceNumber}>
+                                {item.custac_invoice_no}
+                              </Text>
+                              <Text style={styles.transactionDate}>
+                                {new Date(item.custac_date).toLocaleDateString(
+                                  'en-GB',
+                                )}
+                              </Text>
+                            </View>
+
+                            <View style={styles.transactionDetails}>
+                              <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Payable:</Text>
+                                <Text style={styles.detailValue}>
+                                  {item.custac_total_bill_amount}
+                                </Text>
+                              </View>
+                              <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Paid:</Text>
+                                <Text style={styles.detailValue}>
+                                  {item.custac_paid_amount}
+                                </Text>
+                              </View>
+                              <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Balance:</Text>
+                                <Text style={styles.detailValue}>
+                                  {item.custac_balance}
+                                </Text>
+                              </View>
+                              <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Type:</Text>
+                                <Text style={styles.detailValue}>
+                                  {item.custac_payment_type}
+                                </Text>
+                              </View>
+                              <View style={styles.detailRow}>
+                                <Text style={styles.detailLabel}>Method:</Text>
+                                <Text style={styles.detailValue}>
+                                  {item.custac_payment_method}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
+                        )}
+                      />
+                      <PaginationControls
+                        currentPage={currentPageWithout}
+                        totalPages={getTotalPages(accountDetailsWithout.length)}
+                        onPageChange={setCurrentPageWithout}
+                      />
+                    </>
+                  )
+                ) : accountDetailsWith.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Icon
+                      name="receipt"
+                      size={40}
+                      color="rgba(255,255,255,0.5)"
+                    />
+                    <Text style={styles.emptyStateText}>
+                      No detailed transactions found
+                    </Text>
+                  </View>
+                ) : (
+                  <>
                     <FlatList
-                      data={accountDetailsWithout}
+                      data={getPaginatedData(
+                        accountDetailsWith,
+                        currentPageWith,
+                      )}
                       keyExtractor={item => item.id}
                       scrollEnabled={false}
                       renderItem={({item}) => (
@@ -479,75 +640,16 @@ export default function CustomerAccount() {
                                 {item.custac_balance}
                               </Text>
                             </View>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>Type:</Text>
-                              <Text style={styles.detailValue}>
-                                {item.custac_payment_type}
-                              </Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>Method:</Text>
-                              <Text style={styles.detailValue}>
-                                {item.custac_payment_method}
-                              </Text>
-                            </View>
                           </View>
                         </View>
                       )}
                     />
-                  )
-                ) : accountDetailsWith.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Icon
-                      name="receipt"
-                      size={40}
-                      color="rgba(255,255,255,0.5)"
+                    <PaginationControls
+                      currentPage={currentPageWith}
+                      totalPages={getTotalPages(accountDetailsWith.length)}
+                      onPageChange={setCurrentPageWith}
                     />
-                    <Text style={styles.emptyStateText}>
-                      No detailed transactions found
-                    </Text>
-                  </View>
-                ) : (
-                  <FlatList
-                    data={accountDetailsWith}
-                    keyExtractor={item => item.id}
-                    scrollEnabled={false}
-                    renderItem={({item}) => (
-                      <View style={styles.transactionCard}>
-                        <View style={styles.transactionHeader}>
-                          <Text style={styles.invoiceNumber}>
-                            {item.custac_invoice_no}
-                          </Text>
-                          <Text style={styles.transactionDate}>
-                            {new Date(item.custac_date).toLocaleDateString(
-                              'en-GB',
-                            )}
-                          </Text>
-                        </View>
-
-                        <View style={styles.transactionDetails}>
-                          <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Payable:</Text>
-                            <Text style={styles.detailValue}>
-                              {item.custac_total_bill_amount}
-                            </Text>
-                          </View>
-                          <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Paid:</Text>
-                            <Text style={styles.detailValue}>
-                              {item.custac_paid_amount}
-                            </Text>
-                          </View>
-                          <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Balance:</Text>
-                            <Text style={styles.detailValue}>
-                              {item.custac_balance}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
-                    )}
-                  />
+                  </>
                 )}
 
                 {/* Summary Section */}
@@ -621,38 +723,49 @@ export default function CustomerAccount() {
                     </Text>
                   </View>
                 ) : (
-                  <FlatList
-                    data={allCustAccount}
-                    keyExtractor={(item, index) => index.toString()}
-                    scrollEnabled={false}
-                    renderItem={({item}) => (
-                      <View style={styles.customerAccountCard}>
-                        <Text style={styles.customerName}>
-                          {item.cust_name}
-                        </Text>
-                        <View style={styles.accountDetails}>
-                          <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Bill Amount:</Text>
-                            <Text style={styles.detailValue}>
-                              {item.custac_total_bill_amount}
-                            </Text>
-                          </View>
-                          <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Paid Amount:</Text>
-                            <Text style={styles.detailValue}>
-                              {item.custac_paid_amount}
-                            </Text>
-                          </View>
-                          <View style={styles.detailRow}>
-                            <Text style={styles.detailLabel}>Balance:</Text>
-                            <Text style={styles.detailValue}>
-                              {item.custac_balance}
-                            </Text>
+                  <>
+                    <FlatList
+                      data={getPaginatedData(allCustAccount, currentPageAll)}
+                      keyExtractor={(item, index) => index.toString()}
+                      scrollEnabled={false}
+                      renderItem={({item}) => (
+                        <View style={styles.customerAccountCard}>
+                          <Text style={styles.customerName}>
+                            {item.cust_name}
+                          </Text>
+                          <View style={styles.accountDetails}>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>
+                                Bill Amount:
+                              </Text>
+                              <Text style={styles.detailValue}>
+                                {item.custac_total_bill_amount}
+                              </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>
+                                Paid Amount:
+                              </Text>
+                              <Text style={styles.detailValue}>
+                                {item.custac_paid_amount}
+                              </Text>
+                            </View>
+                            <View style={styles.detailRow}>
+                              <Text style={styles.detailLabel}>Balance:</Text>
+                              <Text style={styles.detailValue}>
+                                {item.custac_balance}
+                              </Text>
+                            </View>
                           </View>
                         </View>
-                      </View>
-                    )}
-                  />
+                      )}
+                    />
+                    <PaginationControls
+                      currentPage={currentPageAll}
+                      totalPages={getTotalPages(allCustAccount.length)}
+                      onPageChange={setCurrentPageAll}
+                    />
+                  </>
                 )}
 
                 {/* All Customers Summary */}
@@ -696,7 +809,7 @@ export default function CustomerAccount() {
             </>
           )}
         </ScrollView>
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -706,7 +819,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -744,7 +857,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 14,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
@@ -752,13 +865,13 @@ const styles = StyleSheet.create({
   toggleBtnText: {
     color: 'white',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 16,
   },
   actionBtn: {
     flex: 1,
     marginHorizontal: 4,
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 8,
     alignItems: 'center',
     flexDirection: 'row',
@@ -767,11 +880,11 @@ const styles = StyleSheet.create({
   actionBtnText: {
     color: 'white',
     fontWeight: '600',
-    fontSize: 12,
+    fontSize: 14,
     marginLeft: 4,
   },
   section: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(15, 45, 78, 0.8)',
     borderRadius: 16,
     padding: 20,
     marginVertical: 8,
@@ -828,13 +941,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   infoLabel: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,1)',
     fontSize: 14,
+    fontWeight: '500',
   },
   infoValue: {
     color: 'white',
     fontSize: 14,
-    fontWeight: '500',
   },
   dateSection: {
     marginBottom: 16,
@@ -867,6 +980,7 @@ const styles = StyleSheet.create({
   radioRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    width: '80%'
   },
   radioOption: {
     flexDirection: 'row',
@@ -983,5 +1097,38 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // Pagination Styles
+  paginationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  paginationBtn: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+  },
+  paginationBtnDisabled: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  paginationInfo: {
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    borderRadius: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  paginationText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });

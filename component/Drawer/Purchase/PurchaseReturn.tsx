@@ -21,6 +21,8 @@ import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface Supplier {
   id: number;
@@ -103,6 +105,7 @@ export default function PurchaseReturn() {
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [editingQuantity, setEditingQuantity] = useState<string>('');
   const [editingType, setEditingType] = useState<'with' | 'without'>('with');
+  const [ref, setRef] = useState('');
 
   // Cart Animation
   const bounceAnim = useRef(new Animated.Value(0)).current;
@@ -542,13 +545,12 @@ export default function PurchaseReturn() {
     try {
       const res = await axios.post(`${BASE_URL}/completepurchasereturn`, {
         supp_id: currentpsupplier,
-        refrence_no: '',
+        refrence_no: ref,
         date: expireDate.toISOString().split('T')[0],
       });
 
       const data = res.data;
       console.log(data);
-      
 
       if (res.status === 200 && data.status === 200) {
         Toast.show({
@@ -730,10 +732,11 @@ export default function PurchaseReturn() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -1030,10 +1033,12 @@ export default function PurchaseReturn() {
                   <View style={styles.inputGroup}>
                     <Text style={styles.inputLabel}>Reference</Text>
                     <TextInput
-                      style={[styles.input, {backgroundColor: 'gray'}]}
+                      style={[styles.input]}
                       placeholderTextColor="rgba(255,255,255,0.7)"
                       placeholder="Enter reference"
-                      editable={false}
+                      keyboardType="number-pad"
+                      value={ref}
+                      onChangeText={t => setRef(t)}
                     />
                   </View>
 
@@ -1233,7 +1238,7 @@ export default function PurchaseReturn() {
         </Modal>
 
         <Toast />
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -1243,7 +1248,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -1272,7 +1277,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   section: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(15, 45, 78, 0.8)',
     borderRadius: 16,
     padding: 20,
     marginVertical: 8,
@@ -1346,12 +1351,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   formRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   inputGroup: {
-    width: '48%',
+    width: '100%',
+    marginBottom: 10,
   },
   inputLabel: {
     color: 'rgba(255,255,255,0.8)',
@@ -1412,25 +1416,29 @@ const styles = StyleSheet.create({
     maxHeight: 200,
   },
   supplierInfo: {
-    marginTop: 16,
+    marginBottom: 15,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
   },
   supplierCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 8,
-    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   supplierLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-    marginBottom: 4,
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   supplierValue: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '300',
   },
   detailRow: {
     flexDirection: 'row',

@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
 } from 'react-native';
@@ -19,6 +18,8 @@ import Toast from 'react-native-toast-message';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../../CTX/UserContext';
 import {RadioButton} from 'react-native-paper';
+import backgroundColors from '../../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
 
 interface CompletedList {
   id: number;
@@ -333,14 +334,19 @@ export default function PurchaseOrderStock() {
 
   useEffect(() => {
     fetchCompletedList();
-  }, [statusVal, endDate, startDate, detailOrder]);
+  }, [statusVal, endDate, startDate, selectionMode]);
+
+  useEffect(() => {
+    setCurrentPage(1); // Reset pagination when selection mode or filters change
+  }, [selectionMode, statusVal]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -419,6 +425,7 @@ export default function PurchaseOrderStock() {
             )}
             style={styles.dropdown}
             dropDownContainerStyle={styles.dropDownContainer}
+            listMode="MODAL"
           />
 
           {/* Date Pickers */}
@@ -486,85 +493,24 @@ export default function PurchaseOrderStock() {
               selectionMode === 'purchaseOrder' ? (
                 <View style={styles.card}>
                   {/* Header Row */}
-                  <View style={styles.headerRow}>
+                  <View style={styles.row}>
                     <View style={styles.avatarBox}>
                       <Text style={styles.avatarText}>
                         {item.sup_name?.charAt(0) || 'S'}
                       </Text>
                     </View>
                     <View style={{flex: 1}}>
-                      <Text style={styles.supplierName}>{item.sup_name}</Text>
+                      <Text style={styles.name}>{item.sup_name}</Text>
                       <Text style={styles.subText}>
+                        <Icon name="file-document" size={12} color="#666" />{' '}
                         Invoice: {item.pord_invoice_no}
                       </Text>
-                    </View>
-                    {statusVal !== '' && (
-                      <View style={styles.statusBadge}>
-                        <Text style={styles.statusText}>
-                          {statusVal === 'Pending' ? 'Pending' : 'Completed'}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Info Section */}
-                  <View style={styles.infoBox}>
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="account"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Supplier</Text>
-                      </View>
-                      <Text style={styles.valueText}>{item.sup_name}</Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="currency-usd"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Order Total</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {item.pord_order_total}
+                      <Text style={styles.subText}>
+                        <Icon name="currency-usd" size={12} color="#666" />{' '}
+                        Total: {item.pord_order_total}
                       </Text>
-                    </View>
-
-                    {statusVal !== '' && (
-                      <View style={styles.infoRow}>
-                        <View style={styles.labelRow}>
-                          <Icon
-                            name="information-outline"
-                            size={18}
-                            color="#144272"
-                            style={styles.infoIcon}
-                          />
-                          <Text style={styles.labelText}>Status</Text>
-                        </View>
-                        <Text style={styles.valueText}>
-                          {statusVal === 'Pending' ? 'Pending' : 'Completed'}
-                        </Text>
-                      </View>
-                    )}
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="calendar"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Order Date</Text>
-                      </View>
-                      <Text style={styles.valueText}>
+                      <Text style={styles.subText}>
+                        <Icon name="calendar" size={12} color="#666" />{' '}
                         {new Date(item.pord_order_date).toLocaleDateString(
                           'en-US',
                           {
@@ -574,29 +520,64 @@ export default function PurchaseOrderStock() {
                           },
                         )}
                       </Text>
+                      {statusVal !== '' && (
+                        <Text style={styles.subText}>
+                          <Icon
+                            name="information-outline"
+                            size={12}
+                            color="#666"
+                          />{' '}
+                          {statusVal === 'Pending' ? 'Pending' : 'Completed'}
+                        </Text>
+                      )}
                     </View>
                   </View>
                 </View>
               ) : (
                 <View style={styles.card}>
                   {/* Header Row */}
-                  <View style={styles.headerRow}>
+                  <View style={styles.row}>
                     <View style={styles.avatarBox}>
                       <Text style={styles.avatarText}>
                         {item.pordd_prod_name?.charAt(0) || 'P'}
                       </Text>
                     </View>
                     <View style={{flex: 1}}>
-                      <Text style={styles.supplierName}>
-                        {item.pordd_prod_name}
-                      </Text>
+                      <Text style={styles.name}>{item.pordd_prod_name}</Text>
                       <Text style={styles.subText}>
+                        <Icon name="file-document" size={12} color="#666" />{' '}
                         Invoice: {item.pordd_invoice_no}
                       </Text>
-                    </View>
-                    {statusVal !== '' && (
-                      <View style={styles.statusBadge}>
-                        <Text style={styles.statusText}>
+                      <Text style={styles.subText}>
+                        <Icon name="calendar" size={12} color="#666" />{' '}
+                        {new Date(item.pord_order_date).toLocaleDateString(
+                          'en-US',
+                          {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          },
+                        )}
+                      </Text>
+                      <Text style={styles.subText}>
+                        <Icon name="cube-outline" size={12} color="#666" /> Qty:{' '}
+                        {item.pordd_partial_qty}
+                      </Text>
+                      <Text style={styles.subText}>
+                        <Icon name="percent" size={12} color="#666" /> Rate:{' '}
+                        {item.pordd_cost_price}
+                      </Text>
+                      <Text style={styles.subText}>
+                        <Icon name="cash-multiple" size={12} color="#666" />{' '}
+                        Value: {item.pordd_total_cost}
+                      </Text>
+                      {statusVal !== '' && (
+                        <Text style={styles.subText}>
+                          <Icon
+                            name="information-outline"
+                            size={12}
+                            color="#666"
+                          />{' '}
                           {statusVal === 'Purchase Ordered'
                             ? 'Purchase Ordered'
                             : statusVal === 'Purchased'
@@ -605,95 +586,8 @@ export default function PurchaseOrderStock() {
                             ? 'Pending'
                             : ''}
                         </Text>
-                      </View>
-                    )}
-                  </View>
-
-                  {/* Info Section */}
-                  <View style={styles.infoBox}>
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="calendar"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Date</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {new Date(item.pord_order_date).toLocaleDateString(
-                          'en-US',
-                          {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          },
-                        )}
-                      </Text>
+                      )}
                     </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="cube"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Quantity</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {item.pordd_partial_qty}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="percent"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Booking Rate</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {item.pordd_cost_price}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="cash-multiple"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Booking Value</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {item.pordd_total_cost}
-                      </Text>
-                    </View>
-
-                    {statusVal !== '' && (
-                      <View style={styles.infoRow}>
-                        <View style={styles.labelRow}>
-                          <Icon
-                            name="cash-multiple"
-                            size={18}
-                            color="#144272"
-                            style={styles.infoIcon}
-                          />
-                          <Text style={styles.labelText}>Booking Value</Text>
-                        </View>
-                        <Text style={styles.valueText}>
-                          {item.pordd_total_cost}
-                        </Text>
-                      </View>
-                    )}
                   </View>
                 </View>
               )
@@ -704,7 +598,7 @@ export default function PurchaseOrderStock() {
                 <Text style={styles.emptyText}>No purchase orders found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 80}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -753,7 +647,7 @@ export default function PurchaseOrderStock() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -763,9 +657,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
+
+  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -789,18 +685,33 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
+  // Filter Container
   filterContainer: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: '#fff',
     marginHorizontal: 15,
-    marginVertical: 10,
+    marginVertical: 8,
     borderRadius: 12,
     padding: 15,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
     zIndex: 1000,
+  },
+  radioContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 15,
+  },
+  radioButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  radioText: {
+    color: '#144272',
+    marginLeft: -5,
+    fontWeight: '500',
   },
   dropdown: {
     borderWidth: 1,
@@ -814,7 +725,6 @@ const styles = StyleSheet.create({
   dropDownContainer: {
     backgroundColor: '#fff',
     borderColor: '#144272',
-    zIndex: 3000,
   },
   dateContainer: {
     flexDirection: 'row',
@@ -846,120 +756,108 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
+
+  // Summary Container
+  summaryContainer: {
+    paddingHorizontal: 15,
+    marginBottom: 8,
+    backgroundColor: '#fff',
+    marginHorizontal: 15,
+    borderRadius: 12,
+    paddingVertical: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
+  },
+  innerSummaryCtx: {
+    flexDirection: 'row',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  summaryValue: {
+    fontSize: 18,
+    color: '#144272',
+    fontWeight: 'bold',
+  },
+
+  // FlatList Styling
   listContainer: {
     flex: 1,
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   avatarText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 14,
   },
-  supplierName: {
+  name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
-    flexWrap: 'wrap',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
     marginTop: 2,
-  },
-  statusBadge: {
-    backgroundColor: '#E3F2FD',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#144272',
-  },
-  statusText: {
-    fontSize: 10,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  infoBox: {
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-    flex: 1,
-  },
-  infoIcon: {
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '50%',
-    textAlign: 'right',
-    fontWeight: '500',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 50,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginHorizontal: 20,
+    paddingVertical: '75%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    marginTop: 8,
+    width: '96%',
+    alignSelf: 'center',
   },
   emptyText: {
-    color: '#666',
-    fontSize: 16,
     marginTop: 10,
-    fontWeight: '500',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
+
+  // Pagination Styling
   paginationContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -972,7 +870,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -986,7 +884,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -1010,46 +908,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
     opacity: 0.8,
-  },
-  radioContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 10,
-  },
-  radioButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  radioText: {
-    color: '#144272',
-    marginLeft: -5,
-    fontWeight: '500',
-  },
-
-  //Summary Container Styling
-  summaryContainer: {
-    paddingHorizontal: 15,
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    marginHorizontal: 15,
-    borderRadius: 12,
-    paddingVertical: 10,
-  },
-  innerSummaryCtx: {
-    flexDirection: 'row',
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  summaryLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-  },
-  summaryValue: {
-    fontSize: 16,
-    color: '#144272',
-    fontWeight: 'bold',
   },
 });

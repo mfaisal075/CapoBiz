@@ -18,6 +18,8 @@ import BASE_URL from '../../BASE_URL';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Toast from 'react-native-toast-message';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface Supplier {
   id: string;
@@ -80,7 +82,6 @@ const SupplierAddPayment = () => {
   const [cashType, setCashType] = useState('');
   const [cashTypeOpen, setCashTypeOpen] = useState(false);
   const [receipt, setReceipt] = useState<any | null>(null);
-  const [chequeReceipt, setChequeReceipt] = useState<any | null>(null);
 
   // Cash Payment Add Form OnChange
   const cashOnChange = (field: keyof SupplierAddForm, value: string | Date) => {
@@ -244,7 +245,6 @@ const SupplierAddPayment = () => {
       const data = res.data;
 
       if (res.status === 200 && data.status === 200) {
-        setChequeReceipt(data.chq_info || data);
         Toast.show({
           type: 'success',
           text1: 'Added!',
@@ -268,10 +268,11 @@ const SupplierAddPayment = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -614,66 +615,7 @@ const SupplierAddPayment = () => {
             </View>
           </View>
         </Modal>
-
-        {/* Cheque Receipt Modal */}
-        <Modal
-          visible={!!chequeReceipt}
-          animationType="fade"
-          transparent={true}
-          onRequestClose={() => setChequeReceipt(null)}>
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Cheque Receipt</Text>
-
-              <View style={styles.modalDetails}>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Cheque No:</Text>
-                  <Text style={styles.modalValue}>
-                    {chequeReceipt?.chi_number || chequeAddFrom.chequeNumber}
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Date:</Text>
-                  <Text style={styles.modalValue}>
-                    {chequeReceipt?.chi_date ||
-                      chequeAddFrom.date.toLocaleDateString()}
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Amount:</Text>
-                  <Text style={[styles.modalValue, {color: '#4CAF50'}]}>
-                    Rs. {chequeReceipt?.chi_amount || chequeAddFrom.amount}
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Note:</Text>
-                  <Text style={styles.modalValue}>
-                    {chequeReceipt?.chi_note || chequeAddFrom.note}
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Payment Method:</Text>
-                  <Text style={styles.modalValue}>
-                    {chequeReceipt?.chi_payment_method || 'Cheque'}
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Status:</Text>
-                  <Text style={styles.modalValue}>
-                    {chequeReceipt?.chi_status || 'Pending'}
-                  </Text>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                onPress={() => setChequeReceipt(null)}
-                style={styles.modalButton}>
-                <Text style={styles.modalButtonText}>Close</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 };
@@ -683,7 +625,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -732,7 +674,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   section: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(15, 45, 78, 0.8)',
     borderRadius: 16,
     padding: 20,
     marginVertical: 8,
@@ -789,13 +731,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   infoLabel: {
-    color: 'rgba(255,255,255,0.7)',
+    color: '#fff',
     fontSize: 14,
+    fontWeight: '500',
   },
   infoValue: {
     color: 'white',
     fontSize: 14,
-    fontWeight: '500',
   },
   inputRow: {
     marginBottom: 16,
@@ -843,7 +785,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   submitBtn: {
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

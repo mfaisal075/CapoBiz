@@ -18,6 +18,8 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Toast from 'react-native-toast-message';
 import {Modal} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface Customers {
   id: number;
@@ -264,10 +266,11 @@ const AddCustomerPayment = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -679,7 +682,7 @@ const AddCustomerPayment = () => {
             </View>
           </View>
         </Modal>
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 };
@@ -689,7 +692,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -738,7 +741,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   section: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(15, 45, 78, 0.8)',
     borderRadius: 16,
     padding: 20,
     marginVertical: 8,
@@ -838,7 +841,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   submitBtn: {
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',

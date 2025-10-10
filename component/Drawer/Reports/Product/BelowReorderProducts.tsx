@@ -15,6 +15,8 @@ import BASE_URL from '../../../BASE_URL';
 import {useUser} from '../../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import RNPrint from 'react-native-print';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../../Colors';
 
 interface ReOrderList {
   prod_name: string;
@@ -166,10 +168,11 @@ export default function BelowReorderProducts() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
             <Icon name="menu" size={24} color="white" />
@@ -184,150 +187,50 @@ export default function BelowReorderProducts() {
           </TouchableOpacity>
         </View>
 
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Avatar + Product Name */}
-                <View style={styles.headerRow}>
+                {/* Avatar + Name + Details */}
+                <View style={styles.row}>
                   <View style={styles.avatarBox}>
                     <Text style={styles.avatarText}>
                       {item.prod_name?.charAt(0) || 'P'}
                     </Text>
                   </View>
+
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.prod_name}</Text>
                     <Text style={styles.subText}>
-                      {item.pcat_name || 'No category'}
+                      <Icon name="counter" size={12} color="#666" />{' '}
+                      {item.pcat_name || 'N/A'}
                     </Text>
-                  </View>
-                </View>
-
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="barcode"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Barcode</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.prod_UPC_EAN || 'N/A'}
+                    <Text style={styles.subText}>
+                      <Icon name="counter" size={12} color="#666" />{' '}
+                      {item.prod_qty || 'No category'}
                     </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="cube"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>UOM</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.ums_name || 'N/A'}
+                    <Text style={styles.subText}>
+                      <Icon name="autorenew" size={12} color="#666" />{' '}
+                      {item.prod_reorder_qty || 'N/A'}
                     </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="archive"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Quantity</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.prod_qty || 0}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="alert-circle"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Reorder Qty</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.prod_reorder_qty || 0}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="cash"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Cost Price</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.prod_costprice || '0.00'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="sale"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Sale Price</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.prod_fretailprice || '0.00'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="calendar"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Entry Date</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.created_at
-                        ? new Date(item.created_at)
-                            .toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                            .replace(/\//g, '-')
-                        : 'N/A'}
+                    <Text style={styles.subText}>
+                      <Icon name="cash" size={12} color="#666" />{' '}
+                      {item.prod_fretailprice}
                     </Text>
                   </View>
                 </View>
               </View>
             )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>
-                  No record found.
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="package-variant" size={48} color="#666" />
+                <Text style={styles.emptyText}>No products found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 120}}
+            contentContainerStyle={{paddingBottom: 90, marginTop: 10}}
+            showsVerticalScrollIndicator={false}
           />
         </View>
 
@@ -377,7 +280,7 @@ export default function BelowReorderProducts() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -387,7 +290,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -420,7 +323,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -433,7 +336,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -447,7 +350,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -474,94 +377,64 @@ const styles = StyleSheet.create({
   },
 
   // FlatList Styling
-  card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
   },
-  headerRow: {
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   avatarText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 14,
   },
   name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
     marginTop: 2,
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 10,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: '75%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    marginTop: 8,
+    width: '96%',
+    alignSelf: 'center',
   },
-  actionIcon: {
-    tintColor: '#144272',
-    width: 20,
-    height: 20,
-    marginHorizontal: 4,
-  },
-  infoBox: {
+  emptyText: {
     marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoText: {
-    flex: 1,
-    color: '#333',
-    fontSize: 13,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  infoIcon: {
-    width: 18,
-    height: 18,
-    tintColor: '#144272',
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '60%',
-    textAlign: 'right',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });

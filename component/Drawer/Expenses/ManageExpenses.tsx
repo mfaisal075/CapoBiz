@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   Modal,
@@ -17,10 +16,12 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
-import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
+import {ActivityIndicator} from 'react-native-paper';
 
 interface Expenses {
   expc_name: string;
@@ -70,7 +71,6 @@ const initialEditExpense: EditExpense = {
 };
 
 export default function ManageExpenses() {
-  const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [expenses, setExpenses] = useState<Expenses[]>([]);
   const [totalExpense, setTotalExpense] = useState('');
@@ -89,6 +89,7 @@ export default function ManageExpenses() {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showEditDatePicker, setShowEditDatePicker] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -210,6 +211,19 @@ export default function ManageExpenses() {
       });
       return;
     }
+
+    if (!/^\d+(\.\d{1,2})?$/.test(addFrom.amount)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Amount',
+        text2: 'Please enter a valid numeric amount.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    setLoading(true);
+
     try {
       const res = await axios.post(`${BASE_URL}/addexpense`, {
         cat_id: categoryValue,
@@ -235,6 +249,8 @@ export default function ManageExpenses() {
       }
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -268,6 +284,18 @@ export default function ManageExpenses() {
       return;
     }
 
+    if (!/^\d+(\.\d{1,2})?$/.test(editFrom.amount)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Amount',
+        text2: 'Please enter a valid numeric amount.',
+        visibilityTime: 2000,
+      });
+      return;
+    }
+
+    setLoading(true);
+
     try {
       const res = await axios.post(`${BASE_URL}/updateexpenses`, {
         cat_id: editCategoryValue,
@@ -296,6 +324,8 @@ export default function ManageExpenses() {
       }
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -306,10 +336,11 @@ export default function ManageExpenses() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -327,46 +358,56 @@ export default function ManageExpenses() {
           </TouchableOpacity>
         </View>
 
+        {/* Total Expense */}
+        {currentData.length > 0 && (
+          <View style={styles.totalContainer}>
+            <Text style={styles.totalText}>Total Expense Amount:</Text>
+            <Text style={styles.totalText}>{totalExpense ?? '0'}</Text>
+          </View>
+        )}
+
         {/* Expenses List */}
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.expc_name?.charAt(0) || 'E'}
-                    </Text>
-                  </View>
-                  <View style={{flex: 1}}>
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
+                  <View>
                     <Text style={styles.name}>{item.expc_name}</Text>
                     <Text style={styles.subText}>
+                      <Icon name="calendar" size={12} color="#666" />{' '}
                       {new Date(item.exp_date).toLocaleDateString('en-US', {
                         day: '2-digit',
                         month: 'short',
                         year: 'numeric',
                       })}
                     </Text>
+                    <Text style={styles.subText}>
+                      <Icon name="account" size={12} color="#666" />{' '}
+                      {item.exp_addedby}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Icon name="cash" size={12} color="#666" />{' '}
+                      {item.exp_amount}
+                    </Text>
                   </View>
 
-                  {/* Actions */}
-                  <View style={styles.actionRow}>
+                  <View
+                    style={{
+                      alignSelf: 'flex-start',
+                      flexDirection: 'row',
+                      gap: 10,
+                    }}>
                     <TouchableOpacity
                       onPress={() => {
                         setModalVisible('View');
                         setSelectedExpense([item]);
                       }}>
-                      <Icon
-                        name="eye"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.actionIcon}
-                      />
+                      <Icon name="eye" size={20} color={'#144272'} />
                     </TouchableOpacity>
-
                     <TouchableOpacity
                       onPress={() => {
                         setModalVisible('Edit');
@@ -380,75 +421,28 @@ export default function ManageExpenses() {
                         setEditCategoryValue(item.exp_expc_id.toString());
                         setSelectedExpense([item]);
                       }}>
-                      <Icon
-                        name="pencil"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.actionIcon}
-                      />
+                      <Icon name="pencil" size={20} color={'#144272'} />
                     </TouchableOpacity>
-
                     <TouchableOpacity
                       onPress={() => {
                         setModalVisible('Delete');
                         setSelectedExpense([item]);
                       }}>
-                      <Icon
-                        name="delete"
-                        size={20}
-                        color={'#144272'}
-                        style={styles.actionIcon}
-                      />
+                      <Icon name="delete" size={20} color={'#144272'} />
                     </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="cash"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Amount:</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.exp_amount}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="account"
-                        size={16}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Added By:</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.exp_addedby}</Text>
                   </View>
                 </View>
               </View>
             )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>
-                  No expenses found.
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 120}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
-        </View>
-
-        {/* Total Expense */}
-        <View style={styles.totalContainer}>
-          <Text style={styles.totalText}>Total Expense Amount:</Text>
-          <Text style={styles.totalText}>{totalExpense ?? '0'}</Text>
         </View>
 
         {/* Add Expense Modal */}
@@ -458,7 +452,15 @@ export default function ManageExpenses() {
           animationType="slide">
           <View style={styles.modalOverlay}>
             <ScrollView style={styles.modalContainer}>
-              <View style={styles.modalHeader}>
+              <View
+                style={[
+                  styles.modalHeader,
+                  {
+                    paddingHorizontal: 15,
+                    marginTop: 10,
+                    borderBottomWidth: 1,
+                  },
+                ]}>
                 <Text style={styles.modalTitle}>Add New Expense</Text>
                 <TouchableOpacity
                   onPress={() => {
@@ -495,12 +497,21 @@ export default function ManageExpenses() {
                     <TextInput
                       style={styles.input}
                       placeholderTextColor="#999"
+                      maxLength={11}
                       placeholder="Enter amount"
                       keyboardType="numeric"
                       value={addFrom.amount}
-                      onChangeText={t => addOnChange('amount', t)}
+                      onChangeText={t => {
+                        const filtered = t
+                          .replace(/[^0-9.]/g, '')
+                          .replace(/(\..*)\./g, '$1');
+                        addOnChange('amount', filtered);
+                      }}
+                      editable={!loading}
                     />
                   </View>
+                </View>
+                <View style={[styles.row, {marginVertical: 10}]}>
                   <View style={styles.field}>
                     <Text style={styles.label}>Added By *</Text>
                     <TextInput
@@ -509,6 +520,7 @@ export default function ManageExpenses() {
                       placeholder="Enter name"
                       value={addFrom.addedBy}
                       onChangeText={t => addOnChange('addedBy', t)}
+                      editable={!loading}
                     />
                   </View>
                 </View>
@@ -546,14 +558,29 @@ export default function ManageExpenses() {
                     onChangeText={t => addOnChange('description', t)}
                     multiline
                     numberOfLines={4}
+                    editable={!loading}
                   />
                 </View>
 
                 <TouchableOpacity
-                  style={styles.submitBtn}
-                  onPress={handleAddExpense}>
-                  <Icon name="plus-circle-outline" size={20} color="white" />
-                  <Text style={styles.submitText}>Add Expense</Text>
+                  style={[
+                    styles.submitBtn,
+                    loading && styles.submitButtonDisabled,
+                  ]}
+                  onPress={handleAddExpense}
+                  disabled={loading}>
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Icon
+                        name="plus-circle-outline"
+                        size={20}
+                        color="white"
+                      />
+                      <Text style={styles.submitText}>Add Expense</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -612,7 +639,16 @@ export default function ManageExpenses() {
           animationType="slide">
           <View style={styles.modalOverlay}>
             <ScrollView style={styles.modalContainer}>
-              <View style={styles.modalHeader}>
+              <View
+                style={[
+                  styles.modalHeader,
+                  {
+                    paddingHorizontal: 15,
+                    marginTop: 10,
+                    borderBottomWidth: 1,
+                    borderBottomColor: '#00000039',
+                  },
+                ]}>
                 <Text style={styles.modalTitle}>Edit Expense</Text>
                 <TouchableOpacity
                   onPress={() => {
@@ -649,12 +685,20 @@ export default function ManageExpenses() {
                     <TextInput
                       style={styles.input}
                       placeholderTextColor="#999"
+                      maxLength={11}
                       placeholder="Enter amount"
                       keyboardType="numeric"
                       value={editFrom.amount}
-                      onChangeText={t => editOnChange('amount', t)}
+                      onChangeText={t => {
+                        const filtered = t
+                          .replace(/[^0-9.]/g, '')
+                          .replace(/(\..*)\./g, '$1');
+                        editOnChange('amount', filtered);
+                      }}
                     />
                   </View>
+                </View>
+                <View style={[styles.row, {marginVertical: 10}]}>
                   <View style={styles.field}>
                     <Text style={styles.label}>Added By *</Text>
                     <TextInput
@@ -704,10 +748,24 @@ export default function ManageExpenses() {
                 </View>
 
                 <TouchableOpacity
-                  style={styles.submitBtn}
-                  onPress={handleEditExpense}>
-                  <Icon name="pencil-circle-outline" size={20} color="white" />
-                  <Text style={styles.submitText}>Update Expense</Text>
+                  style={[
+                    styles.submitBtn,
+                    loading && styles.submitButtonDisabled,
+                  ]}
+                  onPress={handleEditExpense}
+                  disabled={loading}>
+                  {loading ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <>
+                      <Icon
+                        name="pencil-circle-outline"
+                        size={20}
+                        color="white"
+                      />
+                      <Text style={styles.submitText}>Update Expense</Text>
+                    </>
+                  )}
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -721,60 +779,65 @@ export default function ManageExpenses() {
           transparent
           animationType="slide">
           <View style={styles.modalOverlay}>
-            <ScrollView style={styles.modalContainer}>
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Expense Details</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setSelectedExpense([]);
-                  }}
-                  style={styles.modalCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
-
-              {selectedExpense.length > 0 && (
-                <View style={styles.detailsContainer}>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Category:</Text>
-                    <Text style={styles.detailValue}>
-                      {selectedExpense[0].expc_name}
-                    </Text>
-                  </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Amount:</Text>
-                    <Text style={styles.detailValue}>
-                      {selectedExpense[0].exp_amount}
-                    </Text>
-                  </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Added By:</Text>
-                    <Text style={styles.detailValue}>
-                      {selectedExpense[0].exp_addedby}
-                    </Text>
-                  </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Date:</Text>
-                    <Text style={styles.detailValue}>
-                      {new Date(selectedExpense[0].exp_date).toLocaleDateString(
-                        'en-GB',
-                      )}
-                    </Text>
-                  </View>
-
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Description:</Text>
-                    <Text style={styles.detailValue}>
-                      {selectedExpense[0].exp_desc || 'N/A'}
-                    </Text>
-                  </View>
+            <View style={styles.modalCard}>
+              <ScrollView contentContainerStyle={styles.modalContent}>
+                {/* Header */}
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalHeaderTitle}>Expense Details</Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setModalVisible('');
+                      setSelectedExpense([]);
+                    }}
+                    style={styles.closeBtn}>
+                    <Icon name="close" size={22} color="#144272" />
+                  </TouchableOpacity>
                 </View>
-              )}
-            </ScrollView>
+
+                {selectedExpense.length > 0 && (
+                  <View style={styles.expenseDetailsWrapper}>
+                    {/* Info Fields */}
+                    <View style={styles.modalInfoBox}>
+                      {[
+                        {
+                          label: 'Category',
+                          value: selectedExpense[0]?.expc_name,
+                        },
+                        {
+                          label: 'Amount',
+                          value: selectedExpense[0]?.exp_amount,
+                        },
+                        {
+                          label: 'Added By',
+                          value: selectedExpense[0]?.exp_addedby,
+                        },
+                        {
+                          label: 'Date',
+                          value: new Date(
+                            selectedExpense[0]?.exp_date,
+                          ).toLocaleDateString('en-US', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          }),
+                        },
+                        {
+                          label: 'Description',
+                          value: selectedExpense[0]?.exp_desc,
+                        },
+                      ].map((item, index) => (
+                        <View key={index} style={styles.modalInfoRow}>
+                          <Text style={styles.infoLabel}>{item.label}</Text>
+                          <Text style={styles.infoValue}>
+                            {item.value || 'N/A'}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )}
+              </ScrollView>
+            </View>
           </View>
         </Modal>
 
@@ -802,6 +865,15 @@ export default function ManageExpenses() {
                 Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
                 {totalPages}
               </Text>
+              <Text
+                style={{
+                  color: '#fff',
+                  fontSize: 12,
+                  marginTop: 2,
+                  opacity: 0.8,
+                }}>
+                Total: {totalRecords} records
+              </Text>
             </View>
 
             <TouchableOpacity
@@ -821,7 +893,7 @@ export default function ManageExpenses() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -831,7 +903,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -857,103 +929,73 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
 
-  // Card Styling
+  // FlatList Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+    marginTop: 8,
+  },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 10,
-    padding: 12,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  avatarBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
   },
   name: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
+    marginTop: 2,
   },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  actionIcon: {
-    marginHorizontal: 4,
-  },
-  infoBox: {
-    marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  labelRow: {
-    flexDirection: 'row',
+  emptyContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    paddingVertical: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    width: '96%',
   },
-  infoIcon: {
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
+  emptyText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Total Container
   totalContainer: {
     padding: 15,
-    borderTopWidth: 1,
-    borderTopColor: 'white',
     flexDirection: 'row',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(20, 66, 114, 0.8)',
+    backgroundColor: '#fff',
+    marginHorizontal: 15,
+    borderRadius: 12,
+    marginVertical: 8,
   },
   totalText: {
-    color: 'white',
+    color: backgroundColors.primary,
     fontWeight: 'bold',
-    fontSize: 16,
+    fontSize: 14,
   },
 
   // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
   modalContainer: {
     backgroundColor: 'white',
     borderRadius: 15,
@@ -963,15 +1005,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 10,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   modalTitle: {
     fontSize: 18,
@@ -984,11 +1017,6 @@ const styles = StyleSheet.create({
   modalForm: {
     paddingHorizontal: 20,
     paddingVertical: 15,
-  },
-  row: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
   },
   field: {
     flex: 1,
@@ -1070,6 +1098,9 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
+  submitButtonDisabled: {
+    opacity: 0.7,
+  },
 
   // Delete Modal
   deleteModalContainer: {
@@ -1130,28 +1161,6 @@ const styles = StyleSheet.create({
     color: '#144272',
   },
 
-  // View Modal Details
-  detailsContainer: {
-    padding: 20,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 12,
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#e0e0e0',
-    paddingBottom: 6,
-  },
-  detailLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  detailValue: {
-    fontSize: 14,
-    color: '#333',
-  },
-
   // Pagination Component
   paginationContainer: {
     flexDirection: 'row',
@@ -1159,7 +1168,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -1172,7 +1181,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1186,7 +1195,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -1204,5 +1213,82 @@ const styles = StyleSheet.create({
   pageCurrent: {
     fontWeight: '700',
     color: '#FFD166',
+  },
+
+  // View Expense Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalCard: {
+    width: '90%',
+    maxHeight: '85%',
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  modalContent: {
+    padding: 20,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 10,
+    paddingHorizontal: 10,
+  },
+  modalHeaderTitle: {
+    color: '#144272',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  closeBtn: {
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  expenseDetailsWrapper: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  expenseIconWrapper: {
+    marginBottom: 16,
+  },
+  expenseIcon: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    borderWidth: 3,
+    borderColor: '#144272',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalInfoBox: {
+    width: '100%',
+    marginTop: 10,
+    backgroundColor: '#fafafa',
+    borderRadius: 12,
+    padding: 12,
+  },
+  modalInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  infoLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#144272',
+  },
+  infoValue: {
+    fontSize: 14,
+    color: '#555',
+    flexShrink: 1,
+    textAlign: 'right',
   },
 });

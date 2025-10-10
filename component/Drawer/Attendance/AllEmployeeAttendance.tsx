@@ -39,6 +39,7 @@ export default function AllEmployeeAttendance() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(
     null,
   );
+  const [secId, setSecId] = useState<number | null>(null);
 
   // Add Employee to Attendance cart
   const addToEmpAttendanceCart = async () => {
@@ -133,6 +134,7 @@ export default function AllEmployeeAttendance() {
   const onClockInChangeForItem = async (
     emp_id: number,
     event: DateTimePickerEvent,
+    sec_id: number,
     selectedDate?: Date,
   ) => {
     setClockInPickerFor(null);
@@ -151,7 +153,7 @@ export default function AllEmployeeAttendance() {
     // Update local state
     setAttCart(prev =>
       prev.map(emp =>
-        emp.emp_id === emp_id ? {...emp, clockin: timeString} : emp,
+        emp.emp_id === sec_id ? {...emp, clockin: timeString} : emp,
       ),
     );
 
@@ -170,6 +172,7 @@ export default function AllEmployeeAttendance() {
   const onClockOutChangeForItem = async (
     emp_id: number,
     event: DateTimePickerEvent,
+    sec_id: number,
     selectedDate?: Date,
   ) => {
     // Close the picker
@@ -185,7 +188,7 @@ export default function AllEmployeeAttendance() {
     // Update local state immediately
     setAttCart(prev =>
       prev.map(emp =>
-        emp.emp_id === emp_id ? {...emp, clockout: timeString} : emp,
+        emp.emp_id === sec_id ? {...emp, clockout: timeString} : emp,
       ),
     );
 
@@ -195,7 +198,7 @@ export default function AllEmployeeAttendance() {
         sid: emp_id,
         clockout: timeString,
       });
-      console.log(`Clock Out updated for employee ${emp_id}: ${timeString}`);
+      console.log('Employee Id:', emp_id);
     } catch (error) {
       console.log('Error updating clock in:', error);
     }
@@ -235,12 +238,16 @@ export default function AllEmployeeAttendance() {
       .padStart(2, '0')}`;
   };
 
-  const updateAttendanceStatus = async (emp_id: number, status: string) => {
+  const updateAttendanceStatus = async (
+    emp_id: number,
+    status: string,
+    sec_id: number,
+  ) => {
     try {
       // Update local state immediately
       setAttCart(prev =>
         prev.map(emp =>
-          emp.emp_id === emp_id ? {...emp, att_status: status} : emp,
+          emp.emp_id === sec_id ? {...emp, att_status: status} : emp,
         ),
       );
 
@@ -276,6 +283,7 @@ export default function AllEmployeeAttendance() {
 
       if (res.status === 200 && data.status === 200) {
         await axios.get(`${BASE_URL}/emptyattendancecart`);
+        handleReset();
 
         Toast.show({
           type: 'success',
@@ -384,7 +392,7 @@ export default function AllEmployeeAttendance() {
           <FlatList
             data={attCart}
             keyExtractor={item => item.emp_id.toString()}
-            renderItem={({item}) => (
+            renderItem={({item, index}) => (
               <View style={styles.card}>
                 {/* Header Row */}
                 <View style={styles.headerRow}>
@@ -537,8 +545,9 @@ export default function AllEmployeeAttendance() {
 
                   <TouchableOpacity
                     onPress={() => {
-                      setSelectedEmployeeId(item.emp_id);
+                      setSelectedEmployeeId(index);
                       setStatusModalVisible(true);
+                      setSecId(item.emp_id);
                     }}
                     style={styles.infoRow}>
                     <View style={styles.labelRow}>
@@ -566,13 +575,18 @@ export default function AllEmployeeAttendance() {
                 {clockInPickerFor === item.emp_id &&
                   item.att_status === 'Present' && (
                     <DateTimePicker
-                      key={`clockin-${item.emp_id}-${item.clockin}`} // Force re-render when time changes
+                      key={`clockin-${item.emp_id}-${item.clockin}`}
                       value={getDateFrom12HourTime(item.clockin)}
                       mode="time"
                       is24Hour={false}
                       display="default"
                       onChange={(event, selectedDate) =>
-                        onClockInChangeForItem(item.emp_id, event, selectedDate)
+                        onClockInChangeForItem(
+                          index,
+                          event,
+                          item.emp_id,
+                          selectedDate,
+                        )
                       }
                     />
                   )}
@@ -580,15 +594,16 @@ export default function AllEmployeeAttendance() {
                 {clockOutPickerFor === item.emp_id &&
                   item.att_status === 'Present' && (
                     <DateTimePicker
-                      key={`clockout-${item.emp_id}-${item.clockout}`} // Force re-render when time changes
+                      key={`clockout-${item.emp_id}-${item.clockout}`}
                       value={getDateFrom12HourTime(item.clockout)}
                       mode="time"
                       is24Hour={false}
                       display="default"
                       onChange={(event, selectedDate) =>
                         onClockOutChangeForItem(
-                          item.emp_id,
+                          index,
                           event,
+                          item.emp_id,
                           selectedDate,
                         )
                       }
@@ -632,8 +647,8 @@ export default function AllEmployeeAttendance() {
                 <TouchableOpacity
                   key={status}
                   onPress={() => {
-                    if (selectedEmployeeId !== null) {
-                      updateAttendanceStatus(selectedEmployeeId, status);
+                    if (selectedEmployeeId !== null && secId !== null) {
+                      updateAttendanceStatus(selectedEmployeeId, status, secId);
                     }
                   }}
                   style={styles.modalOption}>

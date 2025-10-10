@@ -97,7 +97,7 @@ export default function ExpiredProductStock() {
             <Text style={styles.headerTitle}>Expired Products</Text>
           </View>
           <View style={[styles.headerBtn, {backgroundColor: 'transparent'}]}>
-            <Icon name="filter-list" size={24} color="transparent" />
+            <Icon name="mail" size={24} color="transparent" />
           </View>
         </View>
 
@@ -363,9 +363,12 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 50,
+    paddingVertical: '75%',
     backgroundColor: '#fff',
     borderRadius: 15,
+    marginTop: 8,
+    width: '96%',
+    alignSelf: 'center',
   },
   emptyText: {
     marginTop: 10,

@@ -12,10 +12,12 @@ import {
 import React, {useEffect, useState} from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
+import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
 
 interface PurchaseReturn {
   prchr_return_invoice_no: string;
@@ -152,10 +154,11 @@ export default function PurchaseReturnList() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -176,14 +179,14 @@ export default function PurchaseReturnList() {
 
         <View style={styles.dateContainer}>
           <View style={styles.dateInputWrapper}>
-            <Text style={styles.dateLabel}>From Date</Text>
+            <Text style={styles.dateLabel}>From:</Text>
             <TouchableOpacity
               style={styles.dateInputBox}
               onPress={() => setShowStartDatePicker(true)}>
               <Text style={styles.dateText}>
                 {startDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="event" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color="#144272" />
             </TouchableOpacity>
             {showStartDatePicker && (
               <DateTimePicker
@@ -198,14 +201,14 @@ export default function PurchaseReturnList() {
           </View>
 
           <View style={styles.dateInputWrapper}>
-            <Text style={styles.dateLabel}>To Date</Text>
+            <Text style={styles.dateLabel}>To:</Text>
             <TouchableOpacity
               style={styles.dateInputBox}
               onPress={() => setShowEndDatePicker(true)}>
               <Text style={styles.dateText}>
                 {endDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="event" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color="#144272" />
             </TouchableOpacity>
             {showEndDatePicker && (
               <DateTimePicker
@@ -224,96 +227,55 @@ export default function PurchaseReturnList() {
         <View style={styles.listContainer}>
           <FlatList
             data={currentData}
-            keyExtractor={(item, index) =>
-              `${item.prchr_return_invoice_no}_${index}`
-            }
-            renderItem={({item}) => {
-              return (
-                <View style={styles.card}>
-                  {/* Header Row */}
-                  <View style={styles.headerRow}>
-                    <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {item.prchr_return_invoice_no?.charAt(0) || 'R'}
-                      </Text>
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.name}>
-                        {item.prchr_return_invoice_no}
-                      </Text>
-                      <Text style={styles.subText}>
-                        {new Date(item.created_at).toLocaleDateString('en-US', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </Text>
-                    </View>
-
-                    {/* View Action */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('View');
-                        fetchReturnDetails(item.prchr_return_invoice_no);
-                      }}>
-                      <Icon
-                        name="visibility"
-                        size={20}
-                        color={'#144272'}
-                        style={{marginLeft: 10}}
-                      />
-                    </TouchableOpacity>
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => {
+                  setModalVisible('View');
+                  fetchReturnDetails(item.prchr_return_invoice_no);
+                }}>
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
+                  <View>
+                    <Text style={styles.name}>
+                      {item.prchr_return_invoice_no}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Icon name="cash" size={12} color="#666" />{' '}
+                      {item.prchr_return_amount}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Icon name="receipt" size={12} color="#666" />{' '}
+                      {item.prchr_prch_invoice || 'N/A'}
+                    </Text>
                   </View>
 
-                  {/* Info Section */}
-                  <View style={styles.infoBox}>
-                    <View style={styles.infoRow}>
-                      {/* Left side: Icon + Label */}
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="payments"
-                          size={16}
-                          color={'#144272'}
-                          style={{marginRight: 6}}
-                        />
-                        <Text style={styles.infoText}>Return Amount:</Text>
-                      </View>
-
-                      {/* Right side: Value */}
-                      <Text style={styles.infoValue}>
-                        PKR {item.prchr_return_amount}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      {/* Left side: Icon + Label */}
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="receipt"
-                          size={16}
-                          color={'#144272'}
-                          style={{marginRight: 6}}
-                        />
-                        <Text style={styles.infoText}>Purchase Invoice:</Text>
-                      </View>
-
-                      {/* Right side: Value */}
-                      <Text style={styles.infoValue}>
-                        {item?.prchr_prch_invoice ?? '--'}
-                      </Text>
-                    </View>
+                  <View style={{alignSelf: 'flex-start'}}>
+                    <Text
+                      style={[
+                        styles.subText,
+                        {fontWeight: '700', verticalAlign: 'top'},
+                      ]}>
+                      <Icon name="calendar" size={12} color="#666" />{' '}
+                      {new Date(item.created_at).toLocaleDateString('en-US', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      }) || 'N/A'}
+                    </Text>
                   </View>
                 </View>
-              );
-            }}
+              </TouchableOpacity>
+            )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>
-                  No record present in the database for this Date range!
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 110, paddingTop: 10}}
+            contentContainerStyle={{paddingBottom: 90}}
+            showsVerticalScrollIndicator={false}
           />
         </View>
 
@@ -363,7 +325,7 @@ export default function PurchaseReturnList() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
 
       {/* View Modal */}
       <Modal
@@ -380,7 +342,7 @@ export default function PurchaseReturnList() {
             <View style={styles.modalHeader}>
               <View style={styles.headerLeft}>
                 <View style={styles.invoiceIconContainer}>
-                  <Icon name="assignment-return" size={24} color="#144272" />
+                  <Icon name="clipboard-arrow-left" size={24} color="#144272" />
                 </View>
                 <View>
                   <Text style={styles.modalTitle}>Purchase Return Invoice</Text>
@@ -560,7 +522,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -593,7 +555,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -606,7 +568,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -620,7 +582,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -646,69 +608,54 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
 
-  // Flatlist styling
+  // FlatList Styling
   listContainer: {
     flex: 1,
     paddingHorizontal: 8,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 10,
-    padding: 12,
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  avatarBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
   },
   name: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
+    marginTop: 2,
   },
-  infoBox: {
-    marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  infoText: {
-    color: '#144272',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  labelRow: {
-    flexDirection: 'row',
+  emptyContainer: {
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: '70%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    marginTop: 8,
+    width: '96%',
+    alignSelf: 'center',
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Date Fields

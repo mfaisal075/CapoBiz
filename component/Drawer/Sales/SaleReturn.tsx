@@ -18,6 +18,8 @@ import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface CartDetails {
   name: string;
@@ -472,10 +474,10 @@ export default function SaleReturn() {
           text2: 'Product has been returned successfully!',
           visibilityTime: 1500,
         });
-        fetchCartItems();
+        await emptyCart(); // Ensure cart is emptied before fetching
         setCartDetails(initialCartDetails);
         setOrderTotal(0);
-        emptyCart();
+        fetchCartItems(); // Refresh cart items after emptying
       } else if (data.status === 202) {
         Toast.show({
           type: 'error',
@@ -570,10 +572,11 @@ export default function SaleReturn() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -629,10 +632,6 @@ export default function SaleReturn() {
                   Return Without Invoice
                 </Text>
               </TouchableOpacity>
-            </View>
-
-            <View style={styles.newInvoiceBadge}>
-              <Text style={styles.newInvoiceText}>NEW INV</Text>
             </View>
           </View>
 
@@ -1154,7 +1153,7 @@ export default function SaleReturn() {
         </Modal>
 
         <Toast />
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -1164,7 +1163,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -1193,7 +1192,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   section: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(15, 45, 78, 0.8)',
     borderRadius: 16,
     padding: 20,
     marginVertical: 8,
@@ -1276,33 +1275,36 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   customerInfo: {
-    marginTop: 8,
+    marginVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
   },
   customerCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderRadius: 8,
-    padding: 12,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   customerLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-    marginBottom: 4,
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   customerValue: {
     color: 'white',
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 14,
+    fontWeight: '300',
   },
   formRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     marginBottom: 16,
   },
   inputGroup: {
-    width: '48%',
+    marginBottom: 10,
+    width: '100%',
   },
   inputLabel: {
     color: 'rgba(255,255,255,0.8)',

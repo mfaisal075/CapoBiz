@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   Modal,
@@ -17,6 +16,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import BASE_URL from '../../BASE_URL';
 import axios from 'axios';
 import {useUser} from '../../CTX/UserContext';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface DispatchList {
   id: number;
@@ -72,6 +73,11 @@ export default function SaleDispatchList() {
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [endDate, setEndDate] = useState(new Date());
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+  const [selectedDispatch, setSelectedDispatch] = useState<{
+    dispatch: DispatchDataItem;
+    index: number;
+    transporter?: Transporter;
+  } | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -135,10 +141,11 @@ export default function SaleDispatchList() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -205,82 +212,55 @@ export default function SaleDispatchList() {
         </View>
 
         {/* Flatlist */}
-        <View>
+        <View style={styles.listContainer}>
           <FlatList
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => {
-              return (
-                <View style={styles.card}>
-                  {/* Header Row */}
-                  <View style={styles.headerRow}>
-                    <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {item.disp_invoice_no?.charAt(0) || 'D'}
-                      </Text>
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.name}>{item.disp_invoice_no}</Text>
-                      <Text style={styles.subText}>
-                        {new Date(item.disp_date).toLocaleDateString('en-US', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </Text>
-                    </View>
-
-                    {/* View Action */}
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('View');
-                        singleRecord(item.disp_invoice_no);
-                      }}>
-                      <Icon
-                        name="receipt"
-                        size={20}
-                        color={'#144272'}
-                        style={{marginLeft: 10}}
-                      />
-                    </TouchableOpacity>
+            renderItem={({item}) => (
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => {
+                  setModalVisible('View');
+                  singleRecord(item.disp_invoice_no);
+                }}>
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
+                  <View>
+                    <Text style={styles.name}>{item.disp_invoice_no}</Text>
+                    <Text style={styles.subText}>
+                      <Icon name="cash-multiple" size={12} color="#666" />{' '}
+                      {item.disp_order_total}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Icon name="account" size={12} color="#666" />{' '}
+                      {item.slcust_name || 'N/A'}
+                    </Text>
                   </View>
 
-                  {/* Info Section */}
-                  <View style={styles.infoBox}>
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon name="account" size={16} color="#144272" />
-                        <Text style={styles.infoText}>Customer:</Text>
-                      </View>
-                      <Text style={styles.infoValue}>
-                        {item.slcust_name || 'N/A'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon name="cash-multiple" size={16} color="#144272" />
-                        <Text style={styles.infoText}>Total Amount:</Text>
-                      </View>
-                      <Text style={styles.infoValue}>
-                        {item.disp_order_total}
-                      </Text>
-                    </View>
+                  <View style={{alignSelf: 'flex-start'}}>
+                    <Text style={[styles.subText, {fontWeight: '700'}]}>
+                      <Icon name="calendar" size={12} color="#666" />{' '}
+                      {new Date(item.disp_date).toLocaleDateString('en-US', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}
+                    </Text>
                   </View>
                 </View>
-              );
-            }}
+              </TouchableOpacity>
+            )}
             ListEmptyComponent={
-              <View style={{alignItems: 'center', marginTop: 20}}>
-                <Text style={{color: '#fff', fontSize: 14}}>
-                  No record present in the database for this Date range!
-                </Text>
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 230, paddingTop: 10}}
+            contentContainerStyle={{paddingBottom: 90}}
+            showsVerticalScrollIndicator={false}
           />
         </View>
-      </ImageBackground>
+      </LinearGradient>
 
       {/* Pagination Controls */}
       {totalRecords > 0 && (
@@ -306,6 +286,7 @@ export default function SaleDispatchList() {
               Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
               {totalPages}
             </Text>
+            <Text style={styles.totalText}>Total: {totalRecords} records</Text>
           </View>
 
           <TouchableOpacity
@@ -384,7 +365,12 @@ export default function SaleDispatchList() {
                   <Text style={styles.infoValue}>
                     {invoiceData?.sale.disp_date
                       ? new Date(invoiceData.sale.disp_date).toLocaleDateString(
-                          'en-GB',
+                          'en-US',
+                          {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          },
                         )
                       : 'N/A'}
                   </Text>
@@ -415,97 +401,184 @@ export default function SaleDispatchList() {
                 </View>
               </View>
 
-              {/* Dispatch Details */}
-              {invoiceData?.dispatchdata
-                ?.filter(dispatchItem => !!dispatchItem.dispd_disp_no)
-                .map((dispatchItem, index) => {
-                  const transporter = invoiceData.transporters?.find(
-                    t => t.id.toString() === dispatchItem.dispd_trans_id,
-                  );
+              {/* Dispatch Buttons Section */}
+              <View style={styles.dispatchButtonsSection}>
+                <Text style={styles.sectionTitle}>Dispatches</Text>
+                {invoiceData?.dispatchdata
+                  ?.filter(dispatchItem => !!dispatchItem.dispd_disp_no)
+                  .map((dispatchItem, index) => {
+                    const transporter = invoiceData.transporters?.find(
+                      t => t.id.toString() === dispatchItem.dispd_trans_id,
+                    );
 
-                  return (
-                    <View key={index} style={styles.dispatchSection}>
-                      <Text style={styles.sectionTitle}>
-                        Dispatch #{index + 1}
-                      </Text>
-
-                      <View style={styles.dispatchInfo}>
-                        <View style={styles.infoCard}>
-                          <Text style={styles.infoLabel}>Date</Text>
-                          <Text style={styles.infoValue}>
-                            {dispatchItem.created_at
-                              ? new Date(
-                                  dispatchItem.created_at,
-                                ).toLocaleDateString('en-GB')
-                              : 'N/A'}
-                          </Text>
-                        </View>
-                        <View style={styles.infoCard}>
-                          <Text style={styles.infoLabel}>Dispatch #</Text>
-                          <Text style={styles.infoValue}>
-                            {dispatchItem.dispd_disp_no || 'N/A'}
-                          </Text>
-                        </View>
-                        <View style={styles.infoCard}>
-                          <Text style={styles.infoLabel}>Freight</Text>
-                          <Text style={styles.infoValue}>
-                            {dispatchItem.dispd_freight_exp || '0.00'}
-                          </Text>
-                        </View>
-                        <View style={styles.infoCard}>
-                          <Text style={styles.infoLabel}>Transporter</Text>
-                          <Text style={styles.infoValue}>
-                            {transporter?.trans_name || 'N/A'}
-                          </Text>
-                        </View>
-                      </View>
-
-                      {/* Products Table */}
-                      <View style={styles.tableSection}>
-                        <Text style={styles.sectionTitle}>Products</Text>
-
-                        <View style={styles.tableContainer}>
-                          {/* Table Header */}
-                          <View style={styles.tableHeader}>
-                            <Text style={[styles.tableHeaderText, styles.col2]}>
-                              Product
-                            </Text>
-                            <Text style={[styles.tableHeaderText, styles.col3]}>
-                              Qty
-                            </Text>
-                            <Text style={[styles.tableHeaderText, styles.col4]}>
-                              UOM
-                            </Text>
-                          </View>
-
-                          {/* Table Rows */}
-                          {invoiceData?.sale_detail?.map((detail, i) => (
-                            <View
-                              key={i}
-                              style={[
-                                styles.tableRow,
-                                i % 2 === 0
-                                  ? styles.tableRowEven
-                                  : styles.tableRowOdd,
-                              ]}>
-                              <Text
-                                style={[styles.tableCell, styles.col2]}
-                                numberOfLines={2}>
-                                {detail.sald_prod_name}
+                    return (
+                      <TouchableOpacity
+                        key={index}
+                        style={styles.dispatchButton}
+                        onPress={() => {
+                          setSelectedDispatch({
+                            dispatch: dispatchItem,
+                            index,
+                            transporter,
+                          });
+                        }}>
+                        <View style={styles.dispatchButtonContent}>
+                          <View style={styles.dispatchButtonLeft}>
+                            <View style={styles.dispatchButtonIcon}>
+                              <Icon
+                                name="package-variant"
+                                size={20}
+                                color="#144272"
+                              />
+                            </View>
+                            <View>
+                              <Text style={styles.dispatchButtonTitle}>
+                                Dispatch #{index + 1}
                               </Text>
-                              <Text style={[styles.tableCell, styles.col3]}>
-                                {detail.sald_disp_qty}
-                              </Text>
-                              <Text style={[styles.tableCell, styles.col4]}>
-                                {detail.sald_sub_uom}
+                              <Text style={styles.dispatchButtonSubtitle}>
+                                {dispatchItem.dispd_disp_no}
                               </Text>
                             </View>
-                          ))}
+                          </View>
+                          <Icon
+                            name="chevron-right"
+                            size={24}
+                            color="#144272"
+                          />
                         </View>
-                      </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+              </View>
+
+              {/* Footer */}
+              <View style={styles.modalFooter}>
+                <Text style={styles.thankYou}>Thank you for your visit</Text>
+                <View style={styles.developerInfo}>
+                  <Text style={styles.developerText}>
+                    Software Developed with ❤️ by
+                  </Text>
+                  <Text style={styles.companyContact}>
+                    Technic Mentors | +923111122144
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Dispatch Details Popup */}
+      <Modal
+        visible={selectedDispatch !== null}
+        animationType="slide"
+        transparent
+        presentationStyle="overFullScreen">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Modal Handle */}
+            <View style={styles.modalHandle} />
+
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.headerLeft}>
+                <View style={styles.invoiceIconContainer}>
+                  <Icon name="package-variant" size={24} color="#144272" />
+                </View>
+                <View>
+                  <Text style={styles.modalTitle}>
+                    Dispatch #{(selectedDispatch?.index ?? 0) + 1}
+                  </Text>
+                  <Text style={styles.modalSubtitle}>Dispatch Details</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => setSelectedDispatch(null)}
+                style={styles.closeButton}>
+                <Icon name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}>
+              {selectedDispatch && (
+                <>
+                  {/* Dispatch Info Grid */}
+                  <View style={styles.orderInfoGrid}>
+                    <View style={styles.infoCard}>
+                      <Text style={styles.infoLabel}>Date</Text>
+                      <Text style={styles.infoValue}>
+                        {selectedDispatch.dispatch.created_at
+                          ? new Date(
+                              selectedDispatch.dispatch.created_at,
+                            ).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })
+                          : 'N/A'}
+                      </Text>
                     </View>
-                  );
-                })}
+                    <View style={styles.infoCard}>
+                      <Text style={styles.infoLabel}>Dispatch #</Text>
+                      <Text style={styles.infoValue}>
+                        {selectedDispatch.dispatch.dispd_disp_no || 'N/A'}
+                      </Text>
+                    </View>
+                    <View style={styles.infoCard}>
+                      <Text style={styles.infoLabel}>Freight</Text>
+                      <Text style={styles.infoValue}>
+                        {selectedDispatch.dispatch.dispd_freight_exp || '0.00'}
+                      </Text>
+                    </View>
+                    <View style={styles.infoCard}>
+                      <Text style={styles.infoLabel}>Transporter</Text>
+                      <Text style={styles.infoValue}>
+                        {selectedDispatch.transporter?.trans_name || 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Products Table */}
+                  <View style={styles.tableSection}>
+                    <Text style={styles.sectionTitle}>Products</Text>
+
+                    <View style={styles.tableContainer}>
+                      {/* Table Header */}
+                      <View style={styles.tableHeader}>
+                        <Text style={[styles.tableHeaderText, styles.col2]}>
+                          Product
+                        </Text>
+                        <Text style={[styles.tableHeaderText, styles.col3]}>
+                          Qty
+                        </Text>
+                      </View>
+
+                      {/* Table Rows */}
+                      {invoiceData?.sale_detail?.map((detail, i) => (
+                        <View
+                          key={i}
+                          style={[
+                            styles.tableRow,
+                            i % 2 === 0
+                              ? styles.tableRowEven
+                              : styles.tableRowOdd,
+                          ]}>
+                          <Text
+                            style={[styles.tableCell, styles.col2]}
+                            numberOfLines={2}>
+                            {detail.sald_prod_name}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col3]}>
+                            {detail.sald_disp_qty}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                </>
+              )}
 
               {/* Footer */}
               <View style={styles.modalFooter}>
@@ -532,7 +605,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -565,7 +638,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -578,7 +651,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -592,7 +665,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -611,67 +684,60 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFD166',
   },
-
-  // Flatlist styling
-  card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 10,
-    padding: 12,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
+  totalText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 16,
+    fontSize: 12,
+    marginTop: 2,
+    opacity: 0.8,
+  },
+
+  // FlatList Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   name: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
+    marginTop: 2,
   },
-  infoBox: {
-    marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  infoText: {
-    color: '#144272',
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  labelRow: {
-    flexDirection: 'row',
+  emptyContainer: {
     alignItems: 'center',
-    gap: 4,
+    justifyContent: 'center',
+    paddingVertical: '70%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    alignSelf: 'center',
+    width: '96%',
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Date Fields
@@ -680,7 +746,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 15,
     marginTop: 15,
-    marginBottom: 10,
+    marginBottom: 15,
   },
   dateInputWrapper: {
     flex: 0.48,
@@ -866,9 +932,6 @@ const styles = StyleSheet.create({
   },
 
   // Table Section
-  tableSection: {
-    marginTop: 16,
-  },
   tableContainer: {
     backgroundColor: 'white',
     borderRadius: 12,
@@ -913,17 +976,11 @@ const styles = StyleSheet.create({
   },
 
   // Column widths
-  col1: {
-    flex: 0.2,
-  },
   col2: {
-    flex: 0.4, // Product
+    flex: 1, // Product
   },
   col3: {
-    flex: 0.3, // Qty
-  },
-  col4: {
-    flex: 0.3, // UOM
+    flex: 1, // Qty
   },
 
   // Footer
@@ -960,5 +1017,56 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     flex: 1,
+  },
+
+  // Dispatch Details Modal
+  dispatchButtonsSection: {
+    marginHorizontal: 20,
+    marginTop: 20,
+  },
+  dispatchButton: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  dispatchButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+  },
+  dispatchButtonLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  dispatchButtonIcon: {
+    width: 40,
+    height: 40,
+    backgroundColor: '#E8F4FD',
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  dispatchButtonTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 2,
+  },
+  dispatchButtonSubtitle: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
+  },
+  tableSection: {
+    marginHorizontal: 20,
+    marginTop: 16,
   },
 });

@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   View,
   SafeAreaView,
-  ImageBackground,
   ScrollView,
   FlatList,
 } from 'react-native';
@@ -18,6 +17,8 @@ import {RadioButton} from 'react-native-paper';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import {useNavigation} from '@react-navigation/native';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface Suppliers {
   id: number;
@@ -325,10 +326,11 @@ export default function SupplierAccount() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -383,7 +385,7 @@ export default function SupplierAccount() {
           {/* Action Buttons */}
           <View style={[styles.toggleBtnContainer, {marginVertical: 5}]}>
             <TouchableOpacity
-              style={[styles.actionBtn, {backgroundColor: '#144272'}]}
+              style={[styles.actionBtn, {backgroundColor: backgroundColors.primary}]}
               onPress={() => {
                 closeDrawer();
                 navigation.navigate('SupplierAddPayment' as never);
@@ -392,7 +394,7 @@ export default function SupplierAccount() {
               <Text style={styles.actionBtnText}>Add Payment</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionBtn, {backgroundColor: '#144272'}]}
+              style={[styles.actionBtn, {backgroundColor: backgroundColors.primary}]}
               onPress={() => {
                 closeDrawer();
                 navigation.navigate('SupplierChequeClearance' as never);
@@ -825,7 +827,7 @@ export default function SupplierAccount() {
             </>
           )}
         </ScrollView>
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -835,7 +837,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -900,7 +902,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   section: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(15, 45, 78, 0.8)',
     borderRadius: 16,
     padding: 20,
     marginVertical: 8,
@@ -957,13 +959,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   infoLabel: {
-    color: 'rgba(255,255,255,0.7)',
+    color: '#fff',
     fontSize: 14,
+    fontWeight: '500',
   },
   infoValue: {
     color: 'white',
     fontSize: 14,
-    fontWeight: '500',
   },
   dateSection: {
     marginBottom: 16,

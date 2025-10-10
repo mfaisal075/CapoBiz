@@ -1530,7 +1530,7 @@ const styles = StyleSheet.create({
 
   // Card Styles
   card: {
-    backgroundColor: 'rgba(15, 45, 78, 0.9)',
+    backgroundColor: 'rgba(15, 45, 78, 0.8)',
     borderRadius: 15,
     padding: 20,
     marginVertical: 8,

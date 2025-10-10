@@ -5,7 +5,6 @@ import {
   TouchableOpacity,
   View,
   SafeAreaView,
-  ImageBackground,
   ScrollView,
   FlatList,
   Modal,
@@ -21,6 +20,8 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
 
 interface FixedAccount {
   id: number;
@@ -79,6 +80,7 @@ export default function FixedAccounts() {
   const [txnTypeValue, setTxnTypeValue] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(5);
+  const [invc, setInvc] = useState('');
 
   const totalPages = Math.ceil(fixedAccDetails.length / itemsPerPage);
 
@@ -155,6 +157,16 @@ export default function FixedAccounts() {
     }
   };
 
+  // Fetch Invoice
+  const fetchInvc = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/fixedaccountinvoice`);
+      setInvc(res.data.inv_fixac_no);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
   // Add Cash Payment
   const addCashPayment = async () => {
     if (!fixedAccValue) {
@@ -166,16 +178,21 @@ export default function FixedAccounts() {
       return;
     }
 
-    if (
-      !txnTypeValue ||
-      !cashAddFrom.amount ||
-      !cashAddFrom.date ||
-      !cashAddFrom.desc
-    ) {
+    if (!txnTypeValue || !cashAddFrom.amount || !cashAddFrom.date) {
       Toast.show({
         type: 'error',
         text1: 'Fields Missing',
-        text2: 'Please filled add fields',
+        text2: 'Please fill all fields',
+        visibilityTime: 1500,
+      });
+      return;
+    }
+
+    if (isNaN(Number(cashAddFrom.amount)) || cashAddFrom.amount.trim() === '') {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Amount',
+        text2: 'Amount must be a valid number',
         visibilityTime: 1500,
       });
       return;
@@ -183,7 +200,7 @@ export default function FixedAccounts() {
 
     try {
       const res = await axios.post(`${BASE_URL}/addfixedaccountpayment`, {
-        invoice_no: '',
+        invoice_no: `FIXAC-${invc}`,
         account_id: fixedAccValue,
         payment_type: txnTypeValue,
         date: cashAddFrom.date.toISOString().split('T')[0],
@@ -202,6 +219,7 @@ export default function FixedAccounts() {
         });
         setFixedAccValue('');
         setTxnTypeValue('');
+        setInvc('');
         setCashAddForm(initialFixedAccAddFrom);
         setModalVisible('');
       }
@@ -264,14 +282,16 @@ export default function FixedAccounts() {
   useEffect(() => {
     fetchFixesDropdown();
     fetchFixedAccDetails();
+    fetchInvc();
   }, [fixedAccValue, fromDate, toDate]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -294,7 +314,10 @@ export default function FixedAccounts() {
           {/* Action Buttons */}
           <View style={[styles.toggleBtnContainer, {marginVertical: 5}]}>
             <TouchableOpacity
-              style={[styles.actionBtn, {backgroundColor: '#144272'}]}
+              style={[
+                styles.actionBtn,
+                {backgroundColor: backgroundColors.primary},
+              ]}
               onPress={() => setModalVisible('addPayment')}>
               <Icon name="payment" size={16} color="white" />
               <Text style={styles.actionBtnText}>Add Payment</Text>
@@ -446,7 +469,7 @@ export default function FixedAccounts() {
             )}
           </View>
         </ScrollView>
-      </ImageBackground>
+      </LinearGradient>
 
       {/* Add Payment Modal */}
       <Modal
@@ -474,40 +497,32 @@ export default function FixedAccounts() {
                 contentContainerStyle={styles.modalBodyContent}
                 keyboardShouldPersistTaps="handled">
                 <View style={styles.modalBody}>
-                  <View
-                    style={{
-                      width: '100%',
-                      marginTop: 10,
-                      paddingHorizontal: '5%',
-                    }}>
+                  <View style={styles.inputContainer}>
                     <Text
                       style={{
-                        color: '#000',
+                        color: backgroundColors.primary,
                         fontWeight: 'bold',
                         fontSize: 14,
-                        marginLeft: 5,
-                        textAlign: 'left',
                       }}>
                       Invoice#
                     </Text>
                     <TextInput
-                      style={[styles.productinput, {backgroundColor: 'gray'}]}
+                      style={[
+                        styles.productinput,
+                        {backgroundColor: '#00000025'},
+                      ]}
+                      value={`FIXAC-${invc}`}
+                      onChangeText={t => setInvc(t)}
                       editable={false}
                     />
                   </View>
 
-                  <View
-                    style={{
-                      flexDirection: 'column',
-                      alignSelf: 'center',
-                      marginTop: 10,
-                    }}>
+                  <View style={styles.inputContainer}>
                     <Text
                       style={{
-                        color: '#000',
+                        color: backgroundColors.primary,
                         fontWeight: 'bold',
                         fontSize: 14,
-                        marginLeft: 5,
                       }}>
                       Account:
                     </Text>
@@ -524,38 +539,40 @@ export default function FixedAccounts() {
                       dropDownContainerStyle={{
                         backgroundColor: 'white',
                         borderColor: '#144272',
-                        width: '90%',
-                        marginTop: 8,
+                        width: '100%',
                         zIndex: 1000,
+                        marginTop: 5,
                       }}
                       labelStyle={{color: '#144272', fontWeight: 'bold'}}
                       listItemLabelStyle={{color: '#144272'}}
                       ArrowUpIconComponent={() => (
                         <Text>
-                          <Icon name="chevron-up" size={15} color="#000" />
+                          <Icon
+                            name="keyboard-arrow-up"
+                            size={15}
+                            color="#000"
+                          />
                         </Text>
                       )}
                       ArrowDownIconComponent={() => (
                         <Text>
-                          <Icon name="chevron-down" size={15} color="#000" />
+                          <Icon
+                            name="keyboard-arrow-down"
+                            size={15}
+                            color="#000"
+                          />
                         </Text>
                       )}
                       listMode="SCROLLVIEW"
                     />
                   </View>
 
-                  <View
-                    style={{
-                      flexDirection: 'column',
-                      alignSelf: 'center',
-                      marginTop: 10,
-                    }}>
+                  <View style={styles.inputContainer}>
                     <Text
                       style={{
-                        color: '#000',
+                        color: backgroundColors.primary,
                         fontWeight: 'bold',
                         fontSize: 14,
-                        marginLeft: 5,
                       }}>
                       Transaction Type:
                     </Text>
@@ -575,19 +592,26 @@ export default function FixedAccounts() {
                       dropDownContainerStyle={{
                         backgroundColor: 'white',
                         borderColor: '#144272',
-                        width: '90%',
-                        marginTop: 8,
+                        width: '100%',
                       }}
                       labelStyle={{color: '#144272', fontWeight: 'bold'}}
                       listItemLabelStyle={{color: '#144272'}}
                       ArrowUpIconComponent={() => (
                         <Text>
-                          <Icon name="chevron-up" size={15} color="#000" />
+                          <Icon
+                            name="keyboard-arrow-up"
+                            size={15}
+                            color="#000"
+                          />
                         </Text>
                       )}
                       ArrowDownIconComponent={() => (
                         <Text>
-                          <Icon name="chevron-down" size={15} color="#000" />
+                          <Icon
+                            name="keyboard-arrow-down"
+                            size={15}
+                            color="#000"
+                          />
                         </Text>
                       )}
                       listMode="SCROLLVIEW"
@@ -595,29 +619,23 @@ export default function FixedAccounts() {
                   </View>
 
                   {/* Date Fields Section */}
-                  <View
-                    style={{
-                      width: '100%',
-                      marginTop: 10,
-                      paddingHorizontal: '5%',
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                    }}>
+                  <View style={styles.inputContainer}>
                     {/* From Date */}
                     <View style={{width: '100%'}}>
                       <Text
                         style={{
-                          color: '#000',
+                          color: backgroundColors.primary,
                           fontWeight: 'bold',
                           fontSize: 14,
-                          marginLeft: 5,
-                          textAlign: 'left',
                         }}>
                         Date <Text style={{color: 'red'}}>*</Text>
                       </Text>
                       <TouchableOpacity
                         onPress={() => setModalShowDatePicker(true)}
-                        style={[styles.dateInput, {borderColor: '#000'}]}>
+                        style={[
+                          styles.dateInput,
+                          {borderColor: '#000', width: '100%'},
+                        ]}>
                         <Text style={{color: '#000'}}>
                           {cashAddFrom.date
                             ? cashAddFrom.date.toLocaleDateString()
@@ -638,19 +656,12 @@ export default function FixedAccounts() {
                     />
                   )}
 
-                  <View
-                    style={{
-                      width: '100%',
-                      marginTop: 10,
-                      paddingHorizontal: '5%',
-                    }}>
+                  <View style={styles.inputContainer}>
                     <Text
                       style={{
-                        color: '#000',
+                        color: backgroundColors.primary,
                         fontWeight: 'bold',
                         fontSize: 14,
-                        marginLeft: 5,
-                        textAlign: 'left',
                       }}>
                       Amount <Text style={{color: 'red'}}>*</Text>
                     </Text>
@@ -662,19 +673,12 @@ export default function FixedAccounts() {
                     />
                   </View>
 
-                  <View
-                    style={{
-                      width: '100%',
-                      marginTop: 10,
-                      paddingHorizontal: '5%',
-                    }}>
+                  <View style={styles.inputContainer}>
                     <Text
                       style={{
-                        color: '#000',
+                        color: backgroundColors.primary,
                         fontWeight: 'bold',
                         fontSize: 14,
-                        marginLeft: 5,
-                        textAlign: 'left',
                       }}>
                       Description
                     </Text>
@@ -703,6 +707,7 @@ export default function FixedAccounts() {
             </View>
           </SafeAreaView>
         </KeyboardAvoidingView>
+        <Toast />
       </Modal>
     </SafeAreaView>
   );
@@ -713,7 +718,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -721,7 +726,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'transparent',
   },
   headerBtn: {
     padding: 8,
@@ -763,7 +768,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   section: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(15, 45, 78, 0.8)',
     borderRadius: 16,
     padding: 20,
     marginVertical: 8,
@@ -788,8 +793,10 @@ const styles = StyleSheet.create({
   dropdown: {
     backgroundColor: 'rgba(255,255,255,0.1)',
     borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 40,
+    borderRadius: 8,
+    minHeight: 45,
+    padding: 8,
+    marginTop: 5,
   },
   dropdownContainer: {
     backgroundColor: 'white',
@@ -814,16 +821,17 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   dateInput: {
-    flex: 1,
-    marginHorizontal: 4,
+    width: '48%',
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 10,
+    borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.3)',
     paddingHorizontal: 12,
     paddingVertical: 10,
+    height: 40,
+    marginTop: 5,
   },
   dateText: {
     flex: 1,
@@ -939,6 +947,11 @@ const styles = StyleSheet.create({
     color: 'white',
     textAlign: 'center',
     fontWeight: 'bold',
+  },
+  inputContainer: {
+    width: '100%',
+    marginTop: 10,
+    paddingHorizontal: '1%',
   },
   productinput: {
     borderWidth: 1,

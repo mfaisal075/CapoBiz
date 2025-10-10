@@ -16,6 +16,9 @@ import {useUser} from './CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from './BASE_URL';
+import backgroundColors from './Colors';
+import dayjs from 'dayjs';
+import LinearGradient from 'react-native-linear-gradient';
 
 const {width} = Dimensions.get('window');
 
@@ -60,6 +63,7 @@ export default function Dashboard(): JSX.Element {
   const [isModalVisible, setModalVisible] = useState(false);
   const {openDrawer} = useDrawer();
   const [dashboadData, setDashboadData] = useState<DashboardData | null>(null);
+  const [date, setDate] = useState(dayjs());
 
   const toggleModal = () => {
     setModalVisible(!isModalVisible);
@@ -77,6 +81,10 @@ export default function Dashboard(): JSX.Element {
   useEffect(() => {
     fetchData();
 
+    setInterval(() => {
+      setDate(dayjs());
+    }, 1000 * 1);
+
     const fetchUserData = async () => {
       try {
         // Only proceed with the second request if login was successful
@@ -87,7 +95,6 @@ export default function Dashboard(): JSX.Element {
 
         // Getting bussiness details
         const bus = await axios.get(`${BASE_URL}/dashboaddata`);
-        
 
         setBussName(bus.data?.businessdata?.bus_name ?? '');
         setBussAddress(bus.data?.businessdata?.bus_address ?? '');
@@ -100,62 +107,77 @@ export default function Dashboard(): JSX.Element {
     fetchUserData();
   }, []);
 
+  // Number format
+  const formatNumber = (num: number) => {
+    if (num >= 1000000000) {
+      return (num / 1000000000).toFixed(2) + 'B';
+    }
+    if (num >= 100000) {
+      return (num / 100000).toFixed(2) + 'M';
+    }
+    if (num >= 1000) {
+      return (num / 1000).toFixed(2) + 'K';
+    }
+
+    return num.toString();
+  };
+
   // POS Dashboard Stats (static for now)
   const stats: StatItem[] = [
     {
       title: 'Customers',
-      value: dashboadData?.customer ?? 0,
+      value: formatNumber(dashboadData?.customer ?? 0),
       icon: 'account-group',
       color: '#3B82F6',
       lightColor: '#EFF6FF',
     },
     {
       title: 'Suppliers',
-      value: dashboadData?.suppliers ?? 0,
+      value: formatNumber(dashboadData?.suppliers ?? 0),
       icon: 'truck',
       color: '#10B981',
       lightColor: '#ECFDF5',
     },
     {
       title: 'Employees',
-      value: dashboadData?.employees ?? 0,
+      value: formatNumber(dashboadData?.employees ?? 0),
       icon: 'account-tie',
       color: '#8B5CF6',
       lightColor: '#F3E8FF',
     },
     {
       title: 'Current Stock',
-      value: `${dashboadData?.currentstockqty ?? 0} - ${
-        dashboadData?.currentstocksubqty ?? 0
-      }`,
+      value: `${formatNumber(
+        dashboadData?.currentstockqty ?? 0,
+      )} - ${formatNumber(dashboadData?.currentstocksubqty ?? 0)}`,
       icon: 'warehouse',
       color: '#F59E0B',
       lightColor: '#FFFBEB',
     },
     {
       title: 'Products',
-      value: dashboadData?.product ?? 0,
+      value: formatNumber(dashboadData?.product ?? 0),
       icon: 'package-variant',
       color: '#6366F1',
       lightColor: '#EEF2FF',
     },
     {
       title: 'Sale Invoices',
-      value: dashboadData?.sale ?? 0,
+      value: formatNumber(dashboadData?.sale ?? 0),
       icon: 'file-document',
       color: '#EF4444',
       lightColor: '#FEE2E2',
     },
     {
       title: 'Purchases',
-      value: dashboadData?.purchase ?? 0,
+      value: formatNumber(dashboadData?.purchase ?? 0),
       icon: 'cart-arrow-down',
       color: '#06B6D4',
       lightColor: '#ECFEFF',
     },
     {
       title: 'Expenses',
-      value: `Rs. ${dashboadData?.expenseamount ?? 0}`,
+      value: `Rs. ${formatNumber(dashboadData?.expenseamount ?? 0)}`,
       icon: 'cash-multiple',
       color: '#D97706',
       lightColor: '#FEF3C7',
@@ -176,47 +198,79 @@ export default function Dashboard(): JSX.Element {
     <SafeAreaView style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={openDrawer} style={styles.headerButton}>
-          <View style={styles.profileBadge}>
-            <Image
-              source={require('../assets/menu.png')}
-              style={styles.headerIcon}
-              tintColor="white"
-            />
-          </View>
-        </TouchableOpacity>
+        <View style={styles.innerHeader}>
+          <TouchableOpacity onPress={openDrawer} style={styles.headerButton}>
+            <View style={styles.profileBadge}>
+              <Image
+                source={require('../assets/menu.png')}
+                style={styles.headerIcon}
+                tintColor="white"
+              />
+            </View>
+          </TouchableOpacity>
 
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>CapoBiz POS</Text>
-          <Text style={styles.headerSubtitle}>Main Store • Online</Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>CapoBiz POS</Text>
+          </View>
+
+          <TouchableOpacity onPress={toggleModal} style={styles.headerButton}>
+            <View style={styles.profileBadge}>
+              <Image
+                source={require('../assets/user.png')}
+                style={styles.headerIcon}
+                tintColor="white"
+              />
+            </View>
+          </TouchableOpacity>
         </View>
 
-        <TouchableOpacity onPress={toggleModal} style={styles.headerButton}>
-          <View style={styles.profileBadge}>
-            <Image
-              source={require('../assets/user.png')}
-              style={styles.headerIcon}
-              tintColor="white"
-            />
+        {/* Welcome Section */}
+        <View style={styles.welcome}>
+          <Icon
+            name="account"
+            size={30}
+            color={backgroundColors.dark}
+            style={{
+              backgroundColor: backgroundColors.light,
+              padding: 10,
+              borderRadius: 12,
+            }}
+          />
+
+          <View>
+            <Text style={styles.welcomeText}>Welcome back,</Text>
+            <Text style={styles.welcomeText}>{userName || 'Manager'}!</Text>
           </View>
-        </TouchableOpacity>
+        </View>
+
+        {/* Timer Section */}
+        <View style={styles.timerSection}>
+          <Image source={require('../assets/clock.png')} style={styles.clock} />
+          <Text style={styles.time}>{date.format('hh:mm:ss')}</Text>
+        </View>
+
+        {/* Container */}
+        <LinearGradient
+          colors={[
+            backgroundColors.light,
+            backgroundColors.secondary,
+            backgroundColors.primary,
+          ]}
+          style={styles.posContainer}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}>
+          <Image
+            source={require('../assets/pos-terminal.png')}
+            style={styles.pos}
+          />
+          {/* <View>
+            <Text>CapoBiz POS</Text>
+            <Text>Includes all POS features</Text>
+          </View> */}
+        </LinearGradient>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Welcome Section */}
-        <View style={styles.statusSection}>
-          <Text style={styles.welcomeText}>
-            Welcome back, {userName || 'Manager'}!
-          </Text>
-          <Text style={styles.dateText}>
-            {new Date().toLocaleDateString('en-US', {
-              weekday: 'long',
-              month: 'short',
-              day: 'numeric',
-            })}
-          </Text>
-        </View>
-
         {/* Dashboard Stats */}
         <View style={styles.statsGrid}>
           {stats.map((item, index) => renderStatCard(item, index))}
@@ -264,12 +318,74 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#1E40AF',
+    height: '30%',
+    backgroundColor: backgroundColors.primary,
     paddingHorizontal: 20,
     paddingVertical: 16,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  innerHeader: {
+    height: '20%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  welcome: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
+    marginTop: '4%',
+  },
+  timerSection: {
+    height: '23%',
+    backgroundColor: backgroundColors.light,
+    borderRadius: 15,
+    marginTop: '4%',
+    paddingHorizontal: '5%',
+    alignItems: 'center',
+    flexDirection: 'row',
+    shadowColor: backgroundColors.dark,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  time: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: backgroundColors.primary,
+    marginLeft: '10%',
+  },
+  clock: {
+    height: 45,
+    width: 45,
+  },
+  posContainer: {
+    height: '63%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: backgroundColors.light,
+    marginTop: '4%',
+    borderRadius: 15,
+    paddingHorizontal: '5%',
+    shadowColor: backgroundColors.dark,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+    zIndex: 1000,
+  },
+  pos: {
+    height: 125,
+    width: 125,
   },
   headerButton: {
     width: 44,
@@ -306,9 +422,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   welcomeText: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: '700',
-    color: '#1F2937',
+    color: backgroundColors.light,
   },
   dateText: {
     marginTop: 4,
@@ -321,6 +437,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: 24,
+    marginTop: '25%',
   },
   card: {
     width: (width - 60) / 2,

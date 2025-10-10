@@ -15,6 +15,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../../CTX/UserContext';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../../Colors';
 
 interface SupplierList {
   id: number;
@@ -143,10 +145,11 @@ export default function SupplierList() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <LinearGradient
+        colors={[backgroundColors.primary, backgroundColors.secondary]}
+        style={styles.gradientBackground}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
             <Icon name="menu" size={24} color="white" />
@@ -161,84 +164,51 @@ export default function SupplierList() {
           </TouchableOpacity>
         </View>
 
-        <FlatList
-          data={currentData}
-          keyExtractor={(item, index) => index.toString()}
-          renderItem={({item}) => (
-            <View style={styles.card}>
-              {/* Avatar + Name */}
-              <View style={styles.headerRow}>
-                <View style={styles.avatarBox}>
-                  <Text style={styles.avatarText}>
-                    {item.sup_name?.charAt(0) || 'S'}
-                  </Text>
-                </View>
-                <View style={{flex: 1}}>
-                  <Text style={styles.name}>{item.sup_name}</Text>
-                  <Text style={styles.subText}>
-                    {item.sup_company_name || 'No company'}
-                  </Text>
+        <View style={styles.listContainer}>
+          <FlatList
+            data={currentData}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <View style={styles.card}>
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
+                  <View style={styles.avatarBox}>
+                    <Text style={styles.avatarText}>
+                      {item.sup_name?.charAt(0) || 'S'}
+                    </Text>
+                  </View>
+
+                  <View style={{flex: 1}}>
+                    <Text style={styles.name}>{item.sup_name}</Text>
+                    {/* Category */}
+                    <Text style={styles.subText}>
+                      <Icon name="phone" size={12} color="#666" />{' '}
+                      {item.sup_contact || 'No Phone'}
+                    </Text>
+                    {/* Quantity */}
+                    <Text style={styles.subText}>
+                      <Icon name="mail" size={12} color="#666" />{' '}
+                      {item.sup_email ?? 'N/A'}
+                    </Text>
+                    {/* Retail Price */}
+                    <Text style={styles.subText}>
+                      <Icon name="office-building" size={12} color="#666" />{' '}
+                      {item.sup_company_name ?? 'N/A'}
+                    </Text>
+                  </View>
                 </View>
               </View>
-
-              {/* Info Section */}
-              <View style={styles.infoBox}>
-                <View style={styles.infoRow}>
-                  <View style={styles.labelRow}>
-                    <Icon
-                      name="phone"
-                      size={20}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.labelText}>Contact</Text>
-                  </View>
-                  <Text style={styles.valueText}>
-                    {item.sup_contact || 'N/A'}
-                  </Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <View style={styles.labelRow}>
-                    <Icon
-                      name="email"
-                      size={20}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.labelText}>Email</Text>
-                  </View>
-                  <Text style={styles.valueText}>
-                    {item.sup_email || 'N/A'}
-                  </Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <View style={styles.labelRow}>
-                    <Icon
-                      name="map-marker"
-                      size={20}
-                      color={'#144272'}
-                      style={styles.infoIcon}
-                    />
-                    <Text style={styles.labelText}>Address</Text>
-                  </View>
-                  <Text style={styles.valueText}>
-                    {item.sup_address || 'N/A'}
-                  </Text>
-                </View>
+            )}
+            ListEmptyComponent={
+              <View style={styles.emptyContainer}>
+                <Icon name="account-group" size={48} color="#666" />
+                <Text style={styles.emptyText}>No record found.</Text>
               </View>
-            </View>
-          )}
-          ListEmptyComponent={
-            <View style={{alignItems: 'center', marginTop: 20}}>
-              <Text style={{color: '#fff', fontSize: 14}}>
-                No record found.
-              </Text>
-            </View>
-          }
-          contentContainerStyle={{paddingBottom: 70}}
-        />
+            }
+            contentContainerStyle={{paddingBottom: 110}}
+            showsVerticalScrollIndicator={false}
+          />
+        </View>
 
         {/* Pagination Controls */}
         {totalRecords > 0 && (
@@ -286,7 +256,7 @@ export default function SupplierList() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </LinearGradient>
     </SafeAreaView>
   );
 }
@@ -296,7 +266,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
-  background: {
+  gradientBackground: {
     flex: 1,
   },
   header: {
@@ -329,7 +299,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -342,7 +312,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.secondary,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -356,7 +326,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: '#fff',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -383,94 +353,71 @@ const styles = StyleSheet.create({
   },
 
   // FlatList Styling
-  card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    marginHorizontal: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 8,
   },
-  headerRow: {
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    marginVertical: 4,
+    marginHorizontal: 8,
+    padding: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 2,
+    shadowOffset: {width: 0, height: 1},
+    elevation: 1,
+  },
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   avatarText: {
     color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+    fontWeight: '600',
+    fontSize: 14,
   },
   name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
     marginTop: 2,
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 8,
+    marginLeft: 10,
   },
-  actionIcon: {
-    tintColor: '#144272',
-    width: 20,
-    height: 20,
-    marginHorizontal: 4,
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: '75%',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    marginTop: 8,
+    width: '96%',
+    alignSelf: 'center',
   },
-  infoBox: {
+  emptyText: {
     marginTop: 10,
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 10,
-  },
-  infoText: {
-    flex: 1,
-    color: '#333',
-    fontSize: 13,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-  },
-  infoIcon: {
-    width: 18,
-    height: 18,
-    tintColor: '#144272',
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '60%',
-    textAlign: 'right',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });

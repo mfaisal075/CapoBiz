@@ -356,9 +356,12 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 50,
+    paddingVertical: '85%',
     backgroundColor: '#fff',
     borderRadius: 15,
+    width: '96%',
+    alignSelf: 'center',
+    marginTop: 8,
   },
   emptyText: {
     marginTop: 10,

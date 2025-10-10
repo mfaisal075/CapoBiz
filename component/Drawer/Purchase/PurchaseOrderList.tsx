@@ -173,7 +173,7 @@ export default function PurchaseOrderList() {
 
         <View style={styles.dateContainer}>
           <View style={styles.dateInputWrapper}>
-            <Text style={styles.dateLabel}>From Date</Text>
+            <Text style={styles.dateLabel}>From:</Text>
             <TouchableOpacity
               style={styles.dateInputBox}
               onPress={() => setShowStartDatePicker(true)}>
@@ -195,7 +195,7 @@ export default function PurchaseOrderList() {
           </View>
 
           <View style={styles.dateInputWrapper}>
-            <Text style={styles.dateLabel}>To Date</Text>
+            <Text style={styles.dateLabel}>To:</Text>
             <TouchableOpacity
               style={styles.dateInputBox}
               onPress={() => setShowEndDatePicker(true)}>
@@ -245,29 +245,32 @@ export default function PurchaseOrderList() {
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => {
+                  setModalVisible('View');
+                  getSingleOrder(item.id);
+                }}>
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
-                  <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.pord_invoice_no?.charAt(0) || 'I'}
-                    </Text>
-                  </View>
-
-                  <View style={{flex: 1}}>
+                  <View>
                     <Text style={styles.name}>{item.pord_invoice_no}</Text>
-                    {/* Category */}
-                    <Text style={styles.subText}>
-                      <Icon name="account" size={12} color="#666" />{' '}
-                      {item.sup_name || 'No category'}
-                    </Text>
-                    {/* Quantity */}
                     <Text style={styles.subText}>
                       <Icon name="cash" size={12} color="#666" />{' '}
                       {item.pord_order_total}
                     </Text>
-                    {/* Retail Price */}
                     <Text style={styles.subText}>
+                      <Icon name="account" size={12} color="#666" />{' '}
+                      {item.sup_name || 'No category'}
+                    </Text>
+                  </View>
+
+                  <View style={{alignSelf: 'flex-start'}}>
+                    <Text
+                      style={[
+                        styles.subText,
+                        {fontWeight: '700', verticalAlign: 'top'},
+                      ]}>
                       <Icon name="calendar" size={12} color="#666" />{' '}
                       {new Date(item.pord_order_date).toLocaleDateString(
                         'en-US',
@@ -279,19 +282,8 @@ export default function PurchaseOrderList() {
                       ) || 'N/A'}
                     </Text>
                   </View>
-
-                  {/* Actions on right */}
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('View');
-                        getSingleOrder(item.id);
-                      }}>
-                      <Icon name="eye" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                  </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
@@ -643,7 +635,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     marginVertical: 4,
     marginHorizontal: 8,
-    padding: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
     shadowColor: '#000',
     shadowOpacity: 0.04,
     shadowRadius: 2,
@@ -652,21 +645,8 @@ const styles = StyleSheet.create({
   },
   row: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  avatarBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
   },
   name: {
     fontSize: 16,
@@ -678,19 +658,15 @@ const styles = StyleSheet.create({
     color: '#555',
     marginTop: 2,
   },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 8,
-    marginLeft: 10,
-  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 50,
+    paddingVertical: '60%',
     backgroundColor: '#fff',
     borderRadius: 15,
+    width: '96%',
+    alignSelf: 'center',
+    marginTop: 8
   },
   emptyText: {
     marginTop: 10,
@@ -705,7 +681,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 15,
     marginTop: 15,
-    marginBottom: 10,
+    marginBottom: 5,
   },
   dateInputWrapper: {
     flex: 0.48,
