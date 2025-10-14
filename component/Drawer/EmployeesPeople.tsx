@@ -8,18 +8,16 @@ import {
   FlatList,
   TextInput,
   Modal,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
-import {Avatar, Checkbox, RadioButton} from 'react-native-paper';
+import {Checkbox, RadioButton} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
-import {useUser} from '../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import LottieView from 'lottie-react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../Colors';
 
 interface Employee {
@@ -30,28 +28,6 @@ interface Employee {
   emp_cnic: string;
   emp_email: string;
   emp_type: string;
-}
-
-interface EmployeeView {
-  id: number;
-  emp_name: string;
-  emp_address: string;
-  emp_contact: string;
-  emp_cnic: string;
-  emp_email: string;
-  emp_fathername: string;
-  emp_sec_contact: string;
-  emp_third_contact: string;
-  emp_contact_person_one: string;
-  emp_contact_person_two: string;
-  emp_opening_balance: string;
-  emp_transaction_type: string;
-  emp_payment_type: string;
-  emp_status: string;
-  emp_image: string;
-  emp_type: string;
-  created_at: string;
-  updated_at: string;
 }
 
 interface AddEmployeeForm {
@@ -92,56 +68,24 @@ const initialAddEmployee: AddEmployeeForm = {
   transfer_type: '',
 };
 
-interface EditEmployee {
-  id: number;
-  emp_name: string;
-  emp_fathername: string;
-  emp_contact: string;
-  emp_cnic: string;
-  emp_contact_person_one: string;
-  emp_sec_contact: string;
-  emp_contact_person_two: string;
-  emp_third_contact: string;
-  emp_email: string;
-  emp_address: string;
-  emp_type: string;
-}
-
-const initialEditEmployee: EditEmployee = {
-  id: 0,
-  emp_address: '',
-  emp_cnic: '',
-  emp_contact: '',
-  emp_contact_person_one: '',
-  emp_contact_person_two: '',
-  emp_email: '',
-  emp_name: '',
-  emp_type: '',
-  emp_fathername: '',
-  emp_sec_contact: '',
-  emp_third_contact: '',
-};
-
-export default function EmployeesPeople() {
-  const {token} = useUser();
+export default function EmployeesPeople({navigation}: any) {
   const {openDrawer} = useDrawer();
-  const [employeeData, setEmployeeData] = useState<Employee[]>([]);
-  const [viewEmp, setViewEmp] = useState<EmployeeView | null>(null);
   const [modalVisible, setModalVisible] = useState('');
-  const [selectedEmp, setSelectedEmp] = useState<number | null>(null);
   const [addForm, setAddForm] = useState<AddEmployeeForm>(initialAddEmployee);
   const [enableBal, setEnableBal] = useState<string[]>([]);
-  const [editForm, setEditForm] = useState<EditEmployee>(initialEditEmployee);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<Employee[]>([]);
+  const [masterData, setMasterData] = useState<Employee[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const totalRecords = employeeData.length;
+  const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const currentData = employeeData.slice(
+  const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
@@ -154,14 +98,6 @@ export default function EmployeesPeople() {
     }));
   };
 
-  // Edit form on change
-  const editOnchange = (field: keyof EditEmployee, value: string | number) => {
-    setEditForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
   const [paymentType, setpaymentType] = useState(false);
   const [current, setcurrentpaymentType] = useState<string | null>('');
   const paymentTypeItem = [
@@ -169,39 +105,16 @@ export default function EmployeesPeople() {
     {label: 'Recievable', value: 'recievable'},
   ];
   const [Worker, setWorker] = useState<'Worker' | 'other'>('Worker');
-  const [editWorker, setEditWorker] = useState<'Worker' | 'other'>('Worker');
 
   // Fetch Employee
   const fetchEmployees = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchemployeedata`);
-      setEmployeeData(res.data.emp);
-    } catch (error) {
-      console.log(error);
-    }
-  };
 
-  // Delete Employee
-  const delEmployee = async () => {
-    try {
-      const res = await axios.post(`${BASE_URL}/employeedelete`, {
-        id: selectedEmp,
-      });
+      const employeeData = res.data.emp;
 
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Deleted!',
-          text2: 'Employee has been Deleted successfully!',
-          visibilityTime: 1500,
-        });
-
-        setSelectedEmp(null);
-        setModalVisible('');
-        fetchEmployees();
-      }
+      setMasterData(employeeData);
+      setFilteredData(employeeData);
     } catch (error) {
       console.log(error);
     }
@@ -344,132 +257,21 @@ export default function EmployeesPeople() {
     }
   };
 
-  // Edit Employee
-  const editEmployee = async () => {
-    const nameRegex = /^[A-Za-z ]+$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    const name = (editForm.emp_name ?? '').trim();
-    const fatherName = (editForm.emp_fathername ?? '').trim();
-    const email = (editForm.emp_email ?? '').trim();
-    const address = (editForm.emp_address ?? '').trim();
-
-    // Validation
-    if (!name) {
-      Toast.show({
-        type: 'error',
-        text1: 'Missing Fields',
-        text2: 'Please fill all required fields.',
-        visibilityTime: 2000,
+  // Search Filter
+  const searchFilter = (text: string) => {
+    if (text) {
+      const newData = masterData.filter(item => {
+        const itemData = item.emp_name
+          ? item.emp_name.toLocaleUpperCase()
+          : ''.toLocaleLowerCase();
+        const textData = text.toLocaleUpperCase();
+        return itemData.indexOf(textData) > -1;
       });
-      return;
-    }
-
-    if (!nameRegex.test(name)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Name',
-        text2: 'Customer name should only contain letters and spaces.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    if (fatherName && !nameRegex.test(fatherName)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Father Name',
-        text2: 'Father name should only contain letters and spaces.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    if (email && !emailRegex.test(email)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Email',
-        text2: 'Please enter a valid email address.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    try {
-      let empType;
-      if (editWorker.includes('Worker')) {
-        empType = 'Worker';
-      } else if (editWorker.includes('other')) {
-        empType = editForm.emp_type;
-      }
-
-      const payload = {
-        emp_id: editForm.id,
-        emp_name: name,
-        fathername: fatherName,
-        contact: editForm.emp_contact ?? '',
-        cnic: editForm.emp_cnic ?? '',
-        contact_person_one: editForm.emp_contact_person_one ?? '',
-        contact_person_two: editForm.emp_contact_person_two ?? '',
-        sec_contact: editForm.emp_sec_contact ?? '',
-        third_contact: editForm.emp_third_contact ?? '',
-        email,
-        address,
-        emp_type: empType,
-      };
-
-      console.log('Edit payload:', payload);
-
-      const res = await axios.post(`${BASE_URL}/updateemployee`, payload);
-
-      if (res.status === 200 && res.data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'Employee has been updated successfully',
-          visibilityTime: 1500,
-        });
-        fetchEmployees();
-        setEditForm(initialEditEmployee);
-        setModalVisible('');
-        setEditWorker('Worker');
-      } else if (res.status === 200 && res.data.status === 202) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Contact number already exist!',
-          visibilityTime: 1500,
-        });
-      } else if (res.status === 200 && res.data.status === 204) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Email already exist!',
-          visibilityTime: 1500,
-        });
-      } else if (res.status === 200 && res.data.status === 203) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'CNIC already exist!',
-          visibilityTime: 1500,
-        });
-      } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Update Failed',
-          text2: res.data.message || 'Unknown error occurred',
-          visibilityTime: 2000,
-        });
-      }
-    } catch (error: any) {
-      console.error('Update Error:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Update Failed',
-        text2: error.response?.data?.message || error.message,
-        visibilityTime: 3000,
-      });
+      setFilteredData(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredData(masterData);
+      setSearchQuery(text);
     }
   };
 
@@ -479,15 +281,15 @@ export default function EmployeesPeople() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -497,8 +299,20 @@ export default function EmployeesPeople() {
           <TouchableOpacity
             onPress={() => setModalVisible('AddEmp')}
             style={[styles.headerBtn]}>
+            <Text style={styles.addBtnText}>Add</Text>
             <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        {/* Search Filter */}
+        <View style={styles.searchFilter}>
+          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+          <TextInput
+            placeholder="Search by supplier name"
+            style={styles.search}
+            value={searchQuery}
+            onChangeText={text => searchFilter(text)}
+          />
         </View>
 
         <View style={styles.listContainer}>
@@ -506,13 +320,20 @@ export default function EmployeesPeople() {
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => {
+                  navigation.navigate('EmployeeDetails', {
+                    id: item.id,
+                  });
+                }}>
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.emp_name?.charAt(0) || 'E'}
-                    </Text>
+                    <Image
+                      source={require('../../assets/man.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
@@ -522,62 +343,18 @@ export default function EmployeesPeople() {
                       <Icon name="phone" size={12} color="#666" />{' '}
                       {item.emp_contact || 'No contact'}
                     </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="mail" size={12} color="#666" />{' '}
-                      {item.emp_email || 'N/A'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="map-marker" size={12} color="#666" />{' '}
-                      {item.emp_address || 'N/A'}
-                    </Text>
                   </View>
 
                   {/* Actions on right */}
                   <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('View Employee');
-                        const fetchDetails = async (id: number) => {
-                          try {
-                            const res = await axios.get(
-                              `${BASE_URL}/employeesshow?id=${id}&_token=${token}`,
-                            );
-                            setViewEmp(res.data);
-                          } catch (error) {
-                            console.log(error);
-                          }
-                        };
-                        fetchDetails(item.id);
-                      }}>
-                      <Icon name="eye" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('EditEmp');
-                        const fetchEditData = async (id: number) => {
-                          try {
-                            const res = await axios.get(
-                              `${BASE_URL}/editemployee?id=${id}&_token=${token}`,
-                            );
-                            setEditForm(res.data);
-                          } catch (error) {
-                            console.log(error);
-                          }
-                        };
-                        fetchEditData(item.id);
-                      }}>
-                      <Icon name="pencil" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('EmpDelete');
-                        setSelectedEmp(item.id);
-                      }}>
-                      <Icon name="delete" size={20} color={'#144272'} />
-                    </TouchableOpacity>
+                    <Icon
+                      name="chevron-right"
+                      size={28}
+                      color={backgroundColors.dark}
+                    />
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
@@ -775,7 +552,8 @@ export default function EmployeesPeople() {
                     <RadioButton
                       value="Worker"
                       status={Worker === 'Worker' ? 'checked' : 'unchecked'}
-                      color="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                       onPress={() => setWorker('Worker')}
                     />
                     <Text style={styles.addEmployeeRadioText}>Worker</Text>
@@ -783,7 +561,8 @@ export default function EmployeesPeople() {
                     <RadioButton
                       value="other"
                       status={Worker === 'other' ? 'checked' : 'unchecked'}
-                      color="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                       onPress={() => setWorker('other')}
                     />
                     <Text style={styles.addEmployeeRadioText}>Other</Text>
@@ -813,10 +592,14 @@ export default function EmployeesPeople() {
                       status={
                         enableBal.includes('on') ? 'checked' : 'unchecked'
                       }
-                      color="#144272"
-                      uncheckedColor="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                     />
-                    <Text style={[styles.addEmployeeLabel, {marginLeft: 8}]}>
+                    <Text
+                      style={[
+                        styles.addEmployeeLabel,
+                        {marginLeft: 8, marginBottom: 0},
+                      ]}>
                       Enable Opening Balance
                     </Text>
                   </TouchableOpacity>
@@ -872,397 +655,6 @@ export default function EmployeesPeople() {
           </View>
         </Modal>
 
-        {/*Epmloyee Delete*/}
-        <Modal
-          visible={modalVisible === 'EmpDelete'}
-          transparent
-          animationType="fade">
-          <View style={styles.addEmployeeModalOverlay}>
-            <View style={styles.deleteModalContainer}>
-              <View style={styles.delAnim}>
-                <LottieView
-                  style={{flex: 1}}
-                  source={require('../../assets/warning.json')}
-                  autoPlay
-                  loop={false}
-                />
-              </View>
-
-              {/* Title */}
-              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-
-              {/* Subtitle */}
-              <Text style={styles.deleteModalMessage}>
-                You won’t be able to revert this record!
-              </Text>
-
-              {/* Buttons */}
-              <View style={styles.deleteModalActions}>
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
-                  onPress={() => setModalVisible('')}>
-                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
-                  onPress={delEmployee}>
-                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/*Edit Employee*/}
-        <Modal
-          visible={modalVisible === 'EditEmp'}
-          transparent
-          animationType="slide">
-          <View style={styles.addEmployeeModalOverlay}>
-            <ScrollView style={styles.addEmployeeModalContainer}>
-              {/* Header */}
-              <View style={styles.addEmployeeHeader}>
-                <Text style={styles.addEmployeeTitle}>Edit Employee</Text>
-                <TouchableOpacity
-                  onPress={() => setModalVisible('')}
-                  style={styles.addEmployeeCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Form */}
-              <View style={styles.addEmployeeForm}>
-                {/* Row 1 */}
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Employee Name *</Text>
-                  <TextInput
-                    style={styles.addEmployeeInput}
-                    value={editForm.emp_name}
-                    onChangeText={t => editOnchange('emp_name', t)}
-                  />
-                </View>
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Father Name</Text>
-                  <TextInput
-                    style={styles.addEmployeeInput}
-                    value={editForm.emp_fathername}
-                    onChangeText={t => editOnchange('emp_fathername', t)}
-                  />
-                </View>
-
-                {/* Row 2 */}
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Email</Text>
-                  <TextInput
-                    style={styles.addEmployeeInput}
-                    value={editForm.emp_email}
-                    onChangeText={t => editOnchange('emp_email', t)}
-                    keyboardType="email-address"
-                  />
-                </View>
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Address</Text>
-                  <TextInput
-                    style={styles.addEmployeeInput}
-                    value={editForm.emp_address}
-                    onChangeText={t => editOnchange('emp_address', t)}
-                  />
-                </View>
-
-                {/* Row 3 */}
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Contact</Text>
-                  <TextInput
-                    style={styles.addEmployeeInput}
-                    value={editForm.emp_contact}
-                    maxLength={12}
-                    keyboardType="phone-pad"
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9]/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      editOnchange('emp_contact', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>CNIC</Text>
-                  <TextInput
-                    style={styles.addEmployeeInput}
-                    value={editForm.emp_cnic}
-                    maxLength={15}
-                    keyboardType="number-pad"
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9]/g, '');
-                      if (cleaned.length > 5)
-                        cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                      if (cleaned.length > 13)
-                        cleaned =
-                          cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                      if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                      editOnchange('emp_cnic', cleaned);
-                    }}
-                  />
-                </View>
-
-                {/* Row 4 */}
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>
-                    Contact Person One
-                  </Text>
-                  <TextInput
-                    style={styles.addEmployeeInput}
-                    value={editForm.emp_contact_person_one}
-                    maxLength={12}
-                    keyboardType="phone-pad"
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9]/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      editOnchange('emp_contact_person_one', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Contact</Text>
-                  <TextInput
-                    style={styles.addEmployeeInput}
-                    value={editForm.emp_sec_contact}
-                    maxLength={12}
-                    keyboardType="phone-pad"
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9]/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      editOnchange('emp_sec_contact', cleaned);
-                    }}
-                  />
-                </View>
-
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>
-                    Contact Person Two
-                  </Text>
-                  <TextInput
-                    style={styles.addEmployeeInput}
-                    value={editForm.emp_contact_person_two}
-                    maxLength={12}
-                    keyboardType="phone-pad"
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9]/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      editOnchange('emp_contact_person_two', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Contact</Text>
-                  <TextInput
-                    style={styles.addEmployeeInput}
-                    value={editForm.emp_third_contact}
-                    maxLength={12}
-                    keyboardType="phone-pad"
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9]/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      editOnchange('emp_third_contact', cleaned);
-                    }}
-                  />
-                </View>
-
-                {/* Worker Type */}
-                <Text style={[styles.addEmployeeLabel, {marginLeft: 10}]}>
-                  Employee Type *
-                </Text>
-                <View style={{flexDirection: 'row', marginBottom: 15}}>
-                  <TouchableOpacity
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      marginRight: 30,
-                    }}
-                    onPress={() => setEditWorker('Worker')}
-                    activeOpacity={0.7}>
-                    <RadioButton
-                      value="Worker"
-                      status={editWorker === 'Worker' ? 'checked' : 'unchecked'}
-                      color="#144272"
-                      uncheckedColor="#144272"
-                      onPress={() => setEditWorker('Worker')}
-                    />
-                    <Text style={{color: '#144272'}}>Worker</Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={{flexDirection: 'row', alignItems: 'center'}}
-                    onPress={() => setEditWorker('other')}
-                    activeOpacity={0.7}>
-                    <RadioButton
-                      value="other"
-                      status={editWorker === 'other' ? 'checked' : 'unchecked'}
-                      color="#144272"
-                      uncheckedColor="#144272"
-                      onPress={() => setEditWorker('other')}
-                    />
-                    <Text style={{color: '#144272'}}>Other</Text>
-                  </TouchableOpacity>
-                </View>
-
-                {editWorker === 'other' && (
-                  <View style={styles.addEmployeeFullRow}>
-                    <Text style={styles.addEmployeeLabel}>Other</Text>
-                    <TextInput
-                      style={styles.addEmployeeInput}
-                      placeholder="Specify type"
-                      placeholderTextColor="#999"
-                      value={editForm.emp_type}
-                      onChangeText={t => editOnchange('emp_type', t)}
-                    />
-                  </View>
-                )}
-
-                {/* Submit */}
-                <TouchableOpacity
-                  style={styles.addEmployeeSubmitBtn}
-                  onPress={editEmployee}>
-                  <Icon name="account-edit" size={20} color="white" />
-                  <Text style={styles.addEmployeeSubmitText}>
-                    Update Employee
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/*Employee View Modal*/}
-        <Modal
-          visible={modalVisible === 'View Employee'}
-          transparent
-          animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
-              <ScrollView contentContainerStyle={styles.modalContent}>
-                {/* Header */}
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalHeaderTitle}>Customer Details</Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModalVisible('');
-                      setViewEmp(null);
-                    }}
-                    style={styles.closeBtn}>
-                    <Icon name="close" size={22} color="#144272" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.customerDetailsWrapper}>
-                  {/* Profile Image */}
-                  <View style={styles.customerImageWrapper}>
-                    {viewEmp?.emp_image ? (
-                      <Avatar.Image
-                        size={110}
-                        source={{uri: viewEmp.emp_image}}
-                        style={styles.customerImage}
-                      />
-                    ) : (
-                      <Avatar.Icon
-                        size={110}
-                        icon="account"
-                        style={[
-                          styles.customerNoImage,
-                          {backgroundColor: '#e0f2fe'},
-                        ]}
-                        color="#144272"
-                      />
-                    )}
-                  </View>
-
-                  {/* Info Fields */}
-                  <View style={styles.modalInfoBox}>
-                    {[
-                      {
-                        label: 'Employee Name',
-                        value: viewEmp?.emp_name,
-                      },
-                      {
-                        label: 'Father Name',
-                        value: viewEmp?.emp_fathername,
-                      },
-                      {
-                        label: 'Contact',
-                        value: viewEmp?.emp_contact,
-                      },
-                      {
-                        label: 'Email',
-                        value: viewEmp?.emp_email,
-                      },
-                      {
-                        label: 'Contact Person 1',
-                        value: viewEmp?.emp_contact_person_one,
-                      },
-                      {
-                        label: 'Contact',
-                        value: viewEmp?.emp_sec_contact,
-                      },
-                      {
-                        label: 'Contact Person 2',
-                        value: viewEmp?.emp_contact_person_two,
-                      },
-                      {
-                        label: 'Contact',
-                        value: viewEmp?.emp_third_contact,
-                      },
-                      {
-                        label: 'CNIC',
-                        value: viewEmp?.emp_cnic,
-                      },
-                      {
-                        label: 'Address',
-                        value: viewEmp?.emp_address,
-                      },
-                      {
-                        label: 'Employee Type',
-                        value: viewEmp?.emp_type,
-                      },
-                      {
-                        label: 'Opening Balance',
-                        value: viewEmp?.emp_opening_balance,
-                      },
-                      {
-                        label: 'Transaction Type',
-                        value: viewEmp?.emp_transaction_type,
-                      },
-                      {
-                        label: 'Payment Type',
-                        value: viewEmp?.emp_payment_type,
-                      },
-                    ].map((item, index) => (
-                      <View key={index} style={styles.modalInfoRow}>
-                        <Text style={styles.infoLabel}>{item.label}</Text>
-                        <Text style={styles.infoValue}>
-                          {item.value || 'N/A'}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-
         {/* Pagination Controls */}
         {totalRecords > 0 && (
           <View style={styles.paginationContainer}>
@@ -1309,7 +701,7 @@ export default function EmployeesPeople() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -1317,19 +709,31 @@ export default function EmployeesPeople() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -1343,6 +747,25 @@ const styles = StyleSheet.create({
   },
   gradientBackground: {
     flex: 1,
+  },
+
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
   },
 
   // Add Modal Styling
@@ -1374,7 +797,7 @@ const styles = StyleSheet.create({
   addEmployeeTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.primary,
   },
   addEmployeeCloseBtn: {
     padding: 5,
@@ -1393,7 +816,7 @@ const styles = StyleSheet.create({
   addEmployeeLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 5,
   },
   addEmployeeInput: {
@@ -1407,7 +830,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f9f9f9',
   },
   addEmployeeRadioText: {
-    color: '#144272',
+    color: backgroundColors.dark,
+    fontWeight: 'bold',
     fontSize: 14,
     marginRight: 15,
   },
@@ -1441,7 +865,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 10,
     paddingVertical: 15,
     marginTop: 20,
@@ -1456,19 +880,20 @@ const styles = StyleSheet.create({
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -1478,10 +903,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
+  },
+  avatar: {
+    height: 45,
+    width: 45,
   },
   avatarText: {
     color: '#fff',
@@ -1501,19 +929,18 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     gap: 8,
     marginLeft: 10,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '85%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
     alignSelf: 'center',
-    marginTop: 8,
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -1542,7 +969,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1580,150 +1007,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginTop: 2,
     opacity: 0.8,
-  },
-
-  //Delete Modal
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
-  },
-  deleteModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 8,
-  },
-  deleteModalMessage: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  deleteModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  deleteModalBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
-  },
-
-  // View Modal Styling
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCard: {
-    width: '90%',
-    maxHeight: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  modalContent: {
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 10,
-    paddingHorizontal: 10,
-  },
-  modalHeaderTitle: {
-    color: '#144272',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  closeBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  customerDetailsWrapper: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  customerImageWrapper: {
-    marginBottom: 16,
-  },
-  customerImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 3,
-    borderColor: '#144272',
-  },
-  customerNoImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  customerNoImageText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  modalInfoBox: {
-    width: '100%',
-    marginTop: 10,
-    backgroundColor: '#fafafa',
-    borderRadius: 12,
-    padding: 12,
-  },
-  modalInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  infoValue: {
-    fontSize: 14,
-    color: '#555',
-    flexShrink: 1,
-    textAlign: 'right',
   },
 });

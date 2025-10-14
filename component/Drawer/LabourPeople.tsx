@@ -8,35 +8,18 @@ import {
   FlatList,
   TextInput,
   Modal,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
-import {Avatar, Checkbox} from 'react-native-paper';
+import {Checkbox} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import {useUser} from '../CTX/UserContext';
 import Toast from 'react-native-toast-message';
-import LottieView from 'lottie-react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../Colors';
-
-interface ViewLabour {
-  labr_name: string;
-  labr_cnic: string;
-  labr_address: string;
-  labr_contact: string;
-  labr_email: string;
-  labr_contact_person_one: string;
-  labr_contact_person_two: string;
-  labr_sec_contact: string;
-  labr_third_contact: string;
-  labr_image: string;
-  labr_opening_balance: string;
-  labr_payment_type: string;
-  labr_transaction_type: string;
-}
 
 interface Labour {
   id: number;
@@ -46,30 +29,6 @@ interface Labour {
   labr_email: string;
   labr_address: string;
 }
-
-interface EditForm {
-  labr_name: string;
-  labr_email: string;
-  labr_address: string;
-  labr_contact: string;
-  labr_contact_person_one: string;
-  labr_contact_person_two: string;
-  labr_cnic: string;
-  labr_sec_contact: string;
-  labr_third_contact: string;
-}
-
-const initialEditForm: EditForm = {
-  labr_name: '',
-  labr_email: '',
-  labr_address: '',
-  labr_contact: '',
-  labr_contact_person_one: '',
-  labr_contact_person_two: '',
-  labr_cnic: '',
-  labr_sec_contact: '',
-  labr_third_contact: '',
-};
 
 interface AddForm {
   labr_name: string;
@@ -103,35 +62,27 @@ const initialAddForm: AddForm = {
   transaction_type: '',
 };
 
-export default function LabourPeople() {
+export default function LabourPeople({navigation}: any) {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const [labour, setLabour] = useState<Labour[]>([]);
-  const [viewLabour, setViewLabour] = useState<ViewLabour | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>(initialEditForm);
   const [addForm, setAddForm] = useState<AddForm>(initialAddForm);
-  const [selectedLabour, setSelectedLabour] = useState<number | null>(null);
   const [enableBal, setEnableBal] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<Labour[]>([]);
+  const [masterData, setMasterData] = useState<Labour[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const totalRecords = labour.length;
+  const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const currentData = labour.slice(
+  const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
-
-  const handleEditInputChange = (field: keyof EditForm, value: string) => {
-    setEditForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
 
   const handleAddInputChange = (field: keyof AddForm, value: string) => {
     setAddForm(prev => ({
@@ -155,57 +106,6 @@ export default function LabourPeople() {
     {label: 'Payable', value: 'payable'},
     {label: 'Recievable', value: 'recievable'},
   ];
-
-  const [isModalV, setModalV] = useState(false);
-  const tglModal = (id: number) => {
-    setSelectedLabour(id);
-    setModalV(!isModalV);
-  };
-
-  {
-    /*edit*/
-  }
-  const [edit, setedit] = useState(false);
-
-  const toggleedit = async (id: number) => {
-    try {
-      const res = await axios.get(
-        `${BASE_URL}/editlabour?id=${id}&_token=${token}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setedit(!edit);
-      setEditForm(res.data);
-      setSelectedLabour(id);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const [view, setview] = useState(false);
-
-  // View Modal
-  const toggleview = async (id: number) => {
-    try {
-      const res = await axios.get(
-        `${BASE_URL}/showlabour?id=${id}&_token=${token}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setViewLabour(res.data);
-      setview(!view);
-    } catch (error) {
-      console.log(error);
-    }
-  };
 
   // Add Labour
   const handleAddLabr = async () => {
@@ -326,132 +226,6 @@ export default function LabourPeople() {
     }
   };
 
-  // Delete Labour
-  const handleDeleteLabr = async () => {
-    try {
-      const res = await axios.post(`${BASE_URL}/Labourdelete`, {
-        id: selectedLabour,
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Deleted!',
-          text2: 'Labour has been Deleted successfully!',
-          visibilityTime: 1500,
-        });
-
-        setSelectedLabour(null);
-        handleFetchData();
-        setModalV(false);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  // Update Labour
-  const handleUpdateLabr = async () => {
-    const nameRegex = /^[A-Za-z ]+$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    const labrName = (editForm.labr_name ?? '').trim();
-    const labrEmail = (editForm.labr_email ?? '').trim();
-    const labrAddress = (editForm.labr_address ?? '').trim();
-
-    if (!labrName) {
-      Toast.show({
-        type: 'error',
-        text1: 'Missing Fields',
-        text2: 'Please fill all fields and select a role before updating.',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-
-    if (!nameRegex.test(labrName)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Name',
-        text2: 'Labour name should only contain letters and spaces.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    if (labrEmail && !emailRegex.test(labrEmail)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Email',
-        text2: 'Please enter a valid email address.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    try {
-      const res = await axios.post(`${BASE_URL}/updatelabour`, {
-        Labour_id: selectedLabour,
-        labour_name: labrName,
-        cnic: editForm.labr_cnic ?? '',
-        contact: editForm.labr_contact ?? '',
-        email: labrEmail,
-        contact_person_one: editForm.labr_contact_person_one ?? '',
-        sec_contact: editForm.labr_sec_contact ?? '',
-        contact_person_two: editForm.labr_contact_person_two ?? '',
-        third_contact: editForm.labr_third_contact ?? '',
-        address: labrAddress,
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'Labour has been updated successfully!',
-          visibilityTime: 1500,
-        });
-
-        setEditForm(initialEditForm);
-        setSelectedLabour(null);
-        handleFetchData();
-        setedit(false);
-      } else if (res.status === 200 && data.status === 202) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Contact number already exist!',
-          visibilityTime: 1500,
-        });
-      } else if (res.status === 200 && data.status === 204) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Email already exist!',
-          visibilityTime: 1500,
-        });
-      } else if (res.status === 200 && data.status === 205) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'CNIC already exist!',
-          visibilityTime: 1500,
-        });
-      }
-    } catch (error: any) {
-      console.log('Update Error:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Update Failed',
-        text2: error.response?.data?.message || error.message,
-        visibilityTime: 3000,
-      });
-    }
-  };
-
   // Fetch Data
   const handleFetchData = async () => {
     try {
@@ -461,9 +235,30 @@ export default function LabourPeople() {
         },
       });
 
-      setLabour(res.data.labour);
+      const labourData = res.data.labour;
+
+      setFilteredData(labourData);
+      setMasterData(labourData);
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  // Search Filter
+  const searchFilter = (text: string) => {
+    if (text) {
+      const newData = masterData.filter(item => {
+        const itemData = item.labr_name
+          ? item.labr_name.toLocaleUpperCase()
+          : ''.toLocaleLowerCase();
+        const textData = text.toLocaleUpperCase();
+        return itemData.indexOf(textData) > -1;
+      });
+      setFilteredData(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredData(masterData);
+      setSearchQuery(text);
     }
   };
 
@@ -472,23 +267,37 @@ export default function LabourPeople() {
   }, []);
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Labour</Text>
           </View>
 
-          <TouchableOpacity onPress={togglecustomer} style={[styles.headerBtn]}>
+          <TouchableOpacity
+            onPress={() => togglecustomer()}
+            style={[styles.headerBtn]}>
+            <Text style={styles.addBtnText}>Add</Text>
             <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        {/* Search Filter */}
+        <View style={styles.searchFilter}>
+          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+          <TextInput
+            placeholder="Search by supplier name"
+            style={styles.search}
+            value={searchQuery}
+            onChangeText={text => searchFilter(text)}
+          />
         </View>
 
         <View style={styles.listContainer}>
@@ -496,13 +305,20 @@ export default function LabourPeople() {
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => {
+                  navigation.navigate('LabourDetails', {
+                    id: item.id,
+                  });
+                }}>
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.labr_name?.charAt(0) || 'L'}
-                    </Text>
+                    <Image
+                      source={require('../../assets/man.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
@@ -512,36 +328,18 @@ export default function LabourPeople() {
                       <Icon name="phone" size={12} color="#666" />{' '}
                       {item.labr_contact || 'No contact'}
                     </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="mail" size={12} color="#666" />{' '}
-                      {item.labr_email || 'N/A'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="map-marker" size={12} color="#666" />{' '}
-                      {item.labr_address || 'N/A'}
-                    </Text>
                   </View>
 
                   {/* Actions on right */}
                   <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        toggleview(item.id);
-                      }}>
-                      <Icon name="eye" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => toggleedit(item.id)}>
-                      <Icon name="pencil" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        tglModal(item.id);
-                      }}>
-                      <Icon name="delete" size={20} color={'#144272'} />
-                    </TouchableOpacity>
+                    <Icon
+                      name="chevron-right"
+                      size={28}
+                      color={backgroundColors.dark}
+                    />
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
@@ -725,10 +523,14 @@ export default function LabourPeople() {
                       status={
                         enableBal.includes('on') ? 'checked' : 'unchecked'
                       }
-                      color="#144272"
-                      uncheckedColor="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                     />
-                    <Text style={[styles.addCustomerLabel, {marginLeft: 8}]}>
+                    <Text
+                      style={[
+                        styles.addCustomerLabel,
+                        {marginLeft: 8, marginBottom: 0},
+                      ]}>
                       Enable Opening Balance
                     </Text>
                   </TouchableOpacity>
@@ -819,310 +621,6 @@ export default function LabourPeople() {
           </View>
         </Modal>
 
-        {/*Delete*/}
-        <Modal visible={isModalV} transparent animationType="fade">
-          <View style={styles.addCustomerModalOverlay}>
-            <View style={styles.deleteModalContainer}>
-              <View style={styles.delAnim}>
-                <LottieView
-                  style={{flex: 1}}
-                  source={require('../../assets/warning.json')}
-                  autoPlay
-                  loop={false}
-                />
-              </View>
-
-              {/* Title */}
-              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-
-              {/* Subtitle */}
-              <Text style={styles.deleteModalMessage}>
-                You won’t be able to revert this record!
-              </Text>
-
-              {/* Buttons */}
-              <View style={styles.deleteModalActions}>
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
-                  onPress={() => setModalV(!isModalV)}>
-                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
-                  onPress={handleDeleteLabr}>
-                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/*Edit*/}
-        <Modal visible={edit} transparent animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              {/* Header */}
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Edit Labour</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setedit(false);
-                    setEditForm(initialEditForm);
-                    setSelectedLabour(null);
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Form */}
-              <View style={styles.addCustomerForm}>
-                {/* Row 1 */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Labour Name *</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.labr_name}
-                    onChangeText={t => handleEditInputChange('labr_name', t)}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>CNIC</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.labr_cnic}
-                    keyboardType="numeric"
-                    maxLength={15}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                      if (cleaned.length > 5)
-                        cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                      if (cleaned.length > 13)
-                        cleaned =
-                          cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                      if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                      handleEditInputChange('labr_cnic', cleaned);
-                    }}
-                  />
-                </View>
-
-                {/* Row 2 */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.labr_contact}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleEditInputChange('labr_contact', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Email</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.labr_email}
-                    keyboardType="email-address"
-                    onChangeText={t => handleEditInputChange('labr_email', t)}
-                  />
-                </View>
-
-                {/* Row 3 */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact Person 1</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.labr_contact_person_one}
-                    onChangeText={t =>
-                      handleEditInputChange('labr_contact_person_one', t)
-                    }
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact 1</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.labr_sec_contact}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleEditInputChange('labr_sec_contact', cleaned);
-                    }}
-                  />
-                </View>
-
-                {/* Row 4 */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact Person 2</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.labr_contact_person_two}
-                    onChangeText={t =>
-                      handleEditInputChange('labr_contact_person_two', t)
-                    }
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact 2</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.labr_third_contact}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleEditInputChange('labr_third_contact', cleaned);
-                    }}
-                  />
-                </View>
-
-                {/* Address */}
-                <View style={[styles.addCustomerField, {flex: 1}]}>
-                  <Text style={styles.addCustomerLabel}>Address</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.labr_address}
-                    onChangeText={t => handleEditInputChange('labr_address', t)}
-                  />
-                </View>
-
-                {/* Update Button */}
-                <TouchableOpacity
-                  style={styles.addCustomerSubmitBtn}
-                  onPress={handleUpdateLabr}>
-                  <Icon name="account-edit" size={20} color="white" />
-                  <Text style={styles.addCustomerSubmitText}>
-                    Update Labour
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/*View Modal*/}
-        <Modal visible={view} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
-              <ScrollView contentContainerStyle={styles.modalContent}>
-                {/* Header */}
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalHeaderTitle}>Customer Details</Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setview(false);
-                      setSelectedLabour(null);
-                    }}
-                    style={styles.closeBtn}>
-                    <Icon name="close" size={22} color="#144272" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.customerDetailsWrapper}>
-                  {/* Profile Image */}
-                  <View style={styles.customerImageWrapper}>
-                    {viewLabour?.labr_image ? (
-                      <Avatar.Image
-                        size={110}
-                        source={{uri: viewLabour.labr_image}}
-                        style={styles.customerImage}
-                      />
-                    ) : (
-                      <Avatar.Icon
-                        size={110}
-                        icon="account"
-                        style={[
-                          styles.customerNoImage,
-                          {backgroundColor: '#e0f2fe'},
-                        ]}
-                        color="#144272"
-                      />
-                    )}
-                  </View>
-
-                  {/* Info Fields */}
-                  <View style={styles.modalInfoBox}>
-                    {[
-                      {
-                        label: 'Transporter Name',
-                        value: viewLabour?.labr_name,
-                      },
-                      {
-                        label: 'Contact',
-                        value: viewLabour?.labr_contact,
-                      },
-                      {
-                        label: 'CNIC',
-                        value: viewLabour?.labr_cnic,
-                      },
-                      {
-                        label: 'Email',
-                        value: viewLabour?.labr_email,
-                      },
-                      {
-                        label: 'Contact Person 1',
-                        value: viewLabour?.labr_contact_person_one,
-                      },
-                      {
-                        label: 'Contact 1',
-                        value: viewLabour?.labr_sec_contact,
-                      },
-                      {
-                        label: 'Contact Person 2',
-                        value: viewLabour?.labr_contact_person_two,
-                      },
-                      {
-                        label: 'Contact 2',
-                        value: viewLabour?.labr_third_contact,
-                      },
-                      {
-                        label: 'Address',
-                        value: viewLabour?.labr_address,
-                      },
-                      {
-                        label: 'Opening Balance',
-                        value: viewLabour?.labr_opening_balance,
-                      },
-                      {
-                        label: 'Payment Type',
-                        value: viewLabour?.labr_payment_type,
-                      },
-                      {
-                        label: 'Transaction Type',
-                        value: viewLabour?.labr_transaction_type,
-                      },
-                    ].map((item, index) => (
-                      <View key={index} style={styles.modalInfoRow}>
-                        <Text style={styles.infoLabel}>{item.label}</Text>
-                        <Text style={styles.infoValue}>
-                          {item.value || 'N/A'}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-
         {/* Pagination Controls */}
         {totalRecords > 0 && (
           <View style={styles.paginationContainer}>
@@ -1169,7 +667,7 @@ export default function LabourPeople() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -1177,19 +675,31 @@ export default function LabourPeople() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -1205,22 +715,42 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
+  },
+
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -1230,10 +760,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
+  },
+  avatar: {
+    height: 45,
+    width: 45,
   },
   avatarText: {
     color: '#fff',
@@ -1253,19 +786,18 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     gap: 8,
     marginLeft: 10,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '85%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
     alignSelf: 'center',
-    marginTop: 8,
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -1294,7 +826,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1363,7 +895,7 @@ const styles = StyleSheet.create({
   addCustomerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.primary,
   },
   addCustomerCloseBtn: {
     padding: 5,
@@ -1382,7 +914,7 @@ const styles = StyleSheet.create({
   addCustomerLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 5,
   },
   addCustomerInput: {
@@ -1429,7 +961,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 10,
     paddingVertical: 15,
     marginTop: 20,
@@ -1439,150 +971,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
-  },
-
-  //Delete Modal
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
-  },
-  deleteModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 8,
-  },
-  deleteModalMessage: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  deleteModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  deleteModalBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
-  },
-
-  // View Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCard: {
-    width: '90%',
-    maxHeight: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  modalContent: {
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 10,
-    paddingHorizontal: 10,
-  },
-  modalHeaderTitle: {
-    color: '#144272',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  closeBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  customerDetailsWrapper: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  customerImageWrapper: {
-    marginBottom: 16,
-  },
-  customerImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 3,
-    borderColor: '#144272',
-  },
-  customerNoImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  customerNoImageText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  modalInfoBox: {
-    width: '100%',
-    marginTop: 10,
-    backgroundColor: '#fafafa',
-    borderRadius: 12,
-    padding: 12,
-  },
-  modalInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  infoValue: {
-    fontSize: 14,
-    color: '#555',
-    flexShrink: 1,
-    textAlign: 'right',
   },
 });

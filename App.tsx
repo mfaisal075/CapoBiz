@@ -139,6 +139,13 @@ import SupplierChequeClearance from './component/Drawer/Accounts/SupplierChequeC
 import TransporterAddPayment from './component/Drawer/Accounts/TransporterAddPayment';
 import LabourAddPayment from './component/Drawer/Accounts/LabourAddPayment';
 import TradingReport from './component/Drawer/Reports/Trading';
+import CustomerDetails from './component/Drawer/CustomerDetails';
+import SupplierDetails from './component/Drawer/SupplierDetails';
+import EmployeeDetails from './component/Drawer/EmployeeDetails';
+import TransporterDetails from './component/Drawer/TransporterDetails';
+import LabourDetails from './component/Drawer/LabourDetails';
+import OrderBookerDetails from './component/Drawer/OrderBookerDetails';
+import AccountsDetails from './component/Drawer/AccountsDetails';
 
 const Stack = createStackNavigator();
 export const navigationRef = createNavigationContainerRef();
@@ -171,6 +178,22 @@ function App(): React.JSX.Element {
             <Stack.Screen
               name="Fixed Account"
               component={FixedAccountsPeople}
+            />
+            <Stack.Screen name="CustomerDetails" component={CustomerDetails} />
+            <Stack.Screen name="SupplierDetails" component={SupplierDetails} />
+            <Stack.Screen name="EmployeeDetails" component={EmployeeDetails} />
+            <Stack.Screen
+              name="TransporterDetails"
+              component={TransporterDetails}
+            />
+            <Stack.Screen name="LabourDetails" component={LabourDetails} />
+            <Stack.Screen
+              name="OrderBookerDetails"
+              component={OrderBookerDetails}
+            />
+            <Stack.Screen
+              name="AccountsDetails"
+              component={AccountsDetails}
             />
 
             {/*Products*/}
@@ -393,8 +416,8 @@ function App(): React.JSX.Element {
 
           <DrawerModal />
         </NavigationContainer>
+        <Toast />
       </DrawerProvider>
-      <Toast />
     </UserProvider>
   );
 }

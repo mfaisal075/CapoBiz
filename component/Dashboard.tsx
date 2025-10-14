@@ -25,10 +25,8 @@ const {width} = Dimensions.get('window');
 // Type definitions
 interface StatItem {
   title: string;
-  value: string | number;
   icon: any;
-  color: string;
-  lightColor: string;
+  screen: string;
 }
 
 type RootStackParamList = {
@@ -36,19 +34,6 @@ type RootStackParamList = {
 };
 
 type DashboardNavigationProp = NavigationProp<RootStackParamList>;
-
-interface DashboardData {
-  customer: number;
-  suppliers: number;
-  employees: number;
-  product: number;
-  currentstockqty: number;
-  currentstocksubqty: number;
-  expenseamount: number;
-  sale: number;
-  purchase: number;
-  current_month_sale: number;
-}
 
 export default function Dashboard(): JSX.Element {
   const {userName, userEmail} = useUser();
@@ -62,25 +47,13 @@ export default function Dashboard(): JSX.Element {
   const navigation = useNavigation<DashboardNavigationProp>();
   const [isModalVisible, setModalVisible] = useState(false);
   const {openDrawer} = useDrawer();
-  const [dashboadData, setDashboadData] = useState<DashboardData | null>(null);
   const [date, setDate] = useState(dayjs());
 
   const toggleModal = () => {
     setModalVisible(!isModalVisible);
   };
 
-  const fetchData = async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/dashboaddata`);
-      setDashboadData(res.data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
   useEffect(() => {
-    fetchData();
-
     setInterval(() => {
       setDate(dayjs());
     }, 1000 * 1);
@@ -107,91 +80,62 @@ export default function Dashboard(): JSX.Element {
     fetchUserData();
   }, []);
 
-  // Number format
-  const formatNumber = (num: number) => {
-    if (num >= 1000000000) {
-      return (num / 1000000000).toFixed(2) + 'B';
-    }
-    if (num >= 100000) {
-      return (num / 100000).toFixed(2) + 'M';
-    }
-    if (num >= 1000) {
-      return (num / 1000).toFixed(2) + 'K';
-    }
-
-    return num.toString();
-  };
-
   // POS Dashboard Stats (static for now)
   const stats: StatItem[] = [
     {
       title: 'Customers',
-      value: formatNumber(dashboadData?.customer ?? 0),
-      icon: 'account-group',
-      color: '#3B82F6',
-      lightColor: '#EFF6FF',
+      icon: require('../assets/users.png'),
+      screen: 'Customer',
     },
     {
       title: 'Suppliers',
-      value: formatNumber(dashboadData?.suppliers ?? 0),
-      icon: 'truck',
-      color: '#10B981',
-      lightColor: '#ECFDF5',
+      icon: require('../assets/truck.png'),
+      screen: 'Suppliers',
     },
     {
       title: 'Employees',
-      value: formatNumber(dashboadData?.employees ?? 0),
-      icon: 'account-tie',
-      color: '#8B5CF6',
-      lightColor: '#F3E8FF',
+      icon: require('../assets/name-tag.png'),
+      screen: 'Employees',
     },
     {
       title: 'Current Stock',
-      value: `${formatNumber(
-        dashboadData?.currentstockqty ?? 0,
-      )} - ${formatNumber(dashboadData?.currentstocksubqty ?? 0)}`,
-      icon: 'warehouse',
-      color: '#F59E0B',
-      lightColor: '#FFFBEB',
+      icon: require('../assets/stock.png'),
+      screen: 'Current Stock',
     },
     {
       title: 'Products',
-      value: formatNumber(dashboadData?.product ?? 0),
-      icon: 'package-variant',
-      color: '#6366F1',
-      lightColor: '#EEF2FF',
+      icon: require('../assets/product.png'),
+      screen: 'Products',
     },
     {
       title: 'Sale Invoices',
-      value: formatNumber(dashboadData?.sale ?? 0),
-      icon: 'file-document',
-      color: '#EF4444',
-      lightColor: '#FEE2E2',
+      icon: require('../assets/receipt.png'),
+      screen: 'Invoice List',
     },
     {
       title: 'Purchases',
-      value: formatNumber(dashboadData?.purchase ?? 0),
-      icon: 'cart-arrow-down',
-      color: '#06B6D4',
-      lightColor: '#ECFEFF',
+      icon: require('../assets/purchase.png'),
+      screen: 'Purchase List',
     },
     {
       title: 'Expenses',
-      value: `Rs. ${formatNumber(dashboadData?.expenseamount ?? 0)}`,
-      icon: 'cash-multiple',
-      color: '#D97706',
-      lightColor: '#FEF3C7',
+      icon: require('../assets/payment.png'),
+      screen: 'Manage Expenses',
     },
   ];
 
   const renderStatCard = (item: StatItem, index: number) => (
-    <View key={index} style={[styles.card, {backgroundColor: item.lightColor}]}>
-      <View style={[styles.iconContainer, {backgroundColor: item.color}]}>
-        <Icon name={item.icon} size={20} color="white" />
+    <TouchableOpacity
+      key={index}
+      style={[styles.card, {backgroundColor: backgroundColors.light}]}
+      onPress={() => {
+        navigation.navigate(item.screen as never);
+      }}>
+      <View style={[styles.iconContainer]}>
+        <Image source={item.icon} style={styles.cardIcon} />
       </View>
-      <Text style={styles.cardValue}>{item.value}</Text>
       <Text style={styles.cardTitle}>{item.title}</Text>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -200,10 +144,10 @@ export default function Dashboard(): JSX.Element {
       <View style={styles.header}>
         <View style={styles.innerHeader}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerButton}>
-            <View style={styles.profileBadge}>
+            <View>
               <Image
                 source={require('../assets/menu.png')}
-                style={styles.headerIcon}
+                style={styles.menuIcon}
                 tintColor="white"
               />
             </View>
@@ -215,11 +159,7 @@ export default function Dashboard(): JSX.Element {
 
           <TouchableOpacity onPress={toggleModal} style={styles.headerButton}>
             <View style={styles.profileBadge}>
-              <Image
-                source={require('../assets/user.png')}
-                style={styles.headerIcon}
-                tintColor="white"
-              />
+              <Icon name="account" size={28} color={backgroundColors.dark} />
             </View>
           </TouchableOpacity>
         </View>
@@ -263,10 +203,10 @@ export default function Dashboard(): JSX.Element {
             source={require('../assets/pos-terminal.png')}
             style={styles.pos}
           />
-          {/* <View>
-            <Text>CapoBiz POS</Text>
-            <Text>Includes all POS features</Text>
-          </View> */}
+          <View>
+            <Text style={styles.posText}>CapoBiz POS</Text>
+            <Text style={styles.posSubText}>Includes all POS features</Text>
+          </View>
         </LinearGradient>
       </View>
 
@@ -315,7 +255,7 @@ export default function Dashboard(): JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     height: '30%',
@@ -387,15 +327,32 @@ const styles = StyleSheet.create({
     height: 125,
     width: 125,
   },
+  posText: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: backgroundColors.light,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: {width: 2, height: 2},
+    textShadowRadius: 5,
+  },
+  posSubText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: backgroundColors.light,
+    marginTop: 10,
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: {width: 2, height: 2},
+    textShadowRadius: 5,
+  },
   headerButton: {
     width: 44,
     height: 44,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  headerIcon: {
-    width: 24,
-    height: 24,
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     alignItems: 'center',
@@ -414,7 +371,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(255,255,255,1)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -437,7 +394,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: 24,
-    marginTop: '25%',
+    marginTop: '28%',
   },
   card: {
     width: (width - 60) / 2,
@@ -445,29 +402,25 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 16,
     marginBottom: 16,
-    alignItems: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
     elevation: 2,
   },
   iconContainer: {
     width: 36,
     height: 36,
-    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   cardIcon: {
-    width: 20,
-    height: 20,
-  },
-  cardValue: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#1F2937',
+    width: 36,
+    height: 36,
   },
   cardTitle: {
-    fontSize: 13,
-    color: '#6B7280',
+    fontSize: 16,
+    color: backgroundColors.dark,
+    fontWeight: 'bold',
     marginTop: 4,
   },
   modalStyle: {

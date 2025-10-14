@@ -7,7 +7,7 @@ const backgroundColors = {
   info: '#17a2b8',
   light: '#ffffff',
   dark: '#000000',
-  gray: '#ccccccff'
+  gray: '#E0E0E0'
 };
 
 export default backgroundColors;

@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   Image,
   TouchableOpacity,
   ScrollView,
@@ -13,15 +12,13 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
-import {Avatar, Checkbox} from 'react-native-paper';
+import {Checkbox} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import {useUser} from '../CTX/UserContext';
 import Toast from 'react-native-toast-message';
-import LottieView from 'lottie-react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../Colors';
 
 interface Transporter {
@@ -32,46 +29,6 @@ interface Transporter {
   trans_contact: string;
   trans_email: string;
 }
-
-interface ViewTransporter {
-  trans_name: string;
-  trans_cnic: string;
-  trans_address: string;
-  trans_contact: string;
-  trans_email: string;
-  trans_contact_person_one: string;
-  trans_contact_person_two: string;
-  trans_sec_contact: string;
-  trans_third_contact: string;
-  trans_image: string;
-  trans_opening_balance: string;
-  trans_payment_type: string;
-  trans_transaction_type: string;
-}
-
-interface EditForm {
-  trans_name: string;
-  trans_email: string;
-  trans_address: string;
-  trans_contact: string;
-  trans_contact_person_one: string;
-  trans_contact_person_two: string;
-  trans_cnic: string;
-  trans_sec_contact: string;
-  trans_third_contact: string;
-}
-
-const initialEditForm: EditForm = {
-  trans_name: '',
-  trans_email: '',
-  trans_address: '',
-  trans_contact: '',
-  trans_contact_person_one: '',
-  trans_contact_person_two: '',
-  trans_cnic: '',
-  trans_sec_contact: '',
-  trans_third_contact: '',
-};
 
 interface AddForm {
   trans_name: string;
@@ -105,38 +62,27 @@ const initialAddForm: AddForm = {
   transaction_type: '',
 };
 
-export default function TransporterPeople() {
+export default function TransporterPeople({navigation}: any) {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const [transporters, setTransporters] = useState<Transporter[]>([]);
-  const [selectedTransporter, setSelectedTransporter] = useState<number | null>(
-    null,
-  );
-  const [viewTransporters, setViewTransporters] =
-    useState<ViewTransporter | null>(null);
-  const [editForm, setEditForm] = useState<EditForm>(initialEditForm);
   const [addForm, setAddForm] = useState<AddForm>(initialAddForm);
   const [enableBal, setEnableBal] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<Transporter[]>([]);
+  const [masterData, setMasterData] = useState<Transporter[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const totalRecords = transporters.length;
+  const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const currentData = transporters.slice(
+  const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
-
-  const handleEditInputChange = (field: keyof EditForm, value: string) => {
-    setEditForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
 
   const handleAddInputChange = (field: keyof AddForm, value: string) => {
     setAddForm(prev => ({
@@ -160,60 +106,6 @@ export default function TransporterPeople() {
     {label: 'Payable', value: 'payable'},
     {label: 'Recievable', value: 'recievable'},
   ];
-
-  const [isModalV, setModalV] = useState(false);
-
-  // Delete Modal
-  const tglModal = async (id: number) => {
-    setSelectedTransporter(id);
-    setModalV(!isModalV);
-  };
-
-  {
-    /*edit*/
-  }
-  const [edit, setedit] = useState(false);
-
-  // Edit Modal
-  const toggleedit = async (id: number) => {
-    try {
-      const res = await axios.get(
-        `${BASE_URL}/editTransporter?id=${id}&_token=${token}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setedit(!edit);
-      setEditForm(res.data);
-      setSelectedTransporter(id);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const [view, setview] = useState(false);
-
-  // View Modal
-  const toggleview = async (id: number) => {
-    try {
-      const res = await axios.get(
-        `${BASE_URL}/showTransporter?id=${id}&_token=${token}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setViewTransporters(res.data);
-      setview(!view);
-    } catch (error) {
-      console.log(error);
-    }
-  };
 
   // Add Transporter
   const handleAddTrans = async () => {
@@ -332,132 +224,6 @@ export default function TransporterPeople() {
     }
   };
 
-  // Delete Transporter
-  const handleDeleteTrans = async () => {
-    try {
-      const res = await axios.post(`${BASE_URL}/Transporterdelete`, {
-        id: selectedTransporter,
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Deleted!',
-          text2: 'Transporter has been Deleted successfully!',
-          visibilityTime: 1500,
-        });
-
-        setSelectedTransporter(null);
-        handleFetchData();
-        setModalV(false);
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  // Update Transporter
-  const handleEditTrans = async () => {
-    const nameRegex = /^[A-Za-z ]+$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    const transName = (editForm.trans_name ?? '').trim();
-    const transEmail = (editForm.trans_email ?? '').trim();
-    const transAddress = (editForm.trans_address ?? '').trim();
-
-    if (!transName) {
-      Toast.show({
-        type: 'error',
-        text1: 'Missing Fields',
-        text2: 'Field names with * are Mandatory',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-
-    if (!nameRegex.test(transName)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Name',
-        text2: 'Customer name should only contain letters and spaces.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    if (transEmail && !emailRegex.test(transEmail)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Email',
-        text2: 'Please enter a valid email address.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    try {
-      const res = await axios.post(`${BASE_URL}/updateTransporter`, {
-        transporter_id: selectedTransporter,
-        trans_name: transName,
-        cnic: editForm.trans_cnic ?? '',
-        contact: editForm.trans_contact ?? '',
-        email: transEmail,
-        contact_person_one: editForm.trans_contact_person_one ?? '',
-        sec_contact: editForm.trans_sec_contact ?? '',
-        contact_person_two: editForm.trans_contact_person_two ?? '',
-        third_contact: editForm.trans_third_contact ?? '',
-        address: transAddress,
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'Transporter has been updated successfully!',
-          visibilityTime: 2000,
-        });
-
-        setEditForm(initialEditForm);
-        setSelectedTransporter(null);
-        handleFetchData();
-        setedit(false);
-      } else if (res.status === 200 && data.status === 202) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Contact number already exist',
-          visibilityTime: 2000,
-        });
-      } else if (res.status === 200 && data.status === 204) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Email already exist',
-          visibilityTime: 2000,
-        });
-      } else if (res.status === 200 && data.status === 205) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'CNIC already exist',
-          visibilityTime: 2000,
-        });
-      }
-    } catch (error: any) {
-      console.log('Update Error:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Update Failed',
-        text2: error.response?.data?.message || error.message,
-        visibilityTime: 3000,
-      });
-    }
-  };
-
   // Fetch Data
   const handleFetchData = async () => {
     try {
@@ -467,9 +233,30 @@ export default function TransporterPeople() {
         },
       });
 
-      setTransporters(res.data.transporter);
+      const transData = res.data.transporter;
+
+      setFilteredData(transData);
+      setMasterData(transData);
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  // Search Filter
+  const searchFilter = (text: string) => {
+    if (text) {
+      const newData = masterData.filter(item => {
+        const itemData = item.trans_name
+          ? item.trans_name.toLocaleUpperCase()
+          : ''.toLocaleLowerCase();
+        const textData = text.toLocaleUpperCase();
+        return itemData.indexOf(textData) > -1;
+      });
+      setFilteredData(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredData(masterData);
+      setSearchQuery(text);
     }
   };
 
@@ -479,23 +266,37 @@ export default function TransporterPeople() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Transporter</Text>
           </View>
 
-          <TouchableOpacity onPress={togglecustomer} style={[styles.headerBtn]}>
+          <TouchableOpacity
+            onPress={() => togglecustomer()}
+            style={[styles.headerBtn]}>
+            <Text style={styles.addBtnText}>Add</Text>
             <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        {/* Search Filter */}
+        <View style={styles.searchFilter}>
+          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+          <TextInput
+            placeholder="Search by supplier name"
+            style={styles.search}
+            value={searchQuery}
+            onChangeText={text => searchFilter(text)}
+          />
         </View>
 
         <View style={styles.listContainer}>
@@ -503,13 +304,20 @@ export default function TransporterPeople() {
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => {
+                  navigation.navigate('TransporterDetails', {
+                    id: item.id,
+                  });
+                }}>
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.trans_name?.charAt(0) || 'T'}
-                    </Text>
+                    <Image
+                      source={require('../../assets/man.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
@@ -519,30 +327,18 @@ export default function TransporterPeople() {
                       <Icon name="phone" size={12} color="#666" />{' '}
                       {item.trans_contact || 'No contact'}
                     </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="mail" size={12} color="#666" />{' '}
-                      {item.trans_email || 'N/A'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="map-marker" size={12} color="#666" />{' '}
-                      {item.trans_address || 'N/A'}
-                    </Text>
                   </View>
 
                   {/* Actions on right */}
                   <View style={styles.actionRow}>
-                    <TouchableOpacity onPress={() => toggleview(item.id)}>
-                      <Icon name="eye" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => toggleedit(item.id)}>
-                      <Icon name="pencil" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => tglModal(item.id)}>
-                      <Icon name="delete" size={20} color={'#144272'} />
-                    </TouchableOpacity>
+                    <Icon
+                      name="chevron-right"
+                      size={28}
+                      color={backgroundColors.dark}
+                    />
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
@@ -730,10 +526,14 @@ export default function TransporterPeople() {
                       status={
                         enableBal.includes('on') ? 'checked' : 'unchecked'
                       }
-                      color="#144272"
-                      uncheckedColor="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                     />
-                    <Text style={[styles.addCustomerLabel, {marginLeft: 8}]}>
+                    <Text
+                      style={[
+                        styles.addCustomerLabel,
+                        {marginLeft: 8, marginBottom: 0},
+                      ]}>
                       Enable Opening Balance
                     </Text>
                   </TouchableOpacity>
@@ -826,337 +626,6 @@ export default function TransporterPeople() {
           </View>
         </Modal>
 
-        {/*Delete*/}
-        <Modal visible={isModalV} transparent animationType="fade">
-          <View style={styles.addCustomerModalOverlay}>
-            <View style={styles.deleteModalContainer}>
-              <View style={styles.delAnim}>
-                <LottieView
-                  style={{flex: 1}}
-                  source={require('../../assets/warning.json')}
-                  autoPlay
-                  loop={false}
-                />
-              </View>
-
-              {/* Title */}
-              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-
-              {/* Subtitle */}
-              <Text style={styles.deleteModalMessage}>
-                You won’t be able to revert this record!
-              </Text>
-
-              {/* Buttons */}
-              <View style={styles.deleteModalActions}>
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
-                  onPress={() => setModalV(!isModalV)}>
-                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
-                  onPress={handleDeleteTrans}>
-                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Edit Transporter Modal */}
-        <Modal visible={edit} transparent animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              {/* Header */}
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Edit Transporter</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setedit(!edit);
-                    setEditForm(initialEditForm);
-                    setSelectedTransporter(null);
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Form */}
-              <View style={styles.addCustomerForm}>
-                {/* Name */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>
-                    Transporter Name *
-                  </Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.trans_name}
-                    onChangeText={t => handleEditInputChange('trans_name', t)}
-                  />
-                </View>
-
-                {/* CNIC + Contact */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>CNIC</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    keyboardType="numeric"
-                    maxLength={15}
-                    value={editForm.trans_cnic}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '');
-                      cleaned = cleaned.replace(/-/g, '');
-                      if (cleaned.length > 5)
-                        cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                      if (cleaned.length > 13)
-                        cleaned =
-                          cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                      if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                      handleEditInputChange('trans_cnic', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    value={editForm.trans_contact}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '');
-                      cleaned = cleaned.replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleEditInputChange('trans_contact', cleaned);
-                    }}
-                  />
-                </View>
-
-                {/* Email + Contact Person 1 */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Email</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    keyboardType="email-address"
-                    value={editForm.trans_email}
-                    onChangeText={t => handleEditInputChange('trans_email', t)}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact Person 1</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    value={editForm.trans_contact_person_one}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '');
-                      cleaned = cleaned.replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleEditInputChange(
-                        'trans_contact_person_one',
-                        cleaned,
-                      );
-                    }}
-                  />
-                </View>
-
-                {/* Contact 1 + Contact Person 2 */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact 1</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    value={editForm.trans_sec_contact}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '');
-                      cleaned = cleaned.replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleEditInputChange('trans_sec_contact', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact Person 2</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    value={editForm.trans_contact_person_two}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '');
-                      cleaned = cleaned.replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleEditInputChange(
-                        'trans_contact_person_two',
-                        cleaned,
-                      );
-                    }}
-                  />
-                </View>
-
-                {/* Contact 2 + Address */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact 2</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    value={editForm.trans_third_contact}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '');
-                      cleaned = cleaned.replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleEditInputChange('trans_third_contact', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Address</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.trans_address}
-                    onChangeText={t =>
-                      handleEditInputChange('trans_address', t)
-                    }
-                  />
-                </View>
-
-                {/* Submit */}
-                <TouchableOpacity
-                  style={styles.addCustomerSubmitBtn}
-                  onPress={handleEditTrans}>
-                  <Icon name="truck-check-outline" size={20} color="white" />
-                  <Text style={styles.addCustomerSubmitText}>
-                    Update Transporter
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/* View Transporter Modal */}
-        <Modal visible={view} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
-              <ScrollView contentContainerStyle={styles.modalContent}>
-                {/* Header */}
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalHeaderTitle}>Customer Details</Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setview(!view);
-                    }}
-                    style={styles.closeBtn}>
-                    <Icon name="close" size={22} color="#144272" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.customerDetailsWrapper}>
-                  {/* Profile Image */}
-                  <View style={styles.customerImageWrapper}>
-                    {viewTransporters?.trans_image ? (
-                      <Avatar.Image
-                        size={110}
-                        source={{uri: viewTransporters.trans_image}}
-                        style={styles.customerImage}
-                      />
-                    ) : (
-                      <Avatar.Icon
-                        size={110}
-                        icon="account"
-                        style={[
-                          styles.customerNoImage,
-                          {backgroundColor: '#e0f2fe'},
-                        ]}
-                        color="#144272"
-                      />
-                    )}
-                  </View>
-
-                  {/* Info Fields */}
-                  <View style={styles.modalInfoBox}>
-                    {[
-                      {
-                        label: 'Transporter Name',
-                        value: viewTransporters?.trans_name,
-                      },
-                      {
-                        label: 'Contact',
-                        value: viewTransporters?.trans_contact,
-                      },
-                      {
-                        label: 'CNIC',
-                        value: viewTransporters?.trans_cnic,
-                      },
-                      {
-                        label: 'Email',
-                        value: viewTransporters?.trans_email,
-                      },
-                      {
-                        label: 'Contact Person 1',
-                        value: viewTransporters?.trans_contact_person_one,
-                      },
-                      {
-                        label: 'Contact 1',
-                        value: viewTransporters?.trans_sec_contact,
-                      },
-                      {
-                        label: 'Contact Person 2',
-                        value: viewTransporters?.trans_contact_person_two,
-                      },
-                      {
-                        label: 'Contact 2',
-                        value: viewTransporters?.trans_third_contact,
-                      },
-                      {
-                        label: 'Address',
-                        value: viewTransporters?.trans_address,
-                      },
-                      {
-                        label: 'Opening Balance',
-                        value: viewTransporters?.trans_opening_balance,
-                      },
-                      {
-                        label: 'Payment Type',
-                        value: viewTransporters?.trans_payment_type,
-                      },
-                      {
-                        label: 'Transaction Type',
-                        value: viewTransporters?.trans_transaction_type,
-                      },
-                    ].map((item, index) => (
-                      <View key={index} style={styles.modalInfoRow}>
-                        <Text style={styles.infoLabel}>{item.label}</Text>
-                        <Text style={styles.infoValue}>
-                          {item.value || 'N/A'}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-
         {/* Pagination Controls */}
         {totalRecords > 0 && (
           <View style={styles.paginationContainer}>
@@ -1203,7 +672,7 @@ export default function TransporterPeople() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -1211,19 +680,31 @@ export default function TransporterPeople() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -1239,22 +720,42 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
+  },
+
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -1264,10 +765,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
+  },
+  avatar: {
+    height: 45,
+    width: 45,
   },
   avatarText: {
     color: '#fff',
@@ -1287,19 +791,18 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     gap: 8,
     marginLeft: 10,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '85%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
     alignSelf: 'center',
-    marginTop: 8,
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -1328,7 +831,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1397,7 +900,7 @@ const styles = StyleSheet.create({
   addCustomerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.primary,
   },
   addCustomerCloseBtn: {
     padding: 5,
@@ -1421,7 +924,7 @@ const styles = StyleSheet.create({
   addCustomerLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 5,
   },
   addCustomerInput: {
@@ -1468,7 +971,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 10,
     paddingVertical: 15,
     marginTop: 20,
@@ -1478,150 +981,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
-  },
-
-  //Delete Modal
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
-  },
-  deleteModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 8,
-  },
-  deleteModalMessage: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  deleteModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  deleteModalBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
-  },
-
-  // View Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCard: {
-    width: '90%',
-    maxHeight: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  modalContent: {
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 10,
-    paddingHorizontal: 10,
-  },
-  modalHeaderTitle: {
-    color: '#144272',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  closeBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  customerDetailsWrapper: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  customerImageWrapper: {
-    marginBottom: 16,
-  },
-  customerImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 3,
-    borderColor: '#144272',
-  },
-  customerNoImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  customerNoImageText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  modalInfoBox: {
-    width: '100%',
-    marginTop: 10,
-    backgroundColor: '#fafafa',
-    borderRadius: 12,
-    padding: 12,
-  },
-  modalInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  infoValue: {
-    fontSize: 14,
-    color: '#555',
-    flexShrink: 1,
-    textAlign: 'right',
   },
 });

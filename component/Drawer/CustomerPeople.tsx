@@ -7,62 +7,18 @@ import {
   ScrollView,
   FlatList,
   TextInput,
+  Image,
   Modal,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
-import {Avatar, Checkbox} from 'react-native-paper';
+import {Checkbox} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
-import {useUser} from '../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import LottieView from 'lottie-react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../Colors';
-
-interface EditCustomer {
-  id: number;
-  cust_area_id: number;
-  cust_type_id: number;
-  cust_sup_id: number;
-  cust_name: string;
-  cust_fathername: string;
-  cust_contact: string;
-  cust_sec_contact: string;
-  cust_third_contact: string;
-  cust_contact_person_one: string;
-  cust_contact_person_two: string;
-  cust_cnic: string;
-  cust_email: string;
-  cust_address: string;
-  cust_payment_type: string;
-  cust_opening_balance: string;
-  cust_transaction_type: string;
-  updated_at: string;
-}
-
-const initialEditCustomer: EditCustomer = {
-  id: 0,
-  cust_area_id: 0,
-  cust_type_id: 0,
-  cust_sup_id: 0,
-  cust_name: '',
-  cust_fathername: '',
-  cust_contact: '',
-  cust_sec_contact: '',
-  cust_third_contact: '',
-  cust_contact_person_one: '',
-  cust_contact_person_two: '',
-  cust_cnic: '',
-  cust_email: '',
-  cust_address: '',
-  cust_payment_type: '',
-  cust_opening_balance: '',
-  cust_transaction_type: '',
-  updated_at: '',
-};
 
 interface Customers {
   id: number;
@@ -74,46 +30,6 @@ interface Customers {
   cust_address: string;
   custtyp_name: string;
   area_name: string;
-}
-
-interface CustomersData {
-  cust: {
-    id: number;
-    cust_area_id: string;
-    cust_type_id: string;
-    cust_sup_id: string;
-    cust_name: string;
-    cust_fathername: string;
-    cust_contact: string;
-    cust_sec_contact: string;
-    cust_third_contact: string;
-    cust_contact_person_one: string;
-    cust_contact_person_two: string;
-    cust_cnic: string;
-    cust_email: string;
-    cust_address: string;
-    cust_image: string;
-    cust_status: string;
-    cust_payment_type: string;
-    cust_opening_balance: string;
-    cust_transaction_type: string;
-    created_at: string;
-    updated_at: string;
-  };
-  type: {
-    id: number;
-    custtyp_name: string;
-    custtyp_status: string;
-    created_at: string;
-    updated_at: string;
-  };
-  area: {
-    id: number;
-    area_name: string;
-    area_status: string;
-    created_at: string;
-    updated_at: string;
-  };
 }
 
 interface AddCustomer {
@@ -164,28 +80,26 @@ interface AreaData {
   updated_at: string;
 }
 
-export default function CustomerPeople() {
-  const {token} = useUser();
+export default function CustomerPeople({navigation}: any) {
   const {openDrawer} = useDrawer();
-  const [custData, setCustData] = useState<Customers[]>([]);
-  const [selectedCust, setSelectedCust] = useState<CustomersData[]>([]);
-  const [selectedCustomer, setSelectedCustomer] = useState<number | null>(null);
   const [addForm, setAddForm] = useState<AddCustomer>(initialAddCustomer);
   const [types, setTypes] = useState<TypeData[]>([]);
   const [areaData, setAreaData] = useState<AreaData[]>([]);
   const [enableBal, setEnableBal] = useState<string[]>([]);
-  const [editForm, setEditForm] = useState<EditCustomer>(initialEditCustomer);
   const [modalVisible, setModalVisible] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<Customers[]>([]);
+  const [masterData, setMasterData] = useState<Customers[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const totalRecords = custData.length;
+  const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const currentData = custData.slice(
+  const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
@@ -193,14 +107,6 @@ export default function CustomerPeople() {
   // Add Customer Form On Change
   const onChange = (field: keyof AddCustomer, value: string) => {
     setAddForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  // Add Customer Form On Change
-  const editOnChange = (field: keyof EditCustomer, value: string | number) => {
-    setEditForm(prev => ({
       ...prev,
       [field]: value,
     }));
@@ -219,62 +125,13 @@ export default function CustomerPeople() {
     {label: 'Recievable', value: 'recievable'},
   ];
 
-  {
-    /*edit*/
-  }
-
-  const toggleedit = async (id: number) => {
-    try {
-      const res = await axios.get(
-        `${BASE_URL}/editcustomer?id=${id}&_token=${token}`,
-      );
-      setEditForm(res.data);
-      setCurrentEdit(res.data.cust_type_id);
-      setCustEditArea(res.data.cust_area_id);
-      setModalVisible('Edit');
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const [editType, setEditType] = useState(false);
-  const [currentEdit, setCurrentEdit] = useState<string | null>('');
-  const [customereditArea, setcustomereditArea] = useState(false);
-  const [custEditArea, setCustEditArea] = useState<string | null>('');
-
   // Fetch Customer
   const fetchCustomers = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchcustomersdata`);
-      setCustData(res.data.cust);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  // Delete Customer
-  const delCustomer = async () => {
-    try {
-      const res = await axios.post(`${BASE_URL}/customerdelete`, {
-        id: selectedCustomer,
-      });
-
-      const data = res.data;
-      console.log(res.status);
-      console.log(data.status);
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Deleted!',
-          text2: 'Customer has been Deleted successfully!',
-          visibilityTime: 1500,
-        });
-
-        setSelectedCustomer(null);
-        setModalVisible('');
-        fetchCustomers();
-      }
+      const customersData = res.data.cust;
+      setFilteredData(customersData);
+      setMasterData(customersData);
     } catch (error) {
       console.log(error);
     }
@@ -416,110 +273,21 @@ export default function CustomerPeople() {
     }
   };
 
-  // Edit Customer
-  const editCustomer = async () => {
-    const nameRegex = /^[A-Za-z ]+$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    const name = editForm.cust_name?.trim() || '';
-    const fatherName = editForm.cust_fathername?.trim() || '';
-    const email = editForm.cust_email?.trim() || '';
-
-    if (!nameRegex.test(name)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Name',
-        text2: 'Customer name should only contain letters and spaces.',
-        visibilityTime: 2000,
+  // Search Filter
+  const searchFilter = (text: string) => {
+    if (text) {
+      const newData = masterData.filter(item => {
+        const itemData = item.cust_name
+          ? item.cust_name.toLocaleUpperCase()
+          : ''.toLocaleLowerCase();
+        const textData = text.toLocaleUpperCase();
+        return itemData.indexOf(textData) > -1;
       });
-      return;
-    }
-
-    if (fatherName && !nameRegex.test(fatherName)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Father Name',
-        text2: 'Father name should only contain letters and spaces.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    if (email && !emailRegex.test(email)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Email',
-        text2: 'Please enter a valid email address.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    if (!name) {
-      Toast.show({
-        type: 'error',
-        text1: 'Missing Fields',
-        text2: 'Field names with * are Mandatory',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    try {
-      const res = await axios.post(`${BASE_URL}/updatecustomer`, {
-        cust_id: editForm.id,
-        cust_name: name,
-        fathername: fatherName,
-        email: email,
-        contact: editForm.cust_contact?.trim() || '',
-        contact_person_one: editForm.cust_contact_person_one || '',
-        sec_contact: editForm.cust_sec_contact || '',
-        contact_person_two: editForm.cust_contact_person_two || '',
-        third_contact: editForm.cust_third_contact || '',
-        cnic: editForm.cust_cnic || '',
-        address: editForm.cust_address || '',
-        cust_type: currentEdit,
-        cust_area: custEditArea,
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'Customer record has been updated successfully',
-          visibilityTime: 1500,
-        });
-        fetchCustomers();
-        setEditForm(initialEditCustomer);
-        setCurrentEdit('');
-        setCustEditArea('');
-        setModalVisible('');
-      } else if (res.status === 200 && data.status === 202) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Contact number already exist!',
-          visibilityTime: 1500,
-        });
-      } else if (res.status === 200 && data.status === 203) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'CNIC number already exist!',
-          visibilityTime: 1500,
-        });
-      } else if (res.status === 200 && data.status === 204) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Email already exist!',
-          visibilityTime: 1500,
-        });
-      }
-    } catch (error) {
-      console.log(error);
+      setFilteredData(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredData(masterData);
+      setSearchQuery(text);
     }
   };
 
@@ -531,14 +299,14 @@ export default function CustomerPeople() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -548,8 +316,20 @@ export default function CustomerPeople() {
           <TouchableOpacity
             onPress={() => setModalVisible('Add')}
             style={[styles.headerBtn]}>
+            <Text style={styles.addBtnText}>Add</Text>
             <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        {/* Search Filter */}
+        <View style={styles.searchFilter}>
+          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+          <TextInput
+            placeholder="Search by supplier name"
+            style={styles.search}
+            value={searchQuery}
+            onChangeText={text => searchFilter(text)}
+          />
         </View>
 
         <View style={styles.listContainer}>
@@ -557,13 +337,20 @@ export default function CustomerPeople() {
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => {
+                  navigation.navigate('CustomerDetails', {
+                    id: item.id,
+                  });
+                }}>
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.cust_name?.charAt(0) || 'C'}
-                    </Text>
+                    <Image
+                      source={require('../../assets/man.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
@@ -573,48 +360,18 @@ export default function CustomerPeople() {
                       <Icon name="phone" size={12} color="#666" />{' '}
                       {item.cust_contact || 'No contact'}
                     </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="mail" size={12} color="#666" />{' '}
-                      {item.cust_email || 'N/A'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="map-marker" size={12} color="#666" />{' '}
-                      {item.cust_address || 'N/A'}
-                    </Text>
                   </View>
 
                   {/* Actions on right */}
                   <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('View');
-                        const fetchDetails = async (id: number) => {
-                          try {
-                            const res = await axios.get(
-                              `${BASE_URL}/custshow?id=${id}&_token=${token}`,
-                            );
-                            setSelectedCust([res.data]);
-                          } catch (error) {
-                            console.log(error);
-                          }
-                        };
-                        fetchDetails(item.id);
-                      }}>
-                      <Icon name="eye" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => toggleedit(item.id)}>
-                      <Icon name="pencil" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('Delete');
-                        setSelectedCustomer(item.id);
-                      }}>
-                      <Icon name="delete" size={20} color={'#144272'} />
-                    </TouchableOpacity>
+                    <Icon
+                      name="chevron-right"
+                      size={28}
+                      color={backgroundColors.dark}
+                    />
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
@@ -804,6 +561,14 @@ export default function CustomerPeople() {
                       textStyle={styles.addCustomerDropdownText}
                       placeholderStyle={styles.addCustomerDropdownPlaceholder}
                       listMode="SCROLLVIEW"
+                      searchable
+                      searchTextInputStyle={{
+                        borderWidth: 0,
+                        width: '100%',
+                      }}
+                      searchContainerStyle={{
+                        borderColor: backgroundColors.gray
+                      }}
                     />
                   </View>
                 </View>
@@ -825,6 +590,14 @@ export default function CustomerPeople() {
                       textStyle={styles.addCustomerDropdownText}
                       placeholderStyle={styles.addCustomerDropdownPlaceholder}
                       listMode="SCROLLVIEW"
+                      searchable
+                      searchTextInputStyle={{
+                        borderWidth: 0,
+                        width: '100%',
+                      }}
+                      searchContainerStyle={{
+                        borderColor: backgroundColors.gray
+                      }}
                     />
                   </View>
                 </View>
@@ -843,10 +616,10 @@ export default function CustomerPeople() {
                       status={
                         enableBal.includes('on') ? 'checked' : 'unchecked'
                       }
-                      color="#144272"
-                      uncheckedColor="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                     />
-                    <Text style={[styles.addCustomerLabel, {marginLeft: 8}]}>
+                    <Text style={[styles.addCustomerLabel, {marginLeft: 8, marginBottom: 0}]}>
                       Enable Opening Balance
                     </Text>
                   </TouchableOpacity>
@@ -934,382 +707,6 @@ export default function CustomerPeople() {
           </View>
         </Modal>
 
-        {/*Delete*/}
-        <Modal
-          visible={modalVisible === 'Delete'}
-          transparent
-          animationType="fade">
-          <View style={styles.addCustomerModalOverlay}>
-            <View style={styles.deleteModalContainer}>
-              <View style={styles.delAnim}>
-                <LottieView
-                  style={{flex: 1}}
-                  source={require('../../assets/warning.json')}
-                  autoPlay
-                  loop={false}
-                />
-              </View>
-
-              {/* Title */}
-              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-
-              {/* Subtitle */}
-              <Text style={styles.deleteModalMessage}>
-                You won’t be able to revert this record!
-              </Text>
-
-              {/* Buttons */}
-              <View style={styles.deleteModalActions}>
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
-                  onPress={() => setModalVisible('')}>
-                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
-                  onPress={delCustomer}>
-                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/*Edit*/}
-        <Modal
-          visible={modalVisible === 'Edit'}
-          transparent
-          animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              {/* Header */}
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Edit Customer</Text>
-                <TouchableOpacity
-                  onPress={() => setModalVisible('')}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
-
-              {/* Form */}
-              <View style={styles.addCustomerForm}>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Customer Name *</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.cust_name}
-                    onChangeText={t => editOnChange('cust_name', t)}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Father Name</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.cust_fathername}
-                    onChangeText={t => editOnChange('cust_fathername', t)}
-                  />
-                </View>
-
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Email</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.cust_email}
-                    keyboardType="email-address"
-                    onChangeText={t => editOnChange('cust_email', t)}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Address</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.cust_address}
-                    onChangeText={t => editOnChange('cust_address', t)}
-                  />
-                </View>
-
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.cust_contact}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      editOnChange('cust_contact', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>CNIC</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.cust_cnic}
-                    keyboardType="numeric"
-                    maxLength={15}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                      if (cleaned.length > 5)
-                        cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                      if (cleaned.length > 13)
-                        cleaned =
-                          cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                      if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                      editOnChange('cust_cnic', cleaned);
-                    }}
-                  />
-                </View>
-
-                {/* Contact Persons */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact Person 1</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.cust_contact_person_one}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      editOnChange('cust_contact_person_one', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.cust_sec_contact}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      editOnChange('cust_sec_contact', cleaned);
-                    }}
-                  />
-                </View>
-
-                {/* Other Contacts */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact Person 2</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.cust_contact_person_two}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      editOnChange('cust_contact_person_two', cleaned);
-                    }}
-                  />
-                </View>
-
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    value={editForm.cust_third_contact}
-                    keyboardType="phone-pad"
-                    maxLength={12}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      editOnChange('cust_third_contact', cleaned);
-                    }}
-                  />
-                </View>
-
-                {/* Dropdowns */}
-                <View style={styles.addCustomerDropdownRow}>
-                  <View style={styles.addCustomerDropdownField}>
-                    <Text style={styles.addCustomerLabel}>Customer Type</Text>
-                    <DropDownPicker
-                      items={transformedTypes}
-                      open={editType}
-                      setOpen={setEditType}
-                      value={currentEdit}
-                      setValue={setCurrentEdit}
-                      placeholder="Select type"
-                      style={styles.addCustomerDropdown}
-                      dropDownContainerStyle={
-                        styles.addCustomerDropdownContainer
-                      }
-                      textStyle={styles.addCustomerDropdownText}
-                      placeholderStyle={styles.addCustomerDropdownPlaceholder}
-                      listMode="SCROLLVIEW"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.addCustomerDropdownRow}>
-                  <View style={styles.addCustomerDropdownField}>
-                    <Text style={styles.addCustomerLabel}>Area</Text>
-                    <DropDownPicker
-                      items={transformedAreas}
-                      open={customereditArea}
-                      setOpen={setcustomereditArea}
-                      value={custEditArea}
-                      setValue={setCustEditArea}
-                      placeholder="Select area"
-                      style={styles.addCustomerDropdown}
-                      dropDownContainerStyle={
-                        styles.addCustomerDropdownContainer
-                      }
-                      textStyle={styles.addCustomerDropdownText}
-                      placeholderStyle={styles.addCustomerDropdownPlaceholder}
-                      listMode="SCROLLVIEW"
-                    />
-                  </View>
-                </View>
-
-                {/* Update Button */}
-                <TouchableOpacity
-                  style={styles.addCustomerSubmitBtn}
-                  onPress={editCustomer}>
-                  <Icon name="account-edit" size={20} color="white" />
-                  <Text style={styles.addCustomerSubmitText}>
-                    Update Customer
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/* View Modal*/}
-        <Modal
-          visible={modalVisible === 'View'}
-          transparent
-          animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
-              <ScrollView contentContainerStyle={styles.modalContent}>
-                {/* Header */}
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalHeaderTitle}>Customer Details</Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModalVisible('');
-                      setSelectedCust([]);
-                    }}
-                    style={styles.closeBtn}>
-                    <Icon name="close" size={22} color="#144272" />
-                  </TouchableOpacity>
-                </View>
-
-                {selectedCust.length > 0 && (
-                  <View style={styles.customerDetailsWrapper}>
-                    {/* Profile Image */}
-                    <View style={styles.customerImageWrapper}>
-                      {selectedCust[0]?.cust.cust_image ? (
-                        <Avatar.Image
-                          size={110}
-                          source={{uri: selectedCust[0]?.cust.cust_image}}
-                          style={styles.customerImage}
-                        />
-                      ) : (
-                        <Avatar.Icon
-                          size={110}
-                          icon="account"
-                          style={[
-                            styles.customerNoImage,
-                            {backgroundColor: '#e0f2fe'},
-                          ]}
-                          color="#144272"
-                        />
-                      )}
-                    </View>
-
-                    {/* Info Fields */}
-                    <View style={styles.modalInfoBox}>
-                      {[
-                        {
-                          label: 'Customer Name',
-                          value: selectedCust[0]?.cust.cust_name,
-                        },
-                        {
-                          label: 'Father Name',
-                          value: selectedCust[0]?.cust.cust_fathername,
-                        },
-                        {
-                          label: 'Email',
-                          value: selectedCust[0]?.cust.cust_email,
-                        },
-                        {
-                          label: 'Customer Contact',
-                          value: selectedCust[0]?.cust.cust_contact,
-                        },
-                        {
-                          label: 'Contact Person 1',
-                          value: selectedCust[0]?.cust?.cust_contact_person_one,
-                        },
-                        {
-                          label: 'Contact Person 2',
-                          value: selectedCust[0]?.cust?.cust_contact_person_two,
-                        },
-                        {
-                          label: 'CNIC',
-                          value: selectedCust[0]?.cust?.cust_cnic,
-                        },
-                        {
-                          label: 'Address',
-                          value: selectedCust[0]?.cust?.cust_address,
-                        },
-                        {
-                          label: 'Area',
-                          value: selectedCust[0]?.area?.area_name,
-                        },
-                        {
-                          label: 'Type',
-                          value: selectedCust[0]?.type?.custtyp_name,
-                        },
-                        {
-                          label: 'Opening Balance',
-                          value: selectedCust[0]?.cust?.cust_opening_balance,
-                        },
-                        {
-                          label: 'Payment Type',
-                          value: selectedCust[0]?.cust?.cust_payment_type,
-                        },
-                        {
-                          label: 'Transaction Type',
-                          value: selectedCust[0]?.cust?.cust_transaction_type,
-                        },
-                      ].map((item, index) => (
-                        <View key={index} style={styles.modalInfoRow}>
-                          <Text style={styles.infoLabel}>{item.label}</Text>
-                          <Text style={styles.infoValue}>
-                            {item.value || 'N/A'}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-
         {/* Pagination Controls */}
         {totalRecords > 0 && (
           <View style={styles.paginationContainer}>
@@ -1356,7 +753,7 @@ export default function CustomerPeople() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -1364,19 +761,31 @@ export default function CustomerPeople() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -1392,22 +801,42 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
+  },
+
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -1417,10 +846,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
+  },
+  avatar: {
+    height: 45,
+    width: 45,
   },
   avatarText: {
     color: '#fff',
@@ -1440,19 +872,18 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     gap: 8,
     marginLeft: 10,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '85%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
     alignSelf: 'center',
-    marginTop: 8,
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -1481,7 +912,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1545,12 +976,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: backgroundColors.primary,
   },
   addCustomerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.primary,
   },
   addCustomerCloseBtn: {
     padding: 5,
@@ -1569,7 +1000,7 @@ const styles = StyleSheet.create({
   addCustomerLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 5,
   },
   addCustomerInput: {
@@ -1616,7 +1047,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 10,
     paddingVertical: 15,
     marginTop: 20,
@@ -1626,150 +1057,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
-  },
-
-  //Delete Modal
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
-  },
-  deleteModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 8,
-  },
-  deleteModalMessage: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  deleteModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  deleteModalBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
-  },
-
-  // View Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCard: {
-    width: '90%',
-    maxHeight: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  modalContent: {
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 10,
-    paddingHorizontal: 10,
-  },
-  modalHeaderTitle: {
-    color: '#144272',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  closeBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  customerDetailsWrapper: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  customerImageWrapper: {
-    marginBottom: 16,
-  },
-  customerImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 3,
-    borderColor: '#144272',
-  },
-  customerNoImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  customerNoImageText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  modalInfoBox: {
-    width: '100%',
-    marginTop: 10,
-    backgroundColor: '#fafafa',
-    borderRadius: 12,
-    padding: 12,
-  },
-  modalInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  infoValue: {
-    fontSize: 14,
-    color: '#555',
-    flexShrink: 1,
-    textAlign: 'right',
   },
 });

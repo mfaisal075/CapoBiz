@@ -13,6 +13,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import {useDrawer} from './DrawerContext';
 import {useNavigation} from '@react-navigation/native';
 import {useUser} from './CTX/UserContext';
+import backgroundColors from './Colors';
 
 const {width, height} = Dimensions.get('window');
 
@@ -173,39 +174,36 @@ const DrawerModal = () => {
     return (
       <View key={index} style={styles.menuItemContainer}>
         <TouchableOpacity
-          style={[
-            styles.menuRow,
-            isExpanded && styles.menuRowExpanded
-          ]}
+          style={[styles.menuRow, isExpanded && styles.menuRowExpanded]}
           onPress={() => handleMainPress(mainItem)}
           activeOpacity={0.7}>
           <View style={styles.menuItemContent}>
-            <View style={[
-              styles.iconContainer,
-              isExpanded && styles.iconContainerExpanded
-            ]}>
+            <View
+              style={[
+                styles.iconContainer,
+                isExpanded && styles.iconContainerExpanded,
+              ]}>
               {icons[mainItem] && (
-                <Image 
-                  source={icons[mainItem]} 
-                  style={[
-                    styles.icon,
-                    isExpanded && styles.iconExpanded
-                  ]} 
+                <Image
+                  source={icons[mainItem]}
+                  style={[styles.icon, isExpanded && styles.iconExpanded]}
                 />
               )}
             </View>
-            <Text style={[
-              styles.menuItemText,
-              isExpanded && styles.menuItemTextExpanded
-            ]}>
+            <Text
+              style={[
+                styles.menuItemText,
+                isExpanded && styles.menuItemTextExpanded,
+              ]}>
               {mainItem}
             </Text>
             {hasSubmenu && (
               <View style={styles.expandIcon}>
-                <Text style={[
-                  styles.expandIconText,
-                  isExpanded && styles.expandIconTextExpanded
-                ]}>
+                <Text
+                  style={[
+                    styles.expandIconText,
+                    isExpanded && styles.expandIconTextExpanded,
+                  ]}>
                   {isExpanded ? '−' : '+'}
                 </Text>
               </View>
@@ -234,41 +232,43 @@ const DrawerModal = () => {
         {/* Special Reports Submenu */}
         {mainItem === 'Reports' && isExpanded && (
           <View style={styles.submenuContainer}>
-            {['People', 'Products', 'Accounts', 'Sales Reports'].map((sub, idx) => (
-              <View key={idx}>
-                <TouchableOpacity
-                  style={styles.submenuItem}
-                  onPress={() => handleReportSubmenuPress(sub)}
-                  activeOpacity={0.7}>
-                  <View style={styles.submenuItemContent}>
-                    <View style={styles.submenuDot} />
-                    <Text style={styles.submenuText}>{sub}</Text>
-                    <View style={styles.expandIcon}>
-                      <Text style={styles.miniExpandIcon}>
-                        {expandedReportSubmenu === sub ? '−' : '+'}
-                      </Text>
+            {['People', 'Products', 'Accounts', 'Sales Reports'].map(
+              (sub, idx) => (
+                <View key={idx}>
+                  <TouchableOpacity
+                    style={styles.submenuItem}
+                    onPress={() => handleReportSubmenuPress(sub)}
+                    activeOpacity={0.7}>
+                    <View style={styles.submenuItemContent}>
+                      <View style={styles.submenuDot} />
+                      <Text style={styles.submenuText}>{sub}</Text>
+                      <View style={styles.expandIcon}>
+                        <Text style={styles.miniExpandIcon}>
+                          {expandedReportSubmenu === sub ? '−' : '+'}
+                        </Text>
+                      </View>
                     </View>
-                  </View>
-                </TouchableOpacity>
-                
-                {expandedReportSubmenu === sub && (
-                  <View style={styles.subSubmenuContainer}>
-                    {reportSubScreens[sub].map((screen, sIdx) => (
-                      <TouchableOpacity
-                        key={sIdx}
-                        style={styles.subSubmenuItem}
-                        onPress={() => handleSubPress(screen)}
-                        activeOpacity={0.7}>
-                        <View style={styles.subSubmenuContent}>
-                          <View style={styles.subSubmenuDot} />
-                          <Text style={styles.subSubmenuText}>{screen}</Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </View>
-            ))}
+                  </TouchableOpacity>
+
+                  {expandedReportSubmenu === sub && (
+                    <View style={styles.subSubmenuContainer}>
+                      {reportSubScreens[sub].map((screen, sIdx) => (
+                        <TouchableOpacity
+                          key={sIdx}
+                          style={styles.subSubmenuItem}
+                          onPress={() => handleSubPress(screen)}
+                          activeOpacity={0.7}>
+                          <View style={styles.subSubmenuContent}>
+                            <View style={styles.subSubmenuDot} />
+                            <Text style={styles.subSubmenuText}>{screen}</Text>
+                          </View>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              ),
+            )}
 
             {/* Direct Report Items */}
             {[
@@ -314,7 +314,10 @@ const DrawerModal = () => {
       <View style={styles.drawerContainer}>
         {/* Header Section */}
         <LinearGradient
-          colors={['#144272', '#1e5799', '#205295']}
+          colors={[
+            backgroundColors.primary,
+            backgroundColors.primary,
+          ]}
           style={styles.headerContainer}>
           <View style={styles.headerContent}>
             <View style={styles.userAvatarContainer}>
@@ -329,27 +332,29 @@ const DrawerModal = () => {
             </View>
             <View style={styles.userInfo}>
               <Text style={styles.userName}>{userName || 'User Name'}</Text>
-              <Text style={styles.userEmail}>{userEmail || 'user@example.com'}</Text>
+              <Text style={styles.userEmail}>
+                {userEmail || 'user@example.com'}
+              </Text>
             </View>
           </View>
           <View style={styles.headerDivider} />
         </LinearGradient>
 
         {/* Menu Content */}
-        <ScrollView 
+        <ScrollView
           style={styles.menuContent}
           showsVerticalScrollIndicator={false}
           bounces={false}>
           <View style={styles.menuList}>
-            {Object.keys(menuData).map((mainItem, index) => 
-              renderMenuItem(mainItem, index)
+            {Object.keys(menuData).map((mainItem, index) =>
+              renderMenuItem(mainItem, index),
             )}
           </View>
         </ScrollView>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.closeButton}
             onPress={closeDrawer}
             activeOpacity={0.7}>
@@ -381,7 +386,7 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     elevation: 20,
   },
-  
+
   // Header Styles
   headerContainer: {
     paddingTop: 50,
@@ -453,7 +458,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   menuRowExpanded: {
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     shadowOpacity: 0.15,
     elevation: 4,
   },
@@ -467,7 +472,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 10,
-    backgroundColor: '#f1f3f4',
+    backgroundColor: backgroundColors.gray,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -478,10 +483,10 @@ const styles = StyleSheet.create({
   icon: {
     width: 22,
     height: 22,
-    tintColor: '#144272',
+    tintColor: backgroundColors.primary,
   },
   iconExpanded: {
-    tintColor: 'white',
+    tintColor: backgroundColors.light,
   },
   menuItemText: {
     flex: 1,
@@ -490,29 +495,29 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   menuItemTextExpanded: {
-    color: 'white',
+    color: backgroundColors.light,
     fontWeight: 'bold',
   },
   expandIcon: {
     width: 28,
     height: 28,
     borderRadius: 14,
-    backgroundColor: '#e9ecef',
+    backgroundColor: backgroundColors.light,
     justifyContent: 'center',
     alignItems: 'center',
   },
   expandIconText: {
     fontSize: 16,
-    color: '#144272',
+    color: backgroundColors.primary,
     fontWeight: 'bold',
   },
   expandIconTextExpanded: {
-    color: '#144272',
+    color: backgroundColors.primary,
   },
 
   // Submenu Styles
   submenuContainer: {
-    backgroundColor: '#f8f9fa',
+    backgroundColor: backgroundColors.light,
     marginHorizontal: 10,
     marginBottom: 5,
     borderRadius: 12,
@@ -530,14 +535,14 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     marginRight: 12,
     marginLeft: 25,
   },
   submenuText: {
     flex: 1,
     fontSize: 14,
-    color: '#495057',
+    color: backgroundColors.dark,
     fontWeight: '500',
   },
   miniExpandIcon: {
@@ -563,7 +568,7 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: '#6c757d',
+    backgroundColor: backgroundColors.gray,
     marginRight: 10,
     marginLeft: 35,
   },
@@ -578,7 +583,7 @@ const styles = StyleSheet.create({
     padding: 15,
     backgroundColor: 'white',
     borderTopWidth: 1,
-    borderTopColor: '#e9ecef',
+    borderTopColor: backgroundColors.gray,
   },
   closeButton: {
     borderRadius: 10,

@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   Image,
   TouchableOpacity,
   ScrollView,
@@ -13,33 +12,14 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
-import {Avatar, Checkbox} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {useUser} from '../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import Toast from 'react-native-toast-message';
-import LottieView from 'lottie-react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../Colors';
-
-interface ShowSupplierData {
-  id: number;
-  sup_area_id: string;
-  sup_name: string;
-  sup_company_name: string;
-  sup_agancy_name: string;
-  sup_address: string;
-  sup_contact: string;
-  sup_sec_contact: string;
-  sup_third_contact: string;
-  sup_email: string;
-  sup_image: string;
-  sup_payment_type: string;
-  sup_transaction_type: string;
-  sup_opening_balance: string;
-}
+import {Checkbox} from 'react-native-paper';
 
 interface SupplierData {
   id: number;
@@ -49,32 +29,6 @@ interface SupplierData {
   sup_contact: string;
   area_name: string;
 }
-
-interface EditSupplier {
-  id: number;
-  sup_area_id: string;
-  sup_name: string;
-  sup_company_name: string;
-  sup_agancy_name: string;
-  sup_address: string;
-  sup_contact: string;
-  sup_sec_contact: string;
-  sup_third_contact: string;
-  sup_email: string;
-}
-
-const initialEditSupplier: EditSupplier = {
-  id: 0,
-  sup_address: '',
-  sup_agancy_name: '',
-  sup_area_id: '',
-  sup_company_name: '',
-  sup_contact: '',
-  sup_email: '',
-  sup_name: '',
-  sup_sec_contact: '',
-  sup_third_contact: '',
-};
 
 interface AreaDropDown {
   id: string;
@@ -115,14 +69,9 @@ const initialAddSupplier: AddSupplier = {
   transaction_type: '',
 };
 
-export default function SupplierPeople() {
+export default function SupplierPeople({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {token} = useUser();
-  const [supplierData, setSupplierData] = useState<SupplierData[] | []>([]);
-  const [selectedSupplier, setSelectedSupplier] = useState<number | null>(null);
-  const [showSupplierData, setShowSupplierData] =
-    useState<ShowSupplierData | null>();
-  const [editForm, setEditForm] = useState<EditSupplier>(initialEditSupplier);
   const [areaDropdown, setAreaDropdown] = useState<AreaDropDown[] | []>([]);
   const [areaOpen, setAreaOpen] = useState(false);
   const [areaValue, setAreaValue] = useState<string | null>('');
@@ -133,41 +82,29 @@ export default function SupplierPeople() {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [addForm, setAddForm] = useState<AddSupplier>(initialAddSupplier);
   const [enableBal, setEnableBal] = useState<string[]>([]);
-  const [viewModalArea, setViewModalArea] = useState<any>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<SupplierData[]>([]);
+  const [masterData, setMasterData] = useState<SupplierData[]>([]);
+  const [modalVisible, setModalVisible] = useState('');
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const totalRecords = supplierData.length;
+  const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const currentData = supplierData.slice(
+  const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
-
-  const handleEditInputChange = (
-    field: keyof EditSupplier,
-    value: string | number,
-  ) => {
-    setEditForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
 
   const handleAddInputChange = (field: keyof AddSupplier, value: string) => {
     setAddForm(prev => ({
       ...prev,
       [field]: value,
     }));
-  };
-  const [customer, setcustomer] = useState(false);
-
-  const togglecustomer = () => {
-    setcustomer(!customer);
   };
 
   const [paymentType, setpaymentType] = useState(false);
@@ -176,55 +113,6 @@ export default function SupplierPeople() {
     {label: 'Payable', value: 'payable'},
     {label: 'Recievable', value: 'recievable'},
   ];
-
-  const [isModalV, setModalV] = useState(false);
-  const tglModal = async (id: number) => {
-    setSelectedSupplier(id);
-    setModalV(!isModalV);
-  };
-  const [edit, setedit] = useState(false);
-
-  const toggleedit = async (id: number) => {
-    try {
-      const res = await axios.get(
-        `${BASE_URL}/editsupplier?id=%20${id}&_token=${token}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setEditForm(res.data);
-      setAreaValue(res.data.sup_area_id);
-      setedit(!edit);
-      setSelectedSupplier(id);
-      setAreaOpen(false);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  const [view, setview] = useState(false);
-
-  const toggleview = async (id: number) => {
-    try {
-      const res = await axios.get(
-        `${BASE_URL}/suppliersshow?id=${id}&_token=${token}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      setViewModalArea(res.data.area ? res.data.area.area_name : '');
-      setShowSupplierData(res.data.supp);
-      setview(!view);
-    } catch (error) {
-      console.log(error);
-    }
-  };
 
   // Add Supplier
   const handleAddSupplier = async () => {
@@ -314,7 +202,7 @@ export default function SupplierPeople() {
         setEnableBal([]);
         setcurrentpaymentType('');
         handleFetchData();
-        setcustomer(false);
+        setModalVisible('');
       } else if (res.status === 200 && data.status === 201) {
         Toast.show({
           type: 'error',
@@ -334,131 +222,6 @@ export default function SupplierPeople() {
           type: 'error',
           text1: 'Warning!',
           text2: 'Please select payment type first!',
-          visibilityTime: 2000,
-        });
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  // Delete Supplier
-  const handleDeleteSupplier = async () => {
-    try {
-      const res = await axios.post(`${BASE_URL}/supplierdelete`, {
-        id: selectedSupplier,
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Deleted!',
-          text2: 'Supplier has been Deleted successfully!',
-          visibilityTime: 1500,
-        });
-
-        setSelectedSupplier(null);
-        setModalV(false);
-        handleFetchData();
-      }
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  // Update Suuplier
-  const handleUpdateSupplier = async () => {
-    const nameRegex = /^[A-Za-z ]+$/;
-
-    if (!editForm.sup_address || !editForm.sup_name) {
-      Toast.show({
-        type: 'error',
-        text1: 'Missing Fields',
-        text2: 'Please fill all fields and select a role before updating.',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-
-    if (editForm.sup_name.length < 3) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Supplier name must be at least 3 characters.',
-        visibilityTime: 15,
-      });
-      return;
-    }
-
-    if (!nameRegex.test(editForm.sup_name.trim())) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Name',
-        text2: 'Customer name should only contain letters and spaces.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    if (editForm.sup_email && editForm.sup_email.trim() !== '') {
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(editForm.sup_email.trim())) {
-        Toast.show({
-          type: 'error',
-          text1: 'Invalid Email',
-          text2: 'Please enter a valid email address.',
-          visibilityTime: 2000,
-        });
-        return;
-      }
-    }
-
-    try {
-      const res = await axios.post(`${BASE_URL}/updatesupplier`, {
-        supp_id: selectedSupplier,
-        comp_name: editForm.sup_company_name.trim(),
-        agencyname: editForm.sup_agancy_name,
-        supp_name: editForm.sup_name.trim(),
-        contact: editForm.sup_contact,
-        sec_contact: editForm.sup_sec_contact,
-        third_contact: editForm.sup_third_contact,
-        email: editForm.sup_email,
-        address: editForm.sup_address.trim(),
-        supp_area: areaValue,
-        ...(selectedOptions.includes('on') && {alsocust: 'on'}),
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'Supplier has been Updated successfully!',
-          visibilityTime: 2000,
-        });
-
-        setEditForm(initialEditSupplier);
-        setAreaValue(null);
-        setSelectedSupplier(null);
-        setAreaOpen(false);
-        setAreaValue('');
-        handleFetchData();
-        setedit(false);
-      } else if (res.status === 200 && data.status === 202) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Contact number already exist!',
-          visibilityTime: 2000,
-        });
-      } else if (res.status === 200 && data.status === 204) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Email already exist!',
           visibilityTime: 2000,
         });
       }
@@ -490,9 +253,30 @@ export default function SupplierPeople() {
         },
       });
 
-      setSupplierData(res.data.supp);
+      const supplierData = res.data.supp;
+
+      setFilteredData(supplierData);
+      setMasterData(supplierData);
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  // Search Filter
+  const searchFilter = (text: string) => {
+    if (text) {
+      const newData = masterData.filter(item => {
+        const itemData = item.sup_name
+          ? item.sup_name.toLocaleUpperCase()
+          : ''.toLocaleLowerCase();
+        const textData = text.toLocaleUpperCase();
+        return itemData.indexOf(textData) > -1;
+      });
+      setFilteredData(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredData(masterData);
+      setSearchQuery(text);
     }
   };
 
@@ -503,23 +287,37 @@ export default function SupplierPeople() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Suppliers</Text>
           </View>
 
-          <TouchableOpacity onPress={togglecustomer} style={[styles.headerBtn]}>
+          <TouchableOpacity
+            onPress={() => setModalVisible('Add')}
+            style={[styles.headerBtn]}>
+            <Text style={styles.addBtnText}>Add</Text>
             <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        {/* Search Filter */}
+        <View style={styles.searchFilter}>
+          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+          <TextInput
+            placeholder="Search by supplier name"
+            style={styles.search}
+            value={searchQuery}
+            onChangeText={text => searchFilter(text)}
+          />
         </View>
 
         <View style={styles.listContainer}>
@@ -527,13 +325,20 @@ export default function SupplierPeople() {
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => {
+                  navigation.navigate('SupplierDetails', {
+                    id: item.id,
+                  });
+                }}>
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.sup_name?.charAt(0) || 'S'}
-                    </Text>
+                    <Image
+                      source={require('../../assets/man.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
@@ -543,30 +348,18 @@ export default function SupplierPeople() {
                       <Icon name="phone" size={12} color="#666" />{' '}
                       {item.sup_contact || 'No contact'}
                     </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="office-building" size={12} color="#666" />{' '}
-                      {item.sup_company_name || 'N/A'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="map-marker" size={12} color="#666" />{' '}
-                      {item.area_name || 'N/A'}
-                    </Text>
                   </View>
 
                   {/* Actions on right */}
                   <View style={styles.actionRow}>
-                    <TouchableOpacity onPress={() => toggleview(item.id)}>
-                      <Icon name="eye" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => toggleedit(item.id)}>
-                      <Icon name="pencil" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => tglModal(item.id)}>
-                      <Icon name="delete" size={20} color={'#144272'} />
-                    </TouchableOpacity>
+                    <Icon
+                      name="chevron-right"
+                      size={28}
+                      color={backgroundColors.dark}
+                    />
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
@@ -580,16 +373,23 @@ export default function SupplierPeople() {
         </View>
 
         {/* Add Supplier Modal */}
-        <Modal visible={customer} transparent animationType="slide">
+        <Modal
+          visible={modalVisible === 'Add'}
+          transparent
+          animationType="slide">
           <View style={styles.addCustomerModalOverlay}>
             <ScrollView style={styles.addCustomerModalContainer}>
               {/* Header */}
               <View style={styles.addCustomerHeader}>
                 <Text style={styles.addCustomerTitle}>Add New Supplier</Text>
                 <TouchableOpacity
-                  onPress={() => setcustomer(!customer)}
+                  onPress={() => setModalVisible('')}
                   style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon
+                    name="close"
+                    size={20}
+                    color={backgroundColors.primary}
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -609,10 +409,14 @@ export default function SupplierPeople() {
                       status={
                         selectedOptions.includes('on') ? 'checked' : 'unchecked'
                       }
-                      color="#144272"
-                      uncheckedColor="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                     />
-                    <Text style={[styles.addCustomerLabel, {marginLeft: 8}]}>
+                    <Text
+                      style={[
+                        styles.addCustomerLabel,
+                        {marginLeft: 8, marginBottom: 0},
+                      ]}>
                       Also a Customer
                     </Text>
                   </TouchableOpacity>
@@ -756,6 +560,14 @@ export default function SupplierPeople() {
                       textStyle={styles.addCustomerDropdownText}
                       placeholderStyle={styles.addCustomerDropdownPlaceholder}
                       listMode="SCROLLVIEW"
+                      searchable
+                      searchTextInputStyle={{
+                        borderWidth: 0,
+                        width: '100%',
+                      }}
+                      searchContainerStyle={{
+                        borderColor: backgroundColors.gray,
+                      }}
                     />
                   </View>
                 </View>
@@ -775,10 +587,14 @@ export default function SupplierPeople() {
                       status={
                         enableBal.includes('on') ? 'checked' : 'unchecked'
                       }
-                      color="#144272"
-                      uncheckedColor="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                     />
-                    <Text style={[styles.addCustomerLabel, {marginLeft: 8}]}>
+                    <Text
+                      style={[
+                        styles.addCustomerLabel,
+                        {marginLeft: 8, marginBottom: 0},
+                      ]}>
                       Enable Opening Balance
                     </Text>
                   </TouchableOpacity>
@@ -855,357 +671,6 @@ export default function SupplierPeople() {
           </View>
         </Modal>
 
-        {/*Delete*/}
-        <Modal visible={isModalV} transparent animationType="fade">
-          <View style={styles.addCustomerModalOverlay}>
-            <View style={styles.deleteModalContainer}>
-              <View style={styles.delAnim}>
-                <LottieView
-                  style={{flex: 1}}
-                  source={require('../../assets/warning.json')}
-                  autoPlay
-                  loop={false}
-                />
-              </View>
-
-              {/* Title */}
-              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-
-              {/* Subtitle */}
-              <Text style={styles.deleteModalMessage}>
-                You won’t be able to revert this record!
-              </Text>
-
-              {/* Buttons */}
-              <View style={styles.deleteModalActions}>
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
-                  onPress={() => setModalV(!isModalV)}>
-                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
-                  onPress={handleDeleteSupplier}>
-                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Edit Supplier Modal */}
-        <Modal visible={edit} transparent animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              {/* Header */}
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Edit Supplier</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setedit(!edit);
-                    setEditForm(initialEditSupplier);
-                    setAreaOpen(false);
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.addCustomerForm}>
-                {/* Also a Customer */}
-                <View style={{marginBottom: 15}}>
-                  <TouchableOpacity
-                    style={{flexDirection: 'row', alignItems: 'center'}}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      const newOptions = selectedOptions.includes('on')
-                        ? selectedOptions.filter(opt => opt !== 'on')
-                        : [...selectedOptions, 'on'];
-                      setSelectedOptions(newOptions);
-                    }}>
-                    <Checkbox.Android
-                      status={
-                        selectedOptions.includes('on') ? 'checked' : 'unchecked'
-                      }
-                      color="#144272"
-                      uncheckedColor="#144272"
-                    />
-                    <Text style={[styles.addCustomerLabel, {marginLeft: 8}]}>
-                      Also a Customer
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Company + Agency */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Company Name *</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter company name"
-                    value={editForm.sup_company_name}
-                    onChangeText={text =>
-                      handleEditInputChange('sup_company_name', text)
-                    }
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Agency Name</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter agency name"
-                    value={editForm.sup_agancy_name}
-                    onChangeText={text =>
-                      handleEditInputChange('sup_agancy_name', text)
-                    }
-                  />
-                </View>
-
-                {/* Name + Contact 1 */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Supplier Name *</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Supplier Name"
-                    value={editForm.sup_name}
-                    onChangeText={text =>
-                      handleEditInputChange('sup_name', text)
-                    }
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Email</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="supplier@example.com"
-                    value={editForm.sup_email}
-                    keyboardType="email-address"
-                    onChangeText={text =>
-                      handleEditInputChange('sup_email', text)
-                    }
-                  />
-                </View>
-
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter contact"
-                    keyboardType="phone-pad"
-                    value={editForm.sup_contact}
-                    maxLength={12}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '');
-                      cleaned = cleaned.replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleEditInputChange('sup_contact', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact 2</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter contact"
-                    keyboardType="phone-pad"
-                    value={editForm.sup_sec_contact}
-                    maxLength={12}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '');
-                      cleaned = cleaned.replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleEditInputChange('sup_sec_contact', cleaned);
-                    }}
-                  />
-                </View>
-
-                {/* Contact 2 + Contact 3 */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact 3</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter contact"
-                    keyboardType="phone-pad"
-                    value={editForm.sup_third_contact}
-                    maxLength={12}
-                    onChangeText={text => {
-                      let cleaned = text.replace(/[^0-9-]/g, '');
-                      cleaned = cleaned.replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleEditInputChange('sup_third_contact', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Address</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter address"
-                    value={editForm.sup_address}
-                    onChangeText={text =>
-                      handleEditInputChange('sup_address', text)
-                    }
-                  />
-                </View>
-
-                {/* Supplier Area */}
-                <View style={styles.addCustomerDropdownRow}>
-                  <View style={styles.addCustomerDropdownField}>
-                    <Text style={styles.addCustomerLabel}>Supplier Area</Text>
-                    <DropDownPicker
-                      items={transformedAreas}
-                      open={areaOpen}
-                      setOpen={setAreaOpen}
-                      value={areaValue}
-                      setValue={setAreaValue}
-                      placeholder="Select supplier area"
-                      style={styles.addCustomerDropdown}
-                      dropDownContainerStyle={
-                        styles.addCustomerDropdownContainer
-                      }
-                      textStyle={styles.addCustomerDropdownText}
-                      placeholderStyle={styles.addCustomerDropdownPlaceholder}
-                      listMode="SCROLLVIEW"
-                    />
-                  </View>
-                </View>
-
-                {/* Submit */}
-                <TouchableOpacity
-                  style={styles.addCustomerSubmitBtn}
-                  onPress={handleUpdateSupplier}>
-                  <Icon name="content-save-edit" size={20} color="white" />
-                  <Text style={styles.addCustomerSubmitText}>
-                    Update Supplier
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/* Supplier View Modal */}
-        <Modal visible={view} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
-              <ScrollView contentContainerStyle={styles.modalContent}>
-                {/* Header */}
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalHeaderTitle}>Customer Details</Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setview(!view);
-                    }}
-                    style={styles.closeBtn}>
-                    <Icon name="close" size={22} color="#144272" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.customerDetailsWrapper}>
-                  {/* Profile Image */}
-                  <View style={styles.customerImageWrapper}>
-                    {showSupplierData?.sup_image ? (
-                      <Avatar.Image
-                        size={110}
-                        source={{uri: showSupplierData.sup_image}}
-                        style={styles.customerImage}
-                      />
-                    ) : (
-                      <Avatar.Icon
-                        size={110}
-                        icon="account"
-                        style={[
-                          styles.customerNoImage,
-                          {backgroundColor: '#e0f2fe'},
-                        ]}
-                        color="#144272"
-                      />
-                    )}
-                  </View>
-
-                  {/* Info Fields */}
-                  <View style={styles.modalInfoBox}>
-                    {[
-                      {
-                        label: 'Supplier Name',
-                        value: showSupplierData?.sup_name,
-                      },
-                      {
-                        label: 'Agency Name',
-                        value: showSupplierData?.sup_agancy_name,
-                      },
-                      {
-                        label: 'Company Name',
-                        value: showSupplierData?.sup_company_name,
-                      },
-                      {
-                        label: 'Contact 1',
-                        value: showSupplierData?.sup_contact,
-                      },
-                      {
-                        label: 'Contact 2',
-                        value: showSupplierData?.sup_sec_contact,
-                      },
-                      {
-                        label: 'Contact 3',
-                        value: showSupplierData?.sup_third_contact,
-                      },
-                      {
-                        label: 'Email',
-                        value: showSupplierData?.sup_email,
-                      },
-                      {
-                        label: 'Supplier Area',
-                        value: viewModalArea,
-                      },
-                      {
-                        label: 'Address',
-                        value: showSupplierData?.sup_address,
-                      },
-                      {
-                        label: 'Opening Balance',
-                        value: showSupplierData?.sup_opening_balance,
-                      },
-                      {
-                        label: 'Payment Type',
-                        value: showSupplierData?.sup_payment_type,
-                      },
-                      {
-                        label: 'Transaction Type',
-                        value: showSupplierData?.sup_transaction_type,
-                      },
-                    ].map((item, index) => (
-                      <View key={index} style={styles.modalInfoRow}>
-                        <Text style={styles.infoLabel}>{item.label}</Text>
-                        <Text style={styles.infoValue}>
-                          {item.value || 'N/A'}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-
         {/* Pagination Controls */}
         {totalRecords > 0 && (
           <View style={styles.paginationContainer}>
@@ -1254,7 +719,7 @@ export default function SupplierPeople() {
         )}
 
         <Toast />
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -1269,12 +734,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   headerCenter: {
     flex: 1,
@@ -1288,24 +765,45 @@ const styles = StyleSheet.create({
   },
   gradientBackground: {
     flex: 1,
+    backgroundColor: backgroundColors.gray,
+  },
+
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
   },
 
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -1315,10 +813,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
+  },
+  avatar: {
+    height: 45,
+    width: 45,
   },
   avatarText: {
     color: '#fff',
@@ -1338,19 +839,18 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     gap: 8,
     marginLeft: 10,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '85%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
     alignSelf: 'center',
-    marginTop: 8,
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -1379,7 +879,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1443,12 +943,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: backgroundColors.primary,
   },
   addCustomerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.primary,
   },
   addCustomerCloseBtn: {
     padding: 5,
@@ -1472,7 +972,7 @@ const styles = StyleSheet.create({
   addCustomerLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 5,
   },
   addCustomerInput: {
@@ -1519,7 +1019,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 10,
     paddingVertical: 15,
     marginTop: 20,
@@ -1529,150 +1029,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
-  },
-
-  // View Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCard: {
-    width: '90%',
-    maxHeight: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  modalContent: {
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 10,
-    paddingHorizontal: 10,
-  },
-  modalHeaderTitle: {
-    color: '#144272',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  closeBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  customerDetailsWrapper: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  customerImageWrapper: {
-    marginBottom: 16,
-  },
-  customerImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 3,
-    borderColor: '#144272',
-  },
-  customerNoImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  customerNoImageText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  modalInfoBox: {
-    width: '100%',
-    marginTop: 10,
-    backgroundColor: '#fafafa',
-    borderRadius: 12,
-    padding: 12,
-  },
-  modalInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  infoValue: {
-    fontSize: 14,
-    color: '#555',
-    flexShrink: 1,
-    textAlign: 'right',
-  },
-
-  //Delete Modal
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
-  },
-  deleteModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 8,
-  },
-  deleteModalMessage: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  deleteModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  deleteModalBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
   },
 });
