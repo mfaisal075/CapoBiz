@@ -8,20 +8,18 @@ import {
   FlatList,
   TextInput,
   Modal,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import {Avatar, Checkbox} from 'react-native-paper';
+import {Checkbox} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
-import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import LottieView from 'lottie-react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 
 interface Products {
@@ -34,62 +32,6 @@ interface Products {
   prod_expirydate: string;
   prod_qty: string;
   pcat_name: string;
-}
-
-interface ViewProduct {
-  pro: {
-    id: number;
-    prod_name: string;
-    prod_generic_name: string;
-    prod_manage_stock: string;
-    pct_code: string;
-    prod_UPC_EAN: string;
-    prod_sup_id: string;
-    prod_type: string;
-    prod_image: string;
-    prod_pcat_id: string;
-    prod_ums_id: string;
-    prod_costprice: string;
-    prod_retailprice: string;
-    prod_discount: string;
-    prod_fretailprice: string;
-    prod_expirydate: string;
-    prod_have_sub_uom: string;
-    prod_sub_uom: string;
-    prod_master_uom: string;
-    prod_sub_price: string;
-    prod_qty: string;
-    prod_sub_qty: string;
-    prod_reorder_qty: string;
-    prod_equivalent: string;
-    prod_f_equivalent: string;
-  };
-  uom: {
-    id: number;
-    ums_name: string;
-  };
-  cat: {
-    id: number;
-    pcat_name: string;
-  };
-  supp: {
-    id: string;
-    sup_area_id: string;
-    sup_name: string;
-    sup_company_name: string;
-    sup_agancy_name: string;
-    sup_address: string;
-    sup_contact: string;
-    sup_sec_contact: string;
-    sup_third_contact: string;
-    sup_email: string;
-    sup_is_customer: string;
-    sup_image: string;
-    sup_payment_type: string;
-    sup_transaction_type: string;
-    sup_opening_balance: string;
-    sup_status: string;
-  };
 }
 
 interface AddProduct {
@@ -150,76 +92,8 @@ interface Suppliers {
   sup_company_name: string;
 }
 
-interface EditProduct {
-  id: number;
-  prod_name: string;
-  prod_generic_name: string;
-  pct_code: string;
-  prod_UPC_EAN: string;
-  prod_inventory: string;
-  prod_sup_id: string;
-  prod_status: string;
-  prod_type: string;
-  prod_manage_stock: string;
-  prod_image: string;
-  prod_pcat_id: string;
-  prod_ums_id: string;
-  prod_costprice: string;
-  prod_retailprice: string;
-  prod_discount: string;
-  prod_fretailprice: string;
-  prod_expirydate: Date;
-  prod_have_sub_uom: string;
-  prod_sub_uom: string;
-  prod_master_uom: string;
-  prod_sub_price: string;
-  prod_qty: string;
-  prod_sub_qty: string;
-  prod_reorder_qty: string;
-  prod_equivalent: string;
-  prod_f_equivalent: string;
-  created_at: string;
-  updated_at: string;
-}
-
-const initialEditProduct: EditProduct = {
-  id: 0,
-  prod_name: '',
-  prod_generic_name: '',
-  pct_code: '',
-  prod_UPC_EAN: '',
-  prod_inventory: '',
-  prod_sup_id: '',
-  prod_status: '',
-  prod_type: '',
-  prod_manage_stock: '',
-  prod_image: '',
-  prod_pcat_id: '',
-  prod_ums_id: '',
-  prod_costprice: '',
-  prod_retailprice: '',
-  prod_discount: '',
-  prod_fretailprice: '',
-  prod_expirydate: new Date(),
-  prod_have_sub_uom: '',
-  prod_sub_uom: '',
-  prod_master_uom: '',
-  prod_sub_price: '',
-  prod_qty: '',
-  prod_sub_qty: '',
-  prod_reorder_qty: '',
-  prod_equivalent: '',
-  prod_f_equivalent: '',
-  created_at: '',
-  updated_at: '',
-};
-
-export default function CustomerPeople() {
-  const {token} = useUser();
-  const [products, setProducts] = useState<Products[]>([]);
-  const [viewProd, setViewProd] = useState<ViewProduct | null>(null);
+export default function CustomerPeople({navigation}: any) {
   const [modalVisible, setModalVisible] = useState('');
-  const [selectedProd, setSelectedProd] = useState<number | null>(null);
   const [addForm, setAddForm] = useState<AddProduct>(initialAddProduct);
   const [genBarCode, setGenBarCode] = useState<string[]>([]);
   const [catItems, setCatItems] = useState<Categories[]>([]);
@@ -238,25 +112,19 @@ export default function CustomerPeople() {
   const [manageStock, setManageStock] = useState<string[]>([]);
   const [expiry, setExpiry] = useState<string[]>([]);
   const [barCode, setBarCode] = useState('');
-  const [editForm, setEditForm] = useState<EditProduct>(initialEditProduct);
-  const [editCatOpen, setEditCatOpen] = useState(false);
-  const [editCatValue, setEditCatValue] = useState<string | null>('');
-  const [editUomOpen, setEditUomOpen] = useState(false);
-  const [editUomValue, setEditUomValue] = useState<string | null>('');
-  const [editSupOpen, setEditSupOpen] = useState(false);
-  const [editSupValue, setEditSupValue] = useState<string | null>('');
-  const [editSubUmoOpen, setEditSubUmoOpen] = useState(false);
-  const [editSubUmoValue, setEditSubUmoValue] = useState<string | null>('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<Products[]>([]);
+  const [masterData, setMasterData] = useState<Products[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const totalRecords = products.length;
+  const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const currentData = products.slice(
+  const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
@@ -284,14 +152,6 @@ export default function CustomerPeople() {
     }));
   };
 
-  //Edit Form OnChange
-  const editOnChnage = (field: keyof EditProduct, value: string | Date) => {
-    setEditForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
   const {openDrawer} = useDrawer();
 
   const [startDate, setStartDate] = useState(new Date());
@@ -306,45 +166,15 @@ export default function CustomerPeople() {
     setStartDate(currentDate);
   };
 
-  const editOnDateChange = (
-    event: DateTimePickerEvent,
-    selectedDate?: Date,
-  ) => {
-    const currentDate = selectedDate || editForm.prod_expirydate;
-    setShowStartDatePicker(false);
-    editOnChnage('prod_expirydate', currentDate);
-  };
-
   // Fetch Products
   const fetchPrducts = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchproductlist`);
-      setProducts(res.data.product);
-    } catch (error) {
-      console.log(error);
-    }
-  };
 
-  // Delete Product
-  const delProduct = async () => {
-    try {
-      const res = await axios.post(`${BASE_URL}/productdelete`, {
-        id: selectedProd,
-      });
+      const prodData = res.data.product;
 
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Deleted!',
-          text2: 'Product has been deleted successfully!',
-          visibilityTime: 1500,
-        });
-        setModalVisible('');
-        fetchPrducts();
-        setSelectedProd(null);
-      }
+      setFilteredData(prodData);
+      setMasterData(prodData);
     } catch (error) {
       console.log(error);
     }
@@ -566,173 +396,21 @@ export default function CustomerPeople() {
     }
   };
 
-  // Edit Product
-  const updateProduct = async () => {
-    if (!(editForm.prod_name ?? '').trim()) {
-      Toast.show({
-        type: 'error',
-        text1: 'Product Name is required',
-        visibilityTime: 1500,
+  // Search Filter
+  const searchFilter = (text: string) => {
+    if (text) {
+      const newData = masterData.filter(item => {
+        const itemData = item.prod_name
+          ? item.prod_name.toLocaleUpperCase()
+          : ''.toLocaleLowerCase();
+        const textData = text.toLocaleUpperCase();
+        return itemData.indexOf(textData) > -1;
       });
-      return;
-    }
-
-    if (!genBarCode.includes('on') && !(editForm.prod_UPC_EAN ?? '').trim()) {
-      Toast.show({
-        type: 'error',
-        text1: 'Barcode is required',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-
-    if (!editCatValue) {
-      Toast.show({
-        type: 'error',
-        text1: 'Category is required',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-
-    if (!editUomValue) {
-      Toast.show({
-        type: 'error',
-        text1: 'UOM is required',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-
-    if (
-      !manageStock.includes('on') &&
-      (editForm.prod_qty ?? '').trim() !== '' &&
-      (editForm.prod_reorder_qty ?? '').trim() !== ''
-    ) {
-      const openingQty = parseFloat(editForm.prod_qty ?? '0');
-      const reorderQty = parseFloat(editForm.prod_reorder_qty ?? '0');
-      if (!isNaN(openingQty) && !isNaN(reorderQty) && openingQty < reorderQty) {
-        Toast.show({
-          type: 'error',
-          text1: 'Opening quantity cannot be less than reorder quantity!',
-          visibilityTime: 1500,
-        });
-        return;
-      }
-    }
-
-    if (!(editForm.prod_costprice ?? '').trim()) {
-      Toast.show({
-        type: 'error',
-        text1: 'Cost Price is required',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-
-    if (!(editForm.prod_retailprice ?? '').trim()) {
-      Toast.show({
-        type: 'error',
-        text1: 'Retail Price is required',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-
-    if (subUom.includes('on')) {
-      if (!editSubUmoValue) {
-        Toast.show({
-          type: 'error',
-          text1: 'Sub UOM is required',
-          visibilityTime: 1500,
-        });
-        return;
-      }
-      if (!(editForm.prod_equivalent ?? '').trim()) {
-        Toast.show({
-          type: 'error',
-          text1: 'Equivalence is required',
-          visibilityTime: 1500,
-        });
-        return;
-      }
-      if (!(editForm.prod_sub_price ?? '').trim()) {
-        Toast.show({
-          type: 'error',
-          text1: 'Sale Price is required',
-          visibilityTime: 1500,
-        });
-        return;
-      }
-    }
-
-    try {
-      const res = await axios.post(`${BASE_URL}/updateproduct`, {
-        pro_id: editForm.id,
-        product_name: (editForm.prod_name ?? '').trim(),
-        generic_name: (editForm.prod_generic_name ?? '').trim(),
-        ...(genBarCode.includes('on') && {autobarcode: 'on'}),
-        upc_ean: (editForm.prod_UPC_EAN ?? '').trim(),
-        ...(expiry.includes('on') && {apply_expiry: 'on'}),
-        expiry_date: editForm.prod_expirydate,
-        cat_id: editCatValue,
-        uom_id: editUomValue,
-        cost_price: (editForm.prod_costprice ?? '').trim(),
-        retail_price: (editForm.prod_retailprice ?? '').trim(),
-        discount: (editForm.prod_discount ?? '').trim(),
-        final_price: editForm.prod_fretailprice,
-        ...(subUom.includes('on') && {have_sub_uom: 'on'}),
-        sub_uom: editSubUmoValue,
-        equivalent: (editForm.prod_equivalent ?? '').trim(),
-        sub_price: (editForm.prod_sub_price ?? '').trim(),
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'Product has been updated successfully!',
-          visibilityTime: 1500,
-        });
-        setModalVisible('');
-        setEditForm(initialEditProduct);
-        setGenBarCode([]);
-        setEditCatValue('');
-        setEditUomValue('');
-        setSupplier([]);
-        setEditSupValue('');
-        setSubUom([]);
-        setEditSubUmoValue('');
-        setManageStock([]);
-        setExpiry([]);
-        setBarCode('');
-        fetchPrducts();
-      } else if (res.status === 200 && data.status === 102) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'This Barcode Already exist!',
-          visibilityTime: 2000,
-        });
-      } else if (res.status === 200 && data.status === 101) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'This product name already exists!',
-          visibilityTime: 2000,
-        });
-      } else if (res.status === 200 && data.status === 206) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'In sub uom sale price should be greater!',
-          visibilityTime: 200,
-        });
-      }
-    } catch (error) {
-      console.log(error);
+      setFilteredData(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredData(masterData);
+      setSearchQuery(text);
     }
   };
 
@@ -746,14 +424,14 @@ export default function CustomerPeople() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -761,12 +439,22 @@ export default function CustomerPeople() {
           </View>
 
           <TouchableOpacity
-            onPress={() => {
-              setModalVisible('AddProd');
-            }}
+            onPress={() => setModalVisible('AddProd')}
             style={[styles.headerBtn]}>
+            <Text style={styles.addBtnText}>Add</Text>
             <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        {/* Search Filter */}
+        <View style={styles.searchFilter}>
+          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+          <TextInput
+            placeholder="Search by product name"
+            style={styles.search}
+            value={searchQuery}
+            onChangeText={text => searchFilter(text)}
+          />
         </View>
 
         <View style={styles.listContainer}>
@@ -774,104 +462,43 @@ export default function CustomerPeople() {
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => {
+                  navigation.navigate('ProductDetails', {
+                    id: item.id,
+                  });
+                }}>
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.prod_name?.charAt(0) || 'P'}
-                    </Text>
+                    <Image
+                      source={require('../../../assets/product.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.prod_name}</Text>
-                    {/* Category */}
-                    <Text style={styles.subText}>
-                      <Icon name="shape" size={12} color="#666" />{' '}
-                      {item.pcat_name || 'No category'}
-                    </Text>
-                    {/* Quantity */}
-                    <Text style={styles.subText}>
-                      <Icon name="cube-outline" size={12} color="#666" />{' '}
-                      {`${item.prod_qty} ${
-                        item.prod_sub_qty && parseFloat(item.prod_sub_qty) > 0
-                          ? ` - ${item.prod_sub_qty}`
-                          : ''
-                      }`}
-                    </Text>
-                    {/* Retail Price */}
-                    <Text style={styles.subText}>
-                      <Icon name="currency-usd" size={12} color="#666" />{' '}
-                      {item.prod_retailprice || 'N/A'}
-                    </Text>
+                    <Text style={styles.subText}>{`${
+                      item.prod_retailprice
+                    } PKR  -  ${
+                      item.prod_sub_qty
+                        ? `(${item.prod_qty} - ${item.prod_sub_qty})`
+                        : `${item.prod_qty}`
+                    } PC`}</Text>
                   </View>
 
                   {/* Actions on right */}
                   <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('ViewProd');
-                        const fetchSingleProd = async (id: number) => {
-                          try {
-                            const res = await axios.get(
-                              `${BASE_URL}/productsshow?id=${id}&_token=${token}`,
-                            );
-                            setViewProd(res.data);
-                          } catch (error) {
-                            console.log(error);
-                          }
-                        };
-                        fetchSingleProd(item.id);
-                      }}>
-                      <Icon name="eye" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('EditProd');
-                        const fetchProdData = async (id: number) => {
-                          try {
-                            const res = await axios.get(
-                              `${BASE_URL}/editproduct?id=${id}&_token=${token}`,
-                            );
-                            setEditForm(res.data.pro);
-                            setEditCatValue(
-                              res.data.pro.prod_pcat_id
-                                ? String(res.data.pro.prod_pcat_id)
-                                : '',
-                            );
-                            setEditUomValue(
-                              res.data.uom.ums_name
-                                ? String(res.data.uom.ums_name)
-                                : '',
-                            );
-                            setEditSupValue(
-                              res.data.pro.prod_sup_id
-                                ? String(res.data.pro.prod_sup_id)
-                                : '',
-                            );
-                            setEditSubUmoValue(
-                              res.data.pro.prod_sub_uom
-                                ? String(res.data.pro.prod_sub_uom)
-                                : '',
-                            );
-                          } catch (error) {
-                            console.log(error);
-                          }
-                        };
-                        fetchProdData(item.id);
-                      }}>
-                      <Icon name="pencil" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('DeleteProd');
-                        setSelectedProd(item.id);
-                      }}>
-                      <Icon name="delete" size={20} color={'#144272'} />
-                    </TouchableOpacity>
+                    <Icon
+                      name="chevron-right"
+                      size={28}
+                      color={backgroundColors.dark}
+                    />
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
@@ -883,183 +510,6 @@ export default function CustomerPeople() {
             showsVerticalScrollIndicator={false}
           />
         </View>
-
-        {/*Delete Modal*/}
-        <Modal
-          visible={modalVisible === 'DeleteProd'}
-          transparent
-          animationType="fade">
-          <View style={styles.addModalOverlay}>
-            <View style={styles.deleteModalContainer}>
-              <View style={styles.delAnim}>
-                <LottieView
-                  style={{flex: 1}}
-                  source={require('../../../assets/warning.json')}
-                  autoPlay
-                  loop={false}
-                />
-              </View>
-
-              {/* Title */}
-              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-
-              {/* Subtitle */}
-              <Text style={styles.deleteModalMessage}>
-                You won’t be able to revert this record!
-              </Text>
-
-              {/* Buttons */}
-              <View style={styles.deleteModalActions}>
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
-                  onPress={() => setModalVisible('')}>
-                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
-                  onPress={delProduct}>
-                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* View Product Modal */}
-        <Modal
-          visible={modalVisible === 'ViewProd'}
-          transparent
-          animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
-              <ScrollView contentContainerStyle={styles.modalContent}>
-                {/* Header */}
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalHeaderTitle}>Customer Details</Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModalVisible('');
-                      setViewProd(null);
-                    }}
-                    style={styles.closeBtn}>
-                    <Icon name="close" size={22} color="#144272" />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.customerDetailsWrapper}>
-                  {/* Profile Image */}
-                  <View style={styles.customerImageWrapper}>
-                    {viewProd?.pro.prod_image ? (
-                      <Avatar.Image
-                        size={110}
-                        source={{uri: viewProd.pro.prod_image}}
-                        style={styles.customerImage}
-                      />
-                    ) : (
-                      <Avatar.Icon
-                        size={110}
-                        icon="package-variant"
-                        style={[
-                          styles.customerNoImage,
-                          {backgroundColor: '#e0f2fe'},
-                        ]}
-                        color="#144272"
-                      />
-                    )}
-                  </View>
-
-                  {/* Info Fields */}
-                  <View style={styles.modalInfoBox}>
-                    {[
-                      {
-                        label: 'Product Name',
-                        value: viewProd?.pro?.prod_name,
-                      },
-                      {
-                        label: 'Second Name',
-                        value: viewProd?.pro?.prod_generic_name,
-                      },
-                      {
-                        label: 'UPC / EAN',
-                        value: viewProd?.pro?.prod_UPC_EAN,
-                      },
-                      {
-                        label: 'Expiry Date',
-                        value: viewProd?.pro?.prod_expirydate,
-                      },
-                      {
-                        label: 'Reorder Qty',
-                        value: viewProd?.pro?.prod_reorder_qty,
-                      },
-                      {
-                        label: 'Category',
-                        value: viewProd?.cat?.pcat_name,
-                      },
-                      {
-                        label: 'UOM',
-                        value: viewProd?.uom?.ums_name,
-                      },
-                      {
-                        label: 'Sub UOM',
-                        value: viewProd?.pro?.prod_sub_uom,
-                      },
-                      {
-                        label: 'Master UOM',
-                        value: viewProd?.pro?.prod_master_uom,
-                      },
-                      {
-                        label: 'Equivalent',
-                        value: viewProd?.pro?.prod_equivalent,
-                      },
-                      {
-                        label: 'Sub UOM Price',
-                        value: viewProd?.pro?.prod_sub_price,
-                      },
-                      {
-                        label: 'Manage Stock',
-                        value: viewProd?.pro?.prod_manage_stock,
-                      },
-                      {
-                        label: 'Opening Quantity',
-                        value: viewProd?.pro?.prod_qty,
-                      },
-                      {
-                        label: 'Cost Price',
-                        value: viewProd?.pro?.prod_costprice,
-                      },
-                      {
-                        label: 'Retail Price',
-                        value: viewProd?.pro?.prod_retailprice,
-                      },
-                      {
-                        label: 'Discount (%)',
-                        value: viewProd?.pro?.prod_discount,
-                      },
-                      {
-                        label: 'Final Price',
-                        value: viewProd?.pro?.prod_fretailprice,
-                      },
-                      {
-                        label: 'Supplier',
-                        value: viewProd?.supp?.sup_name,
-                      },
-                    ].map((item, index) => (
-                      <View key={index} style={styles.modalInfoRow}>
-                        <Text style={styles.infoLabel}>{item.label}</Text>
-                        <Text style={styles.infoValue}>
-                          {item.value || 'N/A'}
-                        </Text>
-                      </View>
-                    ))}
-                  </View>
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
 
         {/*Add Product Modal*/}
         <Modal
@@ -1141,8 +591,8 @@ export default function CustomerPeople() {
                       status={
                         genBarCode.includes('on') ? 'checked' : 'unchecked'
                       }
-                      color="#144272"
-                      uncheckedColor="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                     />
                     <Text style={styles.addProductCheckboxText}>
                       Generate Auto BarCode
@@ -1190,8 +640,8 @@ export default function CustomerPeople() {
                     }}>
                     <Checkbox.Android
                       status={expiry.includes('on') ? 'checked' : 'unchecked'}
-                      color="#144272"
-                      uncheckedColor="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                     />
                     <Text style={styles.addProductCheckboxText}>
                       Apply Expiry Date
@@ -1306,8 +756,8 @@ export default function CustomerPeople() {
                       status={
                         manageStock.includes('on') ? 'checked' : 'unchecked'
                       }
-                      color="#144272"
-                      uncheckedColor="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                     />
                     <Text style={styles.addProductCheckboxText}>
                       Don't Manage Stock
@@ -1462,8 +912,8 @@ export default function CustomerPeople() {
                     }}>
                     <Checkbox.Android
                       status={supplier.includes('on') ? 'checked' : 'unchecked'}
-                      color="#144272"
-                      uncheckedColor="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                     />
                     <Text style={styles.addProductCheckboxText}>
                       Enable Supplier
@@ -1514,8 +964,8 @@ export default function CustomerPeople() {
                     }}>
                     <Checkbox.Android
                       status={subUom.includes('on') ? 'checked' : 'unchecked'}
-                      color="#144272"
-                      uncheckedColor="#144272"
+                      color={backgroundColors.primary}
+                      uncheckedColor={backgroundColors.dark}
                     />
                     <Text style={styles.addProductCheckboxText}>
                       Have Sub UOM?
@@ -1579,6 +1029,8 @@ export default function CustomerPeople() {
                           }}
                         />
                       </View>
+                    </View>
+                    <View style={styles.addProductRow}>
                       <View style={styles.addProductField}>
                         <Text style={styles.addProductLabel}>
                           Sub UOM Sale Price
@@ -1609,569 +1061,6 @@ export default function CustomerPeople() {
                   onPress={addProduct}>
                   <Icon name="package-variant-closed" size={20} color="white" />
                   <Text style={styles.addProductSubmitText}>Add Product</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/*Edit Product Modal*/}
-        <Modal
-          visible={modalVisible === 'EditProd'}
-          transparent
-          animationType="slide">
-          <View style={styles.editProductModalOverlay}>
-            <ScrollView style={styles.editProductModalContainer}>
-              <View style={styles.editProductHeader}>
-                <Text style={styles.editProductTitle}>Update Product</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setEditForm(initialEditProduct);
-                    setGenBarCode([]);
-                    setEditCatValue('');
-                    setEditUomValue('');
-                    setSupplier([]);
-                    setEditSupValue('');
-                    setSubUom([]);
-                    setEditSubUmoValue('');
-                    setManageStock([]);
-                    setExpiry([]);
-                    setBarCode('');
-                  }}
-                  style={styles.editProductCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.editProductForm}>
-                {/* Product Name and Generic Name */}
-
-                <View style={styles.editProductField}>
-                  <Text style={styles.editProductLabel}>Product Name *</Text>
-                  <TextInput
-                    style={styles.editProductInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter product name"
-                    value={editForm.prod_name}
-                    onChangeText={t => editOnChnage('prod_name', t)}
-                  />
-                </View>
-                <View style={styles.editProductField}>
-                  <Text style={styles.editProductLabel}>Generic Name</Text>
-                  <TextInput
-                    style={styles.editProductInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter generic name"
-                    value={editForm.prod_generic_name}
-                    onChangeText={t => editOnChnage('prod_generic_name', t)}
-                  />
-                </View>
-
-                {/* Auto Barcode Generation */}
-                <View style={styles.editProductField}>
-                  <TouchableOpacity
-                    style={styles.editProductCheckboxRow}
-                    activeOpacity={0.7}
-                    onPress={async () => {
-                      const newOptions = genBarCode.includes('on')
-                        ? genBarCode.filter(opt => opt !== 'on')
-                        : [...genBarCode, 'on'];
-                      setGenBarCode(newOptions);
-                      if (!genBarCode.includes('on')) {
-                        await getBarCode();
-                        editOnChnage(
-                          'prod_UPC_EAN',
-                          typeof barCode === 'string'
-                            ? barCode
-                            : String(barCode),
-                        );
-                      } else {
-                        editOnChnage('prod_UPC_EAN', '');
-                      }
-                    }}>
-                    <Checkbox.Android
-                      status={
-                        genBarCode.includes('on') ? 'checked' : 'unchecked'
-                      }
-                      color="#144272"
-                      uncheckedColor="#144272"
-                    />
-                    <Text style={styles.editProductCheckboxText}>
-                      Generate Auto BarCode
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.editProductField}>
-                  <Text style={styles.editProductLabel}>Barcode/UPC *</Text>
-                  <TextInput
-                    style={[
-                      styles.editProductInput,
-                      genBarCode.includes('on') &&
-                        styles.editProductDisabledInput,
-                    ]}
-                    placeholderTextColor="#999"
-                    placeholder="Enter or generate barcode"
-                    keyboardType="numeric"
-                    value={
-                      genBarCode.includes('on')
-                        ? typeof barCode === 'string'
-                          ? barCode
-                          : String(barCode)
-                        : editForm.prod_UPC_EAN
-                    }
-                    editable={!genBarCode.includes('on')}
-                    onChangeText={t => {
-                      if (!genBarCode.includes('on'))
-                        editOnChnage('prod_UPC_EAN', t);
-                    }}
-                  />
-                </View>
-
-                {/* Expiry Settings */}
-                <View style={styles.editProductField}>
-                  <TouchableOpacity
-                    style={styles.editProductCheckboxRow}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      const newOptions = expiry.includes('on')
-                        ? expiry.filter(opt => opt !== 'on')
-                        : [...expiry, 'on'];
-                      setExpiry(newOptions);
-                    }}>
-                    <Checkbox.Android
-                      status={expiry.includes('on') ? 'checked' : 'unchecked'}
-                      color="#144272"
-                      uncheckedColor="#144272"
-                    />
-                    <Text style={styles.editProductCheckboxText}>
-                      Apply Expiry Date
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {expiry.includes('on') && (
-                  <View style={styles.editProductField}>
-                    <Text style={styles.editProductLabel}>Expiry Date</Text>
-                    <TouchableOpacity
-                      style={[
-                        styles.editProductDatePicker,
-                        !expiry.includes('on') &&
-                          styles.editProductDisabledInput,
-                      ]}
-                      onPress={() => {
-                        if (expiry.includes('on')) setShowStartDatePicker(true);
-                      }}
-                      disabled={!expiry.includes('on')}>
-                      <Text style={styles.editProductDateText}>
-                        {editForm.prod_expirydate
-                          ? new Date(
-                              editForm.prod_expirydate,
-                            ).toLocaleDateString?.() ||
-                            new Date().toLocaleDateString()
-                          : new Date().toLocaleDateString()}
-                      </Text>
-                      <Icon name="calendar-month" size={20} color="#144272" />
-                      {showStartDatePicker && expiry.includes('on') && (
-                        <DateTimePicker
-                          testID="startDatePicker"
-                          value={
-                            editForm.prod_expirydate
-                              ? new Date(editForm.prod_expirydate)
-                              : new Date()
-                          }
-                          mode="date"
-                          is24Hour={true}
-                          display="default"
-                          onChange={editOnDateChange}
-                        />
-                      )}
-                    </TouchableOpacity>
-                  </View>
-                )}
-
-                {/* Category and UOM */}
-                <View style={styles.editProductField}>
-                  <Text style={styles.editProductLabel}>Category *</Text>
-                  <View style={styles.editProductDropdownContainer}>
-                    <DropDownPicker
-                      items={transformedCat}
-                      open={editCatOpen}
-                      setOpen={setEditCatOpen}
-                      value={editCatValue}
-                      setValue={setEditCatValue}
-                      placeholder="Select category"
-                      placeholderStyle={styles.editProductDropdownPlaceholder}
-                      textStyle={styles.editProductDropdownText}
-                      ArrowUpIconComponent={() => (
-                        <Icon name="chevron-up" size={18} color="#144272" />
-                      )}
-                      ArrowDownIconComponent={() => (
-                        <Icon name="chevron-down" size={18} color="#144272" />
-                      )}
-                      style={styles.editProductDropdown}
-                      dropDownContainerStyle={styles.editProductDropdownList}
-                      labelStyle={styles.editProductDropdownText}
-                      listItemLabelStyle={styles.editProductDropdownText}
-                      listMode="SCROLLVIEW"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.editProductField}>
-                  <View style={styles.editProductDropdownField}>
-                    <Text style={styles.editProductLabel}>
-                      Unit of Measure *
-                    </Text>
-                    <View style={styles.editProductDropdownContainer}>
-                      <DropDownPicker
-                        items={transformedUom}
-                        open={editUomOpen}
-                        setOpen={setEditUomOpen}
-                        value={editUomValue}
-                        setValue={setEditUomValue}
-                        placeholder="Select UOM"
-                        placeholderStyle={styles.editProductDropdownPlaceholder}
-                        textStyle={styles.editProductDropdownText}
-                        ArrowUpIconComponent={() => (
-                          <Icon name="chevron-up" size={18} color="#144272" />
-                        )}
-                        ArrowDownIconComponent={() => (
-                          <Icon name="chevron-down" size={18} color="#144272" />
-                        )}
-                        style={[styles.editProductDropdown, {zIndex: 999}]}
-                        dropDownContainerStyle={styles.editProductDropdownList}
-                        labelStyle={styles.editProductDropdownText}
-                        listItemLabelStyle={styles.editProductDropdownText}
-                        listMode="SCROLLVIEW"
-                      />
-                    </View>
-                  </View>
-                </View>
-
-                {/* Stock Management */}
-                <View style={styles.editProductField}>
-                  <TouchableOpacity
-                    style={styles.editProductCheckboxRow}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      const newOptions = manageStock.includes('on')
-                        ? manageStock.filter(opt => opt !== 'on')
-                        : [...manageStock, 'on'];
-                      setManageStock(newOptions);
-                    }}>
-                    <Checkbox.Android
-                      status={
-                        manageStock.includes('on') ? 'checked' : 'unchecked'
-                      }
-                      color="#144272"
-                      uncheckedColor="#144272"
-                    />
-                    <Text style={styles.editProductCheckboxText}>
-                      Don't Manage Stock
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.editProductField}>
-                  <Text style={styles.editProductLabel}>Opening Quantity</Text>
-                  <TextInput
-                    style={[
-                      styles.editProductInput,
-                      manageStock.includes('on') &&
-                        styles.editProductDisabledInput,
-                    ]}
-                    placeholderTextColor="#999"
-                    placeholder="Enter opening quantity"
-                    value={manageStock.includes('on') ? '0' : editForm.prod_qty}
-                    editable={!manageStock.includes('on')}
-                    onChangeText={t => {
-                      if (!manageStock.includes('on'))
-                        editOnChnage('prod_qty', t);
-                    }}
-                    keyboardType="number-pad"
-                  />
-                </View>
-                <View style={styles.editProductField}>
-                  <Text style={styles.editProductLabel}>Re-Order Level</Text>
-                  <TextInput
-                    style={[
-                      styles.editProductInput,
-                      manageStock.includes('on') &&
-                        styles.editProductDisabledInput,
-                    ]}
-                    placeholderTextColor="#999"
-                    placeholder="Enter reorder level"
-                    value={
-                      manageStock.includes('on')
-                        ? '0'
-                        : editForm.prod_reorder_qty
-                    }
-                    editable={!manageStock.includes('on')}
-                    onChangeText={t => {
-                      if (!manageStock.includes('on'))
-                        editOnChnage('prod_reorder_qty', t);
-                    }}
-                    keyboardType="numeric"
-                  />
-                </View>
-
-                {/* Pricing */}
-                <View style={styles.editProductField}>
-                  <Text style={styles.editProductLabel}>Cost Price *</Text>
-                  <TextInput
-                    style={styles.editProductInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter cost price"
-                    value={editForm.prod_costprice}
-                    keyboardType="numeric"
-                    onChangeText={t => {
-                      editOnChnage('prod_costprice', t);
-                      // Calculate final price if possible
-                      const cost = parseFloat(t) || 0;
-                      const retail = parseFloat(editForm.prod_retailprice) || 0;
-                      const discount = parseFloat(editForm.prod_discount) || 0;
-                      const final =
-                        retail > 0
-                          ? (retail - (retail * discount) / 100).toFixed(2)
-                          : (cost - (cost * discount) / 100).toFixed(2);
-                      setEditForm(prev => ({
-                        ...prev,
-                        prod_fretailprice: isNaN(Number(final)) ? '' : final,
-                      }));
-                    }}
-                  />
-                </View>
-                <View style={styles.editProductField}>
-                  <Text style={styles.editProductLabel}>Retail Price *</Text>
-                  <TextInput
-                    style={styles.editProductInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter retail price"
-                    value={editForm.prod_retailprice}
-                    keyboardType="numeric"
-                    onChangeText={t => {
-                      editOnChnage('prod_retailprice', t);
-                      // Calculate final price if possible
-                      const cost = parseFloat(editForm.prod_costprice) || 0;
-                      const retail = parseFloat(t) || 0;
-                      const discount = parseFloat(editForm.prod_discount) || 0;
-                      const final =
-                        retail > 0
-                          ? (retail - (retail * discount) / 100).toFixed(2)
-                          : (cost - (cost * discount) / 100).toFixed(2);
-                      setEditForm(prev => ({
-                        ...prev,
-                        prod_fretailprice: isNaN(Number(final)) ? '' : final,
-                      }));
-                    }}
-                  />
-                </View>
-
-                <View style={styles.editProductField}>
-                  <Text style={styles.editProductLabel}>Discount (%)</Text>
-                  <TextInput
-                    style={styles.editProductInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter discount percentage"
-                    value={editForm.prod_discount}
-                    keyboardType="numeric"
-                    onChangeText={t => {
-                      editOnChnage('prod_discount', t);
-                      // Calculate final price if possible
-                      const cost = parseFloat(editForm.prod_costprice) || 0;
-                      const retail = parseFloat(editForm.prod_retailprice) || 0;
-                      const discount = parseFloat(t) || 0;
-                      const final =
-                        retail > 0
-                          ? (retail - (retail * discount) / 100).toFixed(2)
-                          : (cost - (cost * discount) / 100).toFixed(2);
-                      setEditForm(prev => ({
-                        ...prev,
-                        prod_fretailprice: isNaN(Number(final)) ? '' : final,
-                      }));
-                    }}
-                  />
-                </View>
-                <View style={styles.editProductField}>
-                  <Text style={styles.editProductLabel}>Final Price</Text>
-                  <TextInput
-                    style={[
-                      styles.editProductInput,
-                      styles.editProductDisabledInput,
-                    ]}
-                    placeholder="Calculated automatically"
-                    value={editForm.prod_fretailprice || '0.00'}
-                    editable={false}
-                    placeholderTextColor="#999"
-                  />
-                </View>
-
-                {/* Supplier Section */}
-                <View style={styles.editProductField}>
-                  <TouchableOpacity
-                    style={styles.editProductCheckboxRow}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      const newOptions = supplier.includes('on')
-                        ? supplier.filter(opt => opt !== 'on')
-                        : [...supplier, 'on'];
-                      setSupplier(newOptions);
-                    }}>
-                    <Checkbox.Android
-                      status={supplier.includes('on') ? 'checked' : 'unchecked'}
-                      color="#144272"
-                      uncheckedColor="#144272"
-                    />
-                    <Text style={styles.editProductCheckboxText}>
-                      Enable Supplier
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {supplier.includes('on') && (
-                  <View style={styles.editProductDropdownRow}>
-                    <View style={styles.editProductDropdownField}>
-                      <Text style={styles.editProductLabel}>Supplier</Text>
-                      <DropDownPicker
-                        items={transformedSup}
-                        open={editSupOpen}
-                        setOpen={setEditSupOpen}
-                        value={editSupValue}
-                        setValue={setEditSupValue}
-                        placeholder="Select supplier"
-                        placeholderStyle={styles.editProductDropdownPlaceholder}
-                        textStyle={styles.editProductDropdownText}
-                        ArrowUpIconComponent={() => (
-                          <Icon name="chevron-up" size={18} color="#144272" />
-                        )}
-                        ArrowDownIconComponent={() => (
-                          <Icon name="chevron-down" size={18} color="#144272" />
-                        )}
-                        style={styles.editProductDropdown}
-                        dropDownContainerStyle={styles.editProductDropdownList}
-                        labelStyle={styles.editProductDropdownText}
-                        listItemLabelStyle={styles.editProductDropdownText}
-                        listMode="SCROLLVIEW"
-                        disabled={!supplier.includes('on')}
-                      />
-                    </View>
-                  </View>
-                )}
-
-                {/* Sub UOM Section */}
-                <View style={styles.editProductField}>
-                  <TouchableOpacity
-                    style={styles.editProductCheckboxRow}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      const newOptions = subUom.includes('on')
-                        ? subUom.filter(opt => opt !== 'on')
-                        : [...subUom, 'on'];
-                      setSubUom(newOptions);
-                    }}>
-                    <Checkbox.Android
-                      status={subUom.includes('on') ? 'checked' : 'unchecked'}
-                      color="#144272"
-                      uncheckedColor="#144272"
-                    />
-                    <Text style={styles.editProductCheckboxText}>
-                      Have Sub UOM?
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {subUom.includes('on') && (
-                  <>
-                    <View style={styles.editProductDropdownRow}>
-                      <View style={styles.editProductDropdownField}>
-                        <Text style={styles.editProductLabel}>Sub UOM</Text>
-                        <DropDownPicker
-                          items={transformedUom}
-                          open={editSubUmoOpen}
-                          setOpen={setEditSubUmoOpen}
-                          value={editSubUmoValue}
-                          setValue={setEditSubUmoValue}
-                          placeholder="Select sub UOM"
-                          placeholderStyle={
-                            styles.editProductDropdownPlaceholder
-                          }
-                          textStyle={styles.editProductDropdownText}
-                          ArrowUpIconComponent={() => (
-                            <Icon name="chevron-up" size={18} color="#144272" />
-                          )}
-                          ArrowDownIconComponent={() => (
-                            <Icon
-                              name="chevron-down"
-                              size={18}
-                              color="#144272"
-                            />
-                          )}
-                          style={[styles.editProductDropdown, {zIndex: 999}]}
-                          dropDownContainerStyle={
-                            styles.editProductDropdownList
-                          }
-                          labelStyle={styles.editProductDropdownText}
-                          listItemLabelStyle={styles.editProductDropdownText}
-                          listMode="SCROLLVIEW"
-                          disabled={!subUom.includes('on')}
-                        />
-                      </View>
-                    </View>
-
-                    <View style={styles.editProductField}>
-                      <Text style={styles.editProductLabel}>Equivalence</Text>
-                      <TextInput
-                        style={[
-                          styles.editProductInput,
-                          !subUom.includes('on') &&
-                            styles.editProductDisabledInput,
-                        ]}
-                        placeholderTextColor="#999"
-                        placeholder="Enter equivalence"
-                        keyboardType="number-pad"
-                        value={editForm.prod_equivalent}
-                        editable={subUom.includes('on')}
-                        onChangeText={t => {
-                          if (subUom.includes('on'))
-                            editOnChnage('prod_equivalent', t);
-                        }}
-                      />
-                    </View>
-                    <View style={styles.editProductField}>
-                      <Text style={styles.editProductLabel}>
-                        Sub UOM Sale Price
-                      </Text>
-                      <TextInput
-                        style={[
-                          styles.editProductInput,
-                          !subUom.includes('on') &&
-                            styles.editProductDisabledInput,
-                        ]}
-                        placeholderTextColor="#999"
-                        placeholder="Enter sale price"
-                        keyboardType="number-pad"
-                        value={editForm.prod_sub_price}
-                        editable={subUom.includes('on')}
-                        onChangeText={t => {
-                          if (subUom.includes('on'))
-                            editOnChnage('prod_sub_price', t);
-                        }}
-                      />
-                    </View>
-                  </>
-                )}
-
-                {/* Submit Button */}
-                <TouchableOpacity
-                  style={styles.editProductSubmitBtn}
-                  onPress={updateProduct}>
-                  <Icon name="package-variant-closed" size={20} color="white" />
-                  <Text style={styles.editProductSubmitText}>
-                    Update Product
-                  </Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
@@ -2225,7 +1114,7 @@ export default function CustomerPeople() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -2233,19 +1122,31 @@ export default function CustomerPeople() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -2261,22 +1162,42 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
+  },
+
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -2286,10 +1207,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
+  },
+  avatar: {
+    height: 40,
+    width: 40,
   },
   avatarText: {
     color: '#fff',
@@ -2309,19 +1233,18 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     gap: 8,
     marginLeft: 10,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '85%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
     alignSelf: 'center',
-    marginTop: 8
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -2350,7 +1273,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -2419,7 +1342,7 @@ const styles = StyleSheet.create({
   addProductTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.primary,
   },
   addProductCloseBtn: {
     padding: 5,
@@ -2443,7 +1366,7 @@ const styles = StyleSheet.create({
   addProductLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 5,
   },
   addProductInput: {
@@ -2469,7 +1392,7 @@ const styles = StyleSheet.create({
   addProductCheckboxText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginLeft: 8,
   },
   addProductDatePicker: {
@@ -2532,7 +1455,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 10,
     paddingVertical: 15,
     marginTop: 20,
@@ -2542,302 +1465,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
-  },
-
-  //Delete Modal
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
-  },
-  deleteModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 8,
-  },
-  deleteModalMessage: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  deleteModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  deleteModalBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
-  },
-  addModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-
-  // Edit Product Modal Styles
-  editProductModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  editProductModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  editProductHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  editProductTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#144272',
-  },
-  editProductCloseBtn: {
-    padding: 5,
-  },
-  editProductForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  editProductField: {
-    flex: 1,
-    marginBottom: 5,
-  },
-  editProductLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-    marginBottom: 5,
-  },
-  editProductInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    height: 45,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
-  },
-  editProductDisabledInput: {
-    backgroundColor: '#e0e0e0',
-    color: '#888',
-  },
-  editProductCheckboxRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  editProductCheckboxText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-    marginLeft: 8,
-  },
-  editProductDatePicker: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    height: 45,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#f9f9f9',
-  },
-  editProductDateText: {
-    fontSize: 14,
-    color: '#333',
-  },
-  editProductDropdownRow: {
-    marginBottom: 15,
-  },
-  editProductDropdownField: {
-    flex: 1,
-  },
-  editProductDropdownContainer: {
-    position: 'relative',
-  },
-  editProductDropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    minHeight: 42,
-    zIndex: 999,
-  },
-  editProductDropdownList: {
-    backgroundColor: 'white',
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    zIndex: 1000,
-    maxHeight: 160,
-  },
-  editProductDropdownText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  editProductDropdownPlaceholder: {
-    color: '#999',
-    fontSize: 14,
-  },
-  editProductDropdownAddBtn: {
-    position: 'absolute',
-    right: 35,
-    top: 31,
-    backgroundColor: 'transparent',
-    padding: 5,
-    zIndex: 1001,
-  },
-  editProductSubmitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#144272',
-    borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 20,
-  },
-  editProductSubmitText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-
-  // View Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCard: {
-    width: '90%',
-    maxHeight: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  modalContent: {
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 10,
-    paddingHorizontal: 10,
-  },
-  modalHeaderTitle: {
-    color: '#144272',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  closeBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  customerDetailsWrapper: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  customerImageWrapper: {
-    marginBottom: 16,
-  },
-  customerImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    borderWidth: 3,
-    borderColor: '#144272',
-  },
-  customerNoImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 55,
-    backgroundColor: '#f5f5f5',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-  },
-  customerNoImageText: {
-    fontSize: 12,
-    color: '#999',
-    marginTop: 4,
-  },
-  modalInfoBox: {
-    width: '100%',
-    marginTop: 10,
-    backgroundColor: '#fafafa',
-    borderRadius: 12,
-    padding: 12,
-  },
-  modalInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  infoValue: {
-    fontSize: 14,
-    color: '#555',
-    flexShrink: 1,
-    textAlign: 'right',
   },
 });

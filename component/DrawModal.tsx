@@ -36,7 +36,6 @@ const icons: {[key: string]: any} = {
 
 const menuData: {[key: string]: string[]} = {
   Dashboard: [],
-  'Point of Sale': [],
   People: [
     'Customer',
     'Suppliers',

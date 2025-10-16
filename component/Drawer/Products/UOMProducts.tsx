@@ -34,16 +34,19 @@ export default function UOMProducts() {
   const [editUmo, setEditUmo] = useState('');
   const [selectedUmo, setSelectedUmo] = useState<number | null>(null);
   const [umoName, setUmoName] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<UMOs[]>([]);
+  const [masterData, setMasterData] = useState<UMOs[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const totalRecords = umos.length;
+  const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const currentData = umos.slice(
+  const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
@@ -53,7 +56,10 @@ export default function UOMProducts() {
     try {
       const res = await axios.get(`${BASE_URL}/fetchuoms`);
 
-      setUmos(res.data.uom);
+      const uomData = res.data.uom;
+
+      setFilteredData(uomData);
+      setMasterData(uomData);
     } catch (error) {
       console.log(error);
     }
@@ -201,20 +207,38 @@ export default function UOMProducts() {
     }
   };
 
+  // Search Filter
+  const searchFilter = (text: string) => {
+    if (text) {
+      const newData = masterData.filter(item => {
+        const itemData = item.ums_name
+          ? item.ums_name.toLocaleUpperCase()
+          : ''.toLocaleLowerCase();
+        const textData = text.toLocaleUpperCase();
+        return itemData.indexOf(textData) > -1;
+      });
+      setFilteredData(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredData(masterData);
+      setSearchQuery(text);
+    }
+  };
+
   useEffect(() => {
     fetchUoms();
   }, []);
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -222,12 +246,22 @@ export default function UOMProducts() {
           </View>
 
           <TouchableOpacity
-            onPress={() => {
-              setModalVisible('Add');
-            }}
+            onPress={() => setModalVisible('Add')}
             style={[styles.headerBtn]}>
+            <Text style={styles.addBtnText}>Add</Text>
             <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        {/* Search Filter */}
+        <View style={styles.searchFilter}>
+          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+          <TextInput
+            placeholder="Search by supplier name"
+            style={styles.search}
+            value={searchQuery}
+            onChangeText={text => searchFilter(text)}
+          />
         </View>
 
         <View style={styles.listContainer}>
@@ -239,18 +273,14 @@ export default function UOMProducts() {
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.ums_name?.charAt(0) || 'U'}
-                    </Text>
+                    <Image
+                      source={require('../../../assets/scale.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.ums_name}</Text>
-                    {/* Category */}
-                    <Text style={styles.subText}>
-                      <Icon name="tag" size={12} color="#666" />{' '}
-                      {item.id || 'No category'}
-                    </Text>
                   </View>
 
                   {/* Actions on right */}
@@ -271,14 +301,22 @@ export default function UOMProducts() {
                         };
                         fetchSignleUmo(item.id);
                       }}>
-                      <Icon name="pencil" size={20} color={'#144272'} />
+                      <Icon
+                        name="pencil"
+                        size={20}
+                        color={backgroundColors.success}
+                      />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => {
                         setModalVisible('Delete');
                         setSelectedUmo(item.id);
                       }}>
-                      <Icon name="delete" size={20} color={'#144272'} />
+                      <Icon
+                        name="delete"
+                        size={20}
+                        color={backgroundColors.danger}
+                      />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -478,7 +516,7 @@ export default function UOMProducts() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -486,19 +524,31 @@ export default function UOMProducts() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -514,22 +564,42 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
+  },
+
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -539,10 +609,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
+  },
+  avatar: {
+    height: 40,
+    width: 40,
   },
   avatarText: {
     color: '#fff',
@@ -562,19 +635,18 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 8,
+    alignSelf: 'center',
+    gap: 12,
     marginLeft: 10,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '85%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
     alignSelf: 'center',
-    marginTop: 8,
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,

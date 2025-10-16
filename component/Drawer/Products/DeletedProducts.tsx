@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   FlatList,
   Modal,
+  Image,
+  TextInput,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -15,7 +17,6 @@ import BASE_URL from '../../BASE_URL';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
 import Toast from 'react-native-toast-message';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 
 interface Products {
@@ -34,16 +35,19 @@ export default function DeletedProducts() {
   const [delProducts, setDelProducts] = useState<Products[]>([]);
   const [selectedProd, setSelectedProd] = useState<any | null>(null);
   const [modalVisible, setModalVisible] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<Products[]>([]);
+  const [masterData, setMasterData] = useState<Products[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const totalRecords = delProducts.length;
+  const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const currentData = delProducts.slice(
+  const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
@@ -52,7 +56,11 @@ export default function DeletedProducts() {
   const fetchProds = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchDeletedProducts`);
-      setDelProducts(res.data.deletedProducts);
+
+      const prodData = res.data.deletedProducts;
+
+      setFilteredData(prodData);
+      setMasterData(prodData);
     } catch (error) {
       console.log(error);
     }
@@ -88,31 +96,54 @@ export default function DeletedProducts() {
     }
   };
 
+  // Search Filter
+  const searchFilter = (text: string) => {
+    if (text) {
+      const newData = masterData.filter(item => {
+        const itemData = item.prod_name
+          ? item.prod_name.toLocaleUpperCase()
+          : ''.toLocaleLowerCase();
+        const textData = text.toLocaleUpperCase();
+        return itemData.indexOf(textData) > -1;
+      });
+      setFilteredData(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredData(masterData);
+      setSearchQuery(text);
+    }
+  };
+
   useEffect(() => {
     fetchProds();
   }, []);
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Deleted Products</Text>
           </View>
+        </View>
 
-          <TouchableOpacity
-            onPress={() => {}}
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}>
-            <Icon name="plus" size={24} color="transparent" />
-          </TouchableOpacity>
+        {/* Search Filter */}
+        <View style={styles.searchFilter}>
+          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+          <TextInput
+            placeholder="Search by product name"
+            style={styles.search}
+            value={searchQuery}
+            onChangeText={text => searchFilter(text)}
+          />
         </View>
 
         <View style={styles.listContainer}>
@@ -124,27 +155,17 @@ export default function DeletedProducts() {
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.prod_name?.charAt(0) || 'P'}
-                    </Text>
+                    <Image
+                      source={require('../../../assets/product.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.prod_name}</Text>
                     {/* Category */}
                     <Text style={styles.subText}>
-                      <Icon name="shape" size={12} color="#666" />{' '}
-                      {item.pcat_name || 'No category'}
-                    </Text>
-                    {/* Quantity */}
-                    <Text style={styles.subText}>
-                      <Icon name="cube-outline" size={12} color="#666" />{' '}
-                      {item.prod_qty || 'N/A'}
-                    </Text>
-                    {/* Retail Price */}
-                    <Text style={styles.subText}>
-                      <Icon name="currency-usd" size={12} color="#666" />{' '}
-                      {item.prod_retailprice || 'N/A'}
+                      {`${item.pcat_name} | ${item.prod_retailprice} | ${item.prod_qty}`}
                     </Text>
                   </View>
 
@@ -155,7 +176,7 @@ export default function DeletedProducts() {
                         setModalVisible('Activate');
                         setSelectedProd(item.id);
                       }}>
-                      <Icon name="check-circle" size={22} color={'green'} />
+                      <Icon name="check-circle" size={24} color={'green'} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -265,7 +286,7 @@ export default function DeletedProducts() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -273,19 +294,31 @@ export default function DeletedProducts() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -301,22 +334,42 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
+  },
+
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -326,10 +379,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
+  },
+  avatar: {
+    height: 40,
+    width: 40,
   },
   avatarText: {
     color: '#fff',
@@ -349,19 +405,18 @@ const styles = StyleSheet.create({
   actionRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     gap: 8,
     marginLeft: 10,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '85%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
     alignSelf: 'center',
-    marginTop: 8,
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
