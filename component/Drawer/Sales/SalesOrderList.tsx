@@ -8,6 +8,7 @@ import {
   FlatList,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -18,7 +19,6 @@ import {useUser} from '../../CTX/UserContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import DropDownPicker from 'react-native-dropdown-picker';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 
 interface Orders {
@@ -55,8 +55,17 @@ interface InvoiceOrders {
   salordd_sub_total: string;
 }
 
+interface InvoiceState {
+  id: number;
+  sald_prod_name: string;
+  sald_invoice_no: string;
+  sald_qty: string;
+  sald_retail_price: string;
+  sald_total_fretailprice: string;
+}
+
 export default function SalesOrderList() {
-  const {token, bussName, bussAddress} = useUser();
+  const {token, bussName, bussAddress, bussContact} = useUser();
   const {openDrawer} = useDrawer();
   const [saleOrders, setSaleOrders] = useState<Orders[]>([]);
   const [modalVisible, setModalVisible] = useState('');
@@ -68,6 +77,7 @@ export default function SalesOrderList() {
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
   const [statusOpen, setStatusOpen] = useState(false);
   const [status, setStatus] = useState('Sale Order');
+  const [invoiceState, setInvoiceState] = useState<InvoiceState[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -85,7 +95,7 @@ export default function SalesOrderList() {
   // Status Dropdown
   const statusDropdown = [
     {label: 'Pending', value: 'Sale Order'},
-    {label: 'Complete', value: 'Complete'},
+    {label: 'Completed', value: 'Completed'},
   ];
 
   const onStartDateChange = (
@@ -126,6 +136,7 @@ export default function SalesOrderList() {
       );
       setInvcDetails(res.data);
       setInvcOrders(res.data.orderdetail);
+      setInvoiceState(res.data.saleinvoicedetail);
     } catch (error) {
       console.log(error);
     }
@@ -137,27 +148,19 @@ export default function SalesOrderList() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
-
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Sales Order List</Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Sale Order List</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="mail" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.dateContainer}>
@@ -207,7 +210,7 @@ export default function SalesOrderList() {
         </View>
 
         {/* Status Filter */}
-        <View style={{paddingHorizontal: 15, marginVertical: 8}}>
+        <View style={{paddingHorizontal: 15, marginTop: 4}}>
           <DropDownPicker
             items={statusDropdown}
             open={statusOpen}
@@ -243,7 +246,9 @@ export default function SalesOrderList() {
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View>
-                    <Text style={styles.name}>{item.salord_invoice_no}</Text>
+                    <Text style={styles.name}>
+                      {item.salord_invoice_no} | {item.cust_name}
+                    </Text>
                     <Text style={styles.subText}>
                       <Icon name="cash-multiple" size={12} color="#666" />{' '}
                       {item.order_total}
@@ -277,7 +282,7 @@ export default function SalesOrderList() {
             showsVerticalScrollIndicator={false}
           />
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Pagination Controls */}
       {totalRecords > 0 && (
@@ -323,7 +328,7 @@ export default function SalesOrderList() {
           </TouchableOpacity>
         </View>
       )}
-      
+
       {/* View Modal */}
       <Modal
         visible={modalVisible === 'View'}
@@ -363,48 +368,55 @@ export default function SalesOrderList() {
               {/* Company Info Card */}
               <View style={styles.companyCard}>
                 <View style={styles.companyHeader}>
-                  <Text style={styles.companyName}>{bussName ?? 'N/A'}</Text>
+                  <Text style={styles.companyName}>{bussName || 'N/A'}</Text>
                 </View>
                 <Text style={styles.companyAddress}>
-                  {bussAddress ?? 'N/A'}
+                  {bussAddress || 'N/A'}
+                </Text>
+                <Text style={styles.companyContact}>
+                  {bussContact || 'N/A'}
                 </Text>
               </View>
 
               {/* Order Info Grid */}
               <View style={styles.orderInfoGrid}>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Customer</Text>
-                  <Text style={styles.infoValue}>
-                    {invcDetails?.customer?.cust_name ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Maker User</Text>
-                  <Text style={styles.infoValue}>
-                    {invcDetails?.usermaker?.name ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Invoice #</Text>
+                  <Text style={styles.infoLabel}>Invoice #:</Text>
                   <Text style={styles.infoValue}>
                     {invcDetails?.orderrecord?.salord_invoice_no ?? 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Order Date</Text>
+                  <Text style={styles.infoLabel}>Invoice Date:</Text>
                   <Text style={styles.infoValue}>
                     {invcDetails?.orderrecord?.salord_date
-                      ? new Date(
-                          invcDetails.orderrecord.salord_date,
-                        ).toLocaleDateString('en-GB')
+                      ? new Date(invcDetails.orderrecord.salord_date)
+                          .toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')
                       : 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Customer:</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails?.customer?.cust_name ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Maker User:</Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails?.usermaker?.name ?? 'N/A'}
                   </Text>
                 </View>
               </View>
 
               {/* Order Table Section */}
               <View style={styles.tableSection}>
-                <Text style={styles.sectionTitle}>Order Items</Text>
+                <Text style={styles.sectionTitle}>Invoice Items</Text>
 
                 {/* Table Container */}
                 <View style={styles.tableContainer}>
@@ -417,7 +429,7 @@ export default function SalesOrderList() {
                       Product
                     </Text>
                     <Text style={[styles.tableHeaderText, styles.col3]}>
-                      Qty
+                      QTY
                     </Text>
                     <Text style={[styles.tableHeaderText, styles.col4]}>
                       Price
@@ -434,28 +446,20 @@ export default function SalesOrderList() {
                       item?.id ? item.id.toString() : index.toString()
                     }
                     renderItem={({item, index}) => (
-                      <View
-                        style={[
-                          styles.tableRow,
-                          index % 2 === 0
-                            ? styles.tableRowEven
-                            : styles.tableRowOdd,
-                        ]}>
+                      <View style={[styles.tableRow]}>
                         <Text
                           style={[styles.tableCell, styles.col1]}
-                          numberOfLines={1}>
+                          numberOfLines={2}>
                           {item.salordd_invoice_no}
                         </Text>
-                        <Text
-                          style={[styles.tableCell, styles.col2]}
-                          numberOfLines={2}>
+                        <Text style={[styles.tableCell, styles.col2]}>
                           {item.prod_name}
                         </Text>
                         <Text style={[styles.tableCell, styles.col3]}>
                           {item.salordd_partial_qty}
                         </Text>
                         <Text style={[styles.tableCell, styles.col4]}>
-                          {Number(item.salordd_retail_price).toLocaleString()}
+                          {item.salordd_retail_price}
                         </Text>
                         <Text style={[styles.tableCell, styles.col5]}>
                           {Number(item.salordd_sub_total).toLocaleString()}
@@ -467,30 +471,104 @@ export default function SalesOrderList() {
                 </View>
               </View>
 
-              {/* Order Totals */}
-              <View style={styles.totalsSection}>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Order Total:</Text>
-                  <Text style={styles.totalValue}>
-                    PKR {invcDetails?.total ?? 'N/A'}
+              <View style={styles.orderInfoGrid}>
+                <View
+                  style={[
+                    styles.infoCard,
+                    {
+                      justifyContent: 'flex-end',
+                      width: '100%',
+                      marginBottom: 6,
+                    },
+                  ]}>
+                  <Text style={styles.infoLabel}>Total Amount: </Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails?.total ?? 'N/A'}
                   </Text>
                 </View>
-                <View style={[styles.totalRow, styles.pendingTotalRow]}>
-                  <Text style={[styles.totalLabel, styles.pendingLabel]}>
-                    Pending Total:
-                  </Text>
-                  <Text style={[styles.totalValue, styles.pendingValue]}>
-                    PKR {invcDetails?.pendingtotal ?? 'N/A'}
+                <View
+                  style={[
+                    styles.infoCard,
+                    {
+                      justifyContent: 'flex-end',
+                      width: '100%',
+                      marginBottom: 6,
+                    },
+                  ]}>
+                  <Text style={styles.infoLabel}>Pending Amount: </Text>
+                  <Text style={styles.infoValue}>
+                    {invcDetails?.pendingtotal ?? 'N/A'}
                   </Text>
                 </View>
               </View>
 
+              {/* Invoice Section */}
+              <View style={styles.tableSection}>
+                <Text style={styles.sectionTitle}>Invoice State</Text>
+
+                {/* Table Container */}
+                {invoiceState.length > 0 ? (
+                  <View style={styles.tableContainer}>
+                    {/* Table Header */}
+                    <View style={styles.tableHeader}>
+                      <Text style={[styles.tableHeaderText, styles.col1]}>
+                        Invoice#
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col2]}>
+                        Product
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col3]}>
+                        QTY
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col4]}>
+                        Price
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col5]}>
+                        Sub Total
+                      </Text>
+                    </View>
+
+                    {/* Table Rows */}
+                    <FlatList
+                      data={invoiceState}
+                      keyExtractor={(item, index) =>
+                        item?.id ? item.id.toString() : index.toString()
+                      }
+                      renderItem={({item, index}) => (
+                        <View style={[styles.tableRow]}>
+                          <Text
+                            style={[styles.tableCell, styles.col1]}
+                            numberOfLines={2}>
+                            {item.sald_invoice_no}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col2]}>
+                            {item.sald_prod_name}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col3]}>
+                            {item.sald_qty}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col4]}>
+                            {Number(item.sald_retail_price).toLocaleString()}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col5]}>
+                            {Number(
+                              item.sald_total_fretailprice,
+                            ).toLocaleString()}
+                          </Text>
+                        </View>
+                      )}
+                      scrollEnabled={false}
+                    />
+                  </View>
+                ) : (
+                  <Text style={styles.footerText}>
+                    No Finalized Record Found..!
+                  </Text>
+                )}
+              </View>
+
               {/* Footer */}
               <View style={styles.modalFooter}>
-                <Text style={styles.invoiceState}>Invoice State</Text>
-                <Text style={styles.footerText}>
-                  No Finalized Record Found..!
-                </Text>
                 <Text style={styles.thankYou}>Thank you for your visit</Text>
                 <View style={styles.developerInfo}>
                   <Text style={styles.developerText}>
@@ -512,32 +590,39 @@ export default function SalesOrderList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   // Pagination Component
@@ -560,7 +645,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -603,25 +688,25 @@ const styles = StyleSheet.create({
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   name: {
     fontSize: 16,
@@ -635,13 +720,12 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     alignItems: 'center',
-    alignSelf: 'center',
     justifyContent: 'center',
-    paddingVertical: '65%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
-    marginTop: 8
+    alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -654,25 +738,24 @@ const styles = StyleSheet.create({
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
+    paddingHorizontal: 12,
     marginTop: 15,
-    marginBottom: 5,
+    marginBottom: 4,
   },
   dateInputWrapper: {
     flex: 0.48,
   },
   dateLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
-    marginBottom: 8,
+    color: backgroundColors.dark,
+    marginBottom: 6,
     marginLeft: 4,
   },
   dateInputBox: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: 8,
     paddingHorizontal: 12,
-    paddingVertical: 12,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -685,13 +768,32 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 3,
-    elevation: 3,
-    height: 48,
+    elevation: 4,
+    height: 46,
   },
   dateText: {
     fontSize: 14,
     fontWeight: '500',
     color: '#144272',
+  },
+
+  // Dropdown
+  dropdown: {
+    backgroundColor: backgroundColors.light,
+    borderWidth: 0.2,
+    borderColor: backgroundColors.dark,
+    borderRadius: 8,
+    minHeight: 48,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  dropDownContainer: {
+    backgroundColor: '#fff',
+    borderColor: '#144272',
   },
 
   // Modal stying
@@ -733,7 +835,7 @@ const styles = StyleSheet.create({
   invoiceIconContainer: {
     width: 48,
     height: 48,
-    backgroundColor: '#E8F4FD',
+    backgroundColor: '#2a652b24',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -751,26 +853,24 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   closeButton: {
-    width: 40,
-    height: 40,
+    width: 30,
+    height: 30,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: backgroundColors.gray,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   // Company Card
   companyCard: {
-    backgroundColor: 'white',
     marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: backgroundColors.dark,
+    borderStyle: 'dotted',
   },
   companyHeader: {
     flexDirection: 'row',
@@ -783,17 +883,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#144272',
   },
-  statusBadge: {
-    backgroundColor: '#FFF3CD',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#856404',
-  },
   companyAddress: {
     fontSize: 14,
     color: '#666',
@@ -802,187 +891,65 @@ const styles = StyleSheet.create({
 
   // Info Grid
   orderInfoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    marginTop: 16,
+    marginTop: 10,
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 2,
+    borderStyle: 'dotted',
+    marginHorizontal: 20,
   },
   infoCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    padding: 12,
+    width: '60%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
     borderRadius: 8,
-    margin: '1%',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   infoLabel: {
-    fontSize: 11,
-    color: '#888',
-    fontWeight: '600',
+    fontSize: 12,
+    color: backgroundColors.dark,
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 4,
   },
   infoValue: {
     fontSize: 14,
-    color: '#1A1A1A',
-    fontWeight: '600',
+    color: backgroundColors.dark,
+    fontWeight: '400',
   },
 
   // Items Section
-  itemsSection: {
-    flex: 1,
-    marginTop: 20,
-  },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#1A1A1A',
-    paddingHorizontal: 20,
     marginBottom: 12,
-  },
-  itemsList: {
-    paddingHorizontal: 20,
-  },
-  itemCard: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  itemIconContainer: {
-    width: 36,
-    height: 36,
-    backgroundColor: '#E8F4FD',
-    borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  itemInfo: {
-    flex: 1,
-  },
-  itemName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#1A1A1A',
-    marginBottom: 2,
-  },
-  itemInvoice: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
-  },
-  itemBadge: {
-    backgroundColor: '#FFEBEE',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  itemBadgeText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#C62828',
-  },
-  itemDetails: {
-    backgroundColor: '#F8F9FA',
-    padding: 12,
-    borderRadius: 8,
-  },
-  itemDetailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  itemDetailLabel: {
-    fontSize: 13,
-    color: '#666',
-    fontWeight: '500',
-  },
-  itemDetailValue: {
-    fontSize: 13,
-    color: '#1A1A1A',
-    fontWeight: '600',
-  },
-  itemTotal: {
-    color: '#144272',
-    fontSize: 14,
   },
 
   // Totals Section
   totalsSection: {
-    backgroundColor: 'white',
     marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  totalRow: {
+    paddingVertical: 10,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  pendingTotalRow: {
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    paddingTop: 12,
-    marginTop: 4,
-    marginBottom: 0,
+    justifyContent: 'flex-end',
   },
   totalLabel: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: backgroundColors.dark,
     fontWeight: '600',
   },
   totalValue: {
-    fontSize: 16,
-    color: '#1A1A1A',
-    fontWeight: '700',
-  },
-  pendingLabel: {
-    color: '#C62828',
-  },
-  pendingValue: {
-    color: '#C62828',
-    fontSize: 18,
+    fontSize: 14,
+    color: backgroundColors.dark,
+    fontWeight: '400',
   },
 
   // Footer
   modalFooter: {
-    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
     borderTopWidth: 1,
+    marginTop: 5,
     borderTopColor: '#F0F0F0',
-    marginTop: 16,
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 8,
   },
   thankYou: {
     fontSize: 16,
@@ -1015,101 +982,57 @@ const styles = StyleSheet.create({
   tableSection: {
     marginTop: 20,
     marginHorizontal: 20,
+    borderBottomWidth: 2,
+    borderColor: backgroundColors.dark,
+    borderStyle: 'dotted',
   },
   tableContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#144272',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 1.5,
+    paddingBottom: 5,
   },
   tableHeaderText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontWeight: '600',
-    fontSize: 11,
+    fontSize: 14,
     textAlign: 'center',
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingVertical: 6,
     alignItems: 'center',
   },
-  tableRowEven: {
-    backgroundColor: '#FAFAFA',
-  },
-  tableRowOdd: {
-    backgroundColor: 'white',
-  },
   tableCell: {
-    fontSize: 11,
-    color: '#333',
+    fontSize: 12,
+    color: backgroundColors.dark,
     textAlign: 'center',
-    paddingHorizontal: 2,
+  },
+  footerText: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 8,
   },
 
   // Column widths
   col1: {
-    flex: 0.2, // Invoice#
+    flex: 0.15,
   },
   col2: {
-    flex: 0.3, // Product
+    flex: 0.25, // Product
   },
   col3: {
-    flex: 0.15, // Qty
+    flex: 0.2, // Qty
   },
   col4: {
-    flex: 0.2, // Price
+    flex: 0.15, // Price
   },
   col5: {
     flex: 0.2, // Total
-  },
-
-  statusCell: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusContainer: {
-    backgroundColor: '#FFEBEE',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    minWidth: 50,
-  },
-  statusCellText: {
-    color: '#C62828',
-    fontSize: 9,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  invoiceState: {
-    fontSize: 16,
-    color: '#144272',
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  // Dropdown
-  dropdown: {
-    borderWidth: 1,
-    borderColor: '#144272',
-    minHeight: 48,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff',
-  },
-  dropDownContainer: {
-    backgroundColor: '#fff',
-    borderColor: '#144272',
   },
 });

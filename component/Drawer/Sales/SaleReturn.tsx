@@ -10,6 +10,7 @@ import {
   Modal,
   ScrollView,
   Animated,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState, useRef} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -18,7 +19,6 @@ import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 
 interface CartDetails {
@@ -75,8 +75,22 @@ interface CartItemsWithout {
   price: string;
 }
 
+interface InvoiceDetails {
+  cust_name: string;
+  cust_contact: string;
+  cust_fathername: string;
+  cust_address: string;
+}
+
+interface InvoiceItems {
+  prod_name: string;
+  salrd_return_qty: number;
+  salrd_price: string;
+  salrd_total_price: number;
+}
+
 export default function SaleReturn() {
-  const {token} = useUser();
+  const {token, bussName, bussContact, bussAddress} = useUser();
   const {openDrawer} = useDrawer();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -102,25 +116,8 @@ export default function SaleReturn() {
   const [orderTotalWithout, setOrderTotalWithout] = useState<number>(0);
   const [modal, setModal] = useState('');
   const [editForm, setEditForm] = useState<EditForm>(initialEditFrom);
-
-  // Cart Animation
-  const bounceAnim = useRef(new Animated.Value(0)).current;
-
-  // Cart animation effect
-  const animateCartIcon = () => {
-    Animated.sequence([
-      Animated.timing(bounceAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(bounceAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  };
+  const [invcDetails, setInvcDetails] = useState<InvoiceDetails | null>(null);
+  const [invcItems, setInvcItems] = useState<InvoiceItems[]>([]);
 
   const editOnChange = (field: keyof EditForm, value: string) => {
     setEditForm(prev => ({
@@ -180,8 +177,12 @@ export default function SaleReturn() {
         setSearchTerm('');
         setShowResults(false);
         getInvoiceCart();
-        fetchCartItems();
-        animateCartIcon();
+      } else if (res.status === 200 && data.status === 201) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning!',
+          text2: 'This invoice cannot be return anymore!.',
+        });
       }
     } catch (error) {
       console.error(error);
@@ -267,7 +268,6 @@ export default function SaleReturn() {
         setQty('');
         setSubQty('');
         fetchCartItemsWithout();
-        animateCartIcon();
       }
     } catch (error) {
       console.log(error);
@@ -530,6 +530,11 @@ export default function SaleReturn() {
         fetchCartItemsWithout();
         setOrderTotalWithout(0);
         emptyCartWithoutInv();
+
+        setInvcDetails(res.data.return_detail[0]);
+        setInvcItems(res.data.return_detail);
+
+        setModal('Invoice');
       } else if (data.status === 202) {
         Toast.show({
           type: 'error',
@@ -572,27 +577,35 @@ export default function SaleReturn() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Sale Return</Text>
           </View>
 
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="shopping-cart" size={24} color="transparent" />
-          </TouchableOpacity>
+          {selectedOption === 'without' && (
+            <TouchableOpacity
+              onPress={() => setModal('Cart')}
+              style={[styles.headerBtn]}>
+              <Icon name="add-shopping-cart" size={26} color="#fff" />
+              {cartItemsWithout.length > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>
+                    {cartItemsWithout.length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
 
         <ScrollView
@@ -600,100 +613,88 @@ export default function SaleReturn() {
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled>
           {/* Toggle Section */}
-          <View style={styles.section}>
-            <View style={styles.toggleContainer}>
-              <TouchableOpacity
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                selectedOption === 'with' && styles.toggleButtonActive,
+              ]}
+              onPress={() => setSelectedOption('with')}>
+              <Text
                 style={[
-                  styles.toggleButton,
-                  selectedOption === 'with' && styles.toggleButtonActive,
-                ]}
-                onPress={() => setSelectedOption('with')}>
-                <Text
-                  style={[
-                    styles.toggleButtonText,
-                    selectedOption === 'with' && styles.toggleButtonTextActive,
-                  ]}>
-                  Return With Invoice
-                </Text>
-              </TouchableOpacity>
+                  styles.toggleButtonText,
+                  selectedOption === 'with' && styles.toggleButtonTextActive,
+                ]}>
+                Return With Invoice
+              </Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                selectedOption === 'without' && styles.toggleButtonActive,
+              ]}
+              onPress={() => setSelectedOption('without')}>
+              <Text
                 style={[
-                  styles.toggleButton,
-                  selectedOption === 'without' && styles.toggleButtonActive,
-                ]}
-                onPress={() => setSelectedOption('without')}>
-                <Text
-                  style={[
-                    styles.toggleButtonText,
-                    selectedOption === 'without' &&
-                      styles.toggleButtonTextActive,
-                  ]}>
-                  Return Without Invoice
-                </Text>
-              </TouchableOpacity>
-            </View>
+                  styles.toggleButtonText,
+                  selectedOption === 'without' && styles.toggleButtonTextActive,
+                ]}>
+                Return Without Invoice
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {selectedOption === 'with' ? (
             <View>
-              {/* Search Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Search Invoice</Text>
+              <View style={styles.searchContainer}>
+                <View style={styles.searchInputWrapper}>
+                  <Icon
+                    name="search"
+                    size={20}
+                    color={backgroundColors.dark}
+                    style={styles.searchIcon}
+                  />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholderTextColor="rgba(0,0,0,0.7)"
+                    placeholder="Search Invoice..."
+                    value={searchTerm}
+                    onChangeText={handleSearch}
+                  />
+                  <TouchableOpacity onPress={() => addInvoice(selectedProduct)}>
+                    <Icon name="add" size={24} color={backgroundColors.dark} />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
-                <View style={styles.searchContainer}>
-                  <View style={styles.searchInputWrapper}>
-                    <Icon
-                      name="search"
-                      size={20}
-                      color="rgba(255,255,255,0.7)"
-                      style={styles.searchIcon}
-                    />
-                    <TextInput
-                      style={styles.searchInput}
-                      placeholderTextColor="rgba(255,255,255,0.7)"
-                      placeholder="Search Invoice..."
-                      value={searchTerm}
-                      onChangeText={handleSearch}
-                    />
-                    <TouchableOpacity
-                      onPress={() => addInvoice(selectedProduct)}>
-                      <Icon name="add" size={24} color="white" />
-                    </TouchableOpacity>
+              {/* Customer Details */}
+              {(cartDetails.name ||
+                cartDetails.fatherName ||
+                cartDetails.address) && (
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Customer Details</Text>
+
+                  <View style={styles.customerCard}>
+                    <Text style={styles.customerLabel}>Customer Name:</Text>
+                    <Text style={styles.customerValue}>
+                      {cartDetails.name || 'Not specified'}
+                    </Text>
+                  </View>
+                  <View style={styles.customerCard}>
+                    <Text style={styles.customerLabel}>Father Name:</Text>
+                    <Text style={styles.customerValue}>
+                      {cartDetails.fatherName || 'Not specified'}
+                    </Text>
+                  </View>
+                  <View style={styles.customerCard}>
+                    <Text style={styles.customerLabel}>Address:</Text>
+                    <Text style={styles.customerValue}>
+                      {cartDetails.address || 'Not specified'}
+                    </Text>
                   </View>
                 </View>
-
-                {/* Customer Details */}
-                {(cartDetails.name ||
-                  cartDetails.fatherName ||
-                  cartDetails.address) && (
-                  <View style={styles.customerDetailsContainer}>
-                    <Text style={styles.customerDetailsTitle}>
-                      Customer Details
-                    </Text>
-                    <View style={styles.customerInfo}>
-                      <View style={styles.customerCard}>
-                        <Text style={styles.customerLabel}>Customer Name</Text>
-                        <Text style={styles.customerValue}>
-                          {cartDetails.name || 'Not specified'}
-                        </Text>
-                      </View>
-                      <View style={styles.customerCard}>
-                        <Text style={styles.customerLabel}>Father Name</Text>
-                        <Text style={styles.customerValue}>
-                          {cartDetails.fatherName || 'Not specified'}
-                        </Text>
-                      </View>
-                      <View style={styles.customerCard}>
-                        <Text style={styles.customerLabel}>Address</Text>
-                        <Text style={styles.customerValue}>
-                          {cartDetails.address || 'Not specified'}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-                )}
-              </View>
+              )}
 
               {/* Cart Items */}
               <View style={styles.section}>
@@ -701,11 +702,7 @@ export default function SaleReturn() {
 
                 {cartItems.length === 0 ? (
                   <View style={styles.emptyContainer}>
-                    <Icon
-                      name="receipt"
-                      size={40}
-                      color="rgba(255,255,255,0.5)"
-                    />
+                    <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
                     <Text style={styles.emptyText}>
                       No items added for return
                     </Text>
@@ -730,7 +727,11 @@ export default function SaleReturn() {
                                 setModal('Edit');
                               }}
                               style={styles.actionBtn}>
-                              <Icon name="edit" size={20} color="white" />
+                              <Icon
+                                name="edit"
+                                size={20}
+                                color={backgroundColors.dark}
+                              />
                             </TouchableOpacity>
                             <TouchableOpacity
                               onPress={() => delCartItem(item.prod_id)}
@@ -804,27 +805,40 @@ export default function SaleReturn() {
                 ]}
                 onPress={completeSaleReturn}
                 disabled={cartItems.length === 0}>
-                <Icon name="shopping-cart-checkout" size={20} color="white" />
-                <Text style={styles.checkoutBtnText}>Complete Return</Text>
+                <Icon
+                  name="shopping-cart-checkout"
+                  size={20}
+                  color={
+                    cartItems.length === 0
+                      ? backgroundColors.dark
+                      : backgroundColors.light
+                  }
+                />
+                <Text
+                  style={
+                    cartItems.length === 0
+                      ? styles.checkoutDisableBtnText
+                      : styles.checkoutBtnText
+                  }>
+                  Complete Return
+                </Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View>
               {/* Search Section Without Invoice */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Search Product</Text>
-
                 <View style={styles.searchContainer}>
                   <View style={styles.searchInputWrapper}>
                     <Icon
                       name="search"
                       size={20}
-                      color="rgba(255,255,255,0.7)"
+                      color="rgba(0,0,0,0.7)"
                       style={styles.searchIcon}
                     />
                     <TextInput
                       style={styles.searchInput}
-                      placeholderTextColor="rgba(255,255,255,0.7)"
+                      placeholderTextColor="rgba(0,0,0,0.7)"
                       placeholder="Search Product..."
                       value={searchTermWithout}
                       onChangeText={handleSearchWithout}
@@ -834,10 +848,9 @@ export default function SaleReturn() {
 
                 <View style={styles.formRow}>
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Quantity</Text>
                     <TextInput
                       style={styles.input}
-                      placeholderTextColor="rgba(255,255,255,0.7)"
+                      placeholderTextColor="rgba(0,0,0,0.7)"
                       placeholder="Enter quantity"
                       value={qty}
                       onChangeText={setQty}
@@ -846,10 +859,9 @@ export default function SaleReturn() {
                   </View>
 
                   <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Sub Quantity</Text>
                     <TextInput
                       style={styles.input}
-                      placeholderTextColor="rgba(255,255,255,0.7)"
+                      placeholderTextColor="rgba(0,0,0,0.7)"
                       placeholder="Enter sub quantity"
                       value={subQty}
                       onChangeText={setSubQty}
@@ -864,22 +876,22 @@ export default function SaleReturn() {
                   <Icon
                     name="add"
                     size={20}
-                    color="#144272"
+                    color={backgroundColors.light}
                     style={{marginRight: 8}}
                   />
                   <Text style={styles.addToCartText}>Add Product</Text>
                 </TouchableOpacity>
               </View>
 
-              {/* Complete Button Without Invoice */}
+              {/* Complete Button */}
               <TouchableOpacity
-                style={[
-                  styles.checkoutBtn,
-                  cartItemsWithout.length === 0 && styles.checkoutBtnDisabled,
-                ]}
-                onPress={completeSaleReturnWithout}
-                disabled={cartItemsWithout.length === 0}>
-                <Icon name="shopping-cart-checkout" size={20} color="white" />
+                style={[styles.checkoutBtn]}
+                onPress={completeSaleReturnWithout}>
+                <Icon
+                  name="shopping-cart-checkout"
+                  size={20}
+                  color={backgroundColors.light}
+                />
                 <Text style={styles.checkoutBtnText}>Complete Return</Text>
               </TouchableOpacity>
             </View>
@@ -941,37 +953,6 @@ export default function SaleReturn() {
             </View>
           )}
 
-        {/* Floating Cart Button */}
-        {selectedOption === 'without' && (
-          <Animated.View
-            style={[
-              styles.floatingCartContainer,
-              {
-                transform: [
-                  {
-                    scale: bounceAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1, 1.2],
-                    }),
-                  },
-                ],
-              },
-            ]}>
-            <TouchableOpacity
-              style={styles.floatingCartBtn}
-              onPress={() => setModal('Cart')}>
-              <Icon name="shopping-cart" size={24} color="white" />
-              {cartItemsWithout.length > 0 && (
-                <View style={styles.cartBadge}>
-                  <Text style={styles.cartBadgeText}>
-                    {cartItemsWithout.length}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
         {/* Cart Modal */}
         <Modal
           visible={modal === 'Cart'}
@@ -983,7 +964,11 @@ export default function SaleReturn() {
               <TouchableOpacity
                 onPress={() => setModal('')}
                 style={styles.cartModalCloseBtn}>
-                <Icon name="arrow-back" size={24} color="#144272" />
+                <Icon
+                  name="arrow-back"
+                  size={24}
+                  color={backgroundColors.dark}
+                />
               </TouchableOpacity>
               <Text style={styles.cartModalTitle}>Shopping Cart</Text>
               <Text style={styles.cartItemCount}>
@@ -1015,23 +1000,30 @@ export default function SaleReturn() {
                           {item.product_name}
                         </Text>
                         <Text style={styles.quantityValue}>
-                          {item.return_qty}
+                          {item.return_qty} - {item.return_subqty}
                         </Text>
                       </View>
 
                       <View style={styles.cartItemDetails}>
-                        <Text style={styles.detailText}>PKR {item.price}</Text>
+                        <Text style={styles.detailText}>
+                          <Text style={{fontWeight: '600'}}>Price:</Text>{' '}
+                          {item.price}
+                        </Text>
                         <Text style={styles.detailTextPrice}>
-                          PKR{' '}
                           {(
-                            parseFloat(item.sub_price) + parseFloat(item.price)
+                            parseFloat(item.sub_price) *
+                              parseFloat(item.return_subqty) +
+                            parseFloat(item.price) * parseFloat(item.return_qty)
                           ).toFixed(2)}
                         </Text>
                       </View>
 
                       <View style={styles.cartItemDetails}>
                         <Text style={styles.detailText}>
-                          Sub Price: PKR {item.sub_price}
+                          <Text style={{fontWeight: '600'}}>
+                            Sub QTY Price:
+                          </Text>{' '}
+                          {item.sub_price}
                         </Text>
                         <TouchableOpacity
                           onPress={() => delCartItemWithout(item.prod_id)}
@@ -1048,7 +1040,7 @@ export default function SaleReturn() {
                   <View style={styles.cartTotalRow}>
                     <Text style={styles.cartTotalLabel}>Total Amount:</Text>
                     <Text style={styles.cartTotalValue}>
-                      PKR {orderTotalWithout.toFixed(2)}
+                      {orderTotalWithout.toFixed(2)}
                     </Text>
                   </View>
                   <TouchableOpacity
@@ -1152,8 +1144,210 @@ export default function SaleReturn() {
           </View>
         </Modal>
 
+        {/* Invoice Modal */}
+        <Modal
+          visible={modal === 'Invoice'}
+          animationType="slide"
+          transparent
+          presentationStyle="overFullScreen">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              {/* Modal Handle */}
+              <View style={styles.modalHandle} />
+
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <View style={styles.headerLeft}>
+                  <View style={styles.invoiceIconContainer}>
+                    <Icon name="receipt" size={24} color="#144272" />
+                  </View>
+                  <View>
+                    <Text style={styles.modalTitle}>Return Receipt</Text>
+                    <Text style={styles.modalSubtitle}>Receipt Details</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setModal('');
+                    setInvcDetails(null);
+                    setInvcItems([]);
+                  }}
+                  style={styles.closeButton}>
+                  <Icon name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                style={styles.modalContent}
+                showsVerticalScrollIndicator={false}>
+                {/* Company Info Card */}
+                <View style={styles.companyCard}>
+                  <View style={styles.companyHeader}>
+                    <Text style={styles.companyName}>{bussName || 'N/A'}</Text>
+                  </View>
+                  <Text style={styles.companyAddress}>
+                    {bussAddress || 'N/A'}
+                  </Text>
+                  <Text style={styles.companyContact}>
+                    {bussContact || 'Contact: N/A'}
+                  </Text>
+                </View>
+
+                {/* Order Info Grid */}
+                <View style={styles.orderInfoGrid}>
+                  {/* <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Invoice #</Text>
+                    <Text style={styles.infoValue}>
+                      {invcData?.purchasedata?.prch_invoice_no ?? 'N/A'}
+                    </Text>
+                  </View> */}
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Invoice Date</Text>
+                    <Text style={styles.infoValue}>
+                      {new Date()
+                        .toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                        .replace(/ /g, '-')}
+                    </Text>
+                  </View>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Return Type:</Text>
+                    <Text style={styles.infoValue}>Sale Return</Text>
+                  </View>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Supplier Name:</Text>
+                    <Text style={styles.infoValue}>
+                      {invcDetails?.cust_name ?? 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Father Name:</Text>
+                    <Text style={styles.infoValue}>
+                      {invcDetails?.cust_fathername ?? 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Contact:</Text>
+                    <Text style={styles.infoValue}>
+                      {invcDetails?.cust_contact ?? 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Address:</Text>
+                    <Text style={styles.infoValue}>
+                      {invcDetails?.cust_address ?? 'N/A'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Order Table Section */}
+                <View style={styles.tableSection}>
+                  <View style={styles.tableContainer}>
+                    {/* Table Header */}
+                    <View style={styles.tableHeader}>
+                      <Text style={[styles.tableHeaderText, styles.col1]}>
+                        Sr#
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col2]}>
+                        Product Name
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col3]}>
+                        Return QTY
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col4]}>
+                        Unit Price
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col5]}>
+                        Total Price
+                      </Text>
+                    </View>
+
+                    {/* Table Rows */}
+                    <FlatList
+                      data={invcItems}
+                      keyExtractor={(item, index) => index.toString()}
+                      renderItem={({item, index}) => (
+                        <View style={[styles.tableRow]}>
+                          <Text
+                            style={[styles.tableCell, styles.col1]}
+                            numberOfLines={2}>
+                            {index + 1}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col2]}>
+                            {item.prod_name}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col3]}>
+                            {item.salrd_return_qty}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col4]}>
+                            {Number(item.salrd_price).toLocaleString()}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col5]}>
+                            {Number(item.salrd_total_price).toLocaleString()}
+                          </Text>
+                        </View>
+                      )}
+                      scrollEnabled={false}
+                      ListFooterComponent={
+                        <View
+                          style={{
+                            borderTopWidth: 1.5,
+                            borderTopColor: backgroundColors.dark,
+                            flexDirection: 'row',
+                            paddingVertical: 2.5,
+                          }}>
+                          <Text
+                            style={[
+                              styles.tableHeaderText,
+                              {flex: 0.35, textAlign: 'left'},
+                            ]}>
+                            Totals
+                          </Text>
+                          <Text style={[styles.tableCell, {flex: 0.22}]}>
+                            {invcItems.reduce(
+                              (sum, item) => sum + (item.salrd_return_qty || 0),
+                              0,
+                            )}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.tableCell,
+                              {flex: 0.33, textAlign: 'right'},
+                            ]}>
+                            {invcItems.reduce(
+                              (sum, item) =>
+                                sum + (item.salrd_total_price || 0),
+                              0,
+                            )}
+                          </Text>
+                        </View>
+                      }
+                    />
+                  </View>
+                </View>
+
+                {/* Footer */}
+                <View style={styles.modalFooter}>
+                  <Text style={styles.thankYou}>Thank you for your visit</Text>
+                  <View style={styles.developerInfo}>
+                    <Text style={styles.developerText}>
+                      Software Developed with ❤️ by
+                    </Text>
+                    <Text style={styles.companyContact}>
+                      Technic Mentors | +923111122144
+                    </Text>
+                  </View>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
         <Toast />
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -1161,110 +1355,125 @@ export default function SaleReturn() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    alignItems: 'center',
   },
+
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   section: {
-    backgroundColor: 'rgba(15, 45, 78, 0.8)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: backgroundColors.dark,
     marginBottom: 16,
   },
   toggleContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    paddingVertical: 10,
   },
   toggleButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    width: '48%',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'white',
+    backgroundColor: backgroundColors.light,
+    borderColor: backgroundColors.gray,
     alignItems: 'center',
-    marginHorizontal: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   toggleButtonActive: {
-    backgroundColor: 'white',
+    backgroundColor: backgroundColors.primary,
   },
   toggleButtonText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontWeight: 'bold',
   },
   toggleButtonTextActive: {
-    color: '#144272',
+    color: backgroundColors.light,
   },
-  newInvoiceBadge: {
-    alignSelf: 'flex-end',
-    backgroundColor: 'gray',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'white',
-  },
-  newInvoiceText: {
-    color: 'white',
-    fontSize: 12,
-  },
+
   searchContainer: {
-    marginBottom: 16,
+    marginBottom: 10,
     position: 'relative',
   },
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
     paddingHorizontal: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    height: 48,
   },
   searchIcon: {
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     paddingVertical: 12,
   },
+
   customerDetailsContainer: {
     marginTop: 16,
   },
@@ -1274,15 +1483,6 @@ const styles = StyleSheet.create({
     color: 'white',
     marginBottom: 12,
   },
-  customerInfo: {
-    marginVertical: 10,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 8,
-  },
   customerCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -1290,12 +1490,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   customerLabel: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '600',
   },
   customerValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '300',
   },
@@ -1303,41 +1503,41 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   inputGroup: {
-    marginBottom: 10,
     width: '100%',
-  },
-  inputLabel: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    marginBottom: 6,
-    fontWeight: '500',
+    marginBottom: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    height: 48,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 12,
+    paddingHorizontal: 6,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: 'white',
+    flex: 1,
+    color: backgroundColors.dark,
     fontSize: 16,
   },
   addToCartButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'white',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 20,
   },
   addToCartText: {
-    color: '#144272',
+    color: backgroundColors.light,
     fontSize: 16,
     fontWeight: 'bold',
   },
   withCartItemContainer: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
@@ -1351,7 +1551,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   withCartProductName: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     fontWeight: 'bold',
     flex: 1,
@@ -1364,7 +1564,7 @@ const styles = StyleSheet.create({
     padding: 8,
     marginLeft: 8,
     borderRadius: 6,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
   },
   withCartItemDetails: {
     marginTop: 8,
@@ -1375,11 +1575,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   withDetailLabel: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.7)',
     fontSize: 14,
   },
   detailValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -1408,7 +1608,7 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.7)',
     fontSize: 16,
     marginTop: 10,
   },
@@ -1416,19 +1616,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 12,
     paddingVertical: 15,
     paddingHorizontal: 20,
     marginVertical: 16,
-    shadowColor: '#4CAF50',
+    shadowColor: backgroundColors.dark,
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
   checkoutBtnDisabled: {
-    backgroundColor: 'rgba(76, 175, 80, 0.5)',
+    backgroundColor: backgroundColors.gray,
   },
   checkoutBtnText: {
     color: 'white',
@@ -1436,10 +1636,16 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginLeft: 8,
   },
+  checkoutDisableBtnText: {
+    color: backgroundColors.dark,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
   searchResultsOverlay: {
     position: 'absolute',
-    top: 340,
-    left: 20,
+    top: 220,
+    left: 18,
     backgroundColor: 'white',
     borderRadius: 10,
     zIndex: 1000,
@@ -1449,7 +1655,7 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.25,
     shadowRadius: 5,
-    width: '90%',
+    width: '92%',
   },
   resultItem: {
     padding: 15,
@@ -1457,8 +1663,9 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   resultText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontSize: 14,
+    fontWeight: '600',
   },
   floatingCartContainer: {
     position: 'absolute',
@@ -1501,7 +1708,7 @@ const styles = StyleSheet.create({
   // Cart Modal
   cartModalContainer: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: backgroundColors.gray,
   },
   cartModalHeader: {
     flexDirection: 'row',
@@ -1519,7 +1726,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
     textAlign: 'center',
   },
   cartItemCount: {
@@ -1550,7 +1757,6 @@ const styles = StyleSheet.create({
   cartListContent: {},
   cartItemContainer: {
     backgroundColor: '#fff',
-    marginHorizontal: 15,
     marginVertical: 8,
     borderRadius: 10,
     padding: 12,
@@ -1612,15 +1818,15 @@ const styles = StyleSheet.create({
   cartTotalLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
   },
   cartTotalValue: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    color: backgroundColors.success,
   },
   proceedBtn: {
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -1663,7 +1869,7 @@ const styles = StyleSheet.create({
   editModalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
   },
   editModalContent: {
     padding: 20,
@@ -1697,7 +1903,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 8,
     paddingVertical: 12,
     marginTop: 20,
@@ -1706,5 +1912,219 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+
+  // Modal stying
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#FAFBFC',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '80%',
+    paddingBottom: 20,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#DDD',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  invoiceIconContainer: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#2a652b24',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 2,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 20,
+    backgroundColor: backgroundColors.gray,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Company Card
+  companyCard: {
+    marginHorizontal: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: backgroundColors.dark,
+    borderStyle: 'dotted',
+  },
+  companyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  companyName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#144272',
+  },
+  companyAddress: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '400',
+  },
+
+  // Info Grid
+  orderInfoGrid: {
+    marginTop: 10,
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 2,
+    borderStyle: 'dotted',
+    marginHorizontal: 20,
+  },
+  infoCard: {
+    width: '60%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    borderRadius: 8,
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: backgroundColors.dark,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: backgroundColors.dark,
+    fontWeight: '400',
+  },
+
+  // Totals Section
+  totalsSection: {
+    marginHorizontal: 20,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+
+  // Footer
+  modalFooter: {
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+  },
+  thankYou: {
+    fontSize: 16,
+    color: '#144272',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  developerInfo: {
+    alignItems: 'center',
+  },
+  developerText: {
+    fontSize: 12,
+    color: '#888',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  companyContact: {
+    fontSize: 12,
+    color: '#144272',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+
+  // Table Section
+  tableSection: {
+    marginTop: 20,
+    marginHorizontal: 20,
+    borderBottomWidth: 2,
+    borderColor: backgroundColors.dark,
+    borderStyle: 'dotted',
+  },
+  tableContainer: {
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 1.5,
+    paddingBottom: 5,
+  },
+  tableHeaderText: {
+    color: backgroundColors.dark,
+    fontWeight: '600',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  tableCell: {
+    fontSize: 12,
+    color: backgroundColors.dark,
+    textAlign: 'center',
+  },
+
+  // Column widths
+  col1: {
+    flex: 0.1,
+  },
+  col2: {
+    flex: 0.25, // Product
+  },
+  col3: {
+    flex: 0.22, // Qty
+  },
+  col4: {
+    flex: 0.18, // Price
+  },
+  col5: {
+    flex: 0.2, // Total
   },
 });

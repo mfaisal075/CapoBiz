@@ -3,11 +3,11 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -17,8 +17,9 @@ import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import DropDownPicker from 'react-native-dropdown-picker';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
+import Toast from 'react-native-toast-message';
+import RNPrint from 'react-native-print';
 
 interface InvoiceList {
   id: number;
@@ -159,6 +160,297 @@ export default function SaleInvoiceList() {
     }
   };
 
+  const generateReceiptHTML = () => {
+    if (!invoiceData) return '';
+
+    const itemsHTML = invcSaleDetails
+      .map(
+        item => `
+    <tr>
+      <td style="padding: 8px 4px; font-size: 13px;">${item.prod_name}</td>
+      <td style="padding: 8px 4px; text-align: center; font-size: 13px;">${
+        item.sald_qty
+      }</td>
+      <td style="padding: 8px 4px; text-align: center; font-size: 13px;">${
+        item.ums_name
+      }</td>
+      <td style="padding: 8px 4px; text-align: right; font-size: 13px;">${parseFloat(
+        item.sald_fretail_price,
+      ).toFixed(2)}</td>
+      <td style="padding: 8px 4px; text-align: right; font-size: 13px;">${parseFloat(
+        item.sald_total_fretailprice,
+      ).toFixed(2)}</td>
+    </tr>
+  `,
+      )
+      .join('');
+
+    return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <title>Receipt ${selectedInvc}</title>
+      <style>
+        body { 
+          font-family: Arial, sans-serif; 
+          font-size: 14px; 
+          margin: 0; 
+          padding: 20px; 
+          max-width: 400px;
+          margin: 0 auto;
+        }
+        .header { 
+          text-align: center; 
+          margin-bottom: 20px; 
+          padding-bottom: 15px;
+          border-bottom: 2px dashed #000;
+        }
+        .shop-name { 
+          font-weight: bold; 
+          font-size: 24px;
+          margin-bottom: 8px;
+        }
+        .shop-address { 
+          font-size: 14px;
+          margin: 5px 0;
+        }
+        .shop-phone { 
+          font-size: 14px;
+          margin: 5px 0;
+        }
+        .divider {
+          border-bottom: 2px dashed #000;
+          margin: 15px 0;
+        }
+        .receipt-info { 
+          display: flex; 
+          justify-content: space-between;
+          margin-bottom: 5px;
+          font-size: 13px;
+        }
+        .customer-details { 
+          margin-bottom: 15px;
+          padding-bottom: 15px;
+          border-bottom: 2px dashed #000;
+        }
+        .detail-row {
+          display: flex;
+          justify-content: space-between;
+          margin-bottom: 5px;
+          font-size: 13px;
+        }
+        .detail-label {
+          font-weight: 600;
+        }
+        table { 
+          width: 100%; 
+          border-collapse: collapse;
+          margin-bottom: 15px;
+        }
+        th { 
+          text-align: center;
+          padding: 8px 4px;
+          border-bottom: 2px dashed #000;
+          font-size: 13px;
+          font-weight: 600;
+        }
+        th:first-child,
+        td:first-child {
+          text-align: left;
+        }
+        th:last-child,
+        td:last-child {
+          text-align: right;
+        }
+        .table-footer {
+          border-top: 2px dashed #000;
+          padding-top: 10px;
+        }
+        .summary { 
+          margin-top: 15px;
+          padding-top: 15px;
+          border-top: 2px dashed #000;
+        }
+        .summary-row { 
+          display: flex; 
+          justify-content: space-between;
+          margin-bottom: 8px;
+          font-size: 13px;
+        }
+        .summary-label {
+          font-weight: 400;
+        }
+        .summary-value {
+          text-align: right;
+        }
+        .total-row { 
+          border-top: 2px solid #000;
+          padding-top: 8px;
+          margin-top: 8px;
+          font-weight: bold;
+          font-size: 14px;
+        }
+        .footer { 
+          text-align: center;
+          margin-top: 20px;
+          padding-top: 15px;
+          border-top: 2px dashed #000;
+        }
+        .thank-you { 
+          text-align: center;
+          margin: 20px 0 15px 0;
+          font-weight: bold;
+          font-size: 16px;
+        }
+        .developer-info {
+          font-size: 12px;
+          text-align: center;
+          color: #666;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="header">
+        <div class="shop-name">${invoiceData.config.bus_name}</div>
+        <div class="shop-address">${invoiceData.config.bus_address}</div>
+        <div class="shop-phone">${invoiceData.config.bus_contact1}</div>
+      </div>
+      
+      <div class="receipt-info">
+        <span><strong>Receipt#:</strong> ${selectedInvc}</span>
+      </div>
+      <div class="receipt-info">
+        <span><strong>Date:</strong> ${new Date(
+          invoiceData.sale.created_at,
+        ).toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+        })}</span>
+      </div>
+      <div class="receipt-info">
+        <span><strong>Maker:</strong> ${invoiceData.sale.name}</span>
+      </div>
+      
+      <div class="divider"></div>
+      
+      <div class="customer-details">
+        <div class="detail-row">
+          <span class="detail-label">Customer:</span>
+          <span>${invoiceData.sale.cust_name}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Contact#:</span>
+          <span>${invoiceData.sale.contact || 'N/A'}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Address:</span>
+          <span>${invoiceData.sale.slcust_address || 'NILL'}</span>
+        </div>
+      </div>
+      
+      <table>
+        <thead>
+          <tr>
+            <th>Item</th>
+            <th>Qty</th>
+            <th>UOM</th>
+            <th>Price</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsHTML}
+        </tbody>
+      </table>
+      
+      <div class="table-footer">
+        <div class="summary-row">
+          <span class="summary-label"><strong>Total Items</strong></span>
+          <span class="summary-value">${invcSaleDetails.length}</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label"></span>
+          <span class="summary-value"><strong>Subtotal ${
+            invoiceData.sale.sal_order_total
+          }</strong></span>
+        </div>
+      </div>
+      
+      <div class="summary">
+        <div class="summary-row">
+          <span class="summary-label">Order Total:</span>
+          <span class="summary-value">${invoiceData.sale.sal_order_total}</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Discount:</span>
+          <span class="summary-value">${invoiceData.sale.sal_discount}</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Previous Balance:</span>
+          <span class="summary-value">${invoiceData.prev_balance}</span>
+        </div>
+        <div class="summary-row total-row">
+          <span class="summary-label">Payable:</span>
+          <span class="summary-value">${
+            invoiceData.sale.sal_total_amount
+          }</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Paid:</span>
+          <span class="summary-value">${
+            invoiceData.sale.sal_payment_amount
+          }</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Balance:</span>
+          <span class="summary-value">${
+            invoiceData.sale.sal_change_amount
+          }</span>
+        </div>
+        <div class="summary-row">
+          <span class="summary-label">Note:</span>
+          <span class="summary-value">${invoiceData.sale.note || 'NILL'}</span>
+        </div>
+      </div>
+      
+      <div class="footer">
+        <div class="thank-you">Software Developed</div>
+        <div class="developer-info">
+          <div>with love by</div>
+          <div style="margin-top: 5px;"><strong>Technic Mentors</strong></div>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+  };
+
+  // Print Receipt
+  const printReceipt = async () => {
+    try {
+      // Generate HTML content for the receipt
+      const htmlContent = generateReceiptHTML();
+
+      // Print the receipt
+      await RNPrint.print({
+        html: htmlContent,
+      });
+
+      Toast.show({
+        type: 'success',
+        text1: 'Receipt printed successfully',
+      });
+    } catch (error) {
+      console.error('Failed to print receipt:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Failed to print receipt',
+      });
+    }
+  };
+
   useEffect(() => {
     fetchinvcLisr();
     fetchUserDropdown();
@@ -166,27 +458,20 @@ export default function SaleInvoiceList() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Invoice List</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="mail" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         {/* Date Selection */}
@@ -237,7 +522,7 @@ export default function SaleInvoiceList() {
         </View>
 
         {/* User Filter */}
-        <View style={{paddingHorizontal: 15, marginVertical: 8}}>
+        <View style={{marginHorizontal: 12, marginVertical: 4}}>
           <DropDownPicker
             items={transformedUsers}
             open={userOpen}
@@ -246,15 +531,27 @@ export default function SaleInvoiceList() {
             setValue={setUserValue}
             placeholder="Select User"
             placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
+            textStyle={{color: backgroundColors.dark}}
             ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color="#144272" />
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color="#144272" />
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
             )}
             style={styles.dropdown}
-            dropDownContainerStyle={styles.dropDownContainer}
+            dropDownContainerStyle={styles.dropdownContainer}
+            searchable
+            searchTextInputStyle={{
+              borderWidth: 0,
+              width: '100%',
+            }}
+            searchContainerStyle={{
+              borderColor: backgroundColors.gray,
+            }}
           />
         </View>
 
@@ -308,7 +605,7 @@ export default function SaleInvoiceList() {
             showsVerticalScrollIndicator={false}
           />
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Pagination Controls */}
       {totalRecords > 0 && (
@@ -396,75 +693,78 @@ export default function SaleInvoiceList() {
               <View style={styles.companyCard}>
                 <View style={styles.companyHeader}>
                   <Text style={styles.companyName}>
-                    {invoiceData?.config.bus_name || 'N/A'}
+                    {invoiceData?.config?.bus_name || 'N/A'}
                   </Text>
                 </View>
                 <Text style={styles.companyAddress}>
                   {invoiceData?.config?.bus_address || 'N/A'}
                 </Text>
                 <Text style={styles.companyContact}>
-                  {invoiceData?.config?.bus_contact1 || 'N/A'}
+                  {invoiceData?.config?.bus_contact1 || 'Contact: N/A'}
                 </Text>
               </View>
 
               {/* Order Info Grid */}
               <View style={styles.orderInfoGrid}>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Invoice #</Text>
-                  <Text style={styles.infoValue}>{selectedInvc || 'N/A'}</Text>
+                  <Text style={styles.infoLabel}>Receipt#:</Text>
+                  <Text style={styles.infoValue}>{selectedInvc ?? 'N/A'}</Text>
                 </View>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Date</Text>
+                  <Text style={styles.infoLabel}>Date:</Text>
                   <Text style={styles.infoValue}>
                     {invoiceData?.sale.created_at
-                      ? new Date(
-                          invoiceData.sale.created_at,
-                        ).toLocaleDateString('en-GB')
+                      ? new Date(invoiceData?.sale.created_at)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')
                       : 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Customer</Text>
+                  <Text style={styles.infoLabel}>Maker:</Text>
                   <Text style={styles.infoValue}>
-                    {invoiceData?.sale?.cust_name || 'N/A'}
+                    {invoiceData?.sale?.name ?? 'N/A'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.orderInfoGrid}>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Customer:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.cust_name ?? 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Cashier</Text>
+                  <Text style={styles.infoLabel}>Contact:</Text>
                   <Text style={styles.infoValue}>
-                    {invoiceData?.sale?.name || 'N/A'}
+                    {invoiceData?.sale.contact ?? 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Contact</Text>
+                  <Text style={styles.infoLabel}>Address:</Text>
                   <Text style={styles.infoValue}>
-                    {invoiceData?.sale?.contact || 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Builty Contact</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.sale?.sal_builty_contact || 'N/A'}
+                    {invoiceData?.sale.slcust_address ?? 'N/A'}
                   </Text>
                 </View>
               </View>
 
               {/* Order Table Section */}
               <View style={styles.tableSection}>
-                <Text style={styles.sectionTitle}>Invoice Items</Text>
-
-                {/* Table Container */}
                 <View style={styles.tableContainer}>
                   {/* Table Header */}
                   <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, styles.col1]}>
+                      Item
+                    </Text>
                     <Text style={[styles.tableHeaderText, styles.col2]}>
-                      Product
+                      Qty
                     </Text>
                     <Text style={[styles.tableHeaderText, styles.col3]}>
-                      Quantity
-                    </Text>
-                    <Text style={[styles.tableHeaderText, styles.col6]}>
-                      UMO
+                      UOM
                     </Text>
                     <Text style={[styles.tableHeaderText, styles.col4]}>
                       Price
@@ -477,113 +777,104 @@ export default function SaleInvoiceList() {
                   {/* Table Rows */}
                   <FlatList
                     data={invcSaleDetails}
-                    keyExtractor={(item, index) => index.toString()}
+                    keyExtractor={(_, index) => index.toString()}
                     renderItem={({item, index}) => (
-                      <View
-                        style={[
-                          styles.tableRow,
-                          index % 2 === 0
-                            ? styles.tableRowEven
-                            : styles.tableRowOdd,
-                        ]}>
-                        <Text
-                          style={[styles.tableCell, styles.col2]}
-                          numberOfLines={2}>
+                      <View style={[styles.tableRow]}>
+                        <Text style={[styles.tableCell, styles.col1]}>
                           {item.prod_name}
                         </Text>
-                        <Text style={[styles.tableCell, styles.col3]}>
+                        <Text style={[styles.tableCell, styles.col2]}>
                           {item.sald_qty}
                         </Text>
-                        <Text style={[styles.tableCell, styles.col6]}>
+                        <Text style={[styles.tableCell, styles.col3]}>
                           {item.ums_name}
                         </Text>
                         <Text style={[styles.tableCell, styles.col4]}>
-                          {parseFloat(item.sald_fretail_price || '0').toFixed(
-                            2,
-                          )}
+                          {Number(item.sald_fretail_price).toLocaleString()}
                         </Text>
                         <Text style={[styles.tableCell, styles.col5]}>
-                          {parseFloat(
-                            item.sald_total_fretailprice || '0',
-                          ).toFixed(2)}
+                          {Number(
+                            item.sald_total_fretailprice,
+                          ).toLocaleString()}
                         </Text>
                       </View>
                     )}
                     scrollEnabled={false}
+                    ListFooterComponent={
+                      <View
+                        style={{
+                          borderTopWidth: 1.5,
+                          borderTopColor: backgroundColors.dark,
+                          flexDirection: 'row',
+                          paddingVertical: 2.5,
+                        }}>
+                        <Text
+                          style={[
+                            styles.tableHeaderText,
+                            {flex: 0.2, textAlign: 'left'},
+                          ]}>
+                          Total Items
+                        </Text>
+                        <Text style={[styles.tableCell, {flex: 0.15}]}>
+                          {invcSaleDetails.length}
+                        </Text>
+                        <Text style={[styles.tableHeaderText, {flex: 0.2}]}>
+                          Subtotals
+                        </Text>
+                        <View style={{flex: 0.2}} />
+                        <Text style={[styles.tableCell, {flex: 0.2}]}>
+                          {invoiceData?.sale?.sal_order_total}
+                        </Text>
+                      </View>
+                    }
                   />
                 </View>
               </View>
 
-              {/* Invoice Totals */}
-              <View style={styles.totalsSection}>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Order Total:</Text>
-                  <Text style={styles.totalValue}>
-                    PKR {invoiceData?.sale?.sal_order_total || 'N/A'}
+              <View style={styles.orderInfoGrid}>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Total Order:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.sal_order_total ?? 'N/A'}
                   </Text>
                 </View>
-
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Freight:</Text>
-                  <Text style={styles.totalValue}>
-                    PKR {invoiceData?.sale?.sal_freight_exp || '0.00'}
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Discount:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.sal_discount ?? 'N/A'}
                   </Text>
                 </View>
-
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Labour:</Text>
-                  <Text style={styles.totalValue}>
-                    PKR {invoiceData?.sale?.sal_labr_exp || '0.00'}
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Previous Bal.:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.prev_balance ?? 'N/A'}
                   </Text>
                 </View>
-
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Discount:</Text>
-                  <Text style={styles.totalValue}>
-                    PKR {invoiceData?.sale?.sal_discount || '0.00'}
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Payable:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.sal_total_amount ?? 'N/A'}
                   </Text>
                 </View>
-
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Previous Balance:</Text>
-                  <Text style={styles.totalValue}>
-                    PKR {invoiceData?.prev_balance || '0.00'}
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Paid:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.sal_payment_amount ?? 'N/A'}
                   </Text>
                 </View>
-
-                <View style={[styles.totalRow, styles.pendingTotalRow]}>
-                  <Text style={[styles.totalLabel, styles.pendingLabel]}>
-                    Total Payable:
-                  </Text>
-                  <Text style={[styles.totalValue, styles.pendingValue]}>
-                    PKR {invoiceData?.sale?.sal_total_amount || 'N/A'}
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Balance:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.sal_change_amount ?? 'N/A'}
                   </Text>
                 </View>
-
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Paid Amount:</Text>
-                  <Text style={styles.totalValue}>
-                    PKR {invoiceData?.sale?.sal_payment_amount || '0.00'}
-                  </Text>
-                </View>
-
-                <View style={[styles.totalRow, styles.pendingTotalRow]}>
-                  <Text style={[styles.totalLabel, styles.pendingLabel]}>
-                    Balance:
-                  </Text>
-                  <Text style={[styles.totalValue, styles.pendingValue]}>
-                    PKR {invoiceData?.sale?.sal_change_amount || '0.00'}
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Note:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.note ?? 'N/A'}
                   </Text>
                 </View>
               </View>
-
-              {/* Note Section */}
-              {invoiceData?.sale?.note && (
-                <View style={styles.noteSection}>
-                  <Text style={styles.noteLabel}>Note:</Text>
-                  <Text style={styles.noteText}>{invoiceData.sale.note}</Text>
-                </View>
-              )}
 
               {/* Footer */}
               <View style={styles.modalFooter}>
@@ -596,6 +887,15 @@ export default function SaleInvoiceList() {
                     Technic Mentors | +923111122144
                   </Text>
                 </View>
+
+                <TouchableOpacity style={styles.printBtn} onPress={printReceipt}>
+                  <Icon
+                    name="printer"
+                    size={20}
+                    color={backgroundColors.light}
+                  />
+                  <Text style={styles.printBtnText}>Print</Text>
+                </TouchableOpacity>
               </View>
             </ScrollView>
           </View>
@@ -608,32 +908,44 @@ export default function SaleInvoiceList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   // Pagination Component
@@ -643,7 +955,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -656,7 +968,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -670,12 +982,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: backgroundColors.light,
     fontWeight: '600',
     fontSize: 14,
   },
   pageButtonTextDisabled: {
-    color: '#777',
+    color: backgroundColors.dark,
   },
   pageIndicator: {
     paddingHorizontal: 10,
@@ -699,26 +1011,25 @@ const styles = StyleSheet.create({
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
-    marginTop: 8
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   name: {
     fontSize: 16,
@@ -733,11 +1044,11 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
-    paddingVertical: '65%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
+    alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -750,7 +1061,7 @@ const styles = StyleSheet.create({
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
+    paddingHorizontal: 12,
     marginTop: 15,
     marginBottom: 5,
   },
@@ -758,9 +1069,9 @@ const styles = StyleSheet.create({
     flex: 0.48,
   },
   dateLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: backgroundColors.dark,
     marginBottom: 8,
     marginLeft: 4,
   },
@@ -772,22 +1083,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(20, 66, 114, 0.2)',
+    borderWidth: 1.5,
+    borderColor: backgroundColors.gray,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowRadius: 4,
+    elevation: 8,
     height: 48,
   },
   dateText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#144272',
+    fontWeight: '600',
+    color: backgroundColors.dark,
   },
 
   // Modal stying
@@ -800,7 +1111,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFBFC',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    height: '85%',
+    height: '80%',
     paddingBottom: 20,
   },
   modalHandle: {
@@ -829,7 +1140,7 @@ const styles = StyleSheet.create({
   invoiceIconContainer: {
     width: 48,
     height: 48,
-    backgroundColor: '#E8F4FD',
+    backgroundColor: '#2a652b24',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -847,27 +1158,24 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   closeButton: {
-    width: 40,
-    height: 40,
+    width: 30,
+    height: 30,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: backgroundColors.gray,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   // Company Card
   companyCard: {
-    backgroundColor: 'white',
     marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    alignItems: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: backgroundColors.dark,
+    borderStyle: 'dotted',
   },
   companyHeader: {
     flexDirection: 'row',
@@ -884,105 +1192,72 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontWeight: '400',
-    textAlign: 'center',
   },
 
   // Info Grid
   orderInfoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    marginTop: 16,
+    marginTop: 10,
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 2,
+    borderStyle: 'dotted',
+    marginHorizontal: 20,
   },
   infoCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    padding: 12,
+    width: '60%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
     borderRadius: 8,
-    margin: '1%',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   infoLabel: {
-    fontSize: 11,
-    color: '#888',
-    fontWeight: '600',
+    fontSize: 12,
+    color: backgroundColors.dark,
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 4,
   },
   infoValue: {
     fontSize: 14,
+    color: backgroundColors.dark,
+    fontWeight: '400',
+  },
+
+  // Items Section
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#1A1A1A',
-    fontWeight: '600',
+    marginBottom: 12,
   },
 
   // Totals Section
   totalsSection: {
-    backgroundColor: 'white',
     marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  totalRow: {
+    paddingVertical: 10,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  pendingTotalRow: {
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    paddingTop: 12,
-    marginTop: 4,
-    marginBottom: 0,
+    justifyContent: 'flex-end',
   },
   totalLabel: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: backgroundColors.dark,
     fontWeight: '600',
   },
   totalValue: {
-    fontSize: 16,
-    color: '#1A1A1A',
-    fontWeight: '700',
-  },
-  pendingLabel: {
-    color: '#C62828',
-  },
-  pendingValue: {
-    color: '#C62828',
-    fontSize: 18,
+    fontSize: 14,
+    color: backgroundColors.dark,
+    fontWeight: '400',
   },
 
   // Footer
   modalFooter: {
-    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
-    marginTop: 16,
-  },
-  footerText: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 8,
   },
   thankYou: {
     fontSize: 16,
-    color: '#144272',
+    color: backgroundColors.primary,
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 16,
@@ -999,123 +1274,194 @@ const styles = StyleSheet.create({
   },
   companyContact: {
     fontSize: 12,
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: '600',
     textAlign: 'center',
   },
   modalContent: {
     flex: 1,
   },
+  printBtn: {
+    backgroundColor: backgroundColors.primary,
+    flexDirection: 'row',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    alignSelf: 'center',
+    gap: 5,
+    marginVertical: 5,
+    borderRadius: 10,
+  },
+  printBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
 
   // Table Section
   tableSection: {
     marginTop: 20,
     marginHorizontal: 20,
+    borderBottomWidth: 2,
+    borderColor: backgroundColors.dark,
+    borderStyle: 'dotted',
   },
   tableContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#144272',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 1.5,
+    paddingBottom: 5,
   },
   tableHeaderText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontWeight: '600',
-    fontSize: 11,
+    fontSize: 14,
     textAlign: 'center',
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingVertical: 6,
     alignItems: 'center',
   },
-  tableRowEven: {
-    backgroundColor: '#FAFAFA',
-  },
-  tableRowOdd: {
-    backgroundColor: 'white',
-  },
   tableCell: {
-    fontSize: 11,
-    color: '#333',
+    fontSize: 12,
+    color: backgroundColors.dark,
     textAlign: 'center',
-    paddingHorizontal: 2,
   },
 
   // Column widths
+  col1: {
+    flex: 0.2,
+    textAlign: 'left',
+  },
   col2: {
-    flex: 0.3, // Product
+    flex: 0.15, // Product
   },
   col3: {
-    flex: 0.2, // Qty
+    flex: 0.22, // Qty
   },
   col4: {
-    flex: 0.2, // Price
+    flex: 0.18, // Price
   },
   col5: {
     flex: 0.2, // Total
   },
-  col6: {
-    flex: 0.3,
-  },
 
-  // Note Section
-  noteSection: {
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
+  // ================= NEW CHECKOUT MODAL STYLES =================
+  checkoutModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 8,
+    backgroundColor: backgroundColors.light,
+  },
+  checkoutModalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: backgroundColors.dark,
+    textAlign: 'center',
+    flex: 1,
+    marginRight: 24, // Adjust for the back button
+  },
+  checkoutScrollView: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  checkoutSection: {
+    marginBottom: 5,
+  },
+  checkoutSectionTitle: {
+    fontSize: 14,
+    color: backgroundColors.dark,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  checkoutCard: {
+    backgroundColor: backgroundColors.light,
     borderRadius: 12,
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     elevation: 3,
   },
-  noteLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-    marginBottom: 8,
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 15,
   },
-  noteText: {
+  supplierName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: backgroundColors.dark,
+  },
+  supplierPhone: {
     fontSize: 14,
-    color: '#666',
-    fontStyle: 'italic',
+    color: 'gray',
+  },
+  amountContainer: {
+    backgroundColor: backgroundColors.light,
+    borderRadius: 12,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  amountValue: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  checkoutFooter: {
+    padding: 20,
+    backgroundColor: backgroundColors.light,
+    borderTopWidth: 1,
+    borderColor: '#eee',
+  },
+  completePurchaseBtn: {
+    backgroundColor: backgroundColors.primary,
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  completePurchaseBtnText: {
+    color: backgroundColors.light,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  personIcon: {
+    position: 'absolute',
+    zIndex: 10000,
+    top: 7,
+    left: 6,
   },
 
   // Dropdown
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#144272',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
     minHeight: 48,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 4,
   },
-  dropDownContainer: {
-    backgroundColor: '#fff',
-    borderColor: '#144272',
-  },
-
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    paddingHorizontal: 20,
-    marginBottom: 12,
+  dropdownContainer: {
+    backgroundColor: 'white',
+    borderColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 10,
+    maxHeight: 200,
   },
 });

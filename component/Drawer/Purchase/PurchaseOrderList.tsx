@@ -3,11 +3,11 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -18,7 +18,6 @@ import {useUser} from '../../CTX/UserContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import DropDownPicker from 'react-native-dropdown-picker';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 
 interface OrderList {
@@ -66,6 +65,15 @@ interface InvoiceOrders {
   pordd_status: string;
 }
 
+interface FinalizedInvc {
+  id: number;
+  prchd_invoice_no: string;
+  prchd_prod_name: string;
+  prchd_qty: string;
+  prchd_cost_price: string;
+  prchd_total_cost: string;
+}
+
 export default function PurchaseOrderList() {
   const {token, bussName, bussAddress} = useUser();
   const [orderList, setOrderList] = useState<OrderList[]>([]);
@@ -75,6 +83,7 @@ export default function PurchaseOrderList() {
   const [startDate, setStartDate] = useState(new Date());
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [invoiceOrder, setInvoiceOrder] = useState<InvoiceOrders[]>([]);
+  const [finalizedInvc, setFinalizedInvc] = useState<FinalizedInvc[]>([]);
   const [statusOpen, setStatusOpen] = useState(false);
   const [status, setStatus] = useState('Purchase Order');
 
@@ -137,6 +146,7 @@ export default function PurchaseOrderList() {
         `${BASE_URL}/purchaseorderinvoice?id=${id}&_token=${token}`,
       );
       setInvoiceOrder(res.data.purchase_details);
+      setFinalizedInvc(res.data.purchaseinvoicedetail);
       setSelectedOrder([res.data]);
     } catch (error) {
       console.log(error);
@@ -148,27 +158,20 @@ export default function PurchaseOrderList() {
   }, [startDate, endDate, status]);
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Purchase Order List</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="mail" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.dateContainer}>
@@ -218,7 +221,7 @@ export default function PurchaseOrderList() {
         </View>
 
         {/* Status Filter */}
-        <View style={{paddingHorizontal: 15, marginVertical: 8}}>
+        <View style={{paddingHorizontal: 10, marginTop: 8}}>
           <DropDownPicker
             items={statusDropdown}
             open={statusOpen}
@@ -254,14 +257,24 @@ export default function PurchaseOrderList() {
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View>
-                    <Text style={styles.name}>{item.pord_invoice_no}</Text>
+                    <Text style={styles.name}>
+                      {item.pord_invoice_no} | {item.sup_name}
+                    </Text>
                     <Text style={styles.subText}>
-                      <Icon name="cash" size={12} color="#666" />{' '}
+                      <Icon name="cash" size={12} color={'#666'} />{' '}
                       {item.pord_order_total}
                     </Text>
                     <Text style={styles.subText}>
-                      <Icon name="account" size={12} color="#666" />{' '}
-                      {item.sup_name || 'No category'}
+                      <Icon
+                        name="check-circle"
+                        size={12}
+                        color={
+                          status === 'Purchase Order'
+                            ? backgroundColors.danger
+                            : backgroundColors.success
+                        }
+                      />{' '}
+                      {status === 'Purchase Order' ? 'Pending' : 'Completed'}
                     </Text>
                   </View>
 
@@ -271,15 +284,14 @@ export default function PurchaseOrderList() {
                         styles.subText,
                         {fontWeight: '700', verticalAlign: 'top'},
                       ]}>
-                      <Icon name="calendar" size={12} color="#666" />{' '}
-                      {new Date(item.pord_order_date).toLocaleDateString(
-                        'en-US',
-                        {
+                      <Icon name="calendar" size={12} color={'#666'} />{' '}
+                      {new Date(item.pord_order_date)
+                        .toLocaleDateString('en-GB', {
                           day: '2-digit',
                           month: 'short',
                           year: 'numeric',
-                        },
-                      ) || 'N/A'}
+                        })
+                        .replace(/ /g, '-') || 'N/A'}
                     </Text>
                   </View>
                 </View>
@@ -342,7 +354,7 @@ export default function PurchaseOrderList() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
 
       {/* View Modal */}
       <Modal
@@ -392,45 +404,52 @@ export default function PurchaseOrderList() {
               {/* Order Info Grid */}
               <View style={styles.orderInfoGrid}>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Supplier</Text>
-                  <Text style={styles.infoValue}>
-                    {selectedOrder[0]?.supplier?.sup_name ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Maker User</Text>
-                  <Text style={styles.infoValue}>
-                    {selectedOrder[0]?.makeruser?.name ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Invoice #</Text>
+                  <Text style={styles.infoLabel}>Invoice #: </Text>
                   <Text style={styles.infoValue}>
                     {selectedOrder[0]?.purchase?.pord_invoice_no ?? 'N/A'}
                   </Text>
                 </View>
+
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Order Date</Text>
+                  <Text style={styles.infoLabel}>Maker User: </Text>
+                  <Text style={styles.infoValue}>
+                    {selectedOrder[0]?.makeruser?.name ?? 'N/A'}
+                  </Text>
+                </View>
+
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Order Date: </Text>
                   <Text style={styles.infoValue}>
                     {selectedOrder[0]?.purchase?.pord_order_date
-                      ? new Date(
-                          selectedOrder[0].purchase.pord_order_date,
-                        ).toLocaleDateString('en-GB')
+                      ? new Date(selectedOrder[0].purchase.pord_order_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')
                       : 'N/A'}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.orderInfoGrid}>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Supplier: </Text>
+                  <Text style={styles.infoValue}>
+                    {selectedOrder[0]?.supplier?.sup_name ?? 'N/A'}
                   </Text>
                 </View>
               </View>
 
               {/* Order Table Section */}
               <View style={styles.tableSection}>
-                <Text style={styles.sectionTitle}>Order Items</Text>
-
                 {/* Table Container */}
                 <View style={styles.tableContainer}>
                   {/* Table Header */}
                   <View style={styles.tableHeader}>
                     <Text style={[styles.tableHeaderText, styles.col1]}>
-                      Invoice#
+                      Invoice #
                     </Text>
                     <Text style={[styles.tableHeaderText, styles.col2]}>
                       Product
@@ -453,16 +472,10 @@ export default function PurchaseOrderList() {
                       item?.id ? item.id.toString() : index.toString()
                     }
                     renderItem={({item, index}) => (
-                      <View
-                        style={[
-                          styles.tableRow,
-                          index % 2 === 0
-                            ? styles.tableRowEven
-                            : styles.tableRowOdd,
-                        ]}>
+                      <View style={[styles.tableRow]}>
                         <Text
                           style={[styles.tableCell, styles.col1]}
-                          numberOfLines={1}>
+                          numberOfLines={2}>
                           {item.pordd_invoice_no}
                         </Text>
                         <Text
@@ -513,18 +526,69 @@ export default function PurchaseOrderList() {
               {/* Footer */}
               <View style={styles.modalFooter}>
                 <Text style={styles.invoiceState}>Invoice State</Text>
-                <Text style={styles.footerText}>
-                  No Finalized Record Found..!
-                </Text>
-                <Text style={styles.thankYou}>Thank you for your visit</Text>
-                <View style={styles.developerInfo}>
-                  <Text style={styles.developerText}>
-                    Software Developed with ❤️ by
+                {finalizedInvc.length > 0 ? (
+                  <View
+                    style={[
+                      styles.tableSection,
+                      {marginHorizontal: 0, marginTop: 0, marginBottom: 10},
+                    ]}>
+                    <View style={styles.tableContainer}>
+                      <View style={styles.tableHeader}>
+                        <Text style={[styles.tableHeaderText, styles.col1]}>
+                          Invoice #
+                        </Text>
+                        <Text style={[styles.tableHeaderText, styles.col2]}>
+                          Product
+                        </Text>
+                        <Text style={[styles.tableHeaderText, styles.col3]}>
+                          Qty
+                        </Text>
+                        <Text style={[styles.tableHeaderText, styles.col4]}>
+                          Price
+                        </Text>
+                        <Text style={[styles.tableHeaderText, styles.col5]}>
+                          Total
+                        </Text>
+                      </View>
+
+                      {/* Table Rows */}
+                      <FlatList
+                        data={finalizedInvc}
+                        keyExtractor={(item, index) =>
+                          item?.id ? item.id.toString() : index.toString()
+                        }
+                        renderItem={({item, index}) => (
+                          <View style={[styles.tableRow]}>
+                            <Text
+                              style={[styles.tableCell, styles.col1]}
+                              numberOfLines={2}>
+                              {item.prchd_invoice_no}
+                            </Text>
+                            <Text
+                              style={[styles.tableCell, styles.col2]}
+                              numberOfLines={2}>
+                              {item.prchd_prod_name}
+                            </Text>
+                            <Text style={[styles.tableCell, styles.col3]}>
+                              {item.prchd_qty}
+                            </Text>
+                            <Text style={[styles.tableCell, styles.col4]}>
+                              {Number(item.prchd_cost_price).toLocaleString()}
+                            </Text>
+                            <Text style={[styles.tableCell, styles.col5]}>
+                              {Number(item.prchd_total_cost).toLocaleString()}
+                            </Text>
+                          </View>
+                        )}
+                        scrollEnabled={false}
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  <Text style={styles.footerText}>
+                    No Finalized Record Found..!
                   </Text>
-                  <Text style={styles.companyContact}>
-                    Technic Mentors | +923111122144
-                  </Text>
-                </View>
+                )}
               </View>
             </ScrollView>
           </View>
@@ -537,32 +601,44 @@ export default function PurchaseOrderList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   // Pagination Component
@@ -585,7 +661,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -628,20 +704,20 @@ const styles = StyleSheet.create({
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -661,12 +737,11 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '60%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
     alignSelf: 'center',
-    marginTop: 8
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -679,7 +754,7 @@ const styles = StyleSheet.create({
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
+    paddingHorizontal: 10,
     marginTop: 15,
     marginBottom: 5,
   },
@@ -689,7 +764,7 @@ const styles = StyleSheet.create({
   dateLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#fff',
+    color: backgroundColors.dark,
     marginBottom: 8,
     marginLeft: 4,
   },
@@ -758,7 +833,7 @@ const styles = StyleSheet.create({
   invoiceIconContainer: {
     width: 48,
     height: 48,
-    backgroundColor: '#E8F4FD',
+    backgroundColor: '#2a652b24',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -786,16 +861,14 @@ const styles = StyleSheet.create({
 
   // Company Card
   companyCard: {
-    backgroundColor: 'white',
     marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: backgroundColors.dark,
+    borderStyle: 'dotted',
   },
   companyHeader: {
     flexDirection: 'row',
@@ -808,17 +881,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#144272',
   },
-  statusBadge: {
-    backgroundColor: '#FFF3CD',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#856404',
-  },
   companyAddress: {
     fontSize: 14,
     color: '#666',
@@ -827,35 +889,31 @@ const styles = StyleSheet.create({
 
   // Info Grid
   orderInfoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    marginTop: 16,
+    marginTop: 10,
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 2,
+    borderStyle: 'dotted',
+    marginHorizontal: 20,
   },
   infoCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    padding: 12,
+    width: '60%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
     borderRadius: 8,
-    margin: '1%',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   infoLabel: {
-    fontSize: 11,
-    color: '#888',
-    fontWeight: '600',
+    fontSize: 12,
+    color: backgroundColors.dark,
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 4,
   },
   infoValue: {
     fontSize: 14,
-    color: '#1A1A1A',
-    fontWeight: '600',
+    color: backgroundColors.dark,
+    fontWeight: '400',
   },
 
   // Items Section
@@ -951,53 +1009,45 @@ const styles = StyleSheet.create({
 
   // Totals Section
   totalsSection: {
-    backgroundColor: 'white',
+    marginTop: 20,
     marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    borderBottomWidth: 2,
+    borderColor: backgroundColors.dark,
+    borderStyle: 'dotted',
+    paddingBottom: 5,
   },
   totalRow: {
+    width: '60%',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
   },
   pendingTotalRow: {
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    paddingTop: 12,
+    paddingTop: 10,
     marginTop: 4,
     marginBottom: 0,
   },
   totalLabel: {
-    fontSize: 16,
-    color: '#666',
+    fontSize: 14,
+    color: backgroundColors.dark,
     fontWeight: '600',
   },
   totalValue: {
-    fontSize: 16,
-    color: '#1A1A1A',
-    fontWeight: '700',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    fontWeight: '400',
   },
   pendingLabel: {
-    color: '#C62828',
+    color: backgroundColors.dark,
   },
   pendingValue: {
-    color: '#C62828',
-    fontSize: 18,
+    color: backgroundColors.dark,
+    fontSize: 14,
   },
 
   // Footer
   modalFooter: {
-    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
     marginTop: 16,
@@ -1040,56 +1090,42 @@ const styles = StyleSheet.create({
   tableSection: {
     marginTop: 20,
     marginHorizontal: 20,
+    borderBottomWidth: 2,
+    borderColor: backgroundColors.dark,
+    borderStyle: 'dotted',
   },
   tableContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
   },
   tableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#144272',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 1.5,
+    paddingBottom: 5,
   },
   tableHeaderText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontWeight: '600',
-    fontSize: 11,
+    fontSize: 14,
     textAlign: 'center',
   },
   tableRow: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingVertical: 6,
     alignItems: 'center',
   },
-  tableRowEven: {
-    backgroundColor: '#FAFAFA',
-  },
-  tableRowOdd: {
-    backgroundColor: 'white',
-  },
   tableCell: {
-    fontSize: 11,
-    color: '#333',
+    fontSize: 12,
+    color: backgroundColors.dark,
     textAlign: 'center',
-    paddingHorizontal: 2,
   },
 
   // Column widths
   col1: {
-    flex: 0.2, // Invoice#
+    flex: 0.2,
   },
   col2: {
-    flex: 0.3, // Product
+    flex: 0.25, // Product
   },
   col3: {
     flex: 0.15, // Qty
@@ -1101,37 +1137,26 @@ const styles = StyleSheet.create({
     flex: 0.2, // Total
   },
 
-  statusCell: {
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  statusContainer: {
-    backgroundColor: '#FFEBEE',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    minWidth: 50,
-  },
-  statusCellText: {
-    color: '#C62828',
-    fontSize: 9,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
   invoiceState: {
     fontSize: 16,
     color: '#144272',
     fontWeight: '600',
     marginBottom: 8,
   },
+
   // Dropdown
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#144272',
-    minHeight: 48,
+    backgroundColor: backgroundColors.light,
+    borderWidth: 0.2,
+    borderColor: backgroundColors.dark,
     borderRadius: 8,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff',
+    minHeight: 48,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
   },
   dropDownContainer: {
     backgroundColor: '#fff',

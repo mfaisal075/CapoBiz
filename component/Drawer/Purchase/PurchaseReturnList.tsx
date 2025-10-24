@@ -3,11 +3,11 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -17,7 +17,6 @@ import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import backgroundColors from '../../Colors';
-import LinearGradient from 'react-native-linear-gradient';
 
 interface PurchaseReturn {
   prchr_return_invoice_no: string;
@@ -51,6 +50,7 @@ interface ReturnDetails {
   sup_contact: string;
   sup_company_name: string;
   sup_address: string;
+  created_at: string;
 }
 
 export default function PurchaseReturnList() {
@@ -141,7 +141,7 @@ export default function PurchaseReturnList() {
       });
 
       setReturnData(res.data);
-      setReturnDetails(res.data.return_detail || []);
+      setReturnDetails(res.data.return_detail);
       setSelectedInvc(invoiceNo);
     } catch (error) {
       console.log(error);
@@ -154,27 +154,20 @@ export default function PurchaseReturnList() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Purchase Return List</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="receipt" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         <View style={styles.dateContainer}>
@@ -258,11 +251,13 @@ export default function PurchaseReturnList() {
                         {fontWeight: '700', verticalAlign: 'top'},
                       ]}>
                       <Icon name="calendar" size={12} color="#666" />{' '}
-                      {new Date(item.created_at).toLocaleDateString('en-US', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      }) || 'N/A'}
+                      {new Date(item.created_at)
+                        .toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                        .replace(/ /g, '-') || 'N/A'}
                     </Text>
                   </View>
                 </View>
@@ -325,7 +320,7 @@ export default function PurchaseReturnList() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
 
       {/* View Modal */}
       <Modal
@@ -342,7 +337,7 @@ export default function PurchaseReturnList() {
             <View style={styles.modalHeader}>
               <View style={styles.headerLeft}>
                 <View style={styles.invoiceIconContainer}>
-                  <Icon name="clipboard-arrow-left" size={24} color="#144272" />
+                  <Icon name="receipt" size={24} color="#144272" />
                 </View>
                 <View>
                   <Text style={styles.modalTitle}>Purchase Return Invoice</Text>
@@ -367,26 +362,37 @@ export default function PurchaseReturnList() {
               <View style={styles.companyCard}>
                 <View style={styles.companyHeader}>
                   <Text style={styles.companyName}>
-                    {returnData?.config?.bus_name || 'Super Itefaq'}
+                    {returnData?.config?.bus_name || 'N/A'}
                   </Text>
                 </View>
                 <Text style={styles.companyAddress}>
-                  {returnData?.config?.bus_address ||
-                    'Mumtaz Market, Gujranwala'}
+                  {returnData?.config?.bus_address || 'N/A'}
                 </Text>
                 <Text style={styles.companyContact}>
                   {returnData?.config?.bus_contact1 || 'Contact: N/A'}
                 </Text>
               </View>
 
-              {/* Invoice Number */}
-              <View style={styles.invcCard}>
-                <Text style={styles.invcLabel}>Invoice:</Text>
-                <Text style={styles.invcValue}>{selectedInvc}</Text>
-              </View>
-
               {/* Order Info Grid */}
               <View style={styles.orderInfoGrid}>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Invoice #</Text>
+                  <Text style={styles.infoValue}>{selectedInvc ?? 'N/A'}</Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Invoice Date</Text>
+                  <Text style={styles.infoValue}>
+                    {returnDetails[0]?.created_at
+                      ? new Date(
+                          returnDetails[0]?.created_at,
+                        ).toLocaleDateString('en-US', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                      : 'N/A'}
+                  </Text>
+                </View>
                 <View style={styles.infoCard}>
                   <Text style={styles.infoLabel}>Supplier</Text>
                   <Text style={styles.infoValue}>
@@ -394,7 +400,7 @@ export default function PurchaseReturnList() {
                   </Text>
                 </View>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Company</Text>
+                  <Text style={styles.infoLabel}>Company Name:</Text>
                   <Text style={styles.infoValue}>
                     {returnDetails[0]?.sup_company_name ?? 'N/A'}
                   </Text>
@@ -415,23 +421,26 @@ export default function PurchaseReturnList() {
 
               {/* Order Table Section */}
               <View style={styles.tableSection}>
-                <Text style={styles.sectionTitle}>Return Items</Text>
+                <Text style={styles.sectionTitle}>Invoice Items</Text>
 
                 {/* Table Container */}
                 <View style={styles.tableContainer}>
                   {/* Table Header */}
                   <View style={styles.tableHeader}>
                     <Text style={[styles.tableHeaderText, styles.col1]}>
-                      Product
+                      Sr.#
                     </Text>
                     <Text style={[styles.tableHeaderText, styles.col2]}>
-                      Cost Price
+                      Product Name
                     </Text>
                     <Text style={[styles.tableHeaderText, styles.col3]}>
-                      Qty
+                      Return QTY
                     </Text>
                     <Text style={[styles.tableHeaderText, styles.col4]}>
-                      Total
+                      Price
+                    </Text>
+                    <Text style={[styles.tableHeaderText, styles.col5]}>
+                      Total Price
                     </Text>
                   </View>
 
@@ -442,63 +451,65 @@ export default function PurchaseReturnList() {
                       item?.id ? item.id.toString() : index.toString()
                     }
                     renderItem={({item, index}) => (
-                      <View
-                        style={[
-                          styles.tableRow,
-                          index % 2 === 0
-                            ? styles.tableRowEven
-                            : styles.tableRowOdd,
-                        ]}>
+                      <View style={[styles.tableRow]}>
                         <Text
                           style={[styles.tableCell, styles.col1]}
                           numberOfLines={2}>
-                          {item.prchrd_prod_name}
+                          {index + 1}
                         </Text>
                         <Text style={[styles.tableCell, styles.col2]}>
-                          {Number(item.prchrd_price).toLocaleString()}
+                          {item.prchrd_prod_name}
                         </Text>
                         <Text style={[styles.tableCell, styles.col3]}>
                           {item.prchrd_return_qty}
                         </Text>
                         <Text style={[styles.tableCell, styles.col4]}>
+                          {Number(item.prchrd_price).toLocaleString()}
+                        </Text>
+                        <Text style={[styles.tableCell, styles.col5]}>
                           {Number(item.prchrd_total_price).toLocaleString()}
                         </Text>
                       </View>
                     )}
                     scrollEnabled={false}
+                    ListFooterComponent={
+                      <View
+                        style={{
+                          borderTopWidth: 1.5,
+                          borderTopColor: backgroundColors.dark,
+                          flexDirection: 'row',
+                          paddingVertical: 2.5,
+                        }}>
+                        <Text
+                          style={[
+                            styles.tableHeaderText,
+                            {flex: 0.35, textAlign: 'left'},
+                          ]}>
+                          Totals
+                        </Text>
+                        <Text style={[styles.tableCell, {flex: 0.22}]}>
+                          {totalQty}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.tableCell,
+                            {flex: 0.33, textAlign: 'right'},
+                          ]}>
+                          {totalAmount}
+                        </Text>
+                      </View>
+                    }
                   />
                 </View>
               </View>
 
-              {/* Order Totals */}
               <View style={styles.totalsSection}>
-                <View style={styles.totalRow}>
-                  <Text style={styles.totalLabel}>Total Quantity:</Text>
-                  <Text style={styles.totalValue}>{totalQty}</Text>
-                </View>
-
-                {/* You can add other calculations like tax, discount, etc. here if needed */}
-
-                <View style={[styles.totalRow, styles.pendingTotalRow]}>
-                  <Text style={[styles.totalLabel, styles.pendingLabel]}>
-                    Total Return Amount:
-                  </Text>
-                  <Text style={[styles.totalValue, styles.pendingValue]}>
-                    PKR{' '}
-                    {totalAmount.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </Text>
-                </View>
+                <Text style={styles.totalLabel}>Total Return: </Text>
+                <Text style={styles.totalValue}>{totalAmount}</Text>
               </View>
 
               {/* Footer */}
               <View style={styles.modalFooter}>
-                <Text style={styles.invoiceState}>Return Invoice State</Text>
-                <Text style={styles.footerText}>
-                  Purchase Return Invoice Generated Successfully
-                </Text>
                 <Text style={styles.thankYou}>Thank you for your visit</Text>
                 <View style={styles.developerInfo}>
                   <Text style={styles.developerText}>
@@ -520,32 +531,39 @@ export default function PurchaseReturnList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   // Pagination Component
@@ -568,7 +586,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -611,25 +629,25 @@ const styles = StyleSheet.create({
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   name: {
     fontSize: 16,
@@ -644,12 +662,11 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '70%',
-    backgroundColor: '#fff',
     borderRadius: 15,
-    marginTop: 8,
     width: '96%',
     alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -662,7 +679,7 @@ const styles = StyleSheet.create({
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
+    paddingHorizontal: 12,
     marginTop: 15,
     marginBottom: 10,
   },
@@ -670,9 +687,9 @@ const styles = StyleSheet.create({
     flex: 0.48,
   },
   dateLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: backgroundColors.dark,
     marginBottom: 8,
     marginLeft: 4,
   },
@@ -701,19 +718,11 @@ const styles = StyleSheet.create({
     color: '#144272',
   },
 
-  // Modal styling
+  // Modal stying
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'flex-end',
-  },
-  modalContent: {
-    flex: 1,
-    backgroundColor: '#F9F9F9',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
   },
   modalContainer: {
     backgroundColor: '#FAFBFC',
@@ -748,7 +757,7 @@ const styles = StyleSheet.create({
   invoiceIconContainer: {
     width: 48,
     height: 48,
-    backgroundColor: '#E8F4FD',
+    backgroundColor: '#2a652b24',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -766,52 +775,24 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   closeButton: {
-    width: 40,
-    height: 40,
+    width: 30,
+    height: 30,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: backgroundColors.gray,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
-  // Invoice Card
-  invcCard: {
-    backgroundColor: 'white',
-    marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  invcLabel: {
-    color: '#144272',
-    fontWeight: 'bold',
-    fontSize: 14,
-  },
-  invcValue: {
-    color: '#666',
-    fontSize: 15,
-    fontWeight: '800',
-  },
-
   // Company Card
   companyCard: {
-    backgroundColor: 'white',
     marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: backgroundColors.dark,
+    borderStyle: 'dotted',
   },
   companyHeader: {
     flexDirection: 'row',
@@ -828,181 +809,75 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontWeight: '400',
-    marginBottom: 4,
-  },
-  companyContact: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '400',
   },
 
   // Info Grid
   orderInfoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    marginTop: 16,
-  },
-  infoCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    padding: 12,
-    borderRadius: 8,
-    margin: '1%',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  infoLabel: {
-    fontSize: 11,
-    color: '#888',
-    fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#144272',
-  },
-
-  // Table Section
-  tableSection: {
-    marginTop: 20,
+    marginTop: 10,
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 2,
+    borderStyle: 'dotted',
     marginHorizontal: 20,
   },
+  infoCard: {
+    width: '60%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    borderRadius: 8,
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: backgroundColors.dark,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: backgroundColors.dark,
+    fontWeight: '400',
+  },
+
+  // Items Section
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
     color: '#1A1A1A',
     marginBottom: 12,
   },
-  tableContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    backgroundColor: '#144272',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-  },
-  tableHeaderText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 11,
-    textAlign: 'center',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 10,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  tableRowEven: {
-    backgroundColor: '#FAFAFA',
-  },
-  tableRowOdd: {
-    backgroundColor: '#FFFFFF',
-  },
-  tableCell: {
-    fontSize: 12,
-    color: '#333',
-    textAlign: 'center',
-    fontWeight: '500',
-  },
-  col1: {
-    flex: 2,
-    textAlign: 'left',
-    paddingLeft: 8,
-  },
-  col2: {
-    flex: 1.2,
-  },
-  col3: {
-    flex: 1,
-  },
-  col4: {
-    flex: 1.4,
-  },
 
   // Totals Section
   totalsSection: {
-    marginTop: 20,
     marginHorizontal: 20,
-    padding: 16,
-    backgroundColor: 'white',
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  totalRow: {
+    paddingVertical: 10,
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+    justifyContent: 'flex-end',
   },
   totalLabel: {
-    fontSize: 13,
+    fontSize: 14,
+    color: backgroundColors.dark,
     fontWeight: '600',
-    color: '#444',
   },
   totalValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  pendingTotalRow: {
-    borderTopWidth: 1,
-    borderTopColor: '#EEE',
-    paddingTop: 10,
-    marginTop: 10,
-  },
-  pendingLabel: {
-    color: '#D90429',
-    fontWeight: '700',
-  },
-  pendingValue: {
-    color: '#D90429',
-    fontWeight: '700',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    fontWeight: '400',
   },
 
-  // Footer Section
+  // Footer
   modalFooter: {
-    marginTop: 20,
-    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingBottom: 40,
-  },
-  invoiceState: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#144272',
-    marginBottom: 6,
-  },
-  footerText: {
-    fontSize: 13,
-    color: '#666',
-    marginBottom: 6,
-    textAlign: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
   },
   thankYou: {
-    fontSize: 13,
+    fontSize: 16,
     color: '#144272',
     fontWeight: '600',
-    marginBottom: 12,
+    textAlign: 'center',
+    marginBottom: 16,
   },
   developerInfo: {
     alignItems: 'center',
@@ -1010,5 +885,68 @@ const styles = StyleSheet.create({
   developerText: {
     fontSize: 12,
     color: '#888',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  companyContact: {
+    fontSize: 12,
+    color: '#144272',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+
+  // Table Section
+  tableSection: {
+    marginTop: 20,
+    marginHorizontal: 20,
+    borderBottomWidth: 2,
+    borderColor: backgroundColors.dark,
+    borderStyle: 'dotted',
+  },
+  tableContainer: {
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 1.5,
+    paddingBottom: 5,
+  },
+  tableHeaderText: {
+    color: backgroundColors.dark,
+    fontWeight: '600',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  tableCell: {
+    fontSize: 12,
+    color: backgroundColors.dark,
+    textAlign: 'center',
+  },
+
+  // Column widths
+  col1: {
+    flex: 0.1,
+  },
+  col2: {
+    flex: 0.25, // Product
+  },
+  col3: {
+    flex: 0.22, // Qty
+  },
+  col4: {
+    flex: 0.18, // Price
+  },
+  col5: {
+    flex: 0.2, // Total
   },
 });

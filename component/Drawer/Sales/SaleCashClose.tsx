@@ -3,9 +3,10 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   ScrollView,
+  Image,
+  Modal,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import React, {useEffect, useState} from 'react';
@@ -14,8 +15,8 @@ import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
+import LottieView from 'lottie-react-native';
 
 interface CashClose {
   sales_total: string;
@@ -29,12 +30,25 @@ export default function SaleCashClose({navigation}: any) {
   const {userName} = useUser();
   const {openDrawer} = useDrawer();
   const [cashClose, setCashClose] = useState<CashClose | null>(null);
+  const [showWarningModal, setShowWarningModal] = useState(false);
 
   // Fetch Cash close
   const fetchData = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/poscashregister`);
       setCashClose(res.data);
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Check Cash Close
+  const checkCashClose = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/chkclose`);
+      if (res.data.status === 404) {
+        setShowWarningModal(true);
+      }
     } catch (error) {
       console.log(error);
     }
@@ -66,33 +80,32 @@ export default function SaleCashClose({navigation}: any) {
     }
   };
 
+  const handleWarningOk = () => {
+    setShowWarningModal(false);
+    navigation.navigate('Dashboard');
+  };
+
   useEffect(() => {
+    checkCashClose();
     fetchData();
   }, []);
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Modern Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Cash Close</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="account-balance-wallet" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.scrollContainer}>
@@ -106,7 +119,7 @@ export default function SaleCashClose({navigation}: any) {
                   <Icon
                     name="person"
                     size={20}
-                    color="#fff"
+                    color={backgroundColors.dark}
                     style={styles.summaryIcon}
                   />
                   <Text style={styles.summaryLabel}>User:</Text>
@@ -119,13 +132,13 @@ export default function SaleCashClose({navigation}: any) {
                   <Icon
                     name="account-balance-wallet"
                     size={20}
-                    color="#fff"
+                    color={backgroundColors.dark}
                     style={styles.summaryIcon}
                   />
                   <Text style={styles.summaryLabel}>Cash In Hand:</Text>
                 </View>
                 <Text style={styles.summaryValue}>
-                  PKR {cashClose?.cash_in_hand ?? '0.00'}
+                  {cashClose?.cash_in_hand ?? '0.00'}
                 </Text>
               </View>
 
@@ -134,13 +147,13 @@ export default function SaleCashClose({navigation}: any) {
                   <Icon
                     name="trending-up"
                     size={20}
-                    color="#fff"
+                    color={backgroundColors.dark}
                     style={styles.summaryIcon}
                   />
                   <Text style={styles.summaryLabel}>Total Sales:</Text>
                 </View>
                 <Text style={styles.summaryValue}>
-                  PKR {cashClose?.sales_total ?? '0.00'}
+                  {cashClose?.sales_total ?? '0.00'}
                 </Text>
               </View>
 
@@ -149,13 +162,13 @@ export default function SaleCashClose({navigation}: any) {
                   <Icon
                     name="trending-down"
                     size={20}
-                    color="#fff"
+                    color={backgroundColors.dark}
                     style={styles.summaryIcon}
                   />
                   <Text style={styles.summaryLabel}>Total Return:</Text>
                 </View>
                 <Text style={styles.summaryValue}>
-                  PKR {cashClose?.return_amount ?? '0.00'}
+                  {cashClose?.return_amount ?? '0.00'}
                 </Text>
               </View>
 
@@ -164,7 +177,7 @@ export default function SaleCashClose({navigation}: any) {
                   <Icon
                     name="account-balance"
                     size={20}
-                    color="#4CAF50"
+                    color={backgroundColors.primary}
                     style={styles.summaryIcon}
                   />
                   <Text style={[styles.summaryLabel, styles.totalLabel]}>
@@ -172,7 +185,7 @@ export default function SaleCashClose({navigation}: any) {
                   </Text>
                 </View>
                 <Text style={[styles.summaryValue, styles.totalValue]}>
-                  PKR {cashClose?.closing_amount ?? '0.00'}
+                  {cashClose?.closing_amount ?? '0.00'}
                 </Text>
               </View>
             </View>
@@ -187,7 +200,32 @@ export default function SaleCashClose({navigation}: any) {
         </ScrollView>
 
         <Toast />
-      </LinearGradient>
+      </View>
+
+      {/* Warning Modal */}
+      <Modal
+        visible={showWarningModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleWarningOk}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <LottieView
+              source={require('../../../assets/warning.json')}
+              autoPlay
+              loop={false}
+              style={styles.warningAnimation}
+            />
+            <Text style={styles.warningTitle}>Warning!</Text>
+            <Text style={styles.warningMessage}>
+              Cash register has not been opened yet!
+            </Text>
+            <TouchableOpacity style={styles.okButton} onPress={handleWarningOk}>
+              <Text style={styles.okButtonText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -195,52 +233,67 @@ export default function SaleCashClose({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    alignItems: 'center',
   },
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
+    marginTop: 10,
   },
   section: {
-    backgroundColor: 'rgba(15, 45, 78, 0.8)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: backgroundColors.dark,
     marginBottom: 16,
   },
   summaryCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
@@ -262,30 +315,30 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   summaryLabel: {
-    color: 'rgba(255,255,255,0.8)',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
   summaryValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     fontWeight: '600',
     textAlign: 'right',
   },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
+    borderTopColor: 'rgba(0,0,0,0.2)',
     paddingTop: 12,
     marginTop: 8,
     marginBottom: 0,
   },
   totalLabel: {
-    color: '#4CAF50',
+    color: backgroundColors.primary,
     fontSize: 16,
     fontWeight: 'bold',
   },
   totalValue: {
-    color: '#4CAF50',
+    color: backgroundColors.primary,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -293,21 +346,83 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 12,
     paddingVertical: 15,
     paddingHorizontal: 20,
     marginTop: 20,
-    shadowColor: '#4CAF50',
+    shadowColor: backgroundColors.dark,
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
   closeButtonText: {
-    color: 'white',
+    color: backgroundColors.light,
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContainer: {
+    backgroundColor: backgroundColors.light,
+    borderRadius: 20,
+    padding: 30,
+    alignItems: 'center',
+    width: '95%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  warningAnimation: {
+    width: 150,
+    height: 150,
+  },
+  warningTitle: {
+    fontSize: 26,
+    fontWeight: 'bold',
+    color: backgroundColors.danger,
+    marginTop: 10,
+    marginBottom: 8,
+  },
+  warningMessage: {
+    fontSize: 16,
+    color: backgroundColors.dark,
+    textAlign: 'center',
+    paddingHorizontal: 10,
+    marginBottom: 20,
+    lineHeight: 22,
+  },
+  okButton: {
+    backgroundColor: backgroundColors.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 50,
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    minWidth: 120,
+  },
+  okButtonText: {
+    color: 'white',
+    fontSize: 17,
+    fontWeight: 'bold',
+    textAlign: 'center',
   },
 });

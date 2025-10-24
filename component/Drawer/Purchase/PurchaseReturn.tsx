@@ -3,13 +3,14 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   ScrollView,
   TouchableOpacity,
   TextInput,
   FlatList,
   Modal,
   Animated,
+  Image,
+  ToastAndroid,
 } from 'react-native';
 import React, {useEffect, useRef, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -21,7 +22,6 @@ import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 
 interface Supplier {
@@ -57,21 +57,13 @@ interface InvoiceListWithout {
   cart_id?: number;
 }
 
-const initialSupplierData: SupplierData = {
-  sup_address: '',
-  sup_company_name: '',
-  sup_name: '',
-};
-
 export default function PurchaseReturn() {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [selectedOption, setSelectedOption] = useState<'with' | 'without'>(
     'with',
   );
-  const [supData, setSupData] = useState<SupplierData | null>(
-    initialSupplierData,
-  );
+  const [supData, setSupData] = useState<SupplierData | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showResults, setShowResults] = useState(false);
@@ -535,6 +527,7 @@ export default function PurchaseReturn() {
   // Complete Order Without Invoice
   const compOrderWithoutInvc = async () => {
     if (!withoutInvcList.length) {
+      ToastAndroid.show('No items in cart to complete order', 4000);
       Toast.show({
         type: 'error',
         text1: 'No items in cart to complete order',
@@ -560,9 +553,9 @@ export default function PurchaseReturn() {
         setWithoutInvcList([]);
         setOrderTotalWithout(0);
         emptyCartWithoutInvc();
-        setSupData(initialSupplierData);
-
+        setSupData(null);
         setCurrentpsupplier('');
+        setModalVisible('');
       } else if (res.status === 200 && data.status === 202) {
         Toast.show({
           type: 'error',
@@ -570,6 +563,7 @@ export default function PurchaseReturn() {
           text2: 'Please Select Supplier!',
           visibilityTime: 2000,
         });
+        ToastAndroid.show('Please Select Supplier!', 4500);
       }
     } catch (error) {
       Toast.show({
@@ -631,8 +625,6 @@ export default function PurchaseReturn() {
     fetchSupplierData();
     fetchInvcWith();
     fetchInvcWithout();
-    emptyCartWithInvc();
-    emptyCartWithoutInvc();
   }, [currentpsupplier]);
 
   // Render editable quantity component for "With Invoice" items
@@ -671,7 +663,7 @@ export default function PurchaseReturn() {
         <TouchableOpacity
           onPress={() => startEditing(item, 'with')}
           style={styles.quantityDisplay}>
-          <Text style={[styles.quantityText, {color: '#fff'}]}>
+          <Text style={[styles.quantityText, {color: backgroundColors.dark}]}>
             {item.prod_return_qty}
           </Text>
         </TouchableOpacity>
@@ -732,27 +724,35 @@ export default function PurchaseReturn() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Purchase Return</Text>
           </View>
 
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="shopping-cart" size={24} color="transparent" />
-          </TouchableOpacity>
+          {selectedOption === 'without' && (
+            <TouchableOpacity
+              onPress={() => setModalVisible('Cart')}
+              style={[styles.headerBtn]}>
+              <Icon name="add-shopping-cart" size={26} color="#fff" />
+              {withoutInvcList.length > 0 && (
+                <View style={styles.cartBadge}>
+                  <Text style={styles.cartBadgeText}>
+                    {withoutInvcList.length}
+                  </Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          )}
         </View>
 
         <ScrollView
@@ -760,70 +760,59 @@ export default function PurchaseReturn() {
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled>
           {/* Toggle Section */}
-          <View style={styles.section}>
-            <View style={styles.toggleContainer}>
-              <TouchableOpacity
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                selectedOption === 'with' && styles.toggleButtonActive,
+              ]}
+              onPress={() => setSelectedOption('with')}>
+              <Text
                 style={[
-                  styles.toggleButton,
-                  selectedOption === 'with' && styles.toggleButtonActive,
-                ]}
-                onPress={() => setSelectedOption('with')}>
-                <Text
-                  style={[
-                    styles.toggleButtonText,
-                    selectedOption === 'with' && styles.toggleButtonTextActive,
-                  ]}>
-                  Return With Invoice
-                </Text>
-              </TouchableOpacity>
+                  styles.toggleButtonText,
+                  selectedOption === 'with' && styles.toggleButtonTextActive,
+                ]}>
+                Return With Invoice
+              </Text>
+            </TouchableOpacity>
 
-              <TouchableOpacity
+            <TouchableOpacity
+              style={[
+                styles.toggleButton,
+                selectedOption === 'without' && styles.toggleButtonActive,
+              ]}
+              onPress={() => setSelectedOption('without')}>
+              <Text
                 style={[
-                  styles.toggleButton,
-                  selectedOption === 'without' && styles.toggleButtonActive,
-                ]}
-                onPress={() => setSelectedOption('without')}>
-                <Text
-                  style={[
-                    styles.toggleButtonText,
-                    selectedOption === 'without' &&
-                      styles.toggleButtonTextActive,
-                  ]}>
-                  Return Without Invoice
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.newInvoiceBadge}>
-              <Text style={styles.newInvoiceText}>NEW INV</Text>
-            </View>
+                  styles.toggleButtonText,
+                  selectedOption === 'without' && styles.toggleButtonTextActive,
+                ]}>
+                Return Without Invoice
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {selectedOption === 'with' ? (
             <View>
               {/* Search Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Search Invoice</Text>
-
-                <View style={styles.searchContainer}>
-                  <View style={styles.searchInputWrapper}>
-                    <Icon
-                      name="search"
-                      size={20}
-                      color="rgba(255,255,255,0.7)"
-                      style={styles.searchIcon}
-                    />
-                    <TextInput
-                      style={styles.searchInput}
-                      placeholderTextColor="rgba(255,255,255,0.7)"
-                      placeholder="Search Invoice..."
-                      value={searchTerm}
-                      onChangeText={handleSearch}
-                    />
-                    <TouchableOpacity onPress={addInvoice}>
-                      <Icon name="add" size={24} color="white" />
-                    </TouchableOpacity>
-                  </View>
+              <View style={styles.searchContainer}>
+                <View style={styles.searchInputWrapper}>
+                  <Icon
+                    name="search"
+                    size={20}
+                    color={backgroundColors.dark}
+                    style={styles.searchIcon}
+                  />
+                  <TextInput
+                    style={styles.searchInput}
+                    placeholderTextColor="rgba(0,0,0,0.7)"
+                    placeholder="Search Invoice..."
+                    value={searchTerm}
+                    onChangeText={handleSearch}
+                  />
+                  <TouchableOpacity onPress={addInvoice}>
+                    <Icon name="add" size={24} color={backgroundColors.dark} />
+                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -833,11 +822,7 @@ export default function PurchaseReturn() {
 
                 {withInvcList.length === 0 ? (
                   <View style={styles.emptyContainer}>
-                    <Icon
-                      name="receipt"
-                      size={40}
-                      color="rgba(255,255,255,0.5)"
-                    />
+                    <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
                     <Text style={styles.emptyText}>
                       No items added for return
                     </Text>
@@ -881,13 +866,12 @@ export default function PurchaseReturn() {
                           <View style={styles.withDetailRow}>
                             <Text style={styles.withDetailLabel}>Price:</Text>
                             <Text style={styles.detailValue}>
-                              PKR {item.prod_price}
+                              {item.prod_price}
                             </Text>
                           </View>
                           <View style={styles.withDetailRow}>
                             <Text style={styles.withDetailLabel}>Total:</Text>
                             <Text style={styles.detailValue}>
-                              PKR{' '}
                               {(
                                 item.prod_return_qty *
                                 parseFloat(item.prod_price)
@@ -904,7 +888,7 @@ export default function PurchaseReturn() {
                   <View style={styles.totalContainer}>
                     <Text style={styles.totalLabel}>Total:</Text>
                     <Text style={styles.totalValue}>
-                      PKR {orderTotal.toFixed(2)}
+                      {orderTotal.toFixed(2)}
                     </Text>
                   </View>
                 )}
@@ -918,27 +902,39 @@ export default function PurchaseReturn() {
                 ]}
                 onPress={compOrder}
                 disabled={withInvcList.length === 0}>
-                <Icon name="shopping-cart-checkout" size={20} color="white" />
-                <Text style={styles.checkoutBtnText}>Complete Return</Text>
+                <Icon
+                  name="shopping-cart-checkout"
+                  size={20}
+                  color={
+                    withInvcList.length === 0
+                      ? backgroundColors.dark
+                      : backgroundColors.light
+                  }
+                />
+                <Text
+                  style={[
+                    styles.checkoutBtnText,
+                    withInvcList.length === 0 && styles.checkoutDisableBtnText,
+                  ]}>
+                  Complete Return
+                </Text>
               </TouchableOpacity>
             </View>
           ) : (
             <View>
               {/* Search Section Without Invoice */}
               <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Search Product</Text>
-
                 <View style={styles.searchContainer}>
                   <View style={styles.searchInputWrapper}>
                     <Icon
                       name="search"
                       size={20}
-                      color="rgba(255,255,255,0.7)"
+                      color={backgroundColors.dark}
                       style={styles.searchIcon}
                     />
                     <TextInput
                       style={styles.searchInput}
-                      placeholderTextColor="rgba(255,255,255,0.7)"
+                      placeholderTextColor="rgba(0,0,0,0.7)"
                       placeholder="Search Product..."
                       value={searchTermWithout}
                       onChangeText={handleSearchWithout}
@@ -947,11 +943,10 @@ export default function PurchaseReturn() {
                 </View>
 
                 <View style={styles.formRow}>
-                  <View style={[styles.inputGroup, {width: '100%'}]}>
-                    <Text style={styles.inputLabel}>Quantity</Text>
+                  <View style={[styles.inputGroup]}>
                     <TextInput
                       style={styles.input}
-                      placeholderTextColor="rgba(255,255,255,0.7)"
+                      placeholderTextColor="rgba(0,0,0,0.7)"
                       placeholder="Enter quantity"
                       value={quantity}
                       onChangeText={setQuantity}
@@ -966,123 +961,12 @@ export default function PurchaseReturn() {
                   <Icon
                     name="add"
                     size={20}
-                    color="#144272"
+                    color={backgroundColors.light}
                     style={{marginRight: 8}}
                   />
                   <Text style={styles.addToCartText}>Add Product</Text>
                 </TouchableOpacity>
               </View>
-
-              {/* Supplier Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Supplier Details</Text>
-
-                <View
-                  style={[
-                    styles.inputGroup,
-                    {zIndex: 1000, marginBottom: 16, width: '100%'},
-                  ]}>
-                  <Text style={styles.inputLabel}>Select Supplier</Text>
-                  <DropDownPicker
-                    items={transformedSupplier}
-                    open={psupplier}
-                    setOpen={setpsupplier}
-                    value={currentpsupplier}
-                    setValue={setCurrentpsupplier}
-                    placeholder="Choose supplier..."
-                    placeholderStyle={{color: 'rgba(255,255,255,0.7)'}}
-                    textStyle={{color: 'white'}}
-                    ArrowUpIconComponent={() => (
-                      <Icon name="keyboard-arrow-up" size={18} color="#fff" />
-                    )}
-                    ArrowDownIconComponent={() => (
-                      <Icon name="keyboard-arrow-down" size={18} color="#fff" />
-                    )}
-                    style={styles.dropdown}
-                    dropDownContainerStyle={styles.dropdownContainer}
-                    labelStyle={{color: 'white'}}
-                    listItemLabelStyle={{color: '#144272'}}
-                    listMode="SCROLLVIEW"
-                  />
-                </View>
-
-                {supData && (
-                  <View style={styles.supplierInfo}>
-                    <View style={styles.supplierCard}>
-                      <Text style={styles.supplierLabel}>Supplier Name</Text>
-                      <Text style={styles.supplierValue}>
-                        {supData.sup_name}
-                      </Text>
-                    </View>
-                    <View style={styles.supplierCard}>
-                      <Text style={styles.supplierLabel}>Company Name</Text>
-                      <Text style={styles.supplierValue}>
-                        {supData.sup_company_name}
-                      </Text>
-                    </View>
-                    <View style={styles.supplierCard}>
-                      <Text style={styles.supplierLabel}>Address</Text>
-                      <Text style={styles.supplierValue}>
-                        {supData.sup_address}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                <View style={styles.formRow}>
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Reference</Text>
-                    <TextInput
-                      style={[styles.input]}
-                      placeholderTextColor="rgba(255,255,255,0.7)"
-                      placeholder="Enter reference"
-                      keyboardType="number-pad"
-                      value={ref}
-                      onChangeText={t => setRef(t)}
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <Text style={styles.inputLabel}>Return Date</Text>
-                    <TouchableOpacity
-                      onPress={() => setShowexpireDatePicker(true)}
-                      style={styles.dateInput}>
-                      <Icon name="event" size={20} color="white" />
-                      <Text style={styles.dateText}>
-                        {expireDate.toLocaleDateString()}
-                      </Text>
-                      <Icon
-                        name="keyboard-arrow-down"
-                        size={20}
-                        color="white"
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {showexpireDatePicker && (
-                  <DateTimePicker
-                    testID="expireDatePicker"
-                    value={expireDate}
-                    mode="date"
-                    is24Hour={true}
-                    display="default"
-                    onChange={onexpireDateChange}
-                  />
-                )}
-              </View>
-
-              {/* Complete Button Without Invoice */}
-              <TouchableOpacity
-                style={[
-                  styles.checkoutBtn,
-                  withoutInvcList.length === 0 && styles.checkoutBtnDisabled,
-                ]}
-                onPress={compOrderWithoutInvc}
-                disabled={withoutInvcList.length === 0}>
-                <Icon name="shopping-cart-checkout" size={20} color="white" />
-                <Text style={styles.checkoutBtnText}>Complete Return</Text>
-              </TouchableOpacity>
             </View>
           )}
 
@@ -1140,41 +1024,10 @@ export default function PurchaseReturn() {
             </View>
           )}
 
-        {/* Floating Cart Button */}
-        {selectedOption === 'without' && (
-          <Animated.View
-            style={[
-              styles.floatingCartContainer,
-              {
-                transform: [
-                  {
-                    scale: bounceAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [1, 1.2],
-                    }),
-                  },
-                ],
-              },
-            ]}>
-            <TouchableOpacity
-              style={styles.floatingCartBtn}
-              onPress={() => setModalVisible('Cart')}>
-              <Icon name="shopping-cart" size={24} color="white" />
-              {withoutInvcList.length > 0 && (
-                <View style={styles.cartBadge}>
-                  <Text style={styles.cartBadgeText}>
-                    {withInvcList.length + withoutInvcList.length}
-                  </Text>
-                </View>
-              )}
-            </TouchableOpacity>
-          </Animated.View>
-        )}
-
         {/* Cart Modal */}
         <Modal
           visible={modalVisible === 'Cart'}
-          animationType="slide"
+          animationType="fade"
           transparent={false}>
           <SafeAreaView style={styles.cartModalContainer}>
             {/* Header */}
@@ -1182,7 +1035,11 @@ export default function PurchaseReturn() {
               <TouchableOpacity
                 onPress={() => setModalVisible('')}
                 style={styles.cartModalCloseBtn}>
-                <Icon name="arrow-back" size={24} color="#144272" />
+                <Icon
+                  name="arrow-back"
+                  size={24}
+                  color={backgroundColors.dark}
+                />
               </TouchableOpacity>
               <Text style={styles.cartModalTitle}>Shopping Cart</Text>
               <Text style={styles.cartItemCount}>
@@ -1217,13 +1074,13 @@ export default function PurchaseReturn() {
                   <View style={styles.cartTotalRow}>
                     <Text style={styles.cartTotalLabel}>Total Amount:</Text>
                     <Text style={styles.cartTotalValue}>
-                      PKR {orderTotalWithout.toFixed(2)}
+                      {orderTotalWithout.toFixed(2)}
                     </Text>
                   </View>
                   <TouchableOpacity
                     style={styles.proceedBtn}
                     onPress={() => {
-                      setModalVisible('');
+                      setModalVisible('Checkout');
                     }}>
                     <Text style={styles.proceedBtnText}>
                       Proceed to Checkout
@@ -1237,8 +1094,158 @@ export default function PurchaseReturn() {
           </SafeAreaView>
         </Modal>
 
+        {/* Checkout Modal */}
+        <Modal
+          visible={modalVisible === 'Checkout'}
+          animationType="fade"
+          transparent={false}>
+          <SafeAreaView style={styles.container}>
+            <View style={styles.checkoutModalHeader}>
+              <TouchableOpacity
+                onPress={() => setModalVisible('Cart')}
+                style={styles.headerBtn}>
+                <Icon
+                  name="arrow-back"
+                  size={24}
+                  color={backgroundColors.dark}
+                />
+              </TouchableOpacity>
+              <Text style={styles.checkoutModalTitle}>Checkout</Text>
+            </View>
+
+            <ScrollView
+              style={styles.checkoutScrollView}
+              contentContainerStyle={{paddingBottom: 100}}>
+              {/* Return Date */}
+              <View style={styles.checkoutSection}>
+                <Text style={styles.checkoutSectionTitle}>Return date</Text>
+                <TouchableOpacity
+                  onPress={() => setShowexpireDatePicker(true)}
+                  style={styles.dateInput}>
+                  <Icon name="event" size={20} color={backgroundColors.dark} />
+                  <Text style={styles.dateText}>
+                    {expireDate.toLocaleDateString()}
+                  </Text>
+                  <Icon
+                    name="keyboard-arrow-down"
+                    size={20}
+                    color={backgroundColors.dark}
+                  />
+                </TouchableOpacity>
+
+                {showexpireDatePicker && (
+                  <DateTimePicker
+                    testID="expireDatePicker"
+                    value={expireDate}
+                    mode="date"
+                    is24Hour={true}
+                    display="default"
+                    onChange={onexpireDateChange}
+                  />
+                )}
+              </View>
+              <View style={styles.checkoutSection}>
+                <Text style={styles.checkoutSectionTitle}>Supplier *</Text>
+                <View style={styles.inputGroup}>
+                  <Icon
+                    name="person"
+                    size={28}
+                    color={backgroundColors.dark}
+                    style={styles.personIcon}
+                  />
+                  <DropDownPicker
+                    items={transformedSupplier}
+                    open={psupplier}
+                    setOpen={setpsupplier}
+                    value={currentpsupplier}
+                    setValue={setCurrentpsupplier}
+                    placeholder="Select Supplier"
+                    placeholderStyle={{
+                      color: 'rgba(0,0,0,0.7)',
+                      marginLeft: 30,
+                      fontSize: 16,
+                    }}
+                    textStyle={{color: 'white'}}
+                    ArrowUpIconComponent={() => (
+                      <Icon
+                        name="keyboard-arrow-up"
+                        size={18}
+                        color={backgroundColors.dark}
+                      />
+                    )}
+                    ArrowDownIconComponent={() => (
+                      <Icon
+                        name="keyboard-arrow-down"
+                        size={18}
+                        color={backgroundColors.dark}
+                      />
+                    )}
+                    style={styles.dropdown}
+                    dropDownContainerStyle={styles.dropdownContainer}
+                    labelStyle={{
+                      color: backgroundColors.dark,
+                      marginLeft: 30,
+                      fontSize: 16,
+                    }}
+                    listItemLabelStyle={{color: '#144272'}}
+                    listMode="MODAL"
+                    searchable
+                    searchTextInputStyle={{
+                      borderWidth: 0,
+                      width: '100%',
+                    }}
+                    searchContainerStyle={{
+                      borderColor: backgroundColors.gray,
+                    }}
+                  />
+                </View>
+              </View>
+
+              {/* Supplier Details */}
+              {supData && (
+                <View style={styles.checkoutSection}>
+                  <View style={styles.checkoutCard}>
+                    <Image
+                      source={require('../../../assets/man.png')}
+                      style={styles.avatar}
+                    />
+                    <View style={{flex: 1}}>
+                      <Text style={styles.supplierName}>
+                        {supData?.sup_name}
+                      </Text>
+                      <Text style={styles.supplierPhone}>
+                        {supData?.sup_company_name} | {supData?.sup_address}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+              )}
+
+              {/* Amount to Pay */}
+              <View style={styles.checkoutSection}>
+                <Text style={styles.checkoutSectionTitle}>Total Amount</Text>
+                <View style={styles.amountContainer}>
+                  <Text style={styles.amountValue}>
+                    {orderTotalWithout.toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            <View style={styles.checkoutFooter}>
+              <TouchableOpacity
+                style={styles.completePurchaseBtn}
+                onPress={compOrderWithoutInvc}>
+                <Text style={styles.completePurchaseBtnText}>
+                  Complete Purchase
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </SafeAreaView>
+        </Modal>
+
         <Toast />
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -1246,146 +1253,168 @@ export default function PurchaseReturn() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    alignItems: 'center',
   },
+
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   section: {
-    backgroundColor: 'rgba(15, 45, 78, 0.8)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: backgroundColors.primary,
     marginBottom: 16,
   },
   toggleContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    paddingVertical: 10,
   },
   toggleButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    width: '48%',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'white',
+    backgroundColor: backgroundColors.light,
+    borderColor: backgroundColors.gray,
     alignItems: 'center',
-    marginHorizontal: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   toggleButtonActive: {
-    backgroundColor: 'white',
+    backgroundColor: backgroundColors.primary,
   },
   toggleButtonText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontWeight: 'bold',
   },
   toggleButtonTextActive: {
-    color: '#144272',
+    color: backgroundColors.light,
   },
-  newInvoiceBadge: {
-    alignSelf: 'flex-end',
-    backgroundColor: 'gray',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'white',
-  },
-  newInvoiceText: {
-    color: 'white',
-    fontSize: 12,
-  },
+
   searchContainer: {
-    marginBottom: 16,
+    marginBottom: 10,
     position: 'relative',
   },
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
     paddingHorizontal: 12,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    height: 48,
   },
   searchIcon: {
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     paddingVertical: 12,
   },
+
   formRow: {
     marginBottom: 12,
   },
   inputGroup: {
     width: '100%',
     marginBottom: 10,
-  },
-  inputLabel: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    marginBottom: 6,
-    fontWeight: '500',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 8,
+    height: 48,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 12,
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    paddingHorizontal: 12,
     paddingVertical: 10,
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
+    paddingHorizontal: 12,
   },
+  
   dateInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
     paddingHorizontal: 12,
     paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
   },
   dateText: {
     flex: 1,
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     marginLeft: 8,
   },
@@ -1393,21 +1422,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'white',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 12,
     paddingVertical: 12,
     paddingHorizontal: 20,
   },
   addToCartText: {
-    color: '#144272',
+    color: backgroundColors.light,
     fontSize: 16,
     fontWeight: 'bold',
   },
   dropdown: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    minHeight: 40,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 4,
   },
   dropdownContainer: {
     backgroundColor: 'white',
@@ -1450,7 +1487,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   detailValue: {
-    color: '#fff',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -1464,12 +1501,12 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(255,255,255,0.2)',
   },
   totalLabel: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 18,
     fontWeight: 'bold',
   },
   totalValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 18,
     fontWeight: 'bold',
   },
@@ -1479,7 +1516,7 @@ const styles = StyleSheet.create({
     padding: 40,
   },
   emptyText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.7)',
     fontSize: 16,
     marginTop: 10,
   },
@@ -1487,22 +1524,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 12,
     paddingVertical: 15,
     paddingHorizontal: 20,
     marginVertical: 16,
-    shadowColor: '#4CAF50',
+    shadowColor: backgroundColors.dark,
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
   },
   checkoutBtnDisabled: {
-    backgroundColor: 'rgba(76, 175, 80, 0.5)',
+    backgroundColor: backgroundColors.gray,
   },
   checkoutBtnText: {
     color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  checkoutDisableBtnText: {
+    color: backgroundColors.dark,
     fontSize: 18,
     fontWeight: 'bold',
     marginLeft: 8,
@@ -1513,13 +1556,14 @@ const styles = StyleSheet.create({
     borderBottomColor: '#f0f0f0',
   },
   resultText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontSize: 14,
+    fontWeight: '600',
   },
   searchResultsOverlay: {
     position: 'absolute',
-    top: 340,
-    left: 20,
+    top: 220,
+    left: 10,
     backgroundColor: 'white',
     borderRadius: 10,
     zIndex: 1000,
@@ -1529,35 +1573,16 @@ const styles = StyleSheet.create({
     shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.25,
     shadowRadius: 5,
-    width: '90%',
-  },
-  floatingCartContainer: {
-    position: 'absolute',
-    bottom: 30,
-    right: 20,
-    zIndex: 1000,
-  },
-  floatingCartBtn: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#144272',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    width: '95%',
   },
   cartBadge: {
     position: 'absolute',
-    top: -5,
-    right: -5,
+    top: -3,
+    right: -3,
     backgroundColor: '#FF5252',
     borderRadius: 12,
-    minWidth: 24,
-    height: 24,
+    minWidth: 20,
+    height: 20,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
@@ -1572,7 +1597,7 @@ const styles = StyleSheet.create({
   // Cart Modal
   cartModalContainer: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: backgroundColors.gray,
   },
   cartModalHeader: {
     flexDirection: 'row',
@@ -1590,7 +1615,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
     textAlign: 'center',
   },
   cartItemCount: {
@@ -1651,8 +1676,10 @@ const styles = StyleSheet.create({
   },
   cartSummaryContainer: {
     padding: 20,
-    backgroundColor: 'white',
+    backgroundColor: backgroundColors.light,
     borderTopWidth: 1,
+    borderTopRightRadius: 15,
+    borderTopLeftRadius: 15,
     borderTopColor: '#e0e0e0',
   },
   cartTotalRow: {
@@ -1671,7 +1698,7 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
   },
   proceedBtn: {
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',
@@ -1722,7 +1749,7 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 4,
-    color: '#144272',
+    color: backgroundColors.dark,
     fontSize: 14,
     marginRight: 8,
   },
@@ -1739,7 +1766,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   withCartItemContainer: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 10,
     padding: 12,
     marginBottom: 10,
@@ -1753,7 +1780,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   withCartProductName: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     fontWeight: 'bold',
     flex: 1,
@@ -1769,7 +1796,110 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   withDetailLabel: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.7)',
     fontSize: 14,
+  },
+
+  // ================= NEW CHECKOUT MODAL STYLES =================
+  checkoutModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 8,
+    backgroundColor: backgroundColors.light,
+  },
+  checkoutModalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: backgroundColors.dark,
+    textAlign: 'center',
+    flex: 1,
+    marginRight: 24, // Adjust for the back button
+  },
+  checkoutScrollView: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  checkoutSection: {
+    marginBottom: 5,
+  },
+  checkoutSectionTitle: {
+    fontSize: 14,
+    color: backgroundColors.dark,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  checkoutCard: {
+    backgroundColor: backgroundColors.light,
+    borderRadius: 12,
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  checkoutCardText: {
+    fontSize: 16,
+    color: backgroundColors.dark,
+    marginLeft: 15,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 15,
+  },
+  supplierName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: backgroundColors.dark,
+  },
+  supplierPhone: {
+    fontSize: 14,
+    color: 'gray',
+  },
+  amountContainer: {
+    backgroundColor: backgroundColors.light,
+    borderRadius: 12,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  amountValue: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  amountCurrency: {
+    fontSize: 16,
+    color: 'gray',
+  },
+  checkoutFooter: {
+    padding: 20,
+    backgroundColor: backgroundColors.light,
+    borderTopWidth: 1,
+    borderColor: '#eee',
+  },
+  completePurchaseBtn: {
+    backgroundColor: backgroundColors.primary,
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  completePurchaseBtnText: {
+    color: backgroundColors.light,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  personIcon: {
+    position: 'absolute',
+    zIndex: 10000,
+    top: 7,
+    left: 6,
   },
 });

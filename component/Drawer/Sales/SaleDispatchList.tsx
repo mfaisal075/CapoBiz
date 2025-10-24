@@ -7,6 +7,7 @@ import {
   FlatList,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import React, {useEffect, useState} from 'react';
@@ -16,7 +17,6 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import BASE_URL from '../../BASE_URL';
 import axios from 'axios';
 import {useUser} from '../../CTX/UserContext';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 
 interface DispatchList {
@@ -65,7 +65,7 @@ interface SingleInvoice {
 
 export default function SaleDispatchList() {
   const {openDrawer} = useDrawer();
-  const {token, bussName, bussAddress} = useUser();
+  const {token, bussName, bussAddress, bussContact} = useUser();
   const [dispList, setDispList] = useState<DispatchList[]>([]);
   const [modalVisible, setModalVisible] = useState('');
   const [invoiceData, setInvoiceData] = useState<SingleInvoice | null>(null);
@@ -141,27 +141,20 @@ export default function SaleDispatchList() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Dispatch List</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="mail" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         {/* Date Selection */}
@@ -260,7 +253,7 @@ export default function SaleDispatchList() {
             showsVerticalScrollIndicator={false}
           />
         </View>
-      </LinearGradient>
+      </View>
 
       {/* Pagination Controls */}
       {totalRecords > 0 && (
@@ -322,7 +315,7 @@ export default function SaleDispatchList() {
             <View style={styles.modalHeader}>
               <View style={styles.headerLeft}>
                 <View style={styles.invoiceIconContainer}>
-                  <Icon name="truck" size={24} color="#144272" />
+                  <Icon name="receipt" size={24} color="#144272" />
                 </View>
                 <View>
                   <Text style={styles.modalTitle}>Dispatch</Text>
@@ -345,240 +338,103 @@ export default function SaleDispatchList() {
               {/* Company Info Card */}
               <View style={styles.companyCard}>
                 <View style={styles.companyHeader}>
-                  <Text style={styles.companyName}>{bussName ?? 'N/A'}</Text>
+                  <Text style={styles.companyName}>{bussName || 'N/A'}</Text>
                 </View>
                 <Text style={styles.companyAddress}>
-                  {bussAddress ?? 'N/A'}
+                  {bussAddress || 'N/A'}
+                </Text>
+                <Text style={styles.companyContact}>
+                  {bussContact || 'Contact: N/A'}
                 </Text>
               </View>
 
               {/* Order Info Grid */}
               <View style={styles.orderInfoGrid}>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Invoice #</Text>
+                  <Text style={styles.infoLabel}>Invoice#:</Text>
                   <Text style={styles.infoValue}>
-                    {invoiceData?.sale.disp_invoice_no || 'N/A'}
+                    {invoiceData?.sale.disp_invoice_no ?? 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Date</Text>
+                  <Text style={styles.infoLabel}>Date:</Text>
                   <Text style={styles.infoValue}>
                     {invoiceData?.sale.disp_date
-                      ? new Date(invoiceData.sale.disp_date).toLocaleDateString(
-                          'en-US',
-                          {
+                      ? new Date(invoiceData.sale.disp_date)
+                          .toLocaleDateString('en-GB', {
                             day: '2-digit',
                             month: 'short',
                             year: 'numeric',
-                          },
-                        )
+                          })
+                          .replace(/ /g, '-')
                       : 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Customer</Text>
+                  <Text style={styles.infoLabel}>Customer:</Text>
                   <Text style={styles.infoValue}>
-                    {invoiceData?.cust.slcust_name || 'N/A'}
+                    {invoiceData?.cust?.slcust_name ?? 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Contact</Text>
+                  <Text style={styles.infoLabel}>Contact:</Text>
                   <Text style={styles.infoValue}>
-                    {invoiceData?.cust.slcust_contact || 'N/A'}
+                    {invoiceData?.cust?.slcust_contact ?? 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Builty Contact</Text>
+                  <Text style={styles.infoLabel}>Address:</Text>
                   <Text style={styles.infoValue}>
-                    {invoiceData?.sale.disp_builty_contact || 'N/A'}
+                    {invoiceData?.cust?.slcust_address ?? 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Builty Address</Text>
+                  <Text style={styles.infoLabel}>Builty Contact#:</Text>
                   <Text style={styles.infoValue}>
-                    {invoiceData?.sale.disp_builty_address || 'N/A'}
+                    {invoiceData?.sale.disp_builty_contact ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Builty Address#:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.disp_builty_address ?? 'N/A'}
                   </Text>
                 </View>
               </View>
 
-              {/* Dispatch Buttons Section */}
-              <View style={styles.dispatchButtonsSection}>
-                <Text style={styles.sectionTitle}>Dispatches</Text>
-                {invoiceData?.dispatchdata
-                  ?.filter(dispatchItem => !!dispatchItem.dispd_disp_no)
-                  .map((dispatchItem, index) => {
-                    const transporter = invoiceData.transporters?.find(
-                      t => t.id.toString() === dispatchItem.dispd_trans_id,
-                    );
+              {/* Order Table Section */}
+              <View style={styles.tableSection}>
+                <Text style={styles.sectionTitle}>Dispatched Detail</Text>
 
-                    return (
-                      <TouchableOpacity
-                        key={index}
-                        style={styles.dispatchButton}
-                        onPress={() => {
-                          setSelectedDispatch({
-                            dispatch: dispatchItem,
-                            index,
-                            transporter,
-                          });
-                        }}>
-                        <View style={styles.dispatchButtonContent}>
-                          <View style={styles.dispatchButtonLeft}>
-                            <View style={styles.dispatchButtonIcon}>
-                              <Icon
-                                name="package-variant"
-                                size={20}
-                                color="#144272"
-                              />
-                            </View>
-                            <View>
-                              <Text style={styles.dispatchButtonTitle}>
-                                Dispatch #{index + 1}
-                              </Text>
-                              <Text style={styles.dispatchButtonSubtitle}>
-                                {dispatchItem.dispd_disp_no}
-                              </Text>
-                            </View>
-                          </View>
-                          <Icon
-                            name="chevron-right"
-                            size={24}
-                            color="#144272"
-                          />
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-              </View>
-
-              {/* Footer */}
-              <View style={styles.modalFooter}>
-                <Text style={styles.thankYou}>Thank you for your visit</Text>
-                <View style={styles.developerInfo}>
-                  <Text style={styles.developerText}>
-                    Software Developed with ❤️ by
-                  </Text>
-                  <Text style={styles.companyContact}>
-                    Technic Mentors | +923111122144
-                  </Text>
-                </View>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Dispatch Details Popup */}
-      <Modal
-        visible={selectedDispatch !== null}
-        animationType="slide"
-        transparent
-        presentationStyle="overFullScreen">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            {/* Modal Handle */}
-            <View style={styles.modalHandle} />
-
-            {/* Header */}
-            <View style={styles.modalHeader}>
-              <View style={styles.headerLeft}>
-                <View style={styles.invoiceIconContainer}>
-                  <Icon name="package-variant" size={24} color="#144272" />
-                </View>
-                <View>
-                  <Text style={styles.modalTitle}>
-                    Dispatch #{(selectedDispatch?.index ?? 0) + 1}
-                  </Text>
-                  <Text style={styles.modalSubtitle}>Dispatch Details</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                onPress={() => setSelectedDispatch(null)}
-                style={styles.closeButton}>
-                <Icon name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              style={styles.modalContent}
-              showsVerticalScrollIndicator={false}>
-              {selectedDispatch && (
-                <>
-                  {/* Dispatch Info Grid */}
-                  <View style={styles.orderInfoGrid}>
-                    <View style={styles.infoCard}>
-                      <Text style={styles.infoLabel}>Date</Text>
-                      <Text style={styles.infoValue}>
-                        {selectedDispatch.dispatch.created_at
-                          ? new Date(
-                              selectedDispatch.dispatch.created_at,
-                            ).toLocaleDateString('en-US', {
-                              month: 'short',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })
-                          : 'N/A'}
-                      </Text>
-                    </View>
-                    <View style={styles.infoCard}>
-                      <Text style={styles.infoLabel}>Dispatch #</Text>
-                      <Text style={styles.infoValue}>
-                        {selectedDispatch.dispatch.dispd_disp_no || 'N/A'}
-                      </Text>
-                    </View>
-                    <View style={styles.infoCard}>
-                      <Text style={styles.infoLabel}>Freight</Text>
-                      <Text style={styles.infoValue}>
-                        {selectedDispatch.dispatch.dispd_freight_exp || '0.00'}
-                      </Text>
-                    </View>
-                    <View style={styles.infoCard}>
-                      <Text style={styles.infoLabel}>Transporter</Text>
-                      <Text style={styles.infoValue}>
-                        {selectedDispatch.transporter?.trans_name || 'N/A'}
-                      </Text>
-                    </View>
+                <View style={styles.tableContainer}>
+                  {/* Table Header */}
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.tableHeaderText, styles.col1]}>
+                      Product
+                    </Text>
+                    <Text style={[styles.tableHeaderText, styles.col2]}>
+                      Dispatch Qty
+                    </Text>
                   </View>
 
-                  {/* Products Table */}
-                  <View style={styles.tableSection}>
-                    <Text style={styles.sectionTitle}>Products</Text>
-
-                    <View style={styles.tableContainer}>
-                      {/* Table Header */}
-                      <View style={styles.tableHeader}>
-                        <Text style={[styles.tableHeaderText, styles.col2]}>
-                          Product
+                  {/* Table Rows */}
+                  <FlatList
+                    data={invoiceData?.sale_detail}
+                    keyExtractor={(_, index) => index.toString()}
+                    renderItem={({item, index}) => (
+                      <View style={[styles.tableRow]}>
+                        <Text style={[styles.tableCell, styles.col1]}>
+                          {item.sald_prod_name}
                         </Text>
-                        <Text style={[styles.tableHeaderText, styles.col3]}>
-                          Qty
+                        <Text style={[styles.tableCell, styles.col2]}>
+                          {item.sald_disp_qty}
                         </Text>
                       </View>
-
-                      {/* Table Rows */}
-                      {invoiceData?.sale_detail?.map((detail, i) => (
-                        <View
-                          key={i}
-                          style={[
-                            styles.tableRow,
-                            i % 2 === 0
-                              ? styles.tableRowEven
-                              : styles.tableRowOdd,
-                          ]}>
-                          <Text
-                            style={[styles.tableCell, styles.col2]}
-                            numberOfLines={2}>
-                            {detail.sald_prod_name}
-                          </Text>
-                          <Text style={[styles.tableCell, styles.col3]}>
-                            {detail.sald_disp_qty}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                </>
-              )}
+                    )}
+                    scrollEnabled={false}
+                  />
+                </View>
+              </View>
 
               {/* Footer */}
               <View style={styles.modalFooter}>
@@ -603,32 +459,44 @@ export default function SaleDispatchList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
 
   // Pagination Component
@@ -651,7 +519,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -670,7 +538,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   pageButtonTextDisabled: {
-    color: '#777',
+    color: backgroundColors.dark,
   },
   pageIndicator: {
     paddingHorizontal: 10,
@@ -694,25 +562,25 @@ const styles = StyleSheet.create({
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   name: {
     fontSize: 16,
@@ -727,11 +595,11 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '70%',
-    backgroundColor: '#fff',
     borderRadius: 15,
-    alignSelf: 'center',
     width: '96%',
+    alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -744,17 +612,17 @@ const styles = StyleSheet.create({
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
+    paddingHorizontal: 12,
     marginTop: 15,
-    marginBottom: 15,
+    marginBottom: 5,
   },
   dateInputWrapper: {
     flex: 0.48,
   },
   dateLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: backgroundColors.dark,
     marginBottom: 8,
     marginLeft: 4,
   },
@@ -766,25 +634,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(20, 66, 114, 0.2)',
+    borderWidth: 1.5,
+    borderColor: backgroundColors.gray,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 2,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
+    shadowRadius: 4,
+    elevation: 8,
     height: 48,
   },
   dateText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#144272',
+    fontWeight: '600',
+    color: backgroundColors.dark,
   },
 
-  // Modal stying
+  // // Modal stying
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -794,7 +662,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FAFBFC',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    height: '85%',
+    height: '80%',
     paddingBottom: 20,
   },
   modalHandle: {
@@ -823,7 +691,7 @@ const styles = StyleSheet.create({
   invoiceIconContainer: {
     width: 48,
     height: 48,
-    backgroundColor: '#E8F4FD',
+    backgroundColor: '#2a652b24',
     borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
@@ -841,27 +709,24 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   closeButton: {
-    width: 40,
-    height: 40,
+    width: 30,
+    height: 30,
     borderRadius: 20,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: backgroundColors.gray,
     justifyContent: 'center',
     alignItems: 'center',
   },
 
   // Company Card
   companyCard: {
-    backgroundColor: 'white',
     marginHorizontal: 20,
-    marginTop: 16,
-    padding: 16,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-    alignItems: 'flex-start',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: backgroundColors.dark,
+    borderStyle: 'dotted',
   },
   companyHeader: {
     flexDirection: 'row',
@@ -878,52 +743,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     fontWeight: '400',
-    textAlign: 'center',
   },
 
   // Info Grid
   orderInfoGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    paddingHorizontal: 16,
-    marginTop: 16,
+    marginTop: 10,
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 2,
+    borderStyle: 'dotted',
+    marginHorizontal: 20,
   },
   infoCard: {
-    width: '48%',
-    backgroundColor: 'white',
-    padding: 12,
+    width: '60%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
     borderRadius: 8,
-    margin: '1%',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
   },
   infoLabel: {
-    fontSize: 11,
-    color: '#888',
-    fontWeight: '600',
+    fontSize: 12,
+    color: backgroundColors.dark,
+    fontWeight: '700',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    marginBottom: 4,
   },
   infoValue: {
     fontSize: 14,
-    color: '#1A1A1A',
-    fontWeight: '600',
+    color: backgroundColors.dark,
+    fontWeight: '400',
   },
 
-  // Dispatch Section
-  dispatchSection: {
-    marginTop: 20,
-    marginHorizontal: 20,
-  },
-  dispatchInfo: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 16,
-  },
+  // Items Section
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
@@ -931,70 +782,33 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  // Table Section
-  tableContainer: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  tableHeader: {
+  // Totals Section
+  totalsSection: {
+    marginHorizontal: 20,
+    paddingVertical: 10,
     flexDirection: 'row',
-    backgroundColor: '#144272',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
+    justifyContent: 'flex-end',
   },
-  tableHeaderText: {
-    color: 'white',
+  totalLabel: {
+    fontSize: 14,
+    color: backgroundColors.dark,
     fontWeight: '600',
-    fontSize: 11,
-    textAlign: 'center',
   },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-    alignItems: 'center',
-  },
-  tableRowEven: {
-    backgroundColor: '#FAFAFA',
-  },
-  tableRowOdd: {
-    backgroundColor: 'white',
-  },
-  tableCell: {
-    fontSize: 11,
-    color: '#333',
-    textAlign: 'center',
-    paddingHorizontal: 2,
-  },
-
-  // Column widths
-  col2: {
-    flex: 1, // Product
-  },
-  col3: {
-    flex: 1, // Qty
+  totalValue: {
+    fontSize: 14,
+    color: backgroundColors.dark,
+    fontWeight: '400',
   },
 
   // Footer
   modalFooter: {
-    alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
     borderTopWidth: 1,
     borderTopColor: '#F0F0F0',
-    marginTop: 16,
   },
   thankYou: {
     fontSize: 16,
-    color: '#144272',
+    color: backgroundColors.primary,
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 16,
@@ -1011,62 +825,184 @@ const styles = StyleSheet.create({
   },
   companyContact: {
     fontSize: 12,
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: '600',
     textAlign: 'center',
   },
   modalContent: {
     flex: 1,
   },
-
-  // Dispatch Details Modal
-  dispatchButtonsSection: {
-    marginHorizontal: 20,
-    marginTop: 20,
-  },
-  dispatchButton: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  dispatchButtonContent: {
+  printBtn: {
+    backgroundColor: backgroundColors.primary,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-  },
-  dispatchButtonLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  dispatchButtonIcon: {
-    width: 40,
-    height: 40,
-    backgroundColor: '#E8F4FD',
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    alignSelf: 'center',
+    gap: 5,
+    marginVertical: 5,
     borderRadius: 10,
-    justifyContent: 'center',
+  },
+  printBtnText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // Table Section
+  tableSection: {
+    marginTop: 20,
+    marginHorizontal: 20,
+    borderBottomWidth: 2,
+    borderColor: backgroundColors.dark,
+    borderStyle: 'dotted',
+  },
+  tableContainer: {
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 1.5,
+    paddingBottom: 5,
+  },
+  tableHeaderText: {
+    color: backgroundColors.dark,
+    fontWeight: '600',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 6,
     alignItems: 'center',
-    marginRight: 12,
   },
-  dispatchButtonTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 2,
+  tableCell: {
+    fontSize: 12,
+    color: backgroundColors.dark,
+    textAlign: 'center',
   },
-  dispatchButtonSubtitle: {
-    fontSize: 13,
-    color: '#666',
+
+  // Column widths
+  col1: {
+    flex: 0.5,
+  },
+  col2: {
+    flex: 0.5,
+  },
+
+  // ================= NEW CHECKOUT MODAL STYLES =================
+  checkoutModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 5,
+    paddingVertical: 8,
+    backgroundColor: backgroundColors.light,
+  },
+  checkoutModalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: backgroundColors.dark,
+    textAlign: 'center',
+    flex: 1,
+    marginRight: 24, // Adjust for the back button
+  },
+  checkoutScrollView: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  checkoutSection: {
+    marginBottom: 5,
+  },
+  checkoutSectionTitle: {
+    fontSize: 14,
+    color: backgroundColors.dark,
+    marginBottom: 8,
     fontWeight: '500',
   },
-  tableSection: {
-    marginHorizontal: 20,
-    marginTop: 16,
+  checkoutCard: {
+    backgroundColor: backgroundColors.light,
+    borderRadius: 12,
+    padding: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 15,
+  },
+  supplierName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: backgroundColors.dark,
+  },
+  supplierPhone: {
+    fontSize: 14,
+    color: 'gray',
+  },
+  amountContainer: {
+    backgroundColor: backgroundColors.light,
+    borderRadius: 12,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  amountValue: {
+    fontSize: 36,
+    fontWeight: 'bold',
+    color: '#4CAF50',
+  },
+  checkoutFooter: {
+    padding: 20,
+    backgroundColor: backgroundColors.light,
+    borderTopWidth: 1,
+    borderColor: '#eee',
+  },
+  completePurchaseBtn: {
+    backgroundColor: backgroundColors.primary,
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  completePurchaseBtnText: {
+    color: backgroundColors.light,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  personIcon: {
+    position: 'absolute',
+    zIndex: 10000,
+    top: 7,
+    left: 6,
+  },
+
+  // Dropdown
+  dropdown: {
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 4,
+  },
+  dropdownContainer: {
+    backgroundColor: 'white',
+    borderColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 10,
+    maxHeight: 200,
   },
 });
