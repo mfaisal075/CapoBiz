@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useNavigation, NavigationProp} from '@react-navigation/native';
-import {ScrollView} from 'react-native-gesture-handler';
 import Modal from 'react-native-modal';
 import {useDrawer} from './DrawerContext';
 import {useUser} from './CTX/UserContext';
@@ -18,7 +17,6 @@ import axios from 'axios';
 import BASE_URL from './BASE_URL';
 import backgroundColors from './Colors';
 import dayjs from 'dayjs';
-import LinearGradient from 'react-native-linear-gradient';
 
 const {width} = Dimensions.get('window');
 
@@ -27,6 +25,7 @@ interface StatItem {
   title: string;
   icon: any;
   screen: string;
+  count?: string | number;
 }
 
 type RootStackParamList = {
@@ -34,6 +33,19 @@ type RootStackParamList = {
 };
 
 type DashboardNavigationProp = NavigationProp<RootStackParamList>;
+
+interface Counts {
+  customer: number;
+  suppliers: number;
+  employees: number;
+  product: number;
+  currentstockqty: number;
+  currentstocksubqty: number;
+  expenseamount: number;
+  sale: number;
+  purchase: number;
+  current_month_sale: number;
+}
 
 export default function Dashboard(): JSX.Element {
   const {userName, userEmail} = useUser();
@@ -48,6 +60,7 @@ export default function Dashboard(): JSX.Element {
   const [isModalVisible, setModalVisible] = useState(false);
   const {openDrawer} = useDrawer();
   const [date, setDate] = useState(dayjs());
+  const [count, setCount] = useState<Counts | null>(null);
 
   const toggleModal = () => {
     setModalVisible(!isModalVisible);
@@ -68,6 +81,7 @@ export default function Dashboard(): JSX.Element {
 
         // Getting bussiness details
         const bus = await axios.get(`${BASE_URL}/dashboaddata`);
+        setCount(bus.data);
 
         setBussName(bus.data?.businessdata?.bus_name ?? '');
         setBussAddress(bus.data?.businessdata?.bus_address ?? '');
@@ -80,59 +94,85 @@ export default function Dashboard(): JSX.Element {
     fetchUserData();
   }, []);
 
+  function formatNumber(num: number): string {
+    if (num >= 100000) {
+      return (num / 100000).toFixed(num % 100000 === 0 ? 0 : 2) + 'L';
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(num % 1000 === 0 ? 0 : 2) + 'K';
+    } else {
+      return num.toString();
+    }
+  }
+
   // POS Dashboard Stats (static for now)
   const stats: StatItem[] = [
     {
       title: 'Customers',
       icon: require('../assets/users.png'),
       screen: 'Customer',
+      count: count?.customer,
     },
     {
       title: 'Suppliers',
       icon: require('../assets/truck.png'),
       screen: 'Suppliers',
+      count: count?.suppliers,
     },
     {
       title: 'Employees',
       icon: require('../assets/name-tag.png'),
       screen: 'Employees',
+      count: count?.employees,
     },
     {
       title: 'Current Stock',
       icon: require('../assets/stock.png'),
       screen: 'Current Stock',
+      count: `${formatNumber(Number(count?.currentstockqty))} - ${formatNumber(
+        Number(count?.currentstocksubqty),
+      )}`,
     },
     {
       title: 'Products',
       icon: require('../assets/product.png'),
       screen: 'Products',
+      count: count?.product,
     },
     {
       title: 'Sale Invoices',
       icon: require('../assets/receipt.png'),
       screen: 'Invoice List',
+      count: count?.sale,
     },
     {
       title: 'Purchases',
       icon: require('../assets/purchase.png'),
       screen: 'Purchase List',
+      count: count?.purchase,
     },
     {
       title: 'Expenses',
       icon: require('../assets/payment.png'),
       screen: 'Manage Expenses',
+      count: formatNumber(Number(count?.expenseamount)),
     },
   ];
 
   const renderStatCard = (item: StatItem, index: number) => (
     <TouchableOpacity
       key={index}
-      style={[styles.card, {backgroundColor: backgroundColors.light}]}
+      style={[
+        styles.card,
+        {backgroundColor: backgroundColors.light},
+        // Apply special styling to first two cards
+        index < 2 && styles.overlappingCard,
+      ]}
       onPress={() => {
         navigation.navigate(item.screen as never);
       }}>
       <View style={[styles.iconContainer]}>
         <Image source={item.icon} style={styles.cardIcon} />
+        <Text style={styles.count}>{item.count}</Text>
       </View>
       <Text style={styles.cardTitle}>{item.title}</Text>
     </TouchableOpacity>
@@ -164,58 +204,18 @@ export default function Dashboard(): JSX.Element {
           </TouchableOpacity>
         </View>
 
-        {/* Welcome Section */}
-        <View style={styles.welcome}>
-          <Icon
-            name="account"
-            size={30}
-            color={backgroundColors.dark}
-            style={{
-              backgroundColor: backgroundColors.light,
-              padding: 10,
-              borderRadius: 12,
-            }}
-          />
-
-          <View>
-            <Text style={styles.welcomeText}>Welcome back,</Text>
-            <Text style={styles.welcomeText}>{userName || 'Manager'}!</Text>
-          </View>
-        </View>
-
         {/* Timer Section */}
         <View style={styles.timerSection}>
-          <Image source={require('../assets/clock.png')} style={styles.clock} />
           <Text style={styles.time}>{date.format('hh:mm:ss')}</Text>
         </View>
-
-        {/* Container */}
-        <LinearGradient
-          colors={[
-            backgroundColors.light,
-            backgroundColors.secondary,
-            backgroundColors.primary,
-          ]}
-          style={styles.posContainer}
-          start={{x: 0, y: 0}}
-          end={{x: 1, y: 1}}>
-          <Image
-            source={require('../assets/pos-terminal.png')}
-            style={styles.pos}
-          />
-          <View>
-            <Text style={styles.posText}>CapoBiz POS</Text>
-            <Text style={styles.posSubText}>Includes all POS features</Text>
-          </View>
-        </LinearGradient>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <View style={{zIndex: 1000}}>
         {/* Dashboard Stats */}
         <View style={styles.statsGrid}>
           {stats.map((item, index) => renderStatCard(item, index))}
         </View>
-      </ScrollView>
+      </View>
 
       {/* User Modal */}
       <Modal
@@ -258,12 +258,13 @@ const styles = StyleSheet.create({
     backgroundColor: backgroundColors.gray,
   },
   header: {
-    height: '30%',
+    height: '20%',
     backgroundColor: backgroundColors.primary,
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 20,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
+    zIndex: 999,
   },
   innerHeader: {
     height: '20%',
@@ -271,78 +272,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  welcome: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 20,
-    marginTop: '4%',
-  },
   timerSection: {
-    height: '23%',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 15,
-    marginTop: '4%',
-    paddingHorizontal: '5%',
-    alignItems: 'center',
-    flexDirection: 'row',
-    shadowColor: backgroundColors.dark,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
+    marginTop: '5%',
+    paddingHorizontal: '2%',
   },
   time: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: backgroundColors.primary,
-    marginLeft: '10%',
-  },
-  clock: {
-    height: 45,
-    width: 45,
-  },
-  posContainer: {
-    height: '63%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: backgroundColors.light,
-    marginTop: '4%',
-    borderRadius: 15,
-    paddingHorizontal: '5%',
-    shadowColor: backgroundColors.dark,
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
-    zIndex: 1000,
-  },
-  pos: {
-    height: 125,
-    width: 125,
-  },
-  posText: {
-    fontSize: 22,
-    fontWeight: '900',
     color: backgroundColors.light,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: {width: 2, height: 2},
-    textShadowRadius: 5,
-  },
-  posSubText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: backgroundColors.light,
-    marginTop: 10,
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: {width: 2, height: 2},
-    textShadowRadius: 5,
+    textAlign: 'right',
   },
   headerButton: {
     width: 44,
@@ -362,11 +300,6 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
   },
-  headerSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 12,
-    marginTop: 2,
-  },
   profileBadge: {
     width: 36,
     height: 36,
@@ -375,26 +308,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  statusSection: {
-    padding: 20,
-  },
-  welcomeText: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: backgroundColors.light,
-  },
-  dateText: {
-    marginTop: 4,
-    fontSize: 13,
-    color: '#6B7280',
-  },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingBottom: 24,
-    marginTop: '28%',
+    marginTop: -40,
   },
   card: {
     width: (width - 60) / 2,
@@ -406,16 +326,31 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 2,
   },
+  overlappingCard: {
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
   iconContainer: {
-    width: 36,
+    width: 80,
     height: 36,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 10,
+    justifyContent: 'space-between',
   },
   cardIcon: {
     width: 36,
     height: 36,
+  },
+  count: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.dark,
   },
   cardTitle: {
     fontSize: 16,

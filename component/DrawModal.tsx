@@ -65,7 +65,6 @@ const menuData: {[key: string]: string[]} = {
     'Sale Return List',
     'Cash Close',
   ],
-  Trading: ['Trade', 'Trading List'],
   Expenses: ['Expense Categories', 'Manage Expenses'],
   Accounts: [
     'Customer Account',

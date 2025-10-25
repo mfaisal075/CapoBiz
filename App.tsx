@@ -147,6 +147,7 @@ import LabourDetails from './component/Drawer/LabourDetails';
 import OrderBookerDetails from './component/Drawer/OrderBookerDetails';
 import AccountsDetails from './component/Drawer/AccountsDetails';
 import ProductDetails from './component/Drawer/Products/ProductDetails';
+import ExpenseDetails from './component/Drawer/Expenses/ExpenseDetails';
 
 const Stack = createStackNavigator();
 export const navigationRef = createNavigationContainerRef();
@@ -272,6 +273,7 @@ function App(): React.JSX.Element {
                 component={ExpenseCategories}
               />
               <Stack.Screen name="Manage Expenses" component={ManageExpenses} />
+              <Stack.Screen name="ExpenseDetails" component={ExpenseDetails} />
               {/*Accounts*/}
               <Stack.Screen
                 name="Customer Account"

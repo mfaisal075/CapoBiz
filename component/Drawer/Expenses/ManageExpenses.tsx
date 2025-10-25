@@ -18,8 +18,6 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import LottieView from 'lottie-react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 import {ActivityIndicator} from 'react-native-paper';
 
@@ -54,27 +52,10 @@ const initialAddExpense: AddExpense = {
   description: '',
 };
 
-interface EditExpense {
-  category: string;
-  amount: string;
-  addedBy: string;
-  date: Date;
-  description: string;
-}
-
-const initialEditExpense: EditExpense = {
-  addedBy: '',
-  amount: '',
-  category: '',
-  date: new Date(),
-  description: '',
-};
-
-export default function ManageExpenses() {
+export default function ManageExpenses({navigation}: any) {
   const {openDrawer} = useDrawer();
   const [expenses, setExpenses] = useState<Expenses[]>([]);
   const [totalExpense, setTotalExpense] = useState('');
-  const [selectedExpense, setSelectedExpense] = useState<Expenses[]>([]);
   const [modalVisible, setModalVisible] = useState('');
   const [expCategories, setExpCategories] = useState<ExpenseCategories[]>([]);
   const transformedCategories = expCategories.map(cat => ({
@@ -82,24 +63,23 @@ export default function ManageExpenses() {
     value: cat.id.toString(),
   }));
   const [addFrom, setAddFrom] = useState<AddExpense>(initialAddExpense);
-  const [editFrom, setEditFrom] = useState<EditExpense>(initialEditExpense);
   const [categoryValue, setCategoryValue] = useState('');
-  const [editCategoryValue, setEditCategoryValue] = useState('');
-  const [editCatOpen, setEditCatOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [showEditDatePicker, setShowEditDatePicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<Expenses[]>([]);
+  const [masterData, setMasterData] = useState<Expenses[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const totalRecords = expenses.length;
+  const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const currentData = expenses.slice(
+  const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
@@ -112,14 +92,6 @@ export default function ManageExpenses() {
     }));
   };
 
-  // Edit Form OnChange
-  const editOnChange = (field: keyof EditExpense, value: string | Date) => {
-    setEditFrom(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
   // Date On Change
   const onDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     const currentDate = selectedDate || addFrom.date;
@@ -127,46 +99,16 @@ export default function ManageExpenses() {
     addOnChange('date', currentDate);
   };
 
-  const onEditDateChange = (
-    event: DateTimePickerEvent,
-    selectedDate?: Date,
-  ) => {
-    const currentDate = selectedDate || editFrom.date;
-    setShowEditDatePicker(false);
-    editOnChange('date', currentDate);
-  };
-
   // Fetch Expenses
   const fetchExpenses = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchexpenses`);
-      setExpenses(res.data.exp);
+
+      const expData = res.data.exp;
+
+      setFilteredData(expData);
+      setMasterData(expData);
       setTotalExpense(res.data.total);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  // Delete Expense
-  const handleDelete = async () => {
-    try {
-      const res = await axios.post(`${BASE_URL}/expdelete`, {
-        id: selectedExpense[0].id,
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Deleted!',
-          text2: 'Expense has been Deleted successfully',
-          visibilityTime: 1500,
-        });
-      }
-      fetchExpenses();
-      setSelectedExpense([]);
-      setModalVisible('');
     } catch (error) {
       console.log(error);
     }
@@ -254,78 +196,21 @@ export default function ManageExpenses() {
     }
   };
 
-  // Edit Expense
-  const handleEditExpense = async () => {
-    if (!editCategoryValue) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please select expense category',
-        visibilityTime: 1500,
+  // Search Filter
+  const searchFilter = (text: string) => {
+    if (text) {
+      const newData = masterData.filter(item => {
+        const itemData = item.expc_name
+          ? item.expc_name.toLocaleUpperCase()
+          : ''.toLocaleLowerCase();
+        const textData = text.toLocaleUpperCase();
+        return itemData.indexOf(textData) > -1;
       });
-      return;
-    }
-
-    if (!editFrom.amount || !editFrom.addedBy || !editFrom.description) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please fill all fields!',
-        visibilityTime: 1500,
-      });
-      return;
-    }
-
-    if (parseFloat(editFrom.amount) <= 0) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Amount must be greater than 0!',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    if (!/^\d+(\.\d{1,2})?$/.test(editFrom.amount)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Amount',
-        text2: 'Please enter a valid numeric amount.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const res = await axios.post(`${BASE_URL}/updateexpenses`, {
-        cat_id: editCategoryValue,
-        exp_id: selectedExpense[0]?.id,
-        exp_amount: editFrom.amount,
-        exp_addedby: editFrom.addedBy.trim(),
-        exp_date: editFrom.date.toISOString().split('T')[0],
-        exp_desc: editFrom.description,
-        _method: 'PUT',
-      });
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'Expense has been updated successfully',
-          visibilityTime: 1500,
-        });
-        fetchExpenses();
-        setEditFrom(initialAddExpense);
-        setModalVisible('');
-        setEditCategoryValue('');
-        setSelectedExpense([]);
-      }
-    } catch (error) {
-      console.log(error);
-    } finally {
-      setLoading(false);
+      setFilteredData(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredData(masterData);
+      setSearchQuery(text);
     }
   };
 
@@ -336,11 +221,7 @@ export default function ManageExpenses() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -352,10 +233,22 @@ export default function ManageExpenses() {
           </View>
 
           <TouchableOpacity
-            onPress={() => setModalVisible('Add')}
-            style={styles.headerBtn}>
+            onPress={() => {
+              setModalVisible('Add');
+            }}
+            style={[styles.headerBtn]}>
             <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        <View style={styles.searchFilter}>
+          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+          <TextInput
+            placeholder="Search by category name"
+            style={styles.search}
+            value={searchQuery}
+            onChangeText={text => searchFilter(text)}
+          />
         </View>
 
         {/* Total Expense */}
@@ -372,7 +265,13 @@ export default function ManageExpenses() {
             data={currentData}
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
-              <View style={styles.card}>
+              <TouchableOpacity
+                style={styles.card}
+                onPress={() => {
+                  navigation.navigate('ExpenseDetails', {
+                    id: item.id,
+                  });
+                }}>
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View>
@@ -386,53 +285,20 @@ export default function ManageExpenses() {
                       })}
                     </Text>
                     <Text style={styles.subText}>
-                      <Icon name="account" size={12} color="#666" />{' '}
-                      {item.exp_addedby}
-                    </Text>
-                    <Text style={styles.subText}>
                       <Icon name="cash" size={12} color="#666" />{' '}
                       {item.exp_amount}
                     </Text>
                   </View>
 
-                  <View
-                    style={{
-                      alignSelf: 'flex-start',
-                      flexDirection: 'row',
-                      gap: 10,
-                    }}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('View');
-                        setSelectedExpense([item]);
-                      }}>
-                      <Icon name="eye" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('Edit');
-                        setEditFrom({
-                          addedBy: item.exp_addedby,
-                          amount: item.exp_amount,
-                          category: '',
-                          date: new Date(item.exp_date),
-                          description: item.exp_desc,
-                        });
-                        setEditCategoryValue(item.exp_expc_id.toString());
-                        setSelectedExpense([item]);
-                      }}>
-                      <Icon name="pencil" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModalVisible('Delete');
-                        setSelectedExpense([item]);
-                      }}>
-                      <Icon name="delete" size={20} color={'#144272'} />
-                    </TouchableOpacity>
+                  <View style={styles.actionRow}>
+                    <Icon
+                      name="chevron-right"
+                      size={28}
+                      color={backgroundColors.dark}
+                    />
                   </View>
                 </View>
-              </View>
+              </TouchableOpacity>
             )}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
@@ -469,7 +335,7 @@ export default function ManageExpenses() {
                     setCategoryValue('');
                   }}
                   style={styles.modalCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
@@ -588,259 +454,6 @@ export default function ManageExpenses() {
           </View>
         </Modal>
 
-        {/* Delete Expense Modal */}
-        <Modal
-          visible={modalVisible === 'Delete'}
-          transparent
-          animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.deleteModalContainer}>
-              <View style={styles.animationContainer}>
-                <LottieView
-                  style={styles.animation}
-                  source={require('../../../assets/warning.json')}
-                  autoPlay
-                  loop={false}
-                />
-              </View>
-
-              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-              <Text style={styles.deleteModalMessage}>
-                You won't be able to revert this record!
-              </Text>
-
-              <View style={styles.deleteModalActions}>
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, styles.cancelBtn]}
-                  onPress={() => {
-                    setModalVisible('');
-                    setSelectedExpense([]);
-                  }}>
-                  <Text
-                    style={[styles.deleteModalBtnText, styles.cancelBtnText]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, styles.confirmBtn]}
-                  onPress={handleDelete}>
-                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Edit Expense Modal */}
-        <Modal
-          visible={modalVisible === 'Edit'}
-          transparent
-          animationType="slide">
-          <View style={styles.modalOverlay}>
-            <ScrollView style={styles.modalContainer}>
-              <View
-                style={[
-                  styles.modalHeader,
-                  {
-                    paddingHorizontal: 15,
-                    marginTop: 10,
-                    borderBottomWidth: 1,
-                    borderBottomColor: '#00000039',
-                  },
-                ]}>
-                <Text style={styles.modalTitle}>Edit Expense</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setEditFrom(initialEditExpense);
-                    setEditCategoryValue('');
-                  }}
-                  style={styles.modalCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.modalForm}>
-                <View style={styles.dropdownRow}>
-                  <Text style={styles.label}>Expense Category *</Text>
-                  <DropDownPicker
-                    items={transformedCategories}
-                    open={editCatOpen}
-                    setOpen={setEditCatOpen}
-                    value={editCategoryValue}
-                    setValue={setEditCategoryValue}
-                    placeholder="Select expense category"
-                    placeholderStyle={styles.dropdownPlaceholder}
-                    textStyle={styles.dropdownText}
-                    style={styles.dropdown}
-                    dropDownContainerStyle={styles.dropdownContainer}
-                    listMode="SCROLLVIEW"
-                  />
-                </View>
-
-                <View style={styles.row}>
-                  <View style={styles.field}>
-                    <Text style={styles.label}>Amount *</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholderTextColor="#999"
-                      maxLength={11}
-                      placeholder="Enter amount"
-                      keyboardType="numeric"
-                      value={editFrom.amount}
-                      onChangeText={t => {
-                        const filtered = t
-                          .replace(/[^0-9.]/g, '')
-                          .replace(/(\..*)\./g, '$1');
-                        editOnChange('amount', filtered);
-                      }}
-                    />
-                  </View>
-                </View>
-                <View style={[styles.row, {marginVertical: 10}]}>
-                  <View style={styles.field}>
-                    <Text style={styles.label}>Added By *</Text>
-                    <TextInput
-                      style={styles.input}
-                      placeholderTextColor="#999"
-                      placeholder="Enter name"
-                      value={editFrom.addedBy}
-                      onChangeText={t => editOnChange('addedBy', t)}
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.dateRow}>
-                  <Text style={styles.label}>Date</Text>
-                  <TouchableOpacity
-                    style={styles.dateInput}
-                    onPress={() => setShowEditDatePicker(true)}>
-                    <Text style={styles.dateText}>
-                      {editFrom.date.toLocaleDateString('en-GB')}
-                    </Text>
-                    <Icon name="calendar" size={20} color="#144272" />
-                  </TouchableOpacity>
-                  {showEditDatePicker && (
-                    <DateTimePicker
-                      value={editFrom.date}
-                      mode="date"
-                      display="default"
-                      onChange={onEditDateChange}
-                    />
-                  )}
-                </View>
-
-                <View style={styles.fullRow}>
-                  <Text style={styles.label}>Description *</Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {height: 100, textAlignVertical: 'top'},
-                    ]}
-                    placeholderTextColor="#999"
-                    placeholder="Enter description"
-                    value={editFrom.description}
-                    onChangeText={t => editOnChange('description', t)}
-                    multiline
-                    numberOfLines={4}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={[
-                    styles.submitBtn,
-                    loading && styles.submitButtonDisabled,
-                  ]}
-                  onPress={handleEditExpense}
-                  disabled={loading}>
-                  {loading ? (
-                    <ActivityIndicator size="small" color="#fff" />
-                  ) : (
-                    <>
-                      <Icon
-                        name="pencil-circle-outline"
-                        size={20}
-                        color="white"
-                      />
-                      <Text style={styles.submitText}>Update Expense</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/* View Expense Modal */}
-        <Modal
-          visible={modalVisible === 'View'}
-          transparent
-          animationType="slide">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
-              <ScrollView contentContainerStyle={styles.modalContent}>
-                {/* Header */}
-                <View style={styles.modalHeader}>
-                  <Text style={styles.modalHeaderTitle}>Expense Details</Text>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setModalVisible('');
-                      setSelectedExpense([]);
-                    }}
-                    style={styles.closeBtn}>
-                    <Icon name="close" size={22} color="#144272" />
-                  </TouchableOpacity>
-                </View>
-
-                {selectedExpense.length > 0 && (
-                  <View style={styles.expenseDetailsWrapper}>
-                    {/* Info Fields */}
-                    <View style={styles.modalInfoBox}>
-                      {[
-                        {
-                          label: 'Category',
-                          value: selectedExpense[0]?.expc_name,
-                        },
-                        {
-                          label: 'Amount',
-                          value: selectedExpense[0]?.exp_amount,
-                        },
-                        {
-                          label: 'Added By',
-                          value: selectedExpense[0]?.exp_addedby,
-                        },
-                        {
-                          label: 'Date',
-                          value: new Date(
-                            selectedExpense[0]?.exp_date,
-                          ).toLocaleDateString('en-US', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          }),
-                        },
-                        {
-                          label: 'Description',
-                          value: selectedExpense[0]?.exp_desc,
-                        },
-                      ].map((item, index) => (
-                        <View key={index} style={styles.modalInfoRow}>
-                          <Text style={styles.infoLabel}>{item.label}</Text>
-                          <Text style={styles.infoValue}>
-                            {item.value || 'N/A'}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  </View>
-                )}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-
         {/* Pagination Controls */}
         {totalRecords > 0 && (
           <View style={styles.paginationContainer}>
@@ -893,7 +506,7 @@ export default function ManageExpenses() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -901,22 +514,22 @@ export default function ManageExpenses() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
   },
   headerCenter: {
     flex: 1,
@@ -928,30 +541,51 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
+
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
+  },
 
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
-    marginTop: 8,
+    paddingHorizontal: 12,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   name: {
     fontSize: 16,
@@ -963,14 +597,21 @@ const styles = StyleSheet.create({
     color: '#555',
     marginTop: 2,
   },
+  actionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'center',
+    gap: 8,
+    marginLeft: 10,
+  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
-    paddingVertical: '80%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
+    alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -988,18 +629,37 @@ const styles = StyleSheet.create({
     marginHorizontal: 15,
     borderRadius: 12,
     marginVertical: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   totalText: {
-    color: backgroundColors.primary,
+    color: backgroundColors.dark,
     fontWeight: 'bold',
-    fontSize: 14,
+    fontSize: 16,
   },
 
   // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 10,
+    paddingHorizontal: 10,
+  },
   modalContainer: {
     backgroundColor: 'white',
     borderRadius: 15,
-    maxHeight: '90%',
+    maxHeight: '75%',
+    width: '95%',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
@@ -1009,18 +669,16 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
   },
   modalCloseBtn: {
     padding: 5,
   },
   modalForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    padding: 15,
   },
   field: {
     flex: 1,
-    marginHorizontal: 5,
   },
   fullRow: {
     marginBottom: 15,
@@ -1031,13 +689,13 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 5,
   },
   input: {
     borderWidth: 1,
     borderColor: '#e0e0e0',
-    height: 45,
+    height: 48,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
@@ -1050,7 +708,7 @@ const styles = StyleSheet.create({
     borderColor: '#e0e0e0',
     borderRadius: 8,
     backgroundColor: '#f9f9f9',
-    minHeight: 42,
+    minHeight: 48,
   },
   dropdownContainer: {
     backgroundColor: 'white',
@@ -1087,7 +745,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 10,
     paddingVertical: 15,
     marginTop: 20,
@@ -1100,65 +758,6 @@ const styles = StyleSheet.create({
   },
   submitButtonDisabled: {
     opacity: 0.7,
-  },
-
-  // Delete Modal
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  animationContainer: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
-  },
-  animation: {
-    flex: 1,
-  },
-  deleteModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 8,
-  },
-  deleteModalMessage: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  deleteModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  deleteModalBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  cancelBtn: {
-    backgroundColor: '#e0e0e0',
-  },
-  confirmBtn: {
-    backgroundColor: '#d9534f',
-  },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  cancelBtnText: {
-    color: '#144272',
   },
 
   // Pagination Component
@@ -1181,7 +780,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1200,7 +799,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   pageButtonTextDisabled: {
-    color: '#777',
+    color: backgroundColors.dark,
   },
   pageIndicator: {
     paddingHorizontal: 10,
@@ -1213,82 +812,5 @@ const styles = StyleSheet.create({
   pageCurrent: {
     fontWeight: '700',
     color: '#FFD166',
-  },
-
-  // View Expense Modal Styles
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalCard: {
-    width: '90%',
-    maxHeight: '85%',
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 6,
-  },
-  modalContent: {
-    padding: 20,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingBottom: 10,
-    paddingHorizontal: 10,
-  },
-  modalHeaderTitle: {
-    color: '#144272',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  closeBtn: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  expenseDetailsWrapper: {
-    alignItems: 'center',
-    marginTop: 20,
-  },
-  expenseIconWrapper: {
-    marginBottom: 16,
-  },
-  expenseIcon: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    borderWidth: 3,
-    borderColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  modalInfoBox: {
-    width: '100%',
-    marginTop: 10,
-    backgroundColor: '#fafafa',
-    borderRadius: 12,
-    padding: 12,
-  },
-  modalInfoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  infoValue: {
-    fontSize: 14,
-    color: '#555',
-    flexShrink: 1,
-    textAlign: 'right',
   },
 });

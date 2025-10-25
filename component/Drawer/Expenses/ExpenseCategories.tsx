@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   TextInput,
@@ -17,7 +16,6 @@ import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 
 interface Categories {
@@ -29,21 +27,23 @@ interface Categories {
 export default function ExpenseCategories() {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const [expenseCategories, setExpenseCategories] = useState<Categories[]>([]);
   const [modalVisible, setModalVisible] = useState('');
   const [category, setCategory] = useState('');
   const [editCategory, setEditCategory] = useState('');
   const [selectedItem, setSelectedItem] = useState<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<Categories[]>([]);
+  const [masterData, setMasterData] = useState<Categories[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const totalRecords = expenseCategories.length;
+  const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const currentData = expenseCategories.slice(
+  const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
@@ -52,7 +52,10 @@ export default function ExpenseCategories() {
   const fetchCategories = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchexpensecategories`);
-      setExpenseCategories(res.data.cat);
+
+      const catData = res.data.cat;
+      setMasterData(catData);
+      setFilteredData(catData);
     } catch (error) {
       console.log(error);
     }
@@ -200,24 +203,38 @@ export default function ExpenseCategories() {
     }
   };
 
+  // Search Filter
+  const searchFilter = (text: string) => {
+    if (text) {
+      const newData = masterData.filter(item => {
+        const itemData = item.expc_name
+          ? item.expc_name.toLocaleUpperCase()
+          : ''.toLocaleLowerCase();
+        const textData = text.toLocaleUpperCase();
+        return itemData.indexOf(textData) > -1;
+      });
+      setFilteredData(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredData(masterData);
+      setSearchQuery(text);
+    }
+  };
+
   useEffect(() => {
     fetchCategories();
   }, []);
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
             <Icon name="menu" size={24} color="white" />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Expense</Text>
+            <Text style={styles.headerTitle}>Expense Categories</Text>
           </View>
 
           <TouchableOpacity
@@ -227,6 +244,17 @@ export default function ExpenseCategories() {
             style={[styles.headerBtn]}>
             <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        {/* Search Filter */}
+        <View style={styles.searchFilter}>
+          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+          <TextInput
+            placeholder="Search by category name"
+            style={styles.search}
+            value={searchQuery}
+            onChangeText={text => searchFilter(text)}
+          />
         </View>
 
         <View style={styles.listContainer}>
@@ -241,17 +269,19 @@ export default function ExpenseCategories() {
                     <Text style={styles.name}>{item.expc_name}</Text>
                     <Text style={styles.subText}>
                       <Icon name="calendar" size={12} color="#666" />{' '}
-                      {new Date(item.created_at).toLocaleDateString('en-US', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                      {new Date(item.created_at)
+                        .toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                        .replace(/ /g, '-')}
                     </Text>
                   </View>
 
                   <View
                     style={{
-                      alignSelf: 'flex-start',
+                      alignSelf: 'center',
                       flexDirection: 'row',
                       gap: 10,
                     }}>
@@ -261,14 +291,22 @@ export default function ExpenseCategories() {
                         getEditCategoryData(item.id);
                         setSelectedItem(item.id);
                       }}>
-                      <Icon name="pencil" size={20} color={'#144272'} />
+                      <Icon
+                        name="pencil"
+                        size={20}
+                        color={backgroundColors.dark}
+                      />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => {
                         setModalVisible('Delete');
                         setSelectedItem(item.id);
                       }}>
-                      <Icon name="delete" size={20} color={'#144272'} />
+                      <Icon
+                        name="delete"
+                        size={20}
+                        color={backgroundColors.danger}
+                      />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -388,7 +426,7 @@ export default function ExpenseCategories() {
                     setCategory('');
                   }}
                   style={styles.closeBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
@@ -462,7 +500,7 @@ export default function ExpenseCategories() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -470,22 +508,31 @@ export default function ExpenseCategories() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -497,30 +544,51 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
+
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
+  },
 
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
-    marginTop: 8,
+    paddingHorizontal: 12,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 15,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   name: {
     fontSize: 16,
@@ -535,11 +603,11 @@ const styles = StyleSheet.create({
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    alignSelf: 'center',
-    paddingVertical: '80%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
+    alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -568,7 +636,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -587,7 +655,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   pageButtonTextDisabled: {
-    color: '#777',
+    color: backgroundColors.dark,
   },
   pageIndicator: {
     paddingHorizontal: 10,
@@ -693,7 +761,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#144272',
+    color: backgroundColors.dark,
   },
   closeBtn: {
     padding: 4,
@@ -704,7 +772,7 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 6,
   },
   input: {
@@ -714,14 +782,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#333',
+    color: backgroundColors.dark,
     backgroundColor: '#f9f9f9',
   },
   submitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     paddingVertical: 12,
     borderRadius: 8,
     marginTop: 8,
