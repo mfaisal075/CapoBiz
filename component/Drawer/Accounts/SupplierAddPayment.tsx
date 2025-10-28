@@ -8,9 +8,9 @@ import {
   View,
   ScrollView,
   Modal,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
-import {ImageBackground} from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import axios from 'axios';
@@ -18,7 +18,6 @@ import BASE_URL from '../../BASE_URL';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Toast from 'react-native-toast-message';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 
 interface Supplier {
@@ -268,27 +267,20 @@ const SupplierAddPayment = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Add Supplier Payment</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="account-balance" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
@@ -297,13 +289,15 @@ const SupplierAddPayment = () => {
             <TouchableOpacity
               style={[
                 styles.toggleBtn,
-                selectedTab === 'Cash' && {backgroundColor: '#D0F4DE'},
+                selectedTab === 'Cash' && {
+                  backgroundColor: backgroundColors.primary,
+                },
               ]}
               onPress={() => setSelectedTab('Cash')}>
               <Text
                 style={[
                   styles.toggleBtnText,
-                  selectedTab === 'Cash' && {color: '#144272'},
+                  selectedTab === 'Cash' && {color: backgroundColors.light},
                 ]}>
                 Cash Payment
               </Text>
@@ -311,13 +305,15 @@ const SupplierAddPayment = () => {
             <TouchableOpacity
               style={[
                 styles.toggleBtn,
-                selectedTab === 'Cheque' && {backgroundColor: '#D0F4DE'},
+                selectedTab === 'Cheque' && {
+                  backgroundColor: backgroundColors.primary,
+                },
               ]}
               onPress={() => setSelectedTab('Cheque')}>
               <Text
                 style={[
                   styles.toggleBtnText,
-                  selectedTab === 'Cheque' && {color: '#144272'},
+                  selectedTab === 'Cheque' && {color: backgroundColors.light},
                 ]}>
                 Cheque Payment
               </Text>
@@ -329,26 +325,55 @@ const SupplierAddPayment = () => {
 
             {/* Supplier Selection */}
             <View style={styles.dropdownRow}>
-              <Text style={styles.inputLabel}>Select Supplier</Text>
+              <Icon
+                name="person"
+                size={28}
+                color={backgroundColors.dark}
+                style={styles.personIcon}
+              />
               <DropDownPicker
                 items={transformedSupp}
                 open={Open}
                 value={suppValue}
                 setValue={setSuppValue}
                 setOpen={setOpen}
-                placeholder="Choose supplier..."
+                placeholder="Select Supplier"
                 placeholderStyle={styles.dropdownPlaceholder}
                 textStyle={styles.dropdownText}
                 style={styles.dropdown}
                 dropDownContainerStyle={styles.dropdownContainer}
                 ArrowUpIconComponent={() => (
-                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                  <Icon
+                    name="keyboard-arrow-up"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 ArrowDownIconComponent={() => (
-                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                  <Icon
+                    name="keyboard-arrow-down"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 listMode="SCROLLVIEW"
-                listItemLabelStyle={{color: '#144272'}}
+                listItemLabelStyle={{
+                  color: backgroundColors.dark,
+                  fontWeight: '500',
+                }}
+                labelStyle={{
+                  color: backgroundColors.dark,
+                  marginLeft: 30,
+                  fontSize: 16,
+                }}
+                searchable
+                searchTextInputStyle={{
+                  borderWidth: 0,
+                  width: '100%',
+                }}
+                searchContainerStyle={{
+                  borderColor: backgroundColors.gray,
+                }}
               />
             </View>
 
@@ -376,12 +401,12 @@ const SupplierAddPayment = () => {
                 {/* Cash Payment Form */}
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Amount</Text>
                     <TextInput
                       style={styles.input}
                       value={cashAddFrom.amount}
-                      placeholder="Enter amount"
-                      placeholderTextColor={'rgba(255,255,255,0.7)'}
+                      placeholder="Enter amount *"
+                      maxLength={9}
+                      placeholderTextColor={'rgba(0,0,0,0.7)'}
                       keyboardType="number-pad"
                       onChangeText={t => cashOnChange('amount', t)}
                     />
@@ -390,12 +415,11 @@ const SupplierAddPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Note</Text>
                     <TextInput
                       style={[styles.input, styles.textArea]}
                       value={cashAddFrom.note}
-                      placeholder="Enter note"
-                      placeholderTextColor={'rgba(255,255,255,0.7)'}
+                      placeholder="Add note *"
+                      placeholderTextColor={'rgba(0,0,0,0.7)'}
                       onChangeText={t => cashOnChange('note', t)}
                       numberOfLines={3}
                       multiline
@@ -409,7 +433,11 @@ const SupplierAddPayment = () => {
                     <TouchableOpacity
                       onPress={() => setShowDatePicker('cash')}
                       style={styles.dateInput}>
-                      <Icon name="event" size={20} color="white" />
+                      <Icon
+                        name="event"
+                        size={20}
+                        color={backgroundColors.dark}
+                      />
                       <Text style={styles.dateText}>
                         {cashAddFrom.date
                           ? cashAddFrom.date.toLocaleDateString()
@@ -421,7 +449,6 @@ const SupplierAddPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Payment Type</Text>
                     <DropDownPicker
                       items={paymentType}
                       open={cashTypeOpen}
@@ -429,22 +456,37 @@ const SupplierAddPayment = () => {
                       setValue={setCashType}
                       setOpen={setCashTypeOpen}
                       placeholder="Select type..."
-                      placeholderStyle={styles.dropdownPlaceholder}
+                      placeholderStyle={[
+                        styles.dropdownPlaceholder,
+                        {marginLeft: 10},
+                      ]}
                       textStyle={styles.dropdownText}
                       style={styles.dropdown}
                       dropDownContainerStyle={styles.dropdownContainer}
                       ArrowUpIconComponent={() => (
-                        <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                        <Icon
+                          name="keyboard-arrow-up"
+                          size={18}
+                          color={backgroundColors.dark}
+                        />
                       )}
                       ArrowDownIconComponent={() => (
                         <Icon
                           name="keyboard-arrow-down"
                           size={18}
-                          color="#fff"
+                          color={backgroundColors.dark}
                         />
                       )}
                       listMode="SCROLLVIEW"
-                      listItemLabelStyle={{color: '#144272'}}
+                      listItemLabelStyle={{
+                        color: backgroundColors.dark,
+                        fontWeight: '500',
+                      }}
+                      labelStyle={{
+                        color: backgroundColors.dark,
+                        marginLeft: 10,
+                        fontSize: 16,
+                      }}
                     />
                   </View>
                 </View>
@@ -460,12 +502,11 @@ const SupplierAddPayment = () => {
                 {/* Cheque Payment Form */}
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Cheque Number</Text>
                     <TextInput
                       style={styles.input}
                       value={chequeAddFrom.chequeNumber}
-                      placeholder="Enter cheque number"
-                      placeholderTextColor={'rgba(255,255,255,0.7)'}
+                      placeholder="Enter cheque number *"
+                      placeholderTextColor={'rgba(0,0,0,0.7)'}
                       keyboardType="number-pad"
                       onChangeText={t => chequeOnChange('chequeNumber', t)}
                     />
@@ -474,12 +515,11 @@ const SupplierAddPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Amount</Text>
                     <TextInput
                       style={styles.input}
                       value={chequeAddFrom.amount}
-                      placeholder="Enter amount"
-                      placeholderTextColor={'rgba(255,255,255,0.7)'}
+                      placeholder="Enter amount *"
+                      placeholderTextColor={'rgba(0,0,0,0.7)'}
                       keyboardType="number-pad"
                       onChangeText={t => chequeOnChange('amount', t)}
                     />
@@ -488,12 +528,11 @@ const SupplierAddPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Note</Text>
                     <TextInput
                       style={[styles.input, styles.textArea]}
                       value={chequeAddFrom.note}
-                      placeholder="Enter note"
-                      placeholderTextColor={'rgba(255,255,255,0.7)'}
+                      placeholder="Add note*"
+                      placeholderTextColor={'rgba(0,0,0,0.7)'}
                       onChangeText={t => chequeOnChange('note', t)}
                       numberOfLines={3}
                       multiline
@@ -507,7 +546,7 @@ const SupplierAddPayment = () => {
                     <TouchableOpacity
                       onPress={() => setShowDatePicker('cheque')}
                       style={styles.dateInput}>
-                      <Icon name="event" size={20} color="white" />
+                      <Icon name="event" size={20} color={backgroundColors.dark} />
                       <Text style={styles.dateText}>
                         {chequeAddFrom.date
                           ? chequeAddFrom.date.toLocaleDateString()
@@ -615,7 +654,7 @@ const SupplierAddPayment = () => {
             </View>
           </View>
         </Modal>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 };
@@ -623,35 +662,44 @@ const SupplierAddPayment = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    alignItems: 'center',
   },
+
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   toggleBtnContainer: {
     flexDirection: 'row',
@@ -659,54 +707,72 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   toggleBtn: {
-    flex: 1,
-    marginHorizontal: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
+    width: '48%',
     paddingVertical: 12,
-    alignItems: 'center',
+    paddingHorizontal: 16,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: backgroundColors.light,
+    borderColor: backgroundColors.gray,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   toggleBtnText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 16,
   },
   section: {
-    backgroundColor: 'rgba(15, 45, 78, 0.8)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: backgroundColors.dark,
     marginBottom: 16,
   },
   dropdownRow: {
     marginBottom: 16,
   },
   inputLabel: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(0,0,0,0.8)',
     fontSize: 14,
     marginBottom: 6,
     fontWeight: '500',
   },
   dropdown: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    minHeight: 40,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 4,
   },
   dropdownContainer: {
     backgroundColor: 'white',
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    marginTop: 2,
     maxHeight: 200,
   },
   dropdownText: {
@@ -714,11 +780,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   dropdownPlaceholder: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
+    color: 'rgba(0,0,0,0.7)',
+    marginLeft: 30,
+    fontSize: 16,
+  },
+  personIcon: {
+    position: 'absolute',
+    zIndex: 10000,
+    top: 7,
+    left: 6,
   },
   supplierInfo: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -731,12 +804,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   infoLabel: {
-    color: '#fff',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
   infoValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
   },
   inputRow: {
@@ -746,13 +819,19 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderWidth: 1,
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    padding: 12,
-    color: 'white',
-    fontSize: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    color: backgroundColors.dark,
   },
   textArea: {
     height: 80,
@@ -761,15 +840,22 @@ const styles = StyleSheet.create({
   dateInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderWidth: 1,
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
   },
   dateText: {
     flex: 1,
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     marginLeft: 8,
   },
@@ -781,8 +867,9 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   readOnlyText: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(0,0,0,0.8)',
     fontSize: 14,
+    
   },
   submitBtn: {
     backgroundColor: backgroundColors.primary,

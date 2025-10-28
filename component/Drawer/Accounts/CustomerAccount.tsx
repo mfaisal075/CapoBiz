@@ -6,8 +6,8 @@ import {
   ScrollView,
   TouchableOpacity,
   FlatList,
-  ImageBackground,
   Animated,
+  Image,
 } from 'react-native';
 import React, {useEffect, useRef, useState} from 'react';
 import {RadioButton} from 'react-native-paper';
@@ -18,7 +18,6 @@ import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import BASE_URL from '../../BASE_URL';
 import axios from 'axios';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 
 interface Customers {
@@ -84,7 +83,6 @@ export default function CustomerAccount() {
   const [selectedOption, setSelectedOption] = useState<
     'withoutDetails' | 'withDetails'
   >('withoutDetails');
-  const bounceAnim = useRef(new Animated.Value(0)).current;
 
   // Pagination states
   const [currentPageWithout, setCurrentPageWithout] = useState(1);
@@ -158,6 +156,23 @@ export default function CustomerAccount() {
       console.log(error);
     }
   };
+
+  function formatNumber(num: number | string): string {
+    const n = typeof num === 'string' ? parseFloat(num) : num;
+    if (isNaN(n)) return '0';
+
+    const abs = Math.abs(n);
+
+    if (abs >= 10000000) {
+      return (n / 10000000).toFixed(n % 10000000 === 0 ? 0 : 2) + 'Cr';
+    } else if (abs >= 100000) {
+      return (n / 100000).toFixed(n % 100000 === 0 ? 0 : 2) + 'L';
+    } else if (abs >= 1000) {
+      return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2) + 'K';
+    } else {
+      return n.toString();
+    }
+  }
 
   //Calculate Totals
   const calculateTotals = () => {
@@ -262,7 +277,9 @@ export default function CustomerAccount() {
           <Icon
             name="chevron-left"
             size={20}
-            color={currentPage === 1 ? 'rgba(255,255,255,0.3)' : 'white'}
+            color={
+              currentPage === 1 ? 'rgba(0,0,0,0.3)' : backgroundColors.dark
+            }
           />
         </TouchableOpacity>
 
@@ -283,7 +300,9 @@ export default function CustomerAccount() {
             name="chevron-right"
             size={20}
             color={
-              currentPage === totalPages ? 'rgba(255,255,255,0.3)' : 'white'
+              currentPage === totalPages
+                ? 'rgba(0,0,0,0.3)'
+                : backgroundColors.dark
             }
           />
         </TouchableOpacity>
@@ -301,27 +320,20 @@ export default function CustomerAccount() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Customer Account</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="account-balance" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
@@ -330,13 +342,15 @@ export default function CustomerAccount() {
             <TouchableOpacity
               style={[
                 styles.toggleBtn,
-                selectedTab === 'Single' && {backgroundColor: '#D0F4DE'},
+                selectedTab === 'Single' && {
+                  backgroundColor: backgroundColors.primary,
+                },
               ]}
               onPress={() => setSelectedTab('Single')}>
               <Text
                 style={[
                   styles.toggleBtnText,
-                  selectedTab === 'Single' && {color: '#144272'},
+                  selectedTab === 'Single' && {color: backgroundColors.light},
                 ]}>
                 Single Customer
               </Text>
@@ -344,13 +358,15 @@ export default function CustomerAccount() {
             <TouchableOpacity
               style={[
                 styles.toggleBtn,
-                selectedTab === 'All' && {backgroundColor: '#D0F4DE'},
+                selectedTab === 'All' && {
+                  backgroundColor: backgroundColors.primary,
+                },
               ]}
               onPress={() => setSelectedTab('All')}>
               <Text
                 style={[
                   styles.toggleBtnText,
-                  selectedTab === 'All' && {color: '#144272'},
+                  selectedTab === 'All' && {color: backgroundColors.light},
                 ]}>
                 All Customer
               </Text>
@@ -358,7 +374,14 @@ export default function CustomerAccount() {
           </View>
 
           {/* Action Buttons */}
-          <View style={[styles.toggleBtnContainer, {marginVertical: 5}]}>
+          <View
+            style={[
+              styles.toggleBtnContainer,
+              {
+                justifyContent: 'flex-end',
+                marginVertical: 4,
+              },
+            ]}>
             <TouchableOpacity
               style={[
                 styles.actionBtn,
@@ -369,19 +392,19 @@ export default function CustomerAccount() {
                 navigation.navigate('AddCustomerPayment' as never);
               }}>
               <Icon name="payment" size={16} color="white" />
-              <Text style={styles.actionBtnText}>Add Payment</Text>
+              <Text style={styles.actionBtnText}>+</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.actionBtn,
-                {backgroundColor: backgroundColors.primary},
+                {backgroundColor: backgroundColors.danger},
               ]}
               onPress={() => {
                 closeDrawer();
                 navigation.navigate('ChequeClearance' as never);
               }}>
               <Icon name="account-balance-wallet" size={16} color="white" />
-              <Text style={styles.actionBtnText}>Cheque Clearance</Text>
+              <Text style={styles.actionBtnText}>-</Text>
             </TouchableOpacity>
           </View>
 
@@ -392,26 +415,55 @@ export default function CustomerAccount() {
                 <Text style={styles.sectionTitle}>Customer Information</Text>
 
                 <View style={styles.dropdownRow}>
-                  <Text style={styles.inputLabel}>Select Customer</Text>
+                  <Icon
+                    name="person"
+                    size={28}
+                    color={backgroundColors.dark}
+                    style={styles.personIcon}
+                  />
                   <DropDownPicker
                     items={transformedCust}
                     open={Open}
                     value={customerVal}
                     setValue={setCustomerVal}
                     setOpen={setOpen}
-                    placeholder="Choose customer..."
+                    placeholder="Select Customer"
                     placeholderStyle={styles.dropdownPlaceholder}
                     textStyle={styles.dropdownText}
                     style={styles.dropdown}
                     dropDownContainerStyle={styles.dropdownContainer}
                     ArrowUpIconComponent={() => (
-                      <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                      <Icon
+                        name="keyboard-arrow-up"
+                        size={18}
+                        color={backgroundColors.dark}
+                      />
                     )}
                     ArrowDownIconComponent={() => (
-                      <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                      <Icon
+                        name="keyboard-arrow-down"
+                        size={18}
+                        color={backgroundColors.dark}
+                      />
                     )}
                     listMode="SCROLLVIEW"
-                    listItemLabelStyle={{color: '#144272'}}
+                    listItemLabelStyle={{
+                      color: backgroundColors.dark,
+                      fontWeight: '500',
+                    }}
+                    labelStyle={{
+                      color: backgroundColors.dark,
+                      marginLeft: 30,
+                      fontSize: 16,
+                    }}
+                    searchable
+                    searchTextInputStyle={{
+                      borderWidth: 0,
+                      width: '100%',
+                    }}
+                    searchContainerStyle={{
+                      borderColor: backgroundColors.gray,
+                    }}
                   />
                 </View>
 
@@ -419,18 +471,20 @@ export default function CustomerAccount() {
                   <View style={styles.customerInfo}>
                     <View style={styles.infoRow}>
                       <Text style={styles.infoLabel}>Customer Name:</Text>
-                      <Text style={styles.infoValue}>{custData.cust_name}</Text>
+                      <Text style={styles.infoValue}>
+                        {custData.cust_name ?? 'N/A'}
+                      </Text>
                     </View>
                     <View style={styles.infoRow}>
                       <Text style={styles.infoLabel}>Father Name:</Text>
                       <Text style={styles.infoValue}>
-                        {custData.cust_fathername}
+                        {custData.cust_fathername ?? 'N/A'}
                       </Text>
                     </View>
                     <View style={styles.infoRow}>
                       <Text style={styles.infoLabel}>Address:</Text>
                       <Text style={styles.infoValue}>
-                        {custData.cust_address}
+                        {custData.cust_address ?? 'N/A'}
                       </Text>
                     </View>
                   </View>
@@ -443,7 +497,11 @@ export default function CustomerAccount() {
                     <TouchableOpacity
                       onPress={() => setShowDatePicker('from')}
                       style={styles.dateInput}>
-                      <Icon name="event" size={20} color="white" />
+                      <Icon
+                        name="event"
+                        size={20}
+                        color={backgroundColors.dark}
+                      />
                       <Text style={styles.dateText}>
                         {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
                       </Text>
@@ -451,7 +509,11 @@ export default function CustomerAccount() {
                     <TouchableOpacity
                       onPress={() => setShowDatePicker('to')}
                       style={styles.dateInput}>
-                      <Icon name="event" size={20} color="white" />
+                      <Icon
+                        name="event"
+                        size={20}
+                        color={backgroundColors.dark}
+                      />
                       <Text style={styles.dateText}>
                         {toDate ? toDate.toLocaleDateString() : 'To Date'}
                       </Text>
@@ -474,7 +536,7 @@ export default function CustomerAccount() {
 
                 {/* Account Type Selection */}
                 <View style={styles.accountTypeSection}>
-                  <Text style={styles.inputLabel}>Account View</Text>
+                  <Text style={styles.inputLabel}>Account</Text>
                   <RadioButton.Group
                     onValueChange={value =>
                       setSelectedOption(
@@ -483,29 +545,33 @@ export default function CustomerAccount() {
                     }
                     value={selectedOption}>
                     <View style={styles.radioRow}>
-                      <View style={styles.radioOption}>
+                      <TouchableOpacity
+                        style={styles.radioOption}
+                        onPress={() => setSelectedOption('withoutDetails')}>
                         <RadioButton.Android
                           value="withoutDetails"
-                          color="#D0F4DE"
-                          uncheckedColor="white"
+                          color={backgroundColors.primary}
+                          uncheckedColor={backgroundColors.dark}
                         />
                         <Text style={styles.radioLabel}>Without Details</Text>
-                      </View>
-                      <View style={styles.radioOption}>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.radioOption}
+                        onPress={() => setSelectedOption('withDetails')}>
                         <RadioButton.Android
                           value="withDetails"
-                          color="#D0F4DE"
-                          uncheckedColor="white"
+                          color={backgroundColors.primary}
+                          uncheckedColor={backgroundColors.dark}
                         />
                         <Text style={styles.radioLabel}>With Details</Text>
-                      </View>
+                      </TouchableOpacity>
                     </View>
                   </RadioButton.Group>
                 </View>
               </View>
 
               {/* Account Details Section */}
-              <View style={styles.section}>
+              <View style={[styles.section, {marginBottom: 20}]}>
                 <Text style={styles.sectionTitle}>
                   {selectedOption === 'withoutDetails'
                     ? 'Account Summary'
@@ -515,11 +581,7 @@ export default function CustomerAccount() {
                 {selectedOption === 'withoutDetails' ? (
                   accountDetailsWithout.length === 0 ? (
                     <View style={styles.emptyState}>
-                      <Icon
-                        name="receipt"
-                        size={40}
-                        color="rgba(255,255,255,0.5)"
-                      />
+                      <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
                       <Text style={styles.emptyStateText}>
                         No transactions found
                       </Text>
@@ -540,9 +602,13 @@ export default function CustomerAccount() {
                                 {item.custac_invoice_no}
                               </Text>
                               <Text style={styles.transactionDate}>
-                                {new Date(item.custac_date).toLocaleDateString(
-                                  'en-GB',
-                                )}
+                                {new Date(item.custac_date)
+                                  .toLocaleDateString('en-GB', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })
+                                  .replace(/ /g, '-')}
                               </Text>
                             </View>
 
@@ -590,11 +656,7 @@ export default function CustomerAccount() {
                   )
                 ) : accountDetailsWith.length === 0 ? (
                   <View style={styles.emptyState}>
-                    <Icon
-                      name="receipt"
-                      size={40}
-                      color="rgba(255,255,255,0.5)"
-                    />
+                    <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
                     <Text style={styles.emptyStateText}>
                       No detailed transactions found
                     </Text>
@@ -713,11 +775,7 @@ export default function CustomerAccount() {
 
                 {allCustAccount.length === 0 ? (
                   <View style={styles.emptyState}>
-                    <Icon
-                      name="people"
-                      size={40}
-                      color="rgba(255,255,255,0.5)"
-                    />
+                    <Icon name="people" size={40} color="rgba(0,0,0,0.5)" />
                     <Text style={styles.emptyStateText}>
                       No customer accounts found
                     </Text>
@@ -739,7 +797,7 @@ export default function CustomerAccount() {
                                 Bill Amount:
                               </Text>
                               <Text style={styles.detailValue}>
-                                {item.custac_total_bill_amount}
+                                {formatNumber(item.custac_total_bill_amount)}
                               </Text>
                             </View>
                             <View style={styles.detailRow}>
@@ -747,13 +805,13 @@ export default function CustomerAccount() {
                                 Paid Amount:
                               </Text>
                               <Text style={styles.detailValue}>
-                                {item.custac_paid_amount}
+                                {formatNumber(item.custac_paid_amount)}
                               </Text>
                             </View>
                             <View style={styles.detailRow}>
                               <Text style={styles.detailLabel}>Balance:</Text>
                               <Text style={styles.detailValue}>
-                                {item.custac_balance}
+                                {formatNumber(item.custac_balance)}
                               </Text>
                             </View>
                           </View>
@@ -780,7 +838,7 @@ export default function CustomerAccount() {
                             Total Receivables:
                           </Text>
                           <Text style={styles.summaryValue}>
-                            {totalReceivables}
+                            {formatNumber(totalReceivables)}
                           </Text>
                         </View>
                         <View style={styles.summaryRow}>
@@ -788,7 +846,7 @@ export default function CustomerAccount() {
                             Total Received:
                           </Text>
                           <Text style={styles.summaryValue}>
-                            {totalReceived}
+                            {formatNumber(totalReceived)}
                           </Text>
                         </View>
                         <View style={[styles.summaryRow, styles.totalRow]}>
@@ -798,7 +856,7 @@ export default function CustomerAccount() {
                           </Text>
                           <Text
                             style={[styles.summaryValue, styles.totalValue]}>
-                            {netReceivables}
+                            {formatNumber(netReceivables)}
                           </Text>
                         </View>
                       </>
@@ -809,7 +867,7 @@ export default function CustomerAccount() {
             </>
           )}
         </ScrollView>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -817,35 +875,44 @@ export default function CustomerAccount() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    alignItems: 'center',
   },
+
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   toggleBtnContainer: {
     flexDirection: 'row',
@@ -853,22 +920,27 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   toggleBtn: {
-    flex: 1,
-    marginHorizontal: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
+    width: '48%',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: backgroundColors.light,
+    borderColor: backgroundColors.gray,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   toggleBtnText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontWeight: '600',
     fontSize: 16,
   },
   actionBtn: {
-    flex: 1,
+    width: '15%',
     marginHorizontal: 4,
     borderRadius: 12,
     paddingVertical: 14,
@@ -880,43 +952,56 @@ const styles = StyleSheet.create({
   actionBtnText: {
     color: 'white',
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 18,
     marginLeft: 4,
   },
   section: {
-    backgroundColor: 'rgba(15, 45, 78, 0.8)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: backgroundColors.dark,
     marginBottom: 16,
   },
   dropdownRow: {
     marginBottom: 16,
   },
   inputLabel: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(0,0,0,0.8)',
     fontSize: 14,
     marginBottom: 6,
     fontWeight: '500',
   },
   dropdown: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    minHeight: 40,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 4,
   },
   dropdownContainer: {
     backgroundColor: 'white',
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    marginTop: 2,
     maxHeight: 200,
   },
   dropdownText: {
@@ -924,11 +1009,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   dropdownPlaceholder: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
+    color: 'rgba(0,0,0,0.7)',
+    marginLeft: 30,
+    fontSize: 16,
+  },
+  personIcon: {
+    position: 'absolute',
+    zIndex: 10000,
+    top: 7,
+    left: 6,
   },
   customerInfo: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -941,12 +1033,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   infoLabel: {
-    color: 'rgba(255,255,255,1)',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
   infoValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
   },
   dateSection: {
@@ -957,20 +1049,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   dateInput: {
-    flex: 1,
-    marginHorizontal: 4,
+    width: '48%',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
     paddingHorizontal: 12,
     paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
   },
   dateText: {
-    flex: 1,
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     marginLeft: 8,
   },
@@ -980,16 +1076,16 @@ const styles = StyleSheet.create({
   radioRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '80%'
+    width: '75%',
   },
   radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   radioLabel: {
-    color: 'white',
-    marginLeft: 8,
+    color: backgroundColors.dark,
     fontSize: 14,
+    fontWeight: '500',
   },
   emptyState: {
     alignItems: 'center',
@@ -997,13 +1093,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   emptyStateText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.7)',
     fontSize: 16,
     marginTop: 8,
     textAlign: 'center',
   },
   transactionCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -1017,12 +1113,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   invoiceNumber: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     fontWeight: '600',
   },
   transactionDate: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.7)',
     fontSize: 12,
   },
   transactionDetails: {
@@ -1034,16 +1130,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   detailLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-  },
-  detailValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 12,
     fontWeight: '500',
   },
+  detailValue: {
+    color: backgroundColors.dark,
+    fontSize: 12,
+  },
   customerAccountCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -1051,7 +1147,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   customerName: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
@@ -1060,7 +1156,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   summarySection: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 8,
     padding: 16,
     marginTop: 16,
@@ -1073,31 +1169,32 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   summaryLabel: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  summaryValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '600',
   },
+  summaryValue: {
+    color: backgroundColors.dark,
+    fontSize: 14,
+    fontWeight: '400',
+  },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
+    borderTopColor: 'rgba(0,0,0,0.2)',
     paddingTop: 8,
     marginTop: 8,
   },
   totalLabel: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     fontWeight: 'bold',
   },
   totalValue: {
-    color: '#4CAF50',
+    color: backgroundColors.primary,
     fontSize: 16,
     fontWeight: 'bold',
   },
+
   // Pagination Styles
   paginationContainer: {
     flexDirection: 'row',
@@ -1107,27 +1204,27 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   paginationBtn: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     padding: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderColor: 'rgba(0,0,0,0.2)',
   },
   paginationBtnDisabled: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   paginationInfo: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     paddingHorizontal: 20,
     paddingVertical: 10,
     marginHorizontal: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   paginationText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '600',
   },

@@ -74,6 +74,8 @@ const menuData: {[key: string]: string[]} = {
     'Employee Account',
     'Fixed Accounts',
   ],
+  Attendance: ['All Employees Attendance', 'All Employees Attendance List'],
+  'System Users': ['Users', 'Roles'],
   Reports: [
     'People',
     'Products',
@@ -91,8 +93,6 @@ const menuData: {[key: string]: string[]} = {
     'Day Book',
     'Stock Movement',
   ],
-  Attendance: ['All Employees Attendance', 'All Employees Attendance List'],
-  'System Users': ['Users', 'Roles'],
   Configuration: [
     'Customer Type',
     'Areas',

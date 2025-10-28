@@ -10,6 +10,7 @@ import {
   Modal,
   TextInput,
   KeyboardAvoidingView,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -252,7 +253,9 @@ export default function FixedAccounts() {
           <Icon
             name="chevron-left"
             size={20}
-            color={currentPage === 1 ? '#666' : 'white'}
+            color={
+              currentPage === 1 ? 'rgba(0,0,0,0.3)' : backgroundColors.dark
+            }
           />
         </TouchableOpacity>
 
@@ -272,7 +275,11 @@ export default function FixedAccounts() {
           <Icon
             name="chevron-right"
             size={20}
-            color={currentPage === totalPages ? '#666' : 'white'}
+            color={
+              currentPage === totalPages
+                ? 'rgba(0,0,0,0.3)'
+                : backgroundColors.dark
+            }
           />
         </TouchableOpacity>
       </View>
@@ -287,40 +294,37 @@ export default function FixedAccounts() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.headerTitle}>Fixed Accounts</Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Fixed Account</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="account-balance" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
           {/* Action Buttons */}
-          <View style={[styles.toggleBtnContainer, {marginVertical: 5}]}>
+          <View
+            style={[
+              styles.toggleBtnContainer,
+              {marginVertical: 5, justifyContent: 'flex-end'},
+            ]}>
             <TouchableOpacity
               style={[
                 styles.actionBtn,
                 {backgroundColor: backgroundColors.primary},
               ]}
               onPress={() => setModalVisible('addPayment')}>
-              <Icon name="payment" size={16} color="white" />
-              <Text style={styles.actionBtnText}>Add Payment</Text>
+              <Icon name="payment" size={18} color="white" />
+              <Text style={styles.actionBtnText}>+</Text>
             </TouchableOpacity>
           </View>
 
@@ -328,37 +332,60 @@ export default function FixedAccounts() {
             <Text style={styles.sectionTitle}>Account Information</Text>
 
             <View style={styles.dropdownRow}>
-              <Text style={styles.inputLabel}>Select Account</Text>
               <DropDownPicker
                 items={transformedFixedAcc}
                 open={Open}
                 value={fixedAccValue}
                 setValue={setFixedAccValue}
                 setOpen={setOpen}
-                placeholder="Choose account..."
+                placeholder="Select Account"
                 placeholderStyle={styles.dropdownPlaceholder}
                 textStyle={styles.dropdownText}
                 style={styles.dropdown}
                 dropDownContainerStyle={styles.dropdownContainer}
                 ArrowUpIconComponent={() => (
-                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                  <Icon
+                    name="keyboard-arrow-up"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 ArrowDownIconComponent={() => (
-                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                  <Icon
+                    name="keyboard-arrow-down"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 listMode="SCROLLVIEW"
-                listItemLabelStyle={{color: '#144272'}}
+                listItemLabelStyle={{
+                  color: backgroundColors.dark,
+                  fontWeight: '500',
+                }}
+                labelStyle={{
+                  color: backgroundColors.dark,
+                  marginLeft: 30,
+                  fontSize: 16,
+                }}
               />
             </View>
 
             {/* Date Range Section */}
             <View style={styles.dateSection}>
-              <Text style={styles.inputLabel}>Date Range</Text>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  width: '60%',
+                }}>
+                <Text style={styles.inputLabel}>From:</Text>
+                <Text style={styles.inputLabel}>To:</Text>
+              </View>
               <View style={styles.dateRow}>
                 <TouchableOpacity
                   onPress={() => setShowDatePicker('from')}
                   style={styles.dateInput}>
-                  <Icon name="event" size={20} color="white" />
+                  <Icon name="event" size={20} color={backgroundColors.dark} />
                   <Text style={styles.dateText}>
                     {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
                   </Text>
@@ -366,7 +393,7 @@ export default function FixedAccounts() {
                 <TouchableOpacity
                   onPress={() => setShowDatePicker('to')}
                   style={styles.dateInput}>
-                  <Icon name="event" size={20} color="white" />
+                  <Icon name="event" size={20} color={backgroundColors.dark} />
                   <Text style={styles.dateText}>
                     {toDate ? toDate.toLocaleDateString() : 'To Date'}
                   </Text>
@@ -396,7 +423,7 @@ export default function FixedAccounts() {
 
             {fixedAccDetails.length === 0 ? (
               <View style={styles.emptyState}>
-                <Icon name="receipt" size={40} color="rgba(255,255,255,0.5)" />
+                <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
                 <Text style={styles.emptyStateText}>No transactions found</Text>
               </View>
             ) : (
@@ -412,9 +439,13 @@ export default function FixedAccounts() {
                           {item.fixac_invoice_no}
                         </Text>
                         <Text style={styles.transactionDate}>
-                          {new Date(item.fixac_date).toLocaleDateString(
-                            'en-GB',
-                          )}
+                          {new Date(item.fixac_date)
+                            .toLocaleDateString('en-GB', {
+                              day: 'numeric',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                            .replace(/ /g, '-')}
                         </Text>
                       </View>
 
@@ -469,7 +500,7 @@ export default function FixedAccounts() {
             )}
           </View>
         </ScrollView>
-      </LinearGradient>
+      </View>
 
       {/* Add Payment Modal */}
       <Modal
@@ -487,7 +518,7 @@ export default function FixedAccounts() {
                 <TouchableOpacity
                   onPress={() => setModalVisible('')}
                   style={styles.closeButton}>
-                  <Icon name="close" size={24} color="#333" />
+                  <Icon name="close" size={24} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
@@ -500,16 +531,17 @@ export default function FixedAccounts() {
                   <View style={styles.inputContainer}>
                     <Text
                       style={{
-                        color: backgroundColors.primary,
+                        color: backgroundColors.dark,
                         fontWeight: 'bold',
                         fontSize: 14,
+                        marginBottom: 5,
                       }}>
                       Invoice#
                     </Text>
                     <TextInput
                       style={[
                         styles.productinput,
-                        {backgroundColor: '#00000025'},
+                        {backgroundColor: backgroundColors.gray},
                       ]}
                       value={`FIXAC-${invc}`}
                       onChangeText={t => setInvc(t)}
@@ -520,9 +552,10 @@ export default function FixedAccounts() {
                   <View style={styles.inputContainer}>
                     <Text
                       style={{
-                        color: backgroundColors.primary,
+                        color: backgroundColors.dark,
                         fontWeight: 'bold',
                         fontSize: 14,
+                        marginBottom: 5,
                       }}>
                       Account:
                     </Text>
@@ -533,18 +566,13 @@ export default function FixedAccounts() {
                       setValue={setFixedAccValue}
                       setOpen={setModalDropdownOpen}
                       placeholder="Select Account"
-                      placeholderStyle={{color: '#000'}}
+                      placeholderStyle={[
+                        styles.dropdownPlaceholder,
+                        {marginLeft: 0},
+                      ]}
                       textStyle={{color: 'white'}}
-                      style={[styles.dropdown, {borderColor: '#000'}]}
-                      dropDownContainerStyle={{
-                        backgroundColor: 'white',
-                        borderColor: '#144272',
-                        width: '100%',
-                        zIndex: 1000,
-                        marginTop: 5,
-                      }}
-                      labelStyle={{color: '#144272', fontWeight: 'bold'}}
-                      listItemLabelStyle={{color: '#144272'}}
+                      style={[styles.dropdown]}
+                      dropDownContainerStyle={styles.dropdownContainer}
                       ArrowUpIconComponent={() => (
                         <Text>
                           <Icon
@@ -564,15 +592,24 @@ export default function FixedAccounts() {
                         </Text>
                       )}
                       listMode="SCROLLVIEW"
+                      listItemLabelStyle={{
+                        color: backgroundColors.dark,
+                        fontWeight: '500',
+                      }}
+                      labelStyle={{
+                        color: backgroundColors.dark,
+                        fontSize: 16,
+                      }}
                     />
                   </View>
 
                   <View style={styles.inputContainer}>
                     <Text
                       style={{
-                        color: backgroundColors.primary,
+                        color: backgroundColors.dark,
                         fontWeight: 'bold',
                         fontSize: 14,
+                        marginBottom: 5,
                       }}>
                       Transaction Type:
                     </Text>
@@ -585,17 +622,8 @@ export default function FixedAccounts() {
                       placeholder="Select Type"
                       placeholderStyle={{color: '#000'}}
                       textStyle={{color: 'white'}}
-                      style={[
-                        styles.dropdown,
-                        {borderColor: '#000', zIndex: 999},
-                      ]}
-                      dropDownContainerStyle={{
-                        backgroundColor: 'white',
-                        borderColor: '#144272',
-                        width: '100%',
-                      }}
-                      labelStyle={{color: '#144272', fontWeight: 'bold'}}
-                      listItemLabelStyle={{color: '#144272'}}
+                      style={[styles.dropdown, {zIndex: 999}]}
+                      dropDownContainerStyle={styles.dropdownContainer}
                       ArrowUpIconComponent={() => (
                         <Text>
                           <Icon
@@ -615,6 +643,14 @@ export default function FixedAccounts() {
                         </Text>
                       )}
                       listMode="SCROLLVIEW"
+                      listItemLabelStyle={{
+                        color: backgroundColors.dark,
+                        fontWeight: '500',
+                      }}
+                      labelStyle={{
+                        color: backgroundColors.dark,
+                        fontSize: 16,
+                      }}
                     />
                   </View>
 
@@ -624,18 +660,16 @@ export default function FixedAccounts() {
                     <View style={{width: '100%'}}>
                       <Text
                         style={{
-                          color: backgroundColors.primary,
+                          color: backgroundColors.dark,
                           fontWeight: 'bold',
                           fontSize: 14,
+                          marginBottom: 5,
                         }}>
                         Date <Text style={{color: 'red'}}>*</Text>
                       </Text>
                       <TouchableOpacity
                         onPress={() => setModalShowDatePicker(true)}
-                        style={[
-                          styles.dateInput,
-                          {borderColor: '#000', width: '100%'},
-                        ]}>
+                        style={[styles.dateInput, {width: '100%'}]}>
                         <Text style={{color: '#000'}}>
                           {cashAddFrom.date
                             ? cashAddFrom.date.toLocaleDateString()
@@ -659,9 +693,10 @@ export default function FixedAccounts() {
                   <View style={styles.inputContainer}>
                     <Text
                       style={{
-                        color: backgroundColors.primary,
+                        color: backgroundColors.dark,
                         fontWeight: 'bold',
                         fontSize: 14,
+                        marginBottom: 5,
                       }}>
                       Amount <Text style={{color: 'red'}}>*</Text>
                     </Text>
@@ -676,9 +711,10 @@ export default function FixedAccounts() {
                   <View style={styles.inputContainer}>
                     <Text
                       style={{
-                        color: backgroundColors.primary,
+                        color: backgroundColors.dark,
                         fontWeight: 'bold',
                         fontSize: 14,
+                        marginBottom: 5,
                       }}>
                       Description
                     </Text>
@@ -716,35 +752,44 @@ export default function FixedAccounts() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'transparent',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    alignItems: 'center',
   },
+
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   toggleBtnContainer: {
     flexDirection: 'row',
@@ -752,10 +797,9 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   actionBtn: {
-    flex: 1,
     marginHorizontal: 4,
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 8,
     alignItems: 'center',
     flexDirection: 'row',
@@ -764,54 +808,65 @@ const styles = StyleSheet.create({
   actionBtnText: {
     color: 'white',
     fontWeight: '600',
-    fontSize: 12,
+    fontSize: 14,
     marginLeft: 4,
   },
   section: {
-    backgroundColor: 'rgba(15, 45, 78, 0.8)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: backgroundColors.dark,
     marginBottom: 16,
   },
   dropdownRow: {
     marginBottom: 16,
   },
   inputLabel: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(0,0,0,0.8)',
     fontSize: 14,
     marginBottom: 6,
     fontWeight: '500',
   },
   dropdown: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 8,
-    minHeight: 45,
-    padding: 8,
-    marginTop: 5,
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 4,
   },
   dropdownContainer: {
     backgroundColor: 'white',
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    marginTop: 2,
-    maxHeight: 200,
+    maxHeight: 140,
   },
   dropdownText: {
     color: 'white',
     fontSize: 14,
   },
   dropdownPlaceholder: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
+    color: 'rgba(0,0,0,0.7)',
+    fontSize: 16,
   },
   dateSection: {
     marginBottom: 16,
@@ -824,18 +879,22 @@ const styles = StyleSheet.create({
     width: '48%',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    height: 40,
-    marginTop: 5,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
   },
   dateText: {
     flex: 1,
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     marginLeft: 8,
   },
@@ -845,13 +904,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   emptyStateText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.7)',
     fontSize: 16,
     marginTop: 8,
     textAlign: 'center',
   },
   transactionCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -865,12 +924,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   invoiceNumber: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     fontWeight: '600',
   },
   transactionDate: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.7)',
     fontSize: 12,
   },
   transactionDetails: {
@@ -882,21 +941,23 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   detailLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-  },
-  detailValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 12,
     fontWeight: '500',
   },
+  detailValue: {
+    color: backgroundColors.dark,
+    fontSize: 12,
+  },
   keyboardAvoidContainer: {
     flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   modalContainer: {
-    flex: 1,
+    maxWidth: '95%',
+    maxHeight: '80%',
+    alignSelf: 'center',
     backgroundColor: 'white',
-    margin: 20,
     borderRadius: 10,
     marginTop: 50,
     overflow: 'hidden',
@@ -932,13 +993,13 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
   },
   closeButton: {
     padding: 5,
   },
   submitButton: {
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 5,
@@ -954,47 +1015,50 @@ const styles = StyleSheet.create({
     paddingHorizontal: '1%',
   },
   productinput: {
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderWidth: 1,
-    width: '100%',
-    borderColor: '#000',
-    color: '#000',
-    borderRadius: 6,
-    padding: 8,
-    marginTop: 5,
-    height: 40,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    color: backgroundColors.dark,
   },
 
   paginationContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
     alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 16,
     marginBottom: 8,
   },
   paginationBtn: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginHorizontal: 4,
+    padding: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(0,0,0,0.2)',
   },
   disabledBtn: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   pageIndicator: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginHorizontal: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(0,0,0,0.5)',
   },
   pageText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '600',
   },

@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   ScrollView,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -285,7 +286,9 @@ export default function SupplierAccount() {
           <Icon
             name="chevron-left"
             size={20}
-            color={currentPage === 1 ? '#666' : 'white'}
+            color={
+              currentPage === 1 ? 'rgba(0,0,0,0.3)' : backgroundColors.dark
+            }
           />
         </TouchableOpacity>
 
@@ -305,7 +308,11 @@ export default function SupplierAccount() {
           <Icon
             name="chevron-right"
             size={20}
-            color={currentPage === totalPages ? '#666' : 'white'}
+            color={
+              currentPage === totalPages
+                ? 'rgba(0,0,0,0.3)'
+                : backgroundColors.dark
+            }
           />
         </TouchableOpacity>
       </View>
@@ -326,27 +333,20 @@ export default function SupplierAccount() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Supplier Account</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="account-balance" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
@@ -355,13 +355,15 @@ export default function SupplierAccount() {
             <TouchableOpacity
               style={[
                 styles.toggleBtn,
-                selectedTab === 'Single' && {backgroundColor: '#D0F4DE'},
+                selectedTab === 'Single' && {
+                  backgroundColor: backgroundColors.primary,
+                },
               ]}
               onPress={() => setSelectedTab('Single')}>
               <Text
                 style={[
                   styles.toggleBtnText,
-                  selectedTab === 'Single' && {color: '#144272'},
+                  selectedTab === 'Single' && {color: backgroundColors.light},
                 ]}>
                 Single Supplier
               </Text>
@@ -369,13 +371,15 @@ export default function SupplierAccount() {
             <TouchableOpacity
               style={[
                 styles.toggleBtn,
-                selectedTab === 'All' && {backgroundColor: '#D0F4DE'},
+                selectedTab === 'All' && {
+                  backgroundColor: backgroundColors.primary,
+                },
               ]}
               onPress={() => setSelectedTab('All')}>
               <Text
                 style={[
                   styles.toggleBtnText,
-                  selectedTab === 'All' && {color: '#144272'},
+                  selectedTab === 'All' && {color: backgroundColors.light},
                 ]}>
                 All Suppliers
               </Text>
@@ -383,24 +387,31 @@ export default function SupplierAccount() {
           </View>
 
           {/* Action Buttons */}
-          <View style={[styles.toggleBtnContainer, {marginVertical: 5}]}>
+          <View
+            style={[styles.toggleBtnContainer, {justifyContent: 'flex-end'}]}>
             <TouchableOpacity
-              style={[styles.actionBtn, {backgroundColor: backgroundColors.primary}]}
+              style={[
+                styles.actionBtn,
+                {backgroundColor: backgroundColors.primary},
+              ]}
               onPress={() => {
                 closeDrawer();
                 navigation.navigate('SupplierAddPayment' as never);
               }}>
               <Icon name="payment" size={16} color="white" />
-              <Text style={styles.actionBtnText}>Add Payment</Text>
+              <Text style={styles.actionBtnText}>+</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.actionBtn, {backgroundColor: backgroundColors.primary}]}
+              style={[
+                styles.actionBtn,
+                {backgroundColor: backgroundColors.danger},
+              ]}
               onPress={() => {
                 closeDrawer();
                 navigation.navigate('SupplierChequeClearance' as never);
               }}>
               <Icon name="account-balance-wallet" size={16} color="white" />
-              <Text style={styles.actionBtnText}>Cheque Clearance</Text>
+              <Text style={styles.actionBtnText}>-</Text>
             </TouchableOpacity>
           </View>
 
@@ -411,26 +422,55 @@ export default function SupplierAccount() {
                 <Text style={styles.sectionTitle}>Supplier Information</Text>
 
                 <View style={styles.dropdownRow}>
-                  <Text style={styles.inputLabel}>Select Supplier</Text>
+                  <Icon
+                    name="person"
+                    size={28}
+                    color={backgroundColors.dark}
+                    style={styles.personIcon}
+                  />
                   <DropDownPicker
                     items={transformedSupp}
                     open={Open}
                     value={suppValue}
                     setValue={setSuppValue}
                     setOpen={setOpen}
-                    placeholder="Choose supplier..."
+                    placeholder="Select Supplier"
                     placeholderStyle={styles.dropdownPlaceholder}
                     textStyle={styles.dropdownText}
                     style={styles.dropdown}
                     dropDownContainerStyle={styles.dropdownContainer}
                     ArrowUpIconComponent={() => (
-                      <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                      <Icon
+                        name="keyboard-arrow-up"
+                        size={18}
+                        color={backgroundColors.dark}
+                      />
                     )}
                     ArrowDownIconComponent={() => (
-                      <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                      <Icon
+                        name="keyboard-arrow-down"
+                        size={18}
+                        color={backgroundColors.dark}
+                      />
                     )}
                     listMode="SCROLLVIEW"
-                    listItemLabelStyle={{color: '#144272'}}
+                    listItemLabelStyle={{
+                      color: backgroundColors.dark,
+                      fontWeight: '500',
+                    }}
+                    labelStyle={{
+                      color: backgroundColors.dark,
+                      marginLeft: 30,
+                      fontSize: 16,
+                    }}
+                    searchable
+                    searchTextInputStyle={{
+                      borderWidth: 0,
+                      width: '100%',
+                    }}
+                    searchContainerStyle={{
+                      borderColor: backgroundColors.gray,
+                    }}
                   />
                 </View>
 
@@ -462,7 +502,11 @@ export default function SupplierAccount() {
                     <TouchableOpacity
                       onPress={() => setShowDatePicker('from')}
                       style={styles.dateInput}>
-                      <Icon name="event" size={20} color="white" />
+                      <Icon
+                        name="event"
+                        size={20}
+                        color={backgroundColors.dark}
+                      />
                       <Text style={styles.dateText}>
                         {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
                       </Text>
@@ -470,7 +514,11 @@ export default function SupplierAccount() {
                     <TouchableOpacity
                       onPress={() => setShowDatePicker('to')}
                       style={styles.dateInput}>
-                      <Icon name="event" size={20} color="white" />
+                      <Icon
+                        name="event"
+                        size={20}
+                        color={backgroundColors.dark}
+                      />
                       <Text style={styles.dateText}>
                         {toDate ? toDate.toLocaleDateString() : 'To Date'}
                       </Text>
@@ -495,7 +543,7 @@ export default function SupplierAccount() {
 
                 {/* Account Type Selection */}
                 <View style={styles.accountTypeSection}>
-                  <Text style={styles.inputLabel}>Account View</Text>
+                  <Text style={styles.inputLabel}>Account</Text>
                   <RadioButton.Group
                     onValueChange={value =>
                       setSelectedOption(
@@ -507,16 +555,16 @@ export default function SupplierAccount() {
                       <View style={styles.radioOption}>
                         <RadioButton.Android
                           value="withoutDetails"
-                          color="#D0F4DE"
-                          uncheckedColor="white"
+                          color={backgroundColors.primary}
+                          uncheckedColor={backgroundColors.dark}
                         />
                         <Text style={styles.radioLabel}>Without Details</Text>
                       </View>
                       <View style={styles.radioOption}>
                         <RadioButton.Android
                           value="withDetails"
-                          color="#D0F4DE"
-                          uncheckedColor="white"
+                          color={backgroundColors.primary}
+                          uncheckedColor={backgroundColors.dark}
                         />
                         <Text style={styles.radioLabel}>With Details</Text>
                       </View>
@@ -536,11 +584,7 @@ export default function SupplierAccount() {
                 {selectedOption === 'withoutDetails' ? (
                   accountDetailsWithout.length === 0 ? (
                     <View style={styles.emptyState}>
-                      <Icon
-                        name="receipt"
-                        size={40}
-                        color="rgba(255,255,255,0.5)"
-                      />
+                      <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
                       <Text style={styles.emptyStateText}>
                         No transactions found
                       </Text>
@@ -558,9 +602,13 @@ export default function SupplierAccount() {
                                 {item.supac_invoice_no}
                               </Text>
                               <Text style={styles.transactionDate}>
-                                {new Date(item.supac_date).toLocaleDateString(
-                                  'en-GB',
-                                )}
+                                {new Date(item.supac_date)
+                                  .toLocaleDateString('en-GB', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                  })
+                                  .replace(/ /g, '-')}
                               </Text>
                             </View>
 
@@ -612,7 +660,7 @@ export default function SupplierAccount() {
                     <Icon
                       name="receipt"
                       size={40}
-                      color="rgba(255,255,255,0.5)"
+                      color="rgba(0,0,0,0.5)"
                     />
                     <Text style={styles.emptyStateText}>
                       No detailed transactions found
@@ -733,7 +781,7 @@ export default function SupplierAccount() {
                     <Icon
                       name="people"
                       size={40}
-                      color="rgba(255,255,255,0.5)"
+                      color="rgba(0,0,0,0.5)"
                     />
                     <Text style={styles.emptyStateText}>
                       No supplier accounts found
@@ -827,7 +875,7 @@ export default function SupplierAccount() {
             </>
           )}
         </ScrollView>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -835,35 +883,44 @@ export default function SupplierAccount() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    alignItems: 'center',
   },
+
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   toggleBtnContainer: {
     flexDirection: 'row',
@@ -871,25 +928,30 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   toggleBtn: {
-    flex: 1,
-    marginHorizontal: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
+    width: '48%',
     paddingVertical: 12,
-    alignItems: 'center',
+    paddingHorizontal: 16,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: backgroundColors.light,
+    borderColor: backgroundColors.gray,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   toggleBtnText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 16,
   },
   actionBtn: {
-    flex: 1,
+    width: '15%',
     marginHorizontal: 4,
     borderRadius: 12,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 8,
     alignItems: 'center',
     flexDirection: 'row',
@@ -898,43 +960,56 @@ const styles = StyleSheet.create({
   actionBtnText: {
     color: 'white',
     fontWeight: '600',
-    fontSize: 12,
+    fontSize: 18,
     marginLeft: 4,
   },
   section: {
-    backgroundColor: 'rgba(15, 45, 78, 0.8)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: backgroundColors.dark,
     marginBottom: 16,
   },
   dropdownRow: {
     marginBottom: 16,
   },
   inputLabel: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(0,0,0,0.8)',
     fontSize: 14,
     marginBottom: 6,
     fontWeight: '500',
   },
   dropdown: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    minHeight: 40,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 4,
   },
   dropdownContainer: {
     backgroundColor: 'white',
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    marginTop: 2,
     maxHeight: 200,
   },
   dropdownText: {
@@ -942,11 +1017,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   dropdownPlaceholder: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
+    color: 'rgba(0,0,0,0.7)',
+    marginLeft: 30,
+    fontSize: 16,
+  },
+  personIcon: {
+    position: 'absolute',
+    zIndex: 10000,
+    top: 7,
+    left: 6,
   },
   supplierInfo: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -959,12 +1041,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   infoLabel: {
-    color: '#fff',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
   infoValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
   },
   dateSection: {
@@ -975,20 +1057,24 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   dateInput: {
-    flex: 1,
-    marginHorizontal: 4,
+    width: '48%',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
     paddingHorizontal: 12,
     paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
   },
   dateText: {
-    flex: 1,
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     marginLeft: 8,
   },
@@ -996,6 +1082,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   radioRow: {
+    width: '72%',
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
@@ -1004,9 +1091,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   radioLabel: {
-    color: 'white',
-    marginLeft: 8,
+    color: backgroundColors.dark,
     fontSize: 14,
+    fontWeight: '500',
   },
   emptyState: {
     alignItems: 'center',
@@ -1014,13 +1101,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   emptyStateText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.7)',
     fontSize: 16,
     marginTop: 8,
     textAlign: 'center',
   },
   transactionCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -1034,12 +1121,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   invoiceNumber: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     fontWeight: '600',
   },
   transactionDate: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.7)',
     fontSize: 12,
   },
   transactionDetails: {
@@ -1051,16 +1138,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   detailLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 12,
-  },
-  detailValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 12,
     fontWeight: '500',
   },
+  detailValue: {
+    color: backgroundColors.dark,
+    fontSize: 12,
+  },
   supplierAccountCard: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 8,
@@ -1068,7 +1155,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.1)',
   },
   supplierName: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
@@ -1077,7 +1164,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   summarySection: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.05)',
     borderRadius: 8,
     padding: 16,
     marginTop: 16,
@@ -1090,31 +1177,32 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   summaryLabel: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  summaryValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '600',
   },
+  summaryValue: {
+    color: backgroundColors.dark,
+    fontSize: 14,
+    fontWeight: '400',
+  },
   totalRow: {
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
+    borderTopColor: 'rgba(0,0,0,0.2)',
     paddingTop: 8,
     marginTop: 8,
   },
   totalLabel: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     fontWeight: 'bold',
   },
   totalValue: {
-    color: '#4CAF50',
+    color: backgroundColors.primary,
     fontSize: 16,
     fontWeight: 'bold',
   },
+
   paginationContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -1123,29 +1211,27 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   paginationBtn: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginHorizontal: 4,
+    padding: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(0,0,0,0.2)',
   },
   disabledBtn: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    borderColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   pageIndicator: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    marginHorizontal: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    marginHorizontal: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(0,0,0,0.05)',
   },
   pageText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '600',
   },

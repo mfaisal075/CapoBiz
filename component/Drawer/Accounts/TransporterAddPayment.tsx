@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
   ScrollView,
-  ImageBackground,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -69,8 +69,8 @@ const TransporterAddPayment = () => {
 
   // Payment Type
   const paymentType = [
-    {label: 'Received in Company', value: 'received_in_company'},
-    {label: 'Paid by Company', value: 'paid_by_company'},
+    {label: 'Received', value: 'Received'},
+    {label: 'Paid', value: 'Paid'},
   ];
 
   // Fetch Transporter dropdown
@@ -176,27 +176,20 @@ const TransporterAddPayment = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Add Transporter Payment</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="account-balance" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
@@ -205,7 +198,12 @@ const TransporterAddPayment = () => {
 
             {/* Transporter Selection */}
             <View style={styles.dropdownRow}>
-              <Text style={styles.inputLabel}>Select Transporter</Text>
+              <Icon
+                name="person"
+                size={28}
+                color={backgroundColors.dark}
+                style={styles.personIcon}
+              />
               <DropDownPicker
                 items={transformedTrans}
                 open={Open}
@@ -218,13 +216,37 @@ const TransporterAddPayment = () => {
                 style={styles.dropdown}
                 dropDownContainerStyle={styles.dropdownContainer}
                 ArrowUpIconComponent={() => (
-                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                  <Icon
+                    name="keyboard-arrow-up"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 ArrowDownIconComponent={() => (
-                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                  <Icon
+                    name="keyboard-arrow-down"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 listMode="SCROLLVIEW"
-                listItemLabelStyle={{color: '#144272'}}
+                listItemLabelStyle={{
+                  color: backgroundColors.dark,
+                  fontWeight: '500',
+                }}
+                labelStyle={{
+                  color: backgroundColors.dark,
+                  marginLeft: 30,
+                  fontSize: 16,
+                }}
+                searchable
+                searchTextInputStyle={{
+                  borderWidth: 0,
+                  width: '100%',
+                }}
+                searchContainerStyle={{
+                  borderColor: backgroundColors.gray,
+                }}
               />
             </View>
 
@@ -250,12 +272,12 @@ const TransporterAddPayment = () => {
             {/* Cash Payment Form */}
             <View style={styles.inputRow}>
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Amount</Text>
                 <TextInput
                   style={styles.input}
                   value={cashAddFrom.amount}
-                  placeholder="Enter amount"
-                  placeholderTextColor={'rgba(255,255,255,0.7)'}
+                  maxLength={9}
+                  placeholder="Enter amount *"
+                  placeholderTextColor={'rgba(0,0,0,0.7)'}
                   keyboardType="number-pad"
                   onChangeText={t => cashOnChange('amount', t)}
                 />
@@ -264,12 +286,11 @@ const TransporterAddPayment = () => {
 
             <View style={styles.inputRow}>
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Note</Text>
                 <TextInput
                   style={[styles.input, styles.textArea]}
                   value={cashAddFrom.note}
-                  placeholder="Enter note"
-                  placeholderTextColor={'rgba(255,255,255,0.7)'}
+                  placeholder="Add note *"
+                  placeholderTextColor={'rgba(0,0,0,0.7)'}
                   onChangeText={t => cashOnChange('note', t)}
                   numberOfLines={3}
                   multiline
@@ -279,11 +300,11 @@ const TransporterAddPayment = () => {
 
             <View style={styles.inputRow}>
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Date</Text>
+                <Text style={styles.inputLabel}>Date *</Text>
                 <TouchableOpacity
                   onPress={() => setShowDatePicker(true)}
                   style={styles.dateInput}>
-                  <Icon name="event" size={20} color="white" />
+                  <Icon name="event" size={20} color={backgroundColors.dark} />
                   <Text style={styles.dateText}>
                     {cashAddFrom.date
                       ? cashAddFrom.date.toLocaleDateString()
@@ -303,18 +324,37 @@ const TransporterAddPayment = () => {
                   setValue={setCashType}
                   setOpen={setCashTypeOpen}
                   placeholder="Select type..."
-                  placeholderStyle={styles.dropdownPlaceholder}
+                  placeholderStyle={[
+                    styles.dropdownPlaceholder,
+                    {marginLeft: 10},
+                  ]}
                   textStyle={styles.dropdownText}
                   style={styles.dropdown}
                   dropDownContainerStyle={styles.dropdownContainer}
                   ArrowUpIconComponent={() => (
-                    <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                    <Icon
+                      name="keyboard-arrow-up"
+                      size={18}
+                      color={backgroundColors.dark}
+                    />
                   )}
                   ArrowDownIconComponent={() => (
-                    <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                    <Icon
+                      name="keyboard-arrow-down"
+                      size={18}
+                      color={backgroundColors.dark}
+                    />
                   )}
                   listMode="SCROLLVIEW"
-                  listItemLabelStyle={{color: '#144272'}}
+                  listItemLabelStyle={{
+                    color: backgroundColors.dark,
+                    fontWeight: '500',
+                  }}
+                  labelStyle={{
+                    color: backgroundColors.dark,
+                    marginLeft: 10,
+                    fontSize: 16,
+                  }}
                 />
               </View>
             </View>
@@ -335,7 +375,7 @@ const TransporterAddPayment = () => {
             themeVariant="dark"
           />
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 };
@@ -343,90 +383,92 @@ const TransporterAddPayment = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    alignItems: 'center',
   },
+
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
-  },
-  toggleBtnContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginVertical: 8,
-  },
-  toggleBtn: {
-    flex: 1,
-    marginHorizontal: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  toggleBtnText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
+    paddingHorizontal: 12,
   },
   section: {
-    backgroundColor: 'rgba(15, 45, 78, 0.8)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: backgroundColors.dark,
     marginBottom: 16,
   },
   dropdownRow: {
     marginBottom: 16,
   },
   inputLabel: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(0,0,0,0.8)',
     fontSize: 14,
     marginBottom: 6,
     fontWeight: '500',
   },
   dropdown: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    minHeight: 40,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 4,
   },
   dropdownContainer: {
     backgroundColor: 'white',
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    marginTop: 2,
     maxHeight: 200,
   },
   dropdownText: {
@@ -434,11 +476,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   dropdownPlaceholder: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
+    color: 'rgba(0,0,0,0.7)',
+    marginLeft: 30,
+    fontSize: 16,
+  },
+  personIcon: {
+    position: 'absolute',
+    zIndex: 10000,
+    top: 7,
+    left: 6,
   },
   transporterInfo: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -451,13 +500,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   infoLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-  },
-  infoValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
+  },
+  infoValue: {
+    color: backgroundColors.dark,
+    fontSize: 14,
   },
   inputRow: {
     marginBottom: 16,
@@ -466,13 +515,19 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderWidth: 1,
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    padding: 12,
-    color: 'white',
-    fontSize: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    color: backgroundColors.dark,
   },
   textArea: {
     height: 80,
@@ -481,28 +536,23 @@ const styles = StyleSheet.create({
   dateInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderWidth: 1,
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
   },
   dateText: {
-    flex: 1,
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     marginLeft: 8,
-  },
-  readOnlyInput: {
-    backgroundColor: 'rgba(128,128,128,0.3)',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-  },
-  readOnlyText: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 14,
   },
   submitBtn: {
     backgroundColor: backgroundColors.primary,

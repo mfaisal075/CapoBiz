@@ -1,5 +1,4 @@
 import {
-  ImageBackground,
   Platform,
   StyleSheet,
   Text,
@@ -7,6 +6,7 @@ import {
   TouchableOpacity,
   View,
   ScrollView,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {SafeAreaView} from 'react-native-safe-area-context';
@@ -18,8 +18,8 @@ import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Toast from 'react-native-toast-message';
 import {Modal} from 'react-native';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
+import RNPrint from 'react-native-print';
 
 interface Customers {
   id: number;
@@ -57,8 +57,8 @@ const initialChequeAddForm: ChequeAddFrom = {
 const AddCustomerPayment = () => {
   const {openDrawer} = useDrawer();
   const [custDropdown, setCustDropdown] = useState<Customers[]>([]);
-  const transformedCust = custDropdown.map(cust => ({
-    label: `${cust.cust_name} s/o ${cust.cust_fathername} | ${cust.cust_address}`,
+  const transformedCust = custDropdown.slice(1).map(cust => ({
+    label: cust.cust_name,
     value: cust.id.toString(),
   }));
   const [Open, setOpen] = useState(false);
@@ -192,12 +192,155 @@ const AddCustomerPayment = () => {
           visibilityTime: 1500,
         });
         setCustomerVal('');
-        setCashType('');
         setCashAddForm(initialCustomerAddFrom);
         setCustData(null);
       }
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  const printReceipt = async () => {
+    if (!receipt) return;
+
+    const customerName =
+      custDropdown.find(cust => cust.id.toString() === receipt?.custac_cust_id)
+        ?.cust_name || 'N/A';
+
+    const formattedDate = new Date(receipt?.custac_date)
+      .toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+      .replace(/ /g, '-');
+
+    const htmlContent = `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: 'Arial', sans-serif;
+            padding: 20px;
+            color: #000;
+            font-size: 14px;
+            background-color: #fff;
+          }
+
+          .header {
+            text-align: center;
+            margin-bottom: 10px;
+          }
+
+          .header h2 {
+            margin: 0;
+            font-size: 20px;
+          }
+
+          .sub-header {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+          }
+
+          .section-title {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 10px;
+            text-decoration: underline;
+          }
+
+          table {
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: collapse;
+          }
+
+          td {
+            padding: 6px 0;
+            vertical-align: top;
+          }
+
+          .label {
+            width: 45%;
+            font-weight: bold;
+          }
+
+          .value {
+            width: 55%;
+            text-align: right;
+          }
+
+          .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #555;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>Point of Sale System</h2>
+          <div>IMTIAZ</div>
+          <div>Gujranwala</div>
+        </div>
+
+        <div class="section-title">Customer Payment</div>
+
+        <table>
+          <tr>
+            <td class="label">Date:</td>
+            <td class="value">${formattedDate}</td>
+          </tr>
+          <tr>
+            <td class="label">Customer Name:</td>
+            <td class="value">${customerName}</td>
+          </tr>
+          <tr>
+            <td class="label">Payment:</td>
+            <td class="value">${
+              cashType === 'Paid'
+                ? receipt.custac_total_bill_amount
+                : receipt.custac_paid_amount
+            }</td>
+          </tr>
+          <tr>
+            <td class="label">Previous Balance:</td>
+            <td class="value">${receipt.custac_balance}</td>
+          </tr>
+          <tr>
+            <td class="label">Net Balance:</td>
+            <td class="value">${
+              Number(receipt.custac_balance || 0) +
+              Number(
+                cashType === 'Paid'
+                  ? receipt.custac_total_bill_amount
+                  : receipt.custac_paid_amount,
+              )
+            }</td>
+          </tr>
+          <tr>
+            <td class="label">Payment Type:</td>
+            <td class="value">${receipt.custac_payment_type}</td>
+          </tr>
+          <tr>
+            <td class="label">Payment Method:</td>
+            <td class="value">${receipt.custac_payment_method}</td>
+          </tr>
+        </table>
+
+        <div class="footer">
+          Software Developed with love by <b>Technic Mentors</b> | 0300-4900046
+        </div>
+      </body>
+    </html>
+  `;
+
+    try {
+      await RNPrint.print({html: htmlContent});
+    } catch (error) {
+      console.error('Print error:', error);
     }
   };
 
@@ -250,12 +393,145 @@ const AddCustomerPayment = () => {
           visibilityTime: 1500,
         });
         setCustomerVal('');
-        setCashType('');
         setChequeAddForm(initialChequeAddForm);
         setCustData(null);
       }
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  // Print Cheque payment receipt
+  const printCheReceipt = async () => {
+    if (!chiReceipt) return;
+
+    const customerName =
+      custDropdown.find(cust => cust.id.toString() === chiReceipt?.chi_cust_id)
+        ?.cust_name || 'N/A';
+
+    const formattedDate = new Date(receipt?.custac_date)
+      .toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+      .replace(/ /g, '-');
+
+    const htmlContent = `
+    <html>
+      <head>
+        <style>
+          body {
+            font-family: 'Arial', sans-serif;
+            padding: 20px;
+            color: #000;
+            font-size: 14px;
+            background-color: #fff;
+          }
+
+          .header {
+            text-align: center;
+            margin-bottom: 10px;
+          }
+
+          .header h2 {
+            margin: 0;
+            font-size: 20px;
+          }
+
+          .sub-header {
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 14px;
+          }
+
+          .section-title {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 10px;
+            text-decoration: underline;
+          }
+
+          table {
+            width: 100%;
+            margin-top: 15px;
+            border-collapse: collapse;
+          }
+
+          td {
+            padding: 6px 0;
+            vertical-align: top;
+          }
+
+          .label {
+            width: 45%;
+            font-weight: bold;
+          }
+
+          .value {
+            width: 55%;
+            text-align: right;
+          }
+
+          .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 12px;
+            color: #555;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>Point of Sale System</h2>
+          <div>IMTIAZ</div>
+          <div>Gujranwala</div>
+        </div>
+
+        <div class="section-title">Customer Payment</div>
+
+        <table>
+          <tr>
+            <td class="label">Date:</td>
+            <td class="value">${formattedDate}</td>
+          </tr>
+          <tr>
+            <td class="label">Customer Name:</td>
+            <td class="value">${chiReceipt?.chi_number}</td>
+          </tr>
+          <tr>
+            <td class="label">Customer Name:</td>
+            <td class="value">${customerName}</td>
+          </tr>
+          <tr>
+            <td class="label">Payment:</td>
+            <td class="value">${chiReceipt?.chi_amount}</td>
+          </tr>
+          <tr>
+            <td class="label">Note:</td>
+            <td class="value">${chiReceipt?.chi_note}</td>
+          </tr>
+          <tr>
+            <td class="label">Paymmet Method:</td>
+            <td class="value">${chiReceipt?.chi_payment_method}</td>
+          </tr>
+           <tr>
+            <td class="label">Status:</td>
+            <td class="value">${chiReceipt?.chi_status}</td>
+          </tr>
+        </table>
+
+        <div class="footer">
+          Software Developed with love by <b>Technic Mentors</b> | 0300-4900046
+        </div>
+      </body>
+    </html>
+  `;
+
+    try {
+      await RNPrint.print({html: htmlContent});
+    } catch (error) {
+      console.error('Print error:', error);
     }
   };
 
@@ -266,27 +542,20 @@ const AddCustomerPayment = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Add Customer Payment</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="account-balance" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
@@ -295,13 +564,15 @@ const AddCustomerPayment = () => {
             <TouchableOpacity
               style={[
                 styles.toggleBtn,
-                selectedTab === 'Cash' && {backgroundColor: '#D0F4DE'},
+                selectedTab === 'Cash' && {
+                  backgroundColor: backgroundColors.primary,
+                },
               ]}
               onPress={() => setSelectedTab('Cash')}>
               <Text
                 style={[
                   styles.toggleBtnText,
-                  selectedTab === 'Cash' && {color: '#144272'},
+                  selectedTab === 'Cash' && {color: backgroundColors.light},
                 ]}>
                 Cash Payment
               </Text>
@@ -309,13 +580,15 @@ const AddCustomerPayment = () => {
             <TouchableOpacity
               style={[
                 styles.toggleBtn,
-                selectedTab === 'Cheque' && {backgroundColor: '#D0F4DE'},
+                selectedTab === 'Cheque' && {
+                  backgroundColor: backgroundColors.primary,
+                },
               ]}
               onPress={() => setSelectedTab('Cheque')}>
               <Text
                 style={[
                   styles.toggleBtnText,
-                  selectedTab === 'Cheque' && {color: '#144272'},
+                  selectedTab === 'Cheque' && {color: backgroundColors.light},
                 ]}>
                 Cheque Payment
               </Text>
@@ -327,26 +600,55 @@ const AddCustomerPayment = () => {
 
             {/* Customer Selection */}
             <View style={styles.dropdownRow}>
-              <Text style={styles.inputLabel}>Select Customer</Text>
+              <Icon
+                name="person"
+                size={28}
+                color={backgroundColors.dark}
+                style={styles.personIcon}
+              />
               <DropDownPicker
                 items={transformedCust}
                 open={Open}
                 value={customerVal}
                 setValue={setCustomerVal}
                 setOpen={setOpen}
-                placeholder="Choose customer..."
+                placeholder="Select Customer"
                 placeholderStyle={styles.dropdownPlaceholder}
                 textStyle={styles.dropdownText}
                 style={styles.dropdown}
                 dropDownContainerStyle={styles.dropdownContainer}
                 ArrowUpIconComponent={() => (
-                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                  <Icon
+                    name="keyboard-arrow-up"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 ArrowDownIconComponent={() => (
-                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                  <Icon
+                    name="keyboard-arrow-down"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 listMode="SCROLLVIEW"
-                listItemLabelStyle={{color: '#144272'}}
+                listItemLabelStyle={{
+                  color: backgroundColors.dark,
+                  fontWeight: '500',
+                }}
+                labelStyle={{
+                  color: backgroundColors.dark,
+                  marginLeft: 30,
+                  fontSize: 16,
+                }}
+                searchable
+                searchTextInputStyle={{
+                  borderWidth: 0,
+                  width: '100%',
+                }}
+                searchContainerStyle={{
+                  borderColor: backgroundColors.gray,
+                }}
               />
             </View>
 
@@ -374,12 +676,12 @@ const AddCustomerPayment = () => {
                 {/* Cash Payment Form */}
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Amount</Text>
                     <TextInput
                       style={styles.input}
+                      maxLength={9}
                       value={cashAddFrom.amount}
-                      placeholder="Enter amount"
-                      placeholderTextColor={'rgba(255,255,255,0.7)'}
+                      placeholder="Enter amount *"
+                      placeholderTextColor={'rgba(0,0,0,0.7)'}
                       keyboardType="number-pad"
                       onChangeText={t => cashOnChange('amount', t)}
                     />
@@ -388,12 +690,11 @@ const AddCustomerPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Note</Text>
                     <TextInput
                       style={[styles.input, styles.textArea]}
                       value={cashAddFrom.note}
-                      placeholder="Enter note"
-                      placeholderTextColor={'rgba(255,255,255,0.7)'}
+                      placeholder="Add note *"
+                      placeholderTextColor={'rgba(0,0,0,0.7)'}
                       onChangeText={t => cashOnChange('note', t)}
                       numberOfLines={3}
                       multiline
@@ -407,7 +708,11 @@ const AddCustomerPayment = () => {
                     <TouchableOpacity
                       onPress={() => setShowDatePicker('cash')}
                       style={styles.dateInput}>
-                      <Icon name="event" size={20} color="white" />
+                      <Icon
+                        name="event"
+                        size={20}
+                        color={backgroundColors.dark}
+                      />
                       <Text style={styles.dateText}>
                         {cashAddFrom.date
                           ? cashAddFrom.date.toLocaleDateString()
@@ -419,30 +724,44 @@ const AddCustomerPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Payment Type</Text>
                     <DropDownPicker
                       items={paymentType}
                       open={cashTypeOpen}
                       value={cashType}
                       setValue={setCashType}
                       setOpen={setCashTypeOpen}
-                      placeholder="Select type..."
-                      placeholderStyle={styles.dropdownPlaceholder}
+                      placeholder="Select type *"
+                      placeholderStyle={[
+                        styles.dropdownPlaceholder,
+                        {marginLeft: 10},
+                      ]}
                       textStyle={styles.dropdownText}
                       style={styles.dropdown}
                       dropDownContainerStyle={styles.dropdownContainer}
                       ArrowUpIconComponent={() => (
-                        <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                        <Icon
+                          name="keyboard-arrow-up"
+                          size={18}
+                          color={backgroundColors.dark}
+                        />
                       )}
                       ArrowDownIconComponent={() => (
                         <Icon
                           name="keyboard-arrow-down"
                           size={18}
-                          color="#fff"
+                          color={backgroundColors.dark}
                         />
                       )}
                       listMode="SCROLLVIEW"
-                      listItemLabelStyle={{color: '#144272'}}
+                      listItemLabelStyle={{
+                        color: backgroundColors.dark,
+                        fontWeight: '500',
+                      }}
+                      labelStyle={{
+                        color: backgroundColors.dark,
+                        marginLeft: 10,
+                        fontSize: 16,
+                      }}
                     />
                   </View>
                 </View>
@@ -458,12 +777,11 @@ const AddCustomerPayment = () => {
                 {/* Cheque Payment Form */}
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Cheque Number</Text>
                     <TextInput
                       style={styles.input}
                       value={chequeAddFrom.chequeNumber}
-                      placeholder="Enter cheque number"
-                      placeholderTextColor={'rgba(255,255,255,0.7)'}
+                      placeholder="Enter cheque number *"
+                      placeholderTextColor={'rgba(0,0,0,0.7)'}
                       keyboardType="number-pad"
                       onChangeText={t => chequeOnChange('chequeNumber', t)}
                     />
@@ -472,12 +790,12 @@ const AddCustomerPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Amount</Text>
                     <TextInput
                       style={styles.input}
                       value={chequeAddFrom.amount}
-                      placeholder="Enter amount"
-                      placeholderTextColor={'rgba(255,255,255,0.7)'}
+                      maxLength={9}
+                      placeholder="Enter amount *"
+                      placeholderTextColor={'rgba(0,0,0,0.7)'}
                       keyboardType="number-pad"
                       onChangeText={t => chequeOnChange('amount', t)}
                     />
@@ -486,12 +804,11 @@ const AddCustomerPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Note</Text>
                     <TextInput
                       style={[styles.input, styles.textArea]}
                       value={chequeAddFrom.note}
-                      placeholder="Enter note"
-                      placeholderTextColor={'rgba(255,255,255,0.7)'}
+                      placeholder="Add note *"
+                      placeholderTextColor={'rgba(0,0,0,0.7)'}
                       onChangeText={t => chequeOnChange('note', t)}
                       numberOfLines={3}
                       multiline
@@ -505,7 +822,11 @@ const AddCustomerPayment = () => {
                     <TouchableOpacity
                       onPress={() => setShowDatePicker('cheque')}
                       style={styles.dateInput}>
-                      <Icon name="event" size={20} color="white" />
+                      <Icon
+                        name="event"
+                        size={20}
+                        color={backgroundColors.dark}
+                      />
                       <Text style={styles.dateText}>
                         {chequeAddFrom.date
                           ? chequeAddFrom.date.toLocaleDateString()
@@ -517,30 +838,44 @@ const AddCustomerPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Payment Type</Text>
                     <DropDownPicker
                       items={paymentType}
                       open={cashTypeOpen}
                       value={cashType}
                       setValue={setCashType}
                       setOpen={setCashTypeOpen}
-                      placeholder="Select type..."
-                      placeholderStyle={styles.dropdownPlaceholder}
+                      placeholder="Select type *"
+                      placeholderStyle={[
+                        styles.dropdownPlaceholder,
+                        {marginLeft: 10},
+                      ]}
                       textStyle={styles.dropdownText}
                       style={styles.dropdown}
                       dropDownContainerStyle={styles.dropdownContainer}
                       ArrowUpIconComponent={() => (
-                        <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                        <Icon
+                          name="keyboard-arrow-up"
+                          size={18}
+                          color={backgroundColors.dark}
+                        />
                       )}
                       ArrowDownIconComponent={() => (
                         <Icon
                           name="keyboard-arrow-down"
                           size={18}
-                          color="#fff"
+                          color={backgroundColors.dark}
                         />
                       )}
                       listMode="SCROLLVIEW"
-                      listItemLabelStyle={{color: '#144272'}}
+                      listItemLabelStyle={{
+                        color: backgroundColors.dark,
+                        fontWeight: '500',
+                      }}
+                      labelStyle={{
+                        color: backgroundColors.dark,
+                        marginLeft: 10,
+                        fontSize: 16,
+                      }}
                     />
                   </View>
                 </View>
@@ -578,8 +913,19 @@ const AddCustomerPayment = () => {
           onRequestClose={() => setReceipt(null)}>
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>🧾 Payment Receipt</Text>
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>🧾 Payment Receipt</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setCashType('');
+                    setReceipt(null);
+                  }}>
+                  <Text style={styles.closeButton}>✕</Text>
+                </TouchableOpacity>
+              </View>
 
+              {/* Details */}
               <View style={styles.modalDetails}>
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>Invoice No:</Text>
@@ -587,44 +933,77 @@ const AddCustomerPayment = () => {
                     {receipt?.custac_invoice_no}
                   </Text>
                 </View>
+
                 <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Amount:</Text>
-                  <Text style={[styles.modalValue, {color: '#4CAF50'}]}>
-                    Rs. {receipt?.custac_paid_amount}
+                  <Text style={styles.modalLabel}>Date:</Text>
+                  <Text style={styles.modalValue}>
+                    {new Date(receipt?.custac_date)
+                      .toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                      .replace(/ /g, '-')}
                   </Text>
                 </View>
+
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Customer:</Text>
+                  <Text style={styles.modalValue}>
+                    {
+                      custDropdown.find(
+                        cust => cust.id.toString() === receipt?.custac_cust_id,
+                      )?.cust_name
+                    }
+                  </Text>
+                </View>
+
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Amount:</Text>
+                  <Text style={styles.modalValue}>
+                    {cashType === 'Paid'
+                      ? receipt?.custac_total_bill_amount
+                      : receipt?.custac_paid_amount}
+                  </Text>
+                </View>
+
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>Method:</Text>
                   <Text style={styles.modalValue}>
                     {receipt?.custac_payment_method}
                   </Text>
                 </View>
+
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>Type:</Text>
                   <Text style={styles.modalValue}>
                     {receipt?.custac_payment_type}
                   </Text>
                 </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Date:</Text>
-                  <Text style={styles.modalValue}>{receipt?.custac_date}</Text>
-                </View>
+
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>Note:</Text>
                   <Text style={styles.modalValue}>{receipt?.custac_note}</Text>
                 </View>
+
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>Balance:</Text>
-                  <Text style={[styles.modalValue, {color: '#ff4444'}]}>
+                  <Text style={styles.modalValue}>
                     {receipt?.custac_balance}
                   </Text>
                 </View>
               </View>
 
+              {/* Print Button */}
               <TouchableOpacity
-                onPress={() => setReceipt(null)}
+                onPress={() => {
+                  setCashType('');
+                  setReceipt(null);
+                  printReceipt();
+                }}
                 style={styles.modalButton}>
-                <Text style={styles.modalButtonText}>Close</Text>
+                <Icon name="print" size={20} color={backgroundColors.light} />
+                <Text style={styles.modalButtonText}>Print</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -637,7 +1016,16 @@ const AddCustomerPayment = () => {
           onRequestClose={() => setChiReceipt(null)}>
           <View style={styles.modalContainer}>
             <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>🧾 Cheque Receipt</Text>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>🧾 Cheque Receipt</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setCashType('');
+                    setChiReceipt(null);
+                  }}>
+                  <Text style={styles.closeButton}>✕</Text>
+                </TouchableOpacity>
+              </View>
 
               <View style={styles.modalDetails}>
                 <View style={styles.modalRow}>
@@ -648,12 +1036,30 @@ const AddCustomerPayment = () => {
                 </View>
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>Date:</Text>
-                  <Text style={styles.modalValue}>{chiReceipt?.chi_date}</Text>
+                  <Text style={styles.modalValue}>
+                    {new Date(chiReceipt?.chi_date)
+                      .toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })
+                      .replace(/ /g, '-')}
+                  </Text>
+                </View>
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Customer:</Text>
+                  <Text style={[styles.modalValue]}>
+                    {
+                      custDropdown.find(
+                        cust => cust.id.toString() === chiReceipt?.chi_cust_id,
+                      )?.cust_name
+                    }
+                  </Text>
                 </View>
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>Amount:</Text>
-                  <Text style={[styles.modalValue, {color: '#4CAF50'}]}>
-                    Rs. {chiReceipt?.chi_amount}
+                  <Text style={[styles.modalValue]}>
+                    {chiReceipt?.chi_amount}
                   </Text>
                 </View>
                 <View style={styles.modalRow}>
@@ -675,14 +1081,19 @@ const AddCustomerPayment = () => {
               </View>
 
               <TouchableOpacity
-                onPress={() => setChiReceipt(null)}
+                onPress={() => {
+                  printCheReceipt()
+                  setCashType('')
+                  setChiReceipt(null);
+                }}
                 style={styles.modalButton}>
-                <Text style={styles.modalButtonText}>Close</Text>
+                <Icon name="print" size={20} color={backgroundColors.light} />
+                <Text style={styles.modalButtonText}>Print</Text>
               </TouchableOpacity>
             </View>
           </View>
         </Modal>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 };
@@ -690,35 +1101,44 @@ const AddCustomerPayment = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    alignItems: 'center',
   },
+
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   toggleBtnContainer: {
     flexDirection: 'row',
@@ -726,54 +1146,72 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   toggleBtn: {
-    flex: 1,
-    marginHorizontal: 4,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 12,
+    width: '48%',
     paddingVertical: 12,
-    alignItems: 'center',
+    paddingHorizontal: 16,
+    borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: backgroundColors.light,
+    borderColor: backgroundColors.gray,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   toggleBtnText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontWeight: '600',
-    fontSize: 14,
+    fontSize: 16,
   },
   section: {
-    backgroundColor: 'rgba(15, 45, 78, 0.8)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: backgroundColors.dark,
     marginBottom: 16,
   },
   dropdownRow: {
     marginBottom: 16,
   },
   inputLabel: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(0,0,0,0.8)',
     fontSize: 14,
     marginBottom: 6,
     fontWeight: '500',
   },
   dropdown: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    minHeight: 40,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 4,
   },
   dropdownContainer: {
     backgroundColor: 'white',
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    marginTop: 2,
     maxHeight: 200,
   },
   dropdownText: {
@@ -781,11 +1219,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   dropdownPlaceholder: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
+    color: 'rgba(0,0,0,0.7)',
+    marginLeft: 30,
+    fontSize: 16,
+  },
+  personIcon: {
+    position: 'absolute',
+    zIndex: 10000,
+    top: 7,
+    left: 6,
   },
   customerInfo: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -798,13 +1243,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   infoLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-  },
-  infoValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
+  },
+  infoValue: {
+    color: backgroundColors.dark,
+    fontSize: 14,
   },
   inputRow: {
     marginBottom: 16,
@@ -813,13 +1258,19 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderWidth: 1,
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    padding: 12,
-    color: 'white',
-    fontSize: 14,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    color: backgroundColors.dark,
   },
   textArea: {
     height: 80,
@@ -828,15 +1279,22 @@ const styles = StyleSheet.create({
   dateInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderWidth: 1,
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
   },
   dateText: {
     flex: 1,
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     marginLeft: 8,
   },
@@ -851,6 +1309,18 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  closeButton: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#999',
+    paddingHorizontal: 8,
   },
   modalContainer: {
     flex: 1,
@@ -868,7 +1338,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
     textAlign: 'center',
     marginBottom: 15,
   },
@@ -888,7 +1358,11 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   modalButton: {
-    backgroundColor: '#144272',
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 10,
+    alignSelf: 'center',
+    backgroundColor: backgroundColors.primary,
     paddingVertical: 12,
     borderRadius: 8,
   },

@@ -172,27 +172,20 @@ const ChequeClearance = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
-          <View style={styles.headerTextContainer}>
+          <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Cheque Clearance</Text>
           </View>
-
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}
-            onPress={() => {}}
-            disabled>
-            <Icon name="account-balance" size={24} color="transparent" />
-          </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
@@ -201,7 +194,12 @@ const ChequeClearance = () => {
 
             {/* Customer Selection */}
             <View style={styles.dropdownRow}>
-              <Text style={styles.inputLabel}>Select Customer</Text>
+              <Icon
+                name="person"
+                size={28}
+                color={backgroundColors.dark}
+                style={styles.personIcon}
+              />
               <DropDownPicker
                 items={transformedCust}
                 open={Open}
@@ -214,13 +212,37 @@ const ChequeClearance = () => {
                 style={styles.dropdown}
                 dropDownContainerStyle={styles.dropdownContainer}
                 ArrowUpIconComponent={() => (
-                  <Icon name="keyboard-arrow-up" size={18} color="#fff" />
+                  <Icon
+                    name="keyboard-arrow-up"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 ArrowDownIconComponent={() => (
-                  <Icon name="keyboard-arrow-down" size={18} color="#fff" />
+                  <Icon
+                    name="keyboard-arrow-down"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 listMode="SCROLLVIEW"
-                listItemLabelStyle={{color: '#144272'}}
+                listItemLabelStyle={{
+                  color: backgroundColors.dark,
+                  fontWeight: '500',
+                }}
+                labelStyle={{
+                  color: backgroundColors.dark,
+                  marginLeft: 30,
+                  fontSize: 16,
+                }}
+                searchable
+                searchTextInputStyle={{
+                  borderWidth: 0,
+                  width: '100%',
+                }}
+                searchContainerStyle={{
+                  borderColor: backgroundColors.gray,
+                }}
               />
             </View>
 
@@ -228,17 +250,21 @@ const ChequeClearance = () => {
               <View style={styles.customerInfo}>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Customer Name:</Text>
-                  <Text style={styles.infoValue}>{custData.cust_name}</Text>
+                  <Text style={styles.infoValue}>
+                    {custData.cust_name ?? 'N/A'}
+                  </Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Father Name:</Text>
                   <Text style={styles.infoValue}>
-                    {custData.cust_fathername}
+                    {custData.cust_fathername ?? 'N/A'}
                   </Text>
                 </View>
                 <View style={styles.infoRow}>
                   <Text style={styles.infoLabel}>Address:</Text>
-                  <Text style={styles.infoValue}>{custData.cust_address}</Text>
+                  <Text style={styles.infoValue}>
+                    {custData.cust_address ?? 'N/A'}
+                  </Text>
                 </View>
               </View>
             )}
@@ -256,20 +282,31 @@ const ChequeClearance = () => {
                     style={[
                       styles.chequeItem,
                       loadchequeData?.id === item.id && {
-                        backgroundColor: 'rgba(255,255,255,0.15)',
+                        backgroundColor: 'rgba(0,0,0,0.15)',
                       },
                     ]}
                     onPress={() => {
                       setLoadChequeData(item);
                       setClearanceDate(new Date(item.chi_date));
                     }}>
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontWeight: '500',
+                        color: backgroundColors.danger,
+                        textDecorationLine: 'underline',
+                      }}>
+                      Click to Load the Cheque
+                    </Text>
                     <View style={styles.chequeHeader}>
                       <Text style={styles.chequeName}>{item.cust_name}</Text>
                       <Icon
                         name="receipt"
                         size={20}
                         color={
-                          loadchequeData?.id === item.id ? '#D0F4DE' : 'white'
+                          loadchequeData?.id === item.id
+                            ? backgroundColors.primary
+                            : backgroundColors.dark
                         }
                       />
                     </View>
@@ -332,16 +369,16 @@ const ChequeClearance = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Amount</Text>
+                    <Text style={styles.inputLabel}>Amount *</Text>
                     <Text style={styles.readOnlyInput}>
-                      Rs. {loadchequeData.chi_amount}
+                      {loadchequeData.chi_amount}
                     </Text>
                   </View>
                 </View>
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Cheque Number</Text>
+                    <Text style={styles.inputLabel}>Cheque Number *</Text>
                     <Text style={styles.readOnlyInput}>
                       {loadchequeData.chi_number}
                     </Text>
@@ -350,7 +387,7 @@ const ChequeClearance = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Payment Method</Text>
+                    <Text style={styles.inputLabel}>Payment Method *</Text>
                     <Text style={styles.readOnlyInput}>
                       {loadchequeData.chi_payment_method}
                     </Text>
@@ -359,11 +396,15 @@ const ChequeClearance = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Clearance Date</Text>
+                    <Text style={styles.inputLabel}>Clearance Date *</Text>
                     <TouchableOpacity
                       onPress={() => setShowDatePicker(true)}
                       style={styles.dateInput}>
-                      <Icon name="event" size={20} color="white" />
+                      <Icon
+                        name="event"
+                        size={20}
+                        color={backgroundColors.dark}
+                      />
                       <Text style={styles.dateText}>
                         {clearanceDate
                           ? clearanceDate.toLocaleDateString()
@@ -375,16 +416,19 @@ const ChequeClearance = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Note</Text>
-                    <TextInput
-                      style={[styles.input, styles.textArea]}
-                      value={note}
-                      placeholder="Enter clearance note"
-                      placeholderTextColor={'rgba(255,255,255,0.7)'}
-                      onChangeText={t => setNote(t)}
-                      numberOfLines={3}
-                      multiline
-                    />
+                    <Text style={styles.inputLabel}>Note *</Text>
+
+                    <View style={styles.textArea}>
+                      <TextInput
+                        style={[styles.input]}
+                        value={note}
+                        placeholder="Enter clearance note"
+                        placeholderTextColor={'rgba(0,0,0,0.7)'}
+                        onChangeText={t => setNote(t)}
+                        numberOfLines={3}
+                        multiline
+                      />
+                    </View>
                   </View>
                 </View>
 
@@ -457,7 +501,7 @@ const ChequeClearance = () => {
             </View>
           </View>
         </Modal>
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 };
@@ -465,82 +509,111 @@ const ChequeClearance = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
+  },
+  headerCenter: {
+    flex: 1,
+    alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
-  headerTextContainer: {
+  gradientBackground: {
     flex: 1,
-    alignItems: 'center',
   },
+
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
   section: {
-    backgroundColor: 'rgba(15, 45, 78, 0.8)',
+    backgroundColor: backgroundColors.light,
     borderRadius: 16,
-    padding: 20,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
     marginVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
+    color: backgroundColors.dark,
     marginBottom: 16,
   },
   dropdownRow: {
     marginBottom: 16,
   },
   inputLabel: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(0,0,0,0.8)',
     fontSize: 14,
     marginBottom: 6,
     fontWeight: '500',
   },
   dropdown: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    minHeight: 40,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 4,
   },
   dropdownContainer: {
     backgroundColor: 'white',
     borderColor: 'rgba(255,255,255,0.3)',
     borderRadius: 10,
-    marginTop: 2,
     maxHeight: 200,
   },
   dropdownText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
   },
   dropdownPlaceholder: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
+    color: 'rgba(0,0,0,0.7)',
+    marginLeft: 30,
+    fontSize: 16,
+  },
+  personIcon: {
+    position: 'absolute',
+    zIndex: 10000,
+    top: 7,
+    left: 6,
   },
   customerInfo: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 8,
     padding: 12,
     marginBottom: 16,
@@ -553,16 +626,16 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   infoLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-  },
-  infoValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
+  infoValue: {
+    color: backgroundColors.dark,
+    fontSize: 14,
+  },
   chequeItem: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: 'rgba(0,0,0,0.1)',
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
@@ -573,10 +646,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 5,
   },
   chequeName: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     fontWeight: '600',
   },
@@ -587,17 +660,17 @@ const styles = StyleSheet.create({
   chequeDetailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 6,
   },
   chequeDetailLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-  },
-  chequeDetailValue: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
+  },
+  chequeDetailValue: {
+    color: backgroundColors.dark,
+    fontSize: 14,
   },
   selectedChequeSection: {
     marginTop: 20,
@@ -620,39 +693,64 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 10,
     padding: 12,
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
   },
   readOnlyInput: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderWidth: 1,
+    backgroundColor: backgroundColors.gray,
     borderRadius: 10,
-    padding: 12,
-    color: 'rgba(255,255,255,0.7)',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    color: backgroundColors.dark,
     fontSize: 14,
+    fontWeight: '400',
   },
   textArea: {
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
     height: 80,
-    textAlignVertical: 'top',
+    color: backgroundColors.dark,
+    fontSize: 14,
   },
   dateInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderWidth: 1,
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    padding: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
   },
   dateText: {
     flex: 1,
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 14,
     marginLeft: 8,
   },
   submitBtn: {
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
@@ -664,7 +762,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   noRecordText: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(0,0,0,0.7)',
     fontSize: 16,
     fontWeight: '500',
     textAlign: 'center',

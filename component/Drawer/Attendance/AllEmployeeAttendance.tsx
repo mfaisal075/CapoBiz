@@ -5,8 +5,8 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  ImageBackground,
   SafeAreaView,
+  Image,
 } from 'react-native';
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -16,6 +16,7 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import backgroundColors from '../../Colors';
 
 interface AttendanceCart {
   emp_id: number;
@@ -347,44 +348,45 @@ export default function AllEmployeeAttendance() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>All Employees Attendance</Text>
           </View>
-
-          <View style={[styles.headerBtn, {backgroundColor: 'transparent'}]} />
         </View>
 
         {/* Filter/Action Section */}
-        <View style={styles.filterContainer}>
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => {
-                fetchData();
-              }}>
-              <Icon name="account-multiple" size={18} color="#144272" />
-              <Text style={styles.buttonText}>Load Employees</Text>
-            </TouchableOpacity>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity
+            style={styles.actionButton}
+            onPress={() => {
+              fetchData();
+            }}>
+            <Icon
+              name="account-multiple"
+              size={18}
+              color={backgroundColors.light}
+            />
+            <Text style={styles.buttonText}>Load Employees</Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={() => {
-                handleReset();
-              }}>
-              <Icon name="refresh" size={18} color="#144272" />
-              <Text style={styles.buttonText}>Reset</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={[styles.actionButton, {backgroundColor: backgroundColors.danger}]}
+            onPress={() => {
+              handleReset();
+            }}>
+            <Icon name="refresh" size={18} color={backgroundColors.light} />
+            <Text style={styles.buttonText}>Reset</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Employee List */}
@@ -394,21 +396,175 @@ export default function AllEmployeeAttendance() {
             keyExtractor={item => item.emp_id.toString()}
             renderItem={({item, index}) => (
               <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.name?.charAt(0) || 'E'}
-                    </Text>
+                {/* Card Header with Gradient Effect */}
+                <View style={styles.cardHeader}>
+                  <View style={styles.employeeInfoSection}>
+                    <View style={styles.nameSection}>
+                      <Text style={styles.employeeName}>{item.name}</Text>
+                      <View style={styles.cnicRow}>
+                        <Text style={styles.cnicText}>{item.cnic ?? '--'}</Text>
+                      </View>
+                    </View>
                   </View>
-                  <View style={{flex: 1}}>
-                    <Text style={styles.employeeName}>{item.name}</Text>
+                  <View style={styles.dateSection}>
+                    <Icon name="calendar-today" size={16} color="#666" />
+                    <Text style={styles.dateText}>{item.date}</Text>
                   </View>
+                </View>
+
+                {/* Card Body with Time Information */}
+                <View style={styles.cardBody}>
+                  {/* Clock In */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (item.att_status === 'Present') {
+                        setClockInPickerFor(item.emp_id);
+                      }
+                    }}
+                    disabled={item.att_status !== 'Present'}
+                    style={[
+                      styles.timeCard,
+                      item.att_status !== 'Present' && styles.disabledTimeCard,
+                    ]}>
+                    <View style={styles.timeCardLeft}>
+                      <View
+                        style={[
+                          styles.iconCircle,
+                          {
+                            backgroundColor:
+                              item.att_status === 'Present'
+                                ? '#E8F5E9'
+                                : '#F5F5F5',
+                          },
+                        ]}>
+                        <Icon
+                          name="clock-in"
+                          size={20}
+                          color={
+                            item.att_status === 'Present' ? '#2A652B' : '#999'
+                          }
+                        />
+                      </View>
+                      <View style={styles.timeInfo}>
+                        <Text
+                          style={[
+                            styles.timeLabel,
+                            item.att_status !== 'Present' &&
+                              styles.disabledText,
+                          ]}>
+                          Clock In
+                        </Text>
+                        <Text
+                          style={[
+                            styles.timeValue,
+                            item.att_status !== 'Present' &&
+                              styles.disabledText,
+                          ]}>
+                          {item.clockin
+                            ? formatTimeForDisplay(item.clockin)
+                            : '—'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.editIndicator}>
+                      {item.att_status === 'Present' ? (
+                        <Icon name="pencil-circle" size={22} color="#2A652B" />
+                      ) : (
+                        <Icon name="lock" size={18} color="#999" />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Clock Out */}
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (item.att_status === 'Present') {
+                        setClockOutPickerFor(item.emp_id);
+                      }
+                    }}
+                    disabled={item.att_status !== 'Present'}
+                    style={[
+                      styles.timeCard,
+                      item.att_status !== 'Present' && styles.disabledTimeCard,
+                    ]}>
+                    <View style={styles.timeCardLeft}>
+                      <View
+                        style={[
+                          styles.iconCircle,
+                          {
+                            backgroundColor:
+                              item.att_status === 'Present'
+                                ? '#FFEBEE'
+                                : '#F5F5F5',
+                          },
+                        ]}>
+                        <Icon
+                          name="clock-out"
+                          size={20}
+                          color={
+                            item.att_status === 'Present' ? '#D32F2F' : '#999'
+                          }
+                        />
+                      </View>
+                      <View style={styles.timeInfo}>
+                        <Text
+                          style={[
+                            styles.timeLabel,
+                            item.att_status !== 'Present' &&
+                              styles.disabledText,
+                          ]}>
+                          Clock Out
+                        </Text>
+                        <Text
+                          style={[
+                            styles.timeValue,
+                            item.att_status !== 'Present' &&
+                              styles.disabledText,
+                          ]}>
+                          {item.clockout
+                            ? formatTimeForDisplay(item.clockout)
+                            : '—'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.editIndicator}>
+                      {item.att_status === 'Present' ? (
+                        <Icon name="pencil-circle" size={22} color="#D32F2F" />
+                      ) : (
+                        <Icon name="lock" size={18} color="#999" />
+                      )}
+                    </View>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Card Footer */}
+                <View style={styles.cardFooter}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedEmployeeId(index);
+                      setStatusModalVisible(true);
+                      setSecId(item.emp_id);
+                    }}
+                    style={styles.changeStatusButton}>
+                    <Text style={styles.changeStatusText}>Change Status</Text>
+                    <Icon name="chevron-right" size={16} color="#2A652B" />
+                  </TouchableOpacity>
                   <View
                     style={[
                       styles.statusBadge,
                       getStatusStyle(item.att_status),
                     ]}>
+                    <Icon
+                      name={
+                        item.att_status === 'Present'
+                          ? 'check-circle'
+                          : item.att_status === 'Absent'
+                          ? 'close-circle'
+                          : 'information'
+                      }
+                      size={14}
+                      color={getStatusTextColor(item.att_status)}
+                    />
                     <Text
                       style={[
                         styles.statusText,
@@ -419,159 +575,7 @@ export default function AllEmployeeAttendance() {
                   </View>
                 </View>
 
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="card-account-details"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>CNIC</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.cnic ?? '--'}</Text>
-                  </View>
-
-                  {/* Clock In - Only enabled when status is Present */}
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (item.att_status === 'Present') {
-                        setClockInPickerFor(item.emp_id);
-                      }
-                    }}
-                    disabled={item.att_status !== 'Present'}
-                    style={[
-                      styles.infoRow,
-                      item.att_status !== 'Present' && styles.disabledRow,
-                    ]}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="clock-in"
-                        size={18}
-                        color={
-                          item.att_status === 'Present' ? '#144272' : '#999'
-                        }
-                        style={styles.infoIcon}
-                      />
-                      <Text
-                        style={[
-                          styles.labelText,
-                          item.att_status !== 'Present' && styles.disabledText,
-                        ]}>
-                        Clock In
-                      </Text>
-                    </View>
-                    <View style={styles.timeContainer}>
-                      <Text
-                        style={[
-                          styles.valueText,
-                          item.att_status !== 'Present' && styles.disabledText,
-                        ]}>
-                        {item.clockin
-                          ? formatTimeForDisplay(item.clockin)
-                          : '—'}
-                      </Text>
-                      {item.att_status === 'Present' && (
-                        <Icon name="pencil" size={14} color="#666" />
-                      )}
-                      {item.att_status !== 'Present' && (
-                        <Icon name="lock" size={14} color="#999" />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-
-                  {/* Clock Out - Only enabled when status is Present */}
-                  <TouchableOpacity
-                    onPress={() => {
-                      if (item.att_status === 'Present') {
-                        setClockOutPickerFor(item.emp_id);
-                      }
-                    }}
-                    disabled={item.att_status !== 'Present'}
-                    style={[
-                      styles.infoRow,
-                      item.att_status !== 'Present' && styles.disabledRow,
-                    ]}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="clock-out"
-                        size={18}
-                        color={
-                          item.att_status === 'Present' ? '#144272' : '#999'
-                        }
-                        style={styles.infoIcon}
-                      />
-                      <Text
-                        style={[
-                          styles.labelText,
-                          item.att_status !== 'Present' && styles.disabledText,
-                        ]}>
-                        Clock Out
-                      </Text>
-                    </View>
-                    <View style={styles.timeContainer}>
-                      <Text
-                        style={[
-                          styles.valueText,
-                          item.att_status !== 'Present' && styles.disabledText,
-                        ]}>
-                        {item.clockout
-                          ? formatTimeForDisplay(item.clockout)
-                          : '—'}
-                      </Text>
-                      {item.att_status === 'Present' && (
-                        <Icon name="pencil" size={14} color="#666" />
-                      )}
-                      {item.att_status !== 'Present' && (
-                        <Icon name="lock" size={14} color="#999" />
-                      )}
-                    </View>
-                  </TouchableOpacity>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="calendar"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Date</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.date}</Text>
-                  </View>
-
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSelectedEmployeeId(index);
-                      setStatusModalVisible(true);
-                      setSecId(item.emp_id);
-                    }}
-                    style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="information-outline"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Status</Text>
-                    </View>
-                    <View style={styles.timeContainer}>
-                      <Text
-                        style={[
-                          styles.valueText,
-                          {color: getStatusTextColor(item.att_status)},
-                        ]}>
-                        {item.att_status}
-                      </Text>
-                      <Icon name="pencil" size={14} color="#666" />
-                    </View>
-                  </TouchableOpacity>
-                </View>
-
+                {/* Date Time Pickers */}
                 {clockInPickerFor === item.emp_id &&
                   item.att_status === 'Present' && (
                     <DateTimePicker
@@ -683,7 +687,7 @@ export default function AllEmployeeAttendance() {
         )}
 
         <Toast />
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }
@@ -691,22 +695,26 @@ export default function AllEmployeeAttendance() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -718,242 +726,262 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-  filterContainer: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    marginHorizontal: 15,
-    marginVertical: 10,
-    borderRadius: 12,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
+  gradientBackground: {
+    flex: 1,
   },
   buttonContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    width: '100%',
+    paddingHorizontal: 10,
+    marginVertical: 10,
   },
   actionButton: {
+    width: '48%',
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.primary,
     paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#144272',
-    flex: 1,
-    marginHorizontal: 5,
+    paddingVertical: 13,
+    borderRadius: 10,
+    borderWidth: 0.5,
+    borderColor: backgroundColors.dark,
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 2,
+    shadowColor: backgroundColors.dark,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 4,
   },
   buttonText: {
-    color: '#144272',
-    fontWeight: '600',
+    color: backgroundColors.light,
+    fontWeight: '700',
     marginLeft: 8,
     fontSize: 14,
   },
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
   },
+
+  // NEW ENHANCED CARD STYLES
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 20,
     marginVertical: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowColor: backgroundColors.dark,
+    shadowOpacity: 0.12,
     shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  employeeName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#144272',
-    flexWrap: 'wrap',
-  },
-  subText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    shadowOffset: {width: 0, height: 4},
+    elevation: 8,
+    overflow: 'hidden',
     borderWidth: 1,
+    borderColor: '#E8F5E9',
   },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '600',
-  },
-  infoBox: {
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 12,
-  },
-  infoRow: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#FAFFFE',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8F5E9',
   },
-  labelRow: {
+  employeeInfoSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexShrink: 1,
     flex: 1,
   },
-  infoIcon: {
-    marginRight: 6,
+  avatarBox: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
   },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
+  avatar: {
+    height: 50,
+    width: 50,
+  },
+  nameSection: {
+    marginLeft: 14,
+    flex: 1,
+  },
+  employeeName: {
+    fontSize: 16,
     fontWeight: '600',
+    color: backgroundColors.dark,
+    marginBottom: 2,
+    letterSpacing: 0.3,
   },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    fontWeight: '500',
-  },
-  timeContainer: {
+  cnicRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 50,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginHorizontal: 20,
-  },
-  emptyText: {
+  cnicText: {
+    fontSize: 13,
     color: '#666',
-    fontSize: 16,
-    marginTop: 10,
     fontWeight: '500',
   },
-  emptySubText: {
-    color: '#999',
-    fontSize: 14,
-    marginTop: 5,
-    textAlign: 'center',
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1.5,
   },
-  submitContainer: {
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
-  disabledRow: {
-    opacity: 0.5,
+
+  cardBody: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  timeCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  disabledTimeCard: {
+    backgroundColor: '#F5F5F5',
+    opacity: 0.6,
+  },
+  timeCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  timeInfo: {
+    flex: 1,
+  },
+  timeLabel: {
+    fontSize: 12,
+    color: '#666',
+    fontWeight: '600',
+    marginBottom: 3,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  timeValue: {
+    fontSize: 16,
+    color: '#1A1A1A',
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+  editIndicator: {
+    marginLeft: 8,
   },
   disabledText: {
     color: '#999',
   },
-  submitButton: {
-    backgroundColor: '#144272',
-    paddingVertical: 14,
-    borderRadius: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 5,
-  },
-  submitText: {
-    color: 'white',
-    fontWeight: '700',
-    fontSize: 16,
-    marginLeft: 8,
-  },
-  paginationContainer: {
+
+  cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: '#144272',
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#FAFFFE',
+    borderTopWidth: 1,
+    borderTopColor: '#E8F5E9',
+  },
+  dateSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dateText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '600',
+  },
+  changeStatusButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: '#E8F5E9',
+    borderRadius: 8,
     shadowColor: '#000',
     shadowOpacity: 0.15,
     shadowRadius: 4,
     shadowOffset: {width: 0, height: -2},
     elevation: 6,
   },
-  pageButton: {
-    backgroundColor: '#fff',
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: '#144272',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    alignItems: 'center',
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
+  changeStatusText: {
+    fontSize: 13,
+    color: '#2A652B',
     fontWeight: '700',
-    color: '#FFD166',
   },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
+
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 50,
+    paddingVertical: 50,
+    paddingHorizontal: 20,
+  },
+  emptyText: {
+    color: '#555',
+    fontSize: 17,
+    marginTop: 12,
+    fontWeight: '600',
+  },
+  emptySubText: {
+    color: '#888',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  submitContainer: {
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+  },
+  submitButton: {
+    backgroundColor: '#2A652B',
+    paddingVertical: 16,
+    borderRadius: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#2A652B',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 4},
+    elevation: 8,
+  },
+  submitText: {
+    color: 'white',
+    fontWeight: '800',
+    fontSize: 16,
+    marginLeft: 10,
+    letterSpacing: 0.5,
   },
   modalOverlay: {
     position: 'absolute',
@@ -961,55 +989,61 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'flex-end',
     alignItems: 'center',
   },
   modalContent: {
     backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 30,
+    paddingTop: 24,
+    paddingBottom: 34,
     width: '100%',
     maxWidth: 400,
     shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: {width: 0, height: -5},
-    elevation: 10,
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    shadowOffset: {width: 0, height: -8},
+    elevation: 12,
   },
   modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    marginBottom: 20,
-    color: '#144272',
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 24,
+    color: '#2A652B',
     textAlign: 'center',
+    letterSpacing: 0.3,
   },
   modalOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 15,
-    paddingHorizontal: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    paddingVertical: 16,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#FAFAFA',
   },
   modalOptionText: {
     fontSize: 16,
-    marginLeft: 12,
-    fontWeight: '500',
+    marginLeft: 14,
+    fontWeight: '600',
+    letterSpacing: 0.2,
   },
   modalCancelButton: {
-    marginTop: 15,
+    marginTop: 12,
     alignItems: 'center',
-    paddingVertical: 12,
-    backgroundColor: '#f5f5f5',
-    borderRadius: 10,
+    paddingVertical: 14,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   modalCancelText: {
     color: '#666',
-    fontWeight: '600',
+    fontWeight: '700',
     fontSize: 16,
+    letterSpacing: 0.3,
   },
 });
