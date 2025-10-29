@@ -148,6 +148,7 @@ import OrderBookerDetails from './component/Drawer/OrderBookerDetails';
 import AccountsDetails from './component/Drawer/AccountsDetails';
 import ProductDetails from './component/Drawer/Products/ProductDetails';
 import ExpenseDetails from './component/Drawer/Expenses/ExpenseDetails';
+import UserDetails from './component/Drawer/SystemUsers/UserDetails';
 
 const Stack = createStackNavigator();
 export const navigationRef = createNavigationContainerRef();
@@ -438,6 +439,7 @@ function App(): React.JSX.Element {
               {/*System User*/}
               <Stack.Screen name="Users" component={User} />
               <Stack.Screen name="Roles" component={Roles} />
+              <Stack.Screen name="UserDetails" component={UserDetails} />
 
               {/*Configuration*/}
               <Stack.Screen name="Customer Type" component={CustomerType} />

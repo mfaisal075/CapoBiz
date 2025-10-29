@@ -325,7 +325,7 @@ export default function CustomerPeople({navigation}: any) {
         <View style={styles.searchFilter}>
           <Icon name="magnify" size={36} color={backgroundColors.dark} />
           <TextInput
-            placeholder="Search by supplier name"
+            placeholder="Search by customer name"
             style={styles.search}
             value={searchQuery}
             onChangeText={text => searchFilter(text)}

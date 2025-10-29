@@ -5,6 +5,7 @@ import {
   SafeAreaView,
   TouchableOpacity,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -225,23 +226,23 @@ export default function ListofItems() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>List of Items</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="white" />
+          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -260,8 +261,8 @@ export default function ListofItems() {
                 status={
                   selectionMode === 'allproducts' ? 'checked' : 'unchecked'
                 }
-                color="#144272"
-                uncheckedColor="#666"
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
               />
               <Text style={styles.radioText}>All Products</Text>
             </TouchableOpacity>
@@ -279,8 +280,8 @@ export default function ListofItems() {
                     ? 'checked'
                     : 'unchecked'
                 }
-                color="#144272"
-                uncheckedColor="#666"
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
               />
               <Text style={styles.radioText}>Category Wise</Text>
             </TouchableOpacity>
@@ -298,17 +299,37 @@ export default function ListofItems() {
             placeholderStyle={{color: '#666'}}
             textStyle={{color: '#144272'}}
             ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color="#144272" />
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color="#144272" />
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
             )}
             style={[
               styles.dropdown,
               selectionMode === 'allproducts' && styles.dropdownDisabled,
             ]}
             dropDownContainerStyle={styles.dropDownContainer}
-            listMode='MODAL'
+            listMode="MODAL"
+            listItemLabelStyle={{
+              color: backgroundColors.dark,
+              fontWeight: '500',
+            }}
+            labelStyle={{
+              color: backgroundColors.dark,
+              fontSize: 16,
+            }}
+            searchable
+            searchTextInputStyle={{
+              borderWidth: 0,
+              width: '100%',
+            }}
+            searchContainerStyle={{
+              borderColor: backgroundColors.gray,
+            }}
           />
         </View>
 
@@ -319,37 +340,38 @@ export default function ListofItems() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Avatar + Name + Details */}
+                {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.prod_name?.charAt(0) || 'P'}
-                    </Text>
+                    <Image
+                      source={require('../../../../assets/man.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
-                    <Text style={styles.name}>{item.prod_name}</Text>
-                    {/* Category */}
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.name}>{item.prod_name}</Text>
+                      <View style={styles.catBadge}>
+                        <Text style={styles.badgeText}>{item.pcat_name}</Text>
+                      </View>
+                    </View>
+                    {/* small details inline */}
                     <Text style={styles.subText}>
-                      <Icon name="shape" size={12} color="#666" />{' '}
-                      {item.pcat_name || 'No category'}
+                      <Text style={styles.label}>Cost Price: </Text>
+                      {item.prod_costprice} |{' '}
+                      <Text style={styles.label}>Retail Price: </Text>
+                      {item.prod_retailprice}
                     </Text>
-                    {/* Barcode */}
                     <Text style={styles.subText}>
-                      <Icon name="barcode" size={12} color="#666" />{' '}
-                      {item.prod_UPC_EAN || 'N/A'}
-                    </Text>
-                    {/* Quantity */}
-                    <Text style={styles.subText}>
-                      <Icon name="cube-outline" size={12} color="#666" />{' '}
+                      <Text style={styles.label}>QTY: </Text>
                       {item.prod_sub_qty
                         ? `${item.prod_qty} - ${item.prod_sub_qty}`
                         : item.prod_qty}
-                    </Text>
-                    {/* Sale Price */}
-                    <Text style={styles.subText}>
-                      <Icon name="currency-usd" size={12} color="#666" />{' '}
-                      {parseFloat(item.prod_retailprice).toFixed(2) || 'N/A'}
                     </Text>
                   </View>
                 </View>
@@ -412,7 +434,7 @@ export default function ListofItems() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -420,98 +442,116 @@ export default function ListofItems() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.gray,
   },
-  gradientBackground: {
-    flex: 1,
-  },
-
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
     alignItems: 'center',
+    marginHorizontal: 15,
   },
   headerTitle: {
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
 
   // Filter Container
   filterContainer: {
-    backgroundColor: '#fff',
-    marginHorizontal: 15,
-    marginVertical: 8,
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    marginTop: 10,
+    marginHorizontal: 12,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
-    zIndex: 1000,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   radioContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 15,
+    justifyContent: 'space-between',
+    width: '70%',
+    marginBottom: 10,
   },
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   radioText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     marginLeft: -5,
     fontWeight: '500',
   },
 
   // Dropdown
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#144272',
-    minHeight: 40,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
   },
   dropdownDisabled: {
-    backgroundColor: '#9a9a9a48',
+    backgroundColor: '#dfdfdfff',
     borderColor: '#ccc',
   },
   dropDownContainer: {
-    backgroundColor: '#fff',
-    borderColor: '#144272',
+    backgroundColor: 'white',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    maxHeight: 200,
   },
 
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
+    marginTop: 10,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -521,35 +561,50 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
   },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+  avatar: {
+    height: 45,
+    width: 45,
   },
   name: {
     fontSize: 16,
     fontWeight: '600',
     color: '#144272',
   },
+  catBadge: {
+    backgroundColor: '#e8f0fe',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: backgroundColors.primary,
+  },
+  badgeText: {
+    fontSize: 12,
+    color: backgroundColors.primary,
+    fontWeight: '500',
+  },
   subText: {
     fontSize: 12,
     color: '#555',
     marginTop: 2,
   },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: backgroundColors.dark,
+  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '75%',
-    backgroundColor: '#fff',
     borderRadius: 15,
-    marginTop: 8,
     width: '96%',
     alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -578,7 +633,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -597,7 +652,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   pageButtonTextDisabled: {
-    color: '#777',
+    color: backgroundColors.dark,
   },
   pageIndicator: {
     alignItems: 'center',

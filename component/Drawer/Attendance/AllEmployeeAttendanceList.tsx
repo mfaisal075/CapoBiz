@@ -3,11 +3,11 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
-  Image,
   TouchableOpacity,
   ScrollView,
   FlatList,
+  Image,
+  TextInput,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -21,6 +21,7 @@ import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import LottieView from 'lottie-react-native';
+import backgroundColors from '../../Colors';
 
 interface EmployeeList {
   id: number;
@@ -56,23 +57,30 @@ const initialAddAttendance: AddAttendance = {
 export default function AllEmployeeAttendanceList() {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const [empList, setEmpList] = useState<EmployeeList[]>([]);
   const [modal, setModal] = useState('');
   const [empDropdown, setEmpDropdown] = useState<EmployeeDropdown[]>([]);
   const transformedEmp = empDropdown.map(emp => ({
     label: emp.emp_name,
     value: emp.id.toString(),
   }));
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<EmployeeList[]>([]);
+  const [masterData, setMasterData] = useState<EmployeeList[]>([]);
+  const [fromDate, setFromDate] = useState<Date | null>(new Date());
+  const [toDate, setToDate] = useState<Date | null>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState<'from' | 'to' | null>(
+    null,
+  );
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const totalRecords = empList.length;
+  const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const paginatedData = empList.slice(
+  const paginatedData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
@@ -91,6 +99,22 @@ export default function AllEmployeeAttendanceList() {
   const [addAttendance, setAddAttendance] =
     useState<AddAttendance>(initialAddAttendance);
   const [selectedEmp, setSelectedEmp] = useState<number | null>(null);
+
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    if (event.type === 'dismissed') {
+      setShowDatePicker(null);
+      return;
+    }
+
+    if (selectedDate) {
+      if (showDatePicker === 'from') {
+        setFromDate(selectedDate);
+      } else if (showDatePicker === 'to') {
+        setToDate(selectedDate);
+      }
+    }
+    setShowDatePicker(null);
+  };
 
   const handleAddChange = (
     field: keyof AddAttendance,
@@ -172,9 +196,17 @@ export default function AllEmployeeAttendanceList() {
   // Fetch Empoyee List
   const fetchEmpList = async () => {
     try {
-      const res = await axios.get(`${BASE_URL}/fetchemployeeattendancelist`);
-      setEmpList(res.data.emp);
-      setCurrentPage(1); // Reset to first page when data changes
+      const from = fromDate?.toISOString().split('T')[0];
+      const to = toDate?.toISOString().split('T')[0];
+
+      const res = await axios.get(
+        `${BASE_URL}/fetchemployeeattendancelist?from=${from}&to=${to}&_token=${token}`,
+      );
+
+      const empList = res.data.emp;
+      setFilteredData(empList);
+      setMasterData(empList);
+      setCurrentPage(1);
     } catch (error) {
       console.log(error);
     }
@@ -219,7 +251,23 @@ export default function AllEmployeeAttendanceList() {
     if (date instanceof Date) {
       return date.toISOString().split('T')[0];
     }
-    return date; // already in YYYY-MM-DD
+    return date;
+  };
+
+  const formatTimeForDisplay = (timeString: string) => {
+    if (!timeString) return '—';
+    try {
+      const [hours, minutes] = timeString.split(':').map(Number);
+      const date = new Date();
+      date.setHours(hours, minutes);
+      return date.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      });
+    } catch {
+      return timeString;
+    }
   };
 
   // Update Attendance
@@ -387,21 +435,40 @@ export default function AllEmployeeAttendanceList() {
     }
   };
 
+  // Search Filter
+  const searchFilter = (text: string) => {
+    if (text) {
+      const newData = masterData.filter(item => {
+        const itemData = item.emp_name
+          ? item.emp_name.toLocaleUpperCase()
+          : ''.toLocaleLowerCase();
+        const textData = text.toLocaleUpperCase();
+        return itemData.indexOf(textData) > -1;
+      });
+      setFilteredData(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredData(masterData);
+      setSearchQuery(text);
+    }
+  };
+
   useEffect(() => {
     fetchEmpList();
     empDropdownList();
-  }, []);
+  }, [fromDate, toDate]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -410,10 +477,63 @@ export default function AllEmployeeAttendanceList() {
 
           <TouchableOpacity
             onPress={() => setModal('Add')}
-            style={styles.headerBtn}>
-            <Icon name="plus-circle" size={24} color="white" />
+            style={[styles.headerBtn]}>
+            <Text style={styles.addBtnText}>Add</Text>
+            <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
+
+        {/* Search Filter */}
+        <View style={styles.searchFilter}>
+          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+          <TextInput
+            placeholder="Search by employee name"
+            style={styles.search}
+            value={searchQuery}
+            onChangeText={text => searchFilter(text)}
+          />
+        </View>
+
+        {/* Date Range Section */}
+        <View style={styles.dateSection}>
+          <View style={styles.labelCtr}>
+            <Text style={styles.inputLabel}>From:</Text>
+            <Text style={styles.inputLabel}>To:</Text>
+          </View>
+
+          <View style={styles.dateRow}>
+            <TouchableOpacity
+              onPress={() => setShowDatePicker('from')}
+              style={styles.dateInput}>
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
+              <Text style={styles.dateText}>
+                {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setShowDatePicker('to')}
+              style={styles.dateInput}>
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
+              <Text style={styles.dateText}>
+                {toDate ? toDate.toLocaleDateString() : 'To Date'}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={
+              showDatePicker === 'from'
+                ? fromDate ?? new Date()
+                : toDate ?? new Date()
+            }
+            mode="date"
+            display="default"
+            onChange={handleDateChange}
+          />
+        )}
+
         {/* Employee List */}
         <View style={styles.listContainer}>
           <FlatList
@@ -421,22 +541,82 @@ export default function AllEmployeeAttendanceList() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.emp_name?.charAt(0) || 'E'}
+                {/* Card Header */}
+                <View style={styles.cardHeader}>
+                  <Text style={styles.employeeName}>{item.emp_name}</Text>
+                  <View style={[styles.dateSection, {flexDirection: 'row'}]}>
+                    <Icon name="calendar-today" size={16} color="#666" />
+                    <Text style={styles.dateTextFooter}>
+                      {new Date(item.empatt_date)
+                        .toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                        .replace(/ /g, '-')}
                     </Text>
                   </View>
-                  <View style={{flex: 1}}>
-                    <Text style={styles.employeeName}>{item.emp_name}</Text>
-                    <Text style={styles.subText}>ID: {item.empatt_emp_id}</Text>
+                </View>
+
+                {/* Card Body with Time Information */}
+                <View style={styles.cardBody}>
+                  {/* Clock In */}
+                  <View style={styles.timeCard}>
+                    <View style={styles.timeCardLeft}>
+                      <View
+                        style={[
+                          styles.iconCircle,
+                          {backgroundColor: '#E8F5E9'},
+                        ]}>
+                        <Icon name="clock-in" size={20} color="#2A652B" />
+                      </View>
+                      <View style={styles.timeInfo}>
+                        <Text style={styles.timeLabel}>Clock In</Text>
+                        <Text style={styles.timeValue}>
+                          {item.empatt_clockin ? item.empatt_clockin : '——'}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
+
+                  {/* Clock Out */}
+                  <View style={styles.timeCard}>
+                    <View style={styles.timeCardLeft}>
+                      <View
+                        style={[
+                          styles.iconCircle,
+                          {backgroundColor: '#FFEBEE'},
+                        ]}>
+                        <Icon name="clock-out" size={20} color="#D32F2F" />
+                      </View>
+                      <View style={styles.timeInfo}>
+                        <Text style={styles.timeLabel}>Clock Out</Text>
+                        <Text style={styles.timeValue}>
+                          {item.empatt_clockout ? item.empatt_clockout : '——'}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {/* Card Footer */}
+                <View style={styles.cardFooter}>
                   <View
                     style={[
                       styles.statusBadge,
                       getStatusStyle(item.empatt_att_status),
                     ]}>
+                    <Icon
+                      name={
+                        item.empatt_att_status === 'Present'
+                          ? 'check-circle'
+                          : item.empatt_att_status === 'Absent'
+                          ? 'close-circle'
+                          : 'information'
+                      }
+                      size={14}
+                      color={getStatusTextColor(item.empatt_att_status)}
+                    />
                     <Text
                       style={[
                         styles.statusText,
@@ -465,84 +645,15 @@ export default function AllEmployeeAttendanceList() {
                     </TouchableOpacity>
                   </View>
                 </View>
-
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="clock-in"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Clock In</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.empatt_clockin ?? '--'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="clock-out"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Clock Out</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.empatt_clockout ?? '--'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="calendar"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Date</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {new Date(item.empatt_date)
-                        .toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                        .replace(/ /g, '-')}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="information-outline"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Status</Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.valueText,
-                        {color: getStatusTextColor(item.empatt_att_status)},
-                      ]}>
-                      {item.empatt_att_status}
-                    </Text>
-                  </View>
-                </View>
               </View>
             )}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Icon name="account-multiple-outline" size={48} color="#666" />
+                <Icon
+                  name="account-multiple-outline"
+                  size={48}
+                  color={backgroundColors.dark}
+                />
                 <Text style={styles.emptyText}>
                   No attendance records found.
                 </Text>
@@ -555,6 +666,7 @@ export default function AllEmployeeAttendanceList() {
             showsVerticalScrollIndicator={false}
           />
         </View>
+
         {/* Pagination Controls */}
         {totalRecords > 0 && (
           <View style={styles.paginationContainer}>
@@ -614,7 +726,7 @@ export default function AllEmployeeAttendanceList() {
                   setAddAttendance(initialAddAttendance);
                 }}
                 style={styles.closeButton}>
-                <Icon name="close" size={20} color="#144272" />
+                <Icon name="close" size={20} color={backgroundColors.dark} />
               </TouchableOpacity>
             </View>
 
@@ -630,18 +742,40 @@ export default function AllEmployeeAttendanceList() {
                   handleAddChange('emp', callback(addAttendance.emp))
                 }
                 placeholder="Select Employee"
-                placeholderStyle={{color: '#144272'}}
-                textStyle={{color: '#144272'}}
+                placeholderStyle={{color: backgroundColors.dark}}
+                textStyle={{color: backgroundColors.dark}}
                 ArrowUpIconComponent={() => (
-                  <Icon name="chevron-up" size={18} color="#144272" />
+                  <Icon
+                    name="chevron-up"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 ArrowDownIconComponent={() => (
-                  <Icon name="chevron-down" size={18} color="#144272" />
+                  <Icon
+                    name="chevron-down"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 style={styles.dropdown}
                 dropDownContainerStyle={styles.dropDownContainer}
-                labelStyle={{color: '#144272'}}
-                listItemLabelStyle={{color: '#144272'}}
+                listItemLabelStyle={{
+                  color: backgroundColors.dark,
+                  fontWeight: '500',
+                }}
+                labelStyle={{
+                  color: backgroundColors.dark,
+                  fontSize: 16,
+                }}
+                searchable
+                searchTextInputStyle={{
+                  borderWidth: 0,
+                  width: '100%',
+                }}
+                searchContainerStyle={{
+                  borderColor: backgroundColors.gray,
+                }}
                 listMode="SCROLLVIEW"
               />
 
@@ -654,101 +788,114 @@ export default function AllEmployeeAttendanceList() {
                   handleAddChange('status', callback(addAttendance.status));
                 }}
                 placeholder="Select Status"
-                placeholderStyle={{color: '#144272'}}
-                textStyle={{color: '#144272'}}
+                placeholderStyle={{color: backgroundColors.dark}}
+                textStyle={{color: backgroundColors.dark}}
                 ArrowUpIconComponent={() => (
-                  <Icon name="chevron-up" size={18} color="#144272" />
+                  <Icon
+                    name="chevron-up"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 ArrowDownIconComponent={() => (
-                  <Icon name="chevron-down" size={18} color="#144272" />
+                  <Icon
+                    name="chevron-down"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 style={[styles.dropdown, {zIndex: 999}]}
                 dropDownContainerStyle={styles.dropDownContainer}
-                labelStyle={{color: '#144272'}}
-                listItemLabelStyle={{color: '#144272'}}
+                listItemLabelStyle={{
+                  color: backgroundColors.dark,
+                  fontWeight: '500',
+                }}
+                labelStyle={{
+                  color: backgroundColors.dark,
+                  fontSize: 16,
+                }}
                 listMode="SCROLLVIEW"
               />
 
               {/* Clock In/Out - Only enabled when status is Present */}
-              <View style={styles.timeRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.timeInput,
-                    addAttendance.status !== 'Present' &&
-                      styles.disabledTimeInput,
-                  ]}
-                  onPress={() => {
-                    if (addAttendance.status === 'Present') {
-                      setShowClockInPickerAdd(true);
-                    }
-                  }}
-                  disabled={addAttendance.status !== 'Present'}>
-                  <Text
-                    style={[
-                      styles.timeLabel,
-                      addAttendance.status !== 'Present' && styles.disabledText,
-                    ]}>
-                    Clock In:
-                  </Text>
-                  <Text
-                    style={[
-                      styles.timeValue,
-                      addAttendance.status !== 'Present' && styles.disabledText,
-                    ]}>
-                    {addAttendance.clockIn.toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                  {addAttendance.status !== 'Present' && (
-                    <Icon
-                      name="lock"
-                      size={16}
-                      color="#999"
-                      style={{marginLeft: 6}}
-                    />
-                  )}
-                </TouchableOpacity>
 
-                <TouchableOpacity
+              <TouchableOpacity
+                style={[
+                  styles.timeInput,
+                  addAttendance.status !== 'Present' &&
+                    styles.disabledTimeInput,
+                ]}
+                onPress={() => {
+                  if (addAttendance.status === 'Present') {
+                    setShowClockInPickerAdd(true);
+                  }
+                }}
+                disabled={addAttendance.status !== 'Present'}>
+                <Text
                   style={[
-                    styles.timeInput,
-                    addAttendance.status !== 'Present' &&
-                      styles.disabledTimeInput,
-                  ]}
-                  onPress={() => {
-                    if (addAttendance.status === 'Present') {
-                      setShowClockOutPickerAdd(true);
-                    }
-                  }}
-                  disabled={addAttendance.status !== 'Present'}>
-                  <Text
-                    style={[
-                      styles.timeLabel,
-                      addAttendance.status !== 'Present' && styles.disabledText,
-                    ]}>
-                    Clock Out:
-                  </Text>
-                  <Text
-                    style={[
-                      styles.timeValue,
-                      addAttendance.status !== 'Present' && styles.disabledText,
-                    ]}>
-                    {addAttendance.clockOut.toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                  {addAttendance.status !== 'Present' && (
-                    <Icon
-                      name="lock"
-                      size={16}
-                      color="#999"
-                      style={{marginLeft: 6}}
-                    />
-                  )}
-                </TouchableOpacity>
-              </View>
+                    styles.timeLabel,
+                    addAttendance.status !== 'Present' && styles.disabledText,
+                  ]}>
+                  Clock In:
+                </Text>
+                <Text
+                  style={[
+                    styles.timeValueModal,
+                    addAttendance.status !== 'Present' && styles.disabledText,
+                  ]}>
+                  {addAttendance.clockIn.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+                {addAttendance.status !== 'Present' && (
+                  <Icon
+                    name="lock"
+                    size={16}
+                    color="#999"
+                    style={{marginLeft: 6}}
+                  />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.timeInput,
+                  addAttendance.status !== 'Present' &&
+                    styles.disabledTimeInput,
+                ]}
+                onPress={() => {
+                  if (addAttendance.status === 'Present') {
+                    setShowClockOutPickerAdd(true);
+                  }
+                }}
+                disabled={addAttendance.status !== 'Present'}>
+                <Text
+                  style={[
+                    styles.timeLabel,
+                    addAttendance.status !== 'Present' && styles.disabledText,
+                  ]}>
+                  Clock Out:
+                </Text>
+                <Text
+                  style={[
+                    styles.timeValueModal,
+                    addAttendance.status !== 'Present' && styles.disabledText,
+                  ]}>
+                  {addAttendance.clockOut.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+                {addAttendance.status !== 'Present' && (
+                  <Icon
+                    name="lock"
+                    size={16}
+                    color="#999"
+                    style={{marginLeft: 6}}
+                  />
+                )}
+              </TouchableOpacity>
 
               {/* Only show time pickers when status is Present */}
               {showClockInPickerAdd && addAttendance.status === 'Present' && (
@@ -773,9 +920,9 @@ export default function AllEmployeeAttendanceList() {
               <TouchableOpacity
                 style={styles.datePickerContainer}
                 onPress={() => setShowStartDatePicker(true)}>
-                <Icon name="calendar" size={18} color="#144272" />
-                <Text style={styles.dateLabel}>Date:</Text>
-                <Text style={styles.dateValue}>
+                <Icon name="calendar" size={18} color={backgroundColors.dark} />
+                <Text style={styles.dateLabelModal}>Date:</Text>
+                <Text style={styles.dateValueModal}>
                   {addAttendance.date.toLocaleDateString()}
                 </Text>
               </TouchableOpacity>
@@ -809,7 +956,7 @@ export default function AllEmployeeAttendanceList() {
               <TouchableOpacity
                 onPress={() => setModal('')}
                 style={styles.closeButton}>
-                <Icon name="close" size={20} color="#144272" />
+                <Icon name="close" size={20} color={backgroundColors.dark} />
               </TouchableOpacity>
             </View>
 
@@ -825,18 +972,40 @@ export default function AllEmployeeAttendanceList() {
                   handleEditChange('empId', callback(editAttendance.empId))
                 }
                 placeholder="Select Employee"
-                placeholderStyle={{color: '#144272'}}
+                placeholderStyle={{color: backgroundColors.dark}}
                 textStyle={{color: '#144272'}}
                 ArrowUpIconComponent={() => (
-                  <Icon name="chevron-up" size={18} color="#144272" />
+                  <Icon
+                    name="chevron-up"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 ArrowDownIconComponent={() => (
-                  <Icon name="chevron-down" size={18} color="#144272" />
+                  <Icon
+                    name="chevron-down"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 style={styles.dropdown}
                 dropDownContainerStyle={styles.dropDownContainer}
-                labelStyle={{color: '#144272'}}
-                listItemLabelStyle={{color: '#144272'}}
+                listItemLabelStyle={{
+                  color: backgroundColors.dark,
+                  fontWeight: '500',
+                }}
+                labelStyle={{
+                  color: backgroundColors.dark,
+                  fontSize: 16,
+                }}
+                searchable
+                searchTextInputStyle={{
+                  borderWidth: 0,
+                  width: '100%',
+                }}
+                searchContainerStyle={{
+                  borderColor: backgroundColors.gray,
+                }}
                 listMode="SCROLLVIEW"
               />
 
@@ -849,105 +1018,114 @@ export default function AllEmployeeAttendanceList() {
                   handleEditChange('status', callback(editAttendance.status))
                 }
                 placeholder="Select Status"
-                placeholderStyle={{color: '#144272'}}
+                placeholderStyle={{color: backgroundColors.dark}}
                 textStyle={{color: '#144272'}}
                 ArrowUpIconComponent={() => (
-                  <Icon name="chevron-up" size={18} color="#144272" />
+                  <Icon
+                    name="chevron-up"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 ArrowDownIconComponent={() => (
-                  <Icon name="chevron-down" size={18} color="#144272" />
+                  <Icon
+                    name="chevron-down"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 )}
                 style={[styles.dropdown, {zIndex: 999}]}
                 dropDownContainerStyle={styles.dropDownContainer}
-                labelStyle={{color: '#144272'}}
-                listItemLabelStyle={{color: '#144272'}}
+                listItemLabelStyle={{
+                  color: backgroundColors.dark,
+                  fontWeight: '500',
+                }}
+                labelStyle={{
+                  color: backgroundColors.dark,
+                  fontSize: 16,
+                }}
                 listMode="SCROLLVIEW"
               />
 
               {/* Clock In/Out - Only enabled when status is Present */}
-              <View style={styles.timeRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.timeInput,
-                    editAttendance.status !== 'Present' &&
-                      styles.disabledTimeInput,
-                  ]}
-                  onPress={() => {
-                    if (editAttendance.status === 'Present') {
-                      setShowClockInPicker(true);
-                    }
-                  }}
-                  disabled={editAttendance.status !== 'Present'}>
-                  <Text
-                    style={[
-                      styles.timeLabel,
-                      editAttendance.status !== 'Present' &&
-                        styles.disabledText,
-                    ]}>
-                    Clock In:
-                  </Text>
-                  <Text
-                    style={[
-                      styles.timeValue,
-                      editAttendance.status !== 'Present' &&
-                        styles.disabledText,
-                    ]}>
-                    {editAttendance.clockIn.toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                  {editAttendance.status !== 'Present' && (
-                    <Icon
-                      name="lock"
-                      size={16}
-                      color="#999"
-                      style={{marginLeft: 6}}
-                    />
-                  )}
-                </TouchableOpacity>
 
-                <TouchableOpacity
+              <TouchableOpacity
+                style={[
+                  styles.timeInput,
+                  editAttendance.status !== 'Present' &&
+                    styles.disabledTimeInput,
+                ]}
+                onPress={() => {
+                  if (editAttendance.status === 'Present') {
+                    setShowClockInPicker(true);
+                  }
+                }}
+                disabled={editAttendance.status !== 'Present'}>
+                <Text
                   style={[
-                    styles.timeInput,
-                    editAttendance.status !== 'Present' &&
-                      styles.disabledTimeInput,
-                  ]}
-                  onPress={() => {
-                    if (editAttendance.status === 'Present') {
-                      setShowClockOutPicker(true);
-                    }
-                  }}
-                  disabled={editAttendance.status !== 'Present'}>
-                  <Text
-                    style={[
-                      styles.timeLabel,
-                      editAttendance.status !== 'Present' &&
-                        styles.disabledText,
-                    ]}>
-                    Clock Out:
-                  </Text>
-                  <Text
-                    style={[
-                      styles.timeValue,
-                      editAttendance.status !== 'Present' &&
-                        styles.disabledText,
-                    ]}>
-                    {editAttendance.clockOut.toLocaleTimeString([], {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </Text>
-                  {editAttendance.status !== 'Present' && (
-                    <Icon
-                      name="lock"
-                      size={16}
-                      color="#999"
-                      style={{marginLeft: 6}}
-                    />
-                  )}
-                </TouchableOpacity>
-              </View>
+                    styles.timeLabel,
+                    editAttendance.status !== 'Present' && styles.disabledText,
+                  ]}>
+                  Clock In:
+                </Text>
+                <Text
+                  style={[
+                    styles.timeValueModal,
+                    editAttendance.status !== 'Present' && styles.disabledText,
+                  ]}>
+                  {editAttendance.clockIn.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+                {editAttendance.status !== 'Present' && (
+                  <Icon
+                    name="lock"
+                    size={16}
+                    color="#999"
+                    style={{marginLeft: 6}}
+                  />
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.timeInput,
+                  editAttendance.status !== 'Present' &&
+                    styles.disabledTimeInput,
+                ]}
+                onPress={() => {
+                  if (editAttendance.status === 'Present') {
+                    setShowClockOutPicker(true);
+                  }
+                }}
+                disabled={editAttendance.status !== 'Present'}>
+                <Text
+                  style={[
+                    styles.timeLabel,
+                    editAttendance.status !== 'Present' && styles.disabledText,
+                  ]}>
+                  Clock Out:
+                </Text>
+                <Text
+                  style={[
+                    styles.timeValueModal,
+                    editAttendance.status !== 'Present' && styles.disabledText,
+                  ]}>
+                  {editAttendance.clockOut.toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+                {editAttendance.status !== 'Present' && (
+                  <Icon
+                    name="lock"
+                    size={16}
+                    color="#999"
+                    style={{marginLeft: 6}}
+                  />
+                )}
+              </TouchableOpacity>
 
               {/* Only show time pickers when status is Present */}
               {showClockInPicker && editAttendance.status === 'Present' && (
@@ -973,9 +1151,9 @@ export default function AllEmployeeAttendanceList() {
               <TouchableOpacity
                 style={styles.datePickerContainer}
                 onPress={() => setShoweditDatePicker(true)}>
-                <Icon name="calendar" size={18} color="#144272" />
-                <Text style={styles.dateLabel}>Date:</Text>
-                <Text style={styles.dateValue}>
+                <Icon name="calendar" size={18} color={backgroundColors.dark} />
+                <Text style={styles.dateLabelModal}>Date:</Text>
+                <Text style={styles.dateValueModal}>
                   {new Date(editAttendance.date).toLocaleDateString()}
                 </Text>
               </TouchableOpacity>
@@ -1001,6 +1179,7 @@ export default function AllEmployeeAttendanceList() {
             </ScrollView>
           </View>
         </Modal>
+
         {/*Delete Confirmation Modal*/}
         <Modal isVisible={modal === 'Delete'}>
           <View style={styles.deleteModalContainer}>
@@ -1034,7 +1213,7 @@ export default function AllEmployeeAttendanceList() {
             </View>
           </View>
         </Modal>
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }
@@ -1042,22 +1221,31 @@ export default function AllEmployeeAttendanceList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -1069,6 +1257,74 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
+
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
+  },
+
+  // Date Filteration
+  dateSection: {
+    gap: 6,
+  },
+  labelCtr: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '60%',
+    paddingHorizontal: '3%',
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.dark,
+    marginLeft: 3,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: '3%',
+    marginBottom: 10,
+  },
+  dateInput: {
+    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+  },
+  dateText: {
+    color: backgroundColors.dark,
+    fontSize: 14,
+    marginLeft: 8,
+  },
+
   delAnim: {
     width: 120,
     height: 120,
@@ -1076,137 +1332,167 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
   },
+
+  // Card Style
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 20,
     marginVertical: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowColor: backgroundColors.dark,
+    shadowOpacity: 0.12,
     shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    shadowOffset: {width: 0, height: 4},
+    elevation: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E8F5E9',
   },
-  headerRow: {
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#FAFFFE',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8F5E9',
+  },
+  employeeName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: backgroundColors.dark,
+    marginBottom: 4,
+    letterSpacing: 0.3,
+  },
+  cnicText: {
+    fontSize: 13,
+    color: '#666',
+    fontWeight: '500',
+  },
+  statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1.5,
   },
-  avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#144272',
+  statusText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.3,
+  },
+
+  cardBody: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  timeCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#FAFAFA',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  timeCardLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
+  timeInfo: {
+    flex: 1,
   },
-  employeeName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#144272',
-    flexWrap: 'wrap',
-  },
-  subText: {
+  timeLabel: {
     fontSize: 12,
     color: '#666',
-    marginTop: 2,
+    fontWeight: '600',
+    marginBottom: 3,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginRight: 8,
+  timeValue: {
+    fontSize: 16,
+    color: '#1A1A1A',
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
-  statusText: {
-    fontSize: 10,
+
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: '#FAFFFE',
+    borderTopWidth: 1,
+    borderTopColor: '#E8F5E9',
+  },
+  dateTextFooter: {
+    fontSize: 13,
+    color: '#666',
     fontWeight: '600',
   },
   actionButtons: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
   editButton: {
-    padding: 6,
-    borderRadius: 8,
+    padding: 8,
+    borderRadius: 10,
     backgroundColor: '#E3F2FD',
-    marginRight: 6,
   },
   deleteButton: {
-    padding: 6,
-    borderRadius: 8,
+    padding: 8,
+    borderRadius: 10,
     backgroundColor: '#FFEBEE',
   },
-  infoBox: {
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-    flex: 1,
-  },
-  infoIcon: {
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    fontWeight: '500',
-    maxWidth: '50%',
-    textAlign: 'right',
-  },
+
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 50,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingVertical: 40,
+    paddingVertical: 50,
     paddingHorizontal: 20,
-    borderRadius: 16,
-    marginHorizontal: 20,
   },
   emptyText: {
-    color: '#666',
-    fontSize: 16,
-    marginTop: 10,
-    fontWeight: '500',
+    color: '#555',
+    fontSize: 17,
+    marginTop: 12,
+    fontWeight: '600',
   },
   emptySubText: {
-    color: '#999',
+    color: '#888',
     fontSize: 14,
-    marginTop: 5,
+    marginTop: 8,
     textAlign: 'center',
+    lineHeight: 20,
+    fontWeight: '500',
   },
+
   paginationContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     shadowColor: '#000',
@@ -1216,7 +1502,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.info,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1230,12 +1516,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: backgroundColors.light,
     fontWeight: '600',
     fontSize: 14,
   },
   pageButtonTextDisabled: {
-    color: '#777',
+    color: backgroundColors.dark,
   },
   pageIndicator: {
     alignItems: 'center',
@@ -1280,7 +1566,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
   },
   closeButton: {
     padding: 4,
@@ -1292,19 +1578,25 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#144272',
-    minHeight: 45,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    marginBottom: 15,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 16,
+    zIndex: 2999,
   },
   dropDownContainer: {
-    backgroundColor: '#fff',
-    borderColor: '#144272',
-    borderRadius: 8,
-    marginBottom: 15,
+    backgroundColor: 'white',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    maxHeight: 200,
     zIndex: 3000,
   },
   timeRow: {
@@ -1314,53 +1606,61 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   timeInput: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 8,
-    paddingHorizontal: 4,
-    paddingVertical: 12,
-    width: '48%',
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 16,
   },
-  timeLabel: {
-    color: '#144272',
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  timeValue: {
-    color: '#144272',
+  timeValueModal: {
+    color: backgroundColors.dark,
     marginLeft: 'auto',
     fontSize: 14,
     fontWeight: '600',
   },
   datePickerContainer: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 8,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
     marginBottom: 20,
-    backgroundColor: '#fff',
   },
-  dateLabel: {
-    color: '#144272',
+  dateLabelModal: {
+    color: backgroundColors.dark,
     marginLeft: 8,
     fontSize: 14,
     fontWeight: '500',
   },
-  dateValue: {
-    color: '#144272',
+  dateValueModal: {
+    color: backgroundColors.dark,
     marginLeft: 'auto',
     fontSize: 14,
     fontWeight: '600',
   },
   submitButton: {
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     paddingVertical: 14,
     borderRadius: 10,
     flexDirection: 'row',
@@ -1379,11 +1679,11 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   disabledTimeInput: {
-    opacity: 0.5,
+    opacity: 0.7,
     backgroundColor: '#f5f5f5',
   },
   disabledText: {
-    color: '#999',
+    color: '#111',
   },
 
   // Delete Modal Styles
@@ -1393,15 +1693,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 30,
     alignItems: 'center',
-    marginHorizontal: 20,
     shadowColor: '#000',
     shadowOpacity: 0.25,
     shadowRadius: 10,
     shadowOffset: {width: 0, height: 5},
     elevation: 10,
-  },
-  deleteIconContainer: {
-    marginBottom: 20,
   },
   deleteTitle: {
     fontSize: 22,

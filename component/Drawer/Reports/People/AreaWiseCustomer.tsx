@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ImageBackground,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -172,14 +173,14 @@ export default function AreaWiseCustomer() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -191,7 +192,7 @@ export default function AreaWiseCustomer() {
           </TouchableOpacity>
         </View>
 
-        <View style={{paddingHorizontal: 15, marginVertical: 8}}>
+        <View style={{paddingHorizontal: '3%', marginTop: 10, marginBottom: 5}}>
           <DropDownPicker
             items={transformedLabArea}
             open={areaOpen}
@@ -202,13 +203,34 @@ export default function AreaWiseCustomer() {
             placeholderStyle={{color: '#666'}}
             textStyle={{color: '#144272'}}
             ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color="#144272" />
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color="#144272" />
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
             )}
             style={styles.dropdown}
             dropDownContainerStyle={styles.dropDownContainer}
+            listItemLabelStyle={{
+              color: backgroundColors.dark,
+              fontWeight: '500',
+            }}
+            labelStyle={{
+              color: backgroundColors.dark,
+              fontSize: 16,
+              fontWeight: '500',
+            }}
+            searchable
+            searchTextInputStyle={{
+              borderWidth: 0,
+              width: '100%',
+            }}
+            searchContainerStyle={{
+              borderColor: backgroundColors.gray,
+            }}
           />
         </View>
 
@@ -221,27 +243,18 @@ export default function AreaWiseCustomer() {
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.cust_name?.charAt(0) || 'C'}
-                    </Text>
+                    <Image
+                      source={require('../../../../assets/man.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.cust_name}</Text>
-                    {/* Category */}
+                    {/* small details inline */}
                     <Text style={styles.subText}>
                       <Icon name="phone" size={12} color="#666" />{' '}
-                      {item.cust_contact || 'No Phone'}
-                    </Text>
-                    {/* Quantity */}
-                    <Text style={styles.subText}>
-                      <Icon name="mail" size={12} color="#666" />{' '}
-                      {item.cust_email ?? 'N/A'}
-                    </Text>
-                    {/* Retail Price */}
-                    <Text style={styles.subText}>
-                      <Icon name="map-marker" size={12} color="#666" />{' '}
-                      {item.area_name ?? 'N/A'}
+                      {item.cust_contact || 'No contact'}
                     </Text>
                   </View>
                 </View>
@@ -253,7 +266,7 @@ export default function AreaWiseCustomer() {
                 <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 210, marginTop: 5}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -304,7 +317,7 @@ export default function AreaWiseCustomer() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -312,22 +325,26 @@ export default function AreaWiseCustomer() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -338,6 +355,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  gradientBackground: {
+    flex: 1,
   },
 
   // Pagination Component
@@ -360,7 +380,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -371,7 +391,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   pageButtonDisabled: {
-    backgroundColor: '#ddd',
+    backgroundColor: '#eee',
   },
   pageButtonText: {
     color: '#fff',
@@ -379,7 +399,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   pageButtonTextDisabled: {
-    color: '#777',
+    color: backgroundColors.dark,
   },
   pageIndicator: {
     paddingHorizontal: 10,
@@ -403,19 +423,21 @@ const styles = StyleSheet.create({
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
+    marginTop: 10,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -425,15 +447,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
   },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+  avatar: {
+    height: 45,
+    width: 45,
   },
   name: {
     fontSize: 16,
@@ -445,22 +465,14 @@ const styles = StyleSheet.create({
     color: '#555',
     marginTop: 2,
   },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 8,
-    marginLeft: 10,
-  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '75%',
-    backgroundColor: '#fff',
     borderRadius: 15,
-    marginTop: 8,
     width: '96%',
     alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -471,15 +483,23 @@ const styles = StyleSheet.create({
 
   // Dropdown
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#144272',
-    minHeight: 40,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 4,
   },
   dropDownContainer: {
-    backgroundColor: '#fff',
-    borderColor: '#144272',
+    backgroundColor: 'white',
+    borderColor: 'rgba(0,0,0,0.2)',
+    borderRadius: 10,
+    maxHeight: 200,
   },
 });

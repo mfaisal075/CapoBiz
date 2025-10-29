@@ -3,9 +3,9 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -15,7 +15,6 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../../CTX/UserContext';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../../Colors';
 
 interface CustList {
@@ -29,24 +28,25 @@ interface CustList {
 export default function CustomerList() {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
-  const [custList, setCustList] = useState<CustList[]>([]);
+  const [filteredData, setFilteredData] = useState<CustList[]>([]);
+  const [masterData, setMasterData] = useState<CustList[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const totalRecords = custList.length;
+  const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const currentData = custList.slice(
+  const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
 
   // Handle Print
   const handlePrint = async () => {
-    if (custList.length === 0) {
+    if (masterData.length === 0) {
       Toast.show({
         type: 'error',
         text1: 'No records found to print.',
@@ -59,7 +59,7 @@ export default function CustomerList() {
     const dateStr = new Date().toLocaleDateString();
 
     // Build HTML table rows
-    const rows = custList
+    const rows = masterData
       .map(
         (item, index) => `
       <tr>
@@ -137,7 +137,11 @@ export default function CustomerList() {
   const fetchCustList = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchcustList`);
-      setCustList(res.data.customers);
+
+      const custList = res.data.customers;
+
+      setFilteredData(custList);
+      setMasterData(custList);
     } catch (error) {
       console.log(error);
     }
@@ -149,14 +153,14 @@ export default function CustomerList() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
@@ -177,27 +181,18 @@ export default function CustomerList() {
                 {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.cust_name?.charAt(0) || 'C'}
-                    </Text>
+                    <Image
+                      source={require('../../../../assets/man.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
                     <Text style={styles.name}>{item.cust_name}</Text>
-                    {/* Category */}
+                    {/* small details inline */}
                     <Text style={styles.subText}>
                       <Icon name="phone" size={12} color="#666" />{' '}
-                      {item.cust_contact || 'No Phone'}
-                    </Text>
-                    {/* Quantity */}
-                    <Text style={styles.subText}>
-                      <Icon name="mail" size={12} color="#666" />{' '}
-                      {item.cust_email ?? 'N/A'}
-                    </Text>
-                    {/* Retail Price */}
-                    <Text style={styles.subText}>
-                      <Icon name="map-marker" size={12} color="#666" />{' '}
-                      {item.cust_address ?? 'N/A'}
+                      {item.cust_contact || 'No contact'}
                     </Text>
                   </View>
                 </View>
@@ -209,7 +204,7 @@ export default function CustomerList() {
                 <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 170}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -260,7 +255,7 @@ export default function CustomerList() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -268,22 +263,26 @@ export default function CustomerList() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -294,6 +293,28 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  gradientBackground: {
+    flex: 1,
+  },
+
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
   },
 
   // Pagination Component
@@ -316,7 +337,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 6,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -330,12 +351,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#fff',
+    color: backgroundColors.light,
     fontWeight: '600',
     fontSize: 14,
   },
   pageButtonTextDisabled: {
-    color: '#777',
+    color: backgroundColors.dark,
   },
   pageIndicator: {
     paddingHorizontal: 10,
@@ -359,19 +380,21 @@ const styles = StyleSheet.create({
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
+    marginTop: 10,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -381,15 +404,13 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
   },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+  avatar: {
+    height: 45,
+    width: 45,
   },
   name: {
     fontSize: 16,
@@ -401,22 +422,14 @@ const styles = StyleSheet.create({
     color: '#555',
     marginTop: 2,
   },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'flex-start',
-    gap: 8,
-    marginLeft: 10,
-  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '75%',
-    backgroundColor: '#fff',
     borderRadius: 15,
-    marginTop: 8,
     width: '96%',
     alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,

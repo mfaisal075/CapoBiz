@@ -996,7 +996,6 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 10,
     height: 48,
-    marginBottom: 4,
   },
   dropdownContainer: {
     backgroundColor: 'white',
