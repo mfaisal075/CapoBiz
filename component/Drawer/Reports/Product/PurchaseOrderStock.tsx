@@ -5,6 +5,7 @@ import {
   SafeAreaView,
   TouchableOpacity,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -19,7 +20,6 @@ import RNPrint from 'react-native-print';
 import {useUser} from '../../../CTX/UserContext';
 import {RadioButton} from 'react-native-paper';
 import backgroundColors from '../../../Colors';
-import LinearGradient from 'react-native-linear-gradient';
 
 interface CompletedList {
   id: number;
@@ -317,13 +317,16 @@ export default function PurchaseOrderStock() {
 
   // Calculate Data Wise Total Return
   const calculateOrderTotal = () => {
-    let total = 0;
-
-    completedList.forEach(data => {
-      const returnAmount = parseFloat(data.pord_order_total) || 0;
-
-      total += returnAmount;
-    });
+    const total = completedList.reduce((sum, item) => {
+      return (
+        sum +
+        parseFloat(
+          selectionMode === 'purchaseOrder'
+            ? item.pord_order_total
+            : item.pordd_total_cost || '0',
+        )
+      );
+    }, 0);
 
     return {
       total: total.toFixed(2),
@@ -342,23 +345,23 @@ export default function PurchaseOrderStock() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Purchase Order Report</Text>
+            <Text style={styles.headerTitle}>Purchase Order Stock</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="white" />
+          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -378,8 +381,8 @@ export default function PurchaseOrderStock() {
                 status={
                   selectionMode === 'purchaseOrder' ? 'checked' : 'unchecked'
                 }
-                color="#144272"
-                uncheckedColor="#666"
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
               />
               <Text style={styles.radioText}>Purchase Order</Text>
             </TouchableOpacity>
@@ -398,8 +401,8 @@ export default function PurchaseOrderStock() {
                     ? 'checked'
                     : 'unchecked'
                 }
-                color="#144272"
-                uncheckedColor="#666"
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
               />
               <Text style={styles.radioText}>Purchase Order Details</Text>
             </TouchableOpacity>
@@ -425,7 +428,15 @@ export default function PurchaseOrderStock() {
             )}
             style={styles.dropdown}
             dropDownContainerStyle={styles.dropDownContainer}
-            listMode="MODAL"
+            listMode="SCROLLVIEW"
+            listItemLabelStyle={{
+              color: backgroundColors.dark,
+              fontWeight: '500',
+            }}
+            labelStyle={{
+              color: backgroundColors.dark,
+              fontSize: 16,
+            }}
           />
 
           {/* Date Pickers */}
@@ -438,7 +449,7 @@ export default function PurchaseOrderStock() {
                 <Text style={styles.dateText}>
                   {startDate.toLocaleDateString()}
                 </Text>
-                <Icon name="calendar" size={18} color="#144272" />
+                <Icon name="calendar" size={18} color={backgroundColors.dark} />
               </TouchableOpacity>
               {showStartDatePicker && (
                 <DateTimePicker
@@ -460,7 +471,7 @@ export default function PurchaseOrderStock() {
                 <Text style={styles.dateText}>
                   {endDate.toLocaleDateString()}
                 </Text>
-                <Icon name="calendar" size={18} color="#144272" />
+                <Icon name="calendar" size={18} color={backgroundColors.dark} />
               </TouchableOpacity>
               {showEndDatePicker && (
                 <DateTimePicker
@@ -479,7 +490,7 @@ export default function PurchaseOrderStock() {
         {/* Summary Cards */}
         <View style={styles.summaryContainer}>
           <View style={styles.innerSummaryCtx}>
-            <Text style={styles.summaryLabel}>Total: </Text>
+            <Text style={styles.summaryLabel}>Net Value: </Text>
             <Text style={styles.summaryValue}>{totals.total}</Text>
           </View>
         </View>
@@ -492,101 +503,95 @@ export default function PurchaseOrderStock() {
             renderItem={({item}) =>
               selectionMode === 'purchaseOrder' ? (
                 <View style={styles.card}>
-                  {/* Header Row */}
+                  {/* Avatar + Name + Actions */}
                   <View style={styles.row}>
                     <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {item.sup_name?.charAt(0) || 'S'}
-                      </Text>
+                      <Image
+                        source={require('../../../../assets/product.png')}
+                        style={styles.avatar}
+                      />
                     </View>
+
                     <View style={{flex: 1}}>
-                      <Text style={styles.name}>{item.sup_name}</Text>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                        }}>
+                        <Text style={styles.name}>{item.sup_name}</Text>
+                        <View style={styles.catBadge}>
+                          <Text style={styles.badgeText}>{statusVal}</Text>
+                        </View>
+                      </View>
+                      {/* small details inline */}
                       <Text style={styles.subText}>
-                        <Icon name="file-document" size={12} color="#666" />{' '}
-                        Invoice: {item.pord_invoice_no}
+                        <Text style={styles.label}>Invoice: </Text>
+                        {item.pord_invoice_no} |{' '}
+                        <Text style={styles.label}>Total: </Text>
+                        {item.pord_order_total}
                       </Text>
                       <Text style={styles.subText}>
-                        <Icon name="currency-usd" size={12} color="#666" />{' '}
-                        Total: {item.pord_order_total}
-                      </Text>
-                      <Text style={styles.subText}>
-                        <Icon name="calendar" size={12} color="#666" />{' '}
-                        {new Date(item.pord_order_date).toLocaleDateString(
-                          'en-US',
-                          {
-                            day: '2-digit',
+                        <Text style={styles.label}>Date: </Text>
+                        {new Date(item.pord_order_date)
+                          .toLocaleDateString('en-GB', {
+                            day: 'numeric',
                             month: 'short',
                             year: 'numeric',
-                          },
-                        )}
+                          })
+                          .replace(/ /g, '-')}
                       </Text>
-                      {statusVal !== '' && (
-                        <Text style={styles.subText}>
-                          <Icon
-                            name="information-outline"
-                            size={12}
-                            color="#666"
-                          />{' '}
-                          {statusVal === 'Pending' ? 'Pending' : 'Completed'}
-                        </Text>
-                      )}
                     </View>
                   </View>
                 </View>
               ) : (
                 <View style={styles.card}>
-                  {/* Header Row */}
+                  {/* Avatar + Name + Actions */}
                   <View style={styles.row}>
                     <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {item.pordd_prod_name?.charAt(0) || 'P'}
-                      </Text>
+                      <Image
+                        source={require('../../../../assets/product.png')}
+                        style={styles.avatar}
+                      />
                     </View>
+
                     <View style={{flex: 1}}>
-                      <Text style={styles.name}>{item.pordd_prod_name}</Text>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          justifyContent: 'space-between',
+                        }}>
+                        <Text style={styles.name}>{item.pordd_prod_name}</Text>
+                        <View style={styles.catBadge}>
+                          <Text style={styles.badgeText}>
+                            {statusVal === 'Purchase Order'
+                              ? 'Pending'
+                              : statusVal}
+                          </Text>
+                        </View>
+                      </View>
+                      {/* small details inline */}
                       <Text style={styles.subText}>
-                        <Icon name="file-document" size={12} color="#666" />{' '}
-                        Invoice: {item.pordd_invoice_no}
-                      </Text>
-                      <Text style={styles.subText}>
-                        <Icon name="calendar" size={12} color="#666" />{' '}
-                        {new Date(item.pord_order_date).toLocaleDateString(
-                          'en-US',
-                          {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          },
-                        )}
-                      </Text>
-                      <Text style={styles.subText}>
-                        <Icon name="cube-outline" size={12} color="#666" /> Qty:{' '}
+                        <Text style={styles.label}>Invoice: </Text>
+                        {item.pordd_invoice_no} |{' '}
+                        <Text style={styles.label}>QTY: </Text>
                         {item.pordd_partial_qty}
                       </Text>
                       <Text style={styles.subText}>
-                        <Icon name="percent" size={12} color="#666" /> Rate:{' '}
-                        {item.pordd_cost_price}
+                        <Text style={styles.label}>Booking Rate: </Text>
+                        {item.pordd_cost_price} |{' '}
+                        <Text style={styles.label}>Booking Value: </Text>
+                        {item.pordd_total_cost}
                       </Text>
                       <Text style={styles.subText}>
-                        <Icon name="cash-multiple" size={12} color="#666" />{' '}
-                        Value: {item.pordd_total_cost}
+                        <Text style={styles.label}>Date: </Text>
+                        {new Date(item.pord_order_date)
+                          .toLocaleDateString('en-GB', {
+                            day: 'numeric',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')}
                       </Text>
-                      {statusVal !== '' && (
-                        <Text style={styles.subText}>
-                          <Icon
-                            name="information-outline"
-                            size={12}
-                            color="#666"
-                          />{' '}
-                          {statusVal === 'Purchase Ordered'
-                            ? 'Purchase Ordered'
-                            : statusVal === 'Purchased'
-                            ? 'Purchased'
-                            : statusVal === 'Purchase Order'
-                            ? 'Pending'
-                            : ''}
-                        </Text>
-                      )}
                     </View>
                   </View>
                 </View>
@@ -647,7 +652,7 @@ export default function PurchaseOrderStock() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -655,24 +660,26 @@ export default function PurchaseOrderStock() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.gray,
   },
-  gradientBackground: {
-    flex: 1,
-  },
-
-  // Header
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -684,92 +691,115 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
 
   // Filter Container
   filterContainer: {
-    backgroundColor: '#fff',
-    marginHorizontal: 15,
-    marginVertical: 8,
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    marginTop: 10,
+    marginHorizontal: 12,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
-    zIndex: 1000,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   radioContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 15,
+    justifyContent: 'space-between',
+    width: '90%',
+    marginBottom: 10,
   },
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   radioText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     marginLeft: -5,
     fontWeight: '500',
   },
+
+  // Dropdown
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#144272',
-    minHeight: 40,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff',
-    marginBottom: 15,
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 6,
   },
   dropDownContainer: {
-    backgroundColor: '#fff',
-    borderColor: '#144272',
+    backgroundColor: 'white',
+    borderColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 10,
+    maxHeight: 100,
   },
+
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   datePicker: {
-    flex: 1,
-    marginHorizontal: 5,
+    width: '48%',
   },
   dateLabel: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: '600',
     marginBottom: 5,
     fontSize: 14,
   },
   dateButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
   },
   dateText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
 
   // Summary Container
   summaryContainer: {
-    paddingHorizontal: 15,
-    marginBottom: 8,
-    backgroundColor: '#fff',
-    marginHorizontal: 15,
-    borderRadius: 12,
-    paddingVertical: 10,
+    marginHorizontal: 12,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 14,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
+    marginBottom: 4,
   },
   innerSummaryCtx: {
     flexDirection: 'row',
@@ -779,31 +809,33 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    color: '#666',
+    color: '#555',
     fontWeight: '500',
   },
   summaryValue: {
     fontSize: 18,
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: 'bold',
   },
 
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
+    marginTop: 10,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -813,35 +845,50 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
   },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+  avatar: {
+    height: 45,
+    width: 45,
   },
   name: {
     fontSize: 16,
     fontWeight: '600',
     color: '#144272',
   },
+  catBadge: {
+    backgroundColor: '#e8f0fe',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: backgroundColors.primary,
+  },
+  badgeText: {
+    fontSize: 12,
+    color: backgroundColors.primary,
+    fontWeight: '500',
+  },
   subText: {
     fontSize: 12,
     color: '#555',
     marginTop: 2,
   },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: backgroundColors.dark,
+  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '75%',
-    backgroundColor: '#fff',
     borderRadius: 15,
-    marginTop: 8,
     width: '96%',
     alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -870,7 +917,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,

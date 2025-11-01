@@ -18,7 +18,6 @@ import Toast from 'react-native-toast-message';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../../CTX/UserContext';
 import backgroundColors from '../../../Colors';
-import LinearGradient from 'react-native-linear-gradient';
 
 interface AllProductList {
   id: number;
@@ -344,7 +343,7 @@ export default function ListofItems() {
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
                     <Image
-                      source={require('../../../../assets/man.png')}
+                      source={require('../../../../assets/product.png')}
                       style={styles.avatar}
                     />
                   </View>
@@ -652,7 +651,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   pageButtonTextDisabled: {
-    color: backgroundColors.dark,
+    color: '#777',
   },
   pageIndicator: {
     alignItems: 'center',

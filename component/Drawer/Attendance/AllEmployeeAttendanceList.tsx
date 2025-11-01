@@ -1521,7 +1521,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   pageButtonTextDisabled: {
-    color: backgroundColors.dark,
+    color: '#777',
   },
   pageIndicator: {
     alignItems: 'center',

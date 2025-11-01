@@ -5,6 +5,7 @@ import {
   SafeAreaView,
   TouchableOpacity,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -332,6 +333,23 @@ export default function SupplierAccounts() {
     };
   };
 
+  function formatNumber(num: number | string): string {
+    const n = typeof num === 'string' ? parseFloat(num) : num;
+    if (isNaN(n)) return '0';
+
+    const abs = Math.abs(n);
+
+    if (abs >= 10000000) {
+      return (n / 10000000).toFixed(n % 10000000 === 0 ? 0 : 2) + 'Cr';
+    } else if (abs >= 100000) {
+      return (n / 100000).toFixed(n % 100000 === 0 ? 0 : 2) + 'L';
+    } else if (abs >= 1000) {
+      return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2) + 'K';
+    } else {
+      return n.toString();
+    }
+  }
+
   const totals =
     selectionMode === 'allsuppliers'
       ? calculateAllSupTotal()
@@ -345,28 +363,69 @@ export default function SupplierAccounts() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Supplier Accounts</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="white" />
+          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
         {/* Filter Section */}
         <View style={styles.filterContainer}>
+          {/* Dropdown */}
+          <DropDownPicker
+            items={transformedSup}
+            open={open}
+            setOpen={setOpen}
+            value={supValue}
+            setValue={setSupValue}
+            placeholder="Select Supplier"
+            disabled={selectionMode === 'allsuppliers'}
+            placeholderStyle={{color: '#666'}}
+            textStyle={{color: '#144272'}}
+            ArrowUpIconComponent={() => (
+              <Icon name="chevron-up" size={18} color="#144272" />
+            )}
+            ArrowDownIconComponent={() => (
+              <Icon name="chevron-down" size={18} color="#144272" />
+            )}
+            style={[
+              styles.dropdown,
+              selectionMode === 'allsuppliers' && styles.dropdownDisabled,
+            ]}
+            dropDownContainerStyle={styles.dropDownContainer}
+            listMode="MODAL"
+            listItemLabelStyle={{
+              color: backgroundColors.dark,
+              fontWeight: '500',
+            }}
+            labelStyle={{
+              color: backgroundColors.dark,
+              fontSize: 16,
+            }}
+            searchable
+            searchTextInputStyle={{
+              borderWidth: 0,
+              width: '100%',
+            }}
+            searchContainerStyle={{
+              borderColor: backgroundColors.gray,
+            }}
+          />
+
           {/* Date Pickers */}
           <View style={styles.dateContainer}>
             <View style={styles.datePicker}>
@@ -377,7 +436,7 @@ export default function SupplierAccounts() {
                 <Text style={styles.dateText}>
                   {startDate.toLocaleDateString()}
                 </Text>
-                <Icon name="calendar" size={18} color="#144272" />
+                <Icon name="calendar" size={18} color={backgroundColors.dark} />
               </TouchableOpacity>
               {showStartDatePicker && (
                 <DateTimePicker
@@ -399,7 +458,7 @@ export default function SupplierAccounts() {
                 <Text style={styles.dateText}>
                   {endDate.toLocaleDateString()}
                 </Text>
-                <Icon name="calendar" size={18} color="#144272" />
+                <Icon name="calendar" size={18} color={backgroundColors.dark} />
               </TouchableOpacity>
               {showEndDatePicker && (
                 <DateTimePicker
@@ -427,8 +486,8 @@ export default function SupplierAccounts() {
                 status={
                   selectionMode === 'allsuppliers' ? 'checked' : 'unchecked'
                 }
-                color="#144272"
-                uncheckedColor="#666"
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
               />
               <Text style={styles.radioText}>All Supplier</Text>
             </TouchableOpacity>
@@ -443,51 +502,33 @@ export default function SupplierAccounts() {
                 status={
                   selectionMode === 'singlesupplier' ? 'checked' : 'unchecked'
                 }
-                color="#144272"
-                uncheckedColor="#666"
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
               />
               <Text style={styles.radioText}>Single Supplier</Text>
             </TouchableOpacity>
           </View>
-
-          {/* Dropdown */}
-          <DropDownPicker
-            items={transformedSup}
-            open={open}
-            setOpen={setOpen}
-            value={supValue}
-            setValue={setSupValue}
-            placeholder="Select Supplier"
-            disabled={selectionMode === 'allsuppliers'}
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
-            ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color="#144272" />
-            )}
-            ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color="#144272" />
-            )}
-            style={[
-              styles.dropdown,
-              selectionMode === 'allsuppliers' && styles.dropdownDisabled,
-            ]}
-            dropDownContainerStyle={styles.dropDownContainer}
-          />
         </View>
 
         {/* Summary Cards */}
         <View style={styles.summaryContainer}>
           <View style={styles.innerSummaryCtx}>
             <Text style={styles.summaryLabel}>Total Receivables: </Text>
-            <Text style={styles.summaryValue}>{totals.totalReceivables}</Text>
+            <Text style={styles.summaryValue}>
+              {formatNumber(totals.totalReceivables)}
+            </Text>
           </View>
           <View style={styles.innerSummaryCtx}>
             <Text style={styles.summaryLabel}>Total Received: </Text>
-            <Text style={styles.summaryValue}>{totals.totalReceived}</Text>
+            <Text style={styles.summaryValue}>
+              {formatNumber(totals.totalReceived)}
+            </Text>
           </View>
           <View style={styles.innerSummaryCtx}>
             <Text style={styles.summaryLabel}>Net Receivables: </Text>
-            <Text style={styles.summaryValue}>{totals.netReceivables}</Text>
+            <Text style={styles.summaryValue}>
+              {formatNumber(totals.netReceivables)}
+            </Text>
           </View>
           {selectionMode === 'singlesupplier' && (
             <View style={styles.innerSummaryCtx}>
@@ -509,16 +550,20 @@ export default function SupplierAccounts() {
                     <View>
                       <Text style={styles.name}>{item.sup_name}</Text>
                       <Text style={styles.subText}>
-                        <Icon name="cash" size={12} color="#666" />{' '}
-                        {item.supac_paid_amount ?? '0'}
+                        <Text style={{fontWeight: '600'}}>
+                          Total Bill Amount:{' '}
+                        </Text>
+                        {formatNumber(item.supac_total_bill_amount) ?? '0'}
                       </Text>
                       <Text style={styles.subText}>
-                        <Icon name="cash-multiple" size={12} color="#666" />{' '}
-                        {item.supac_total_bill_amount ?? '0'}
+                        <Text style={{fontWeight: '600'}}>
+                          Total Paid Amount:{' '}
+                        </Text>
+                        {formatNumber(item.supac_paid_amount) ?? '0'}
                       </Text>
                       <Text style={styles.subText}>
-                        <Icon name="wallet" size={12} color="#666" />{' '}
-                        {item.supac_balance ?? '0'}
+                        <Text style={{fontWeight: '600'}}>Balance: </Text>
+                        {formatNumber(item.supac_balance) ?? '0'}
                       </Text>
                     </View>
                   </View>
@@ -548,16 +593,20 @@ export default function SupplierAccounts() {
                     <View>
                       <Text style={styles.name}>{item.supac_invoice_no}</Text>
                       <Text style={styles.subText}>
-                        <Icon name="cash" size={12} color="#666" />{' '}
-                        {item.supac_paid_amount ?? '0'}
+                        <Text style={{fontWeight: '600'}}>
+                          Total Bill Amount:{' '}
+                        </Text>
+                        {formatNumber(item.supac_total_bill_amount) ?? '0'}
                       </Text>
                       <Text style={styles.subText}>
-                        <Icon name="cash-multiple" size={12} color="#666" />{' '}
-                        {item.supac_total_bill_amount ?? '0'}
+                        <Text style={{fontWeight: '600'}}>
+                          Total Paid Amount:{' '}
+                        </Text>
+                        {formatNumber(item.supac_paid_amount) ?? '0'}
                       </Text>
                       <Text style={styles.subText}>
-                        <Icon name="wallet" size={12} color="#666" />{' '}
-                        {item.supac_balance ?? '0'}
+                        <Text style={{fontWeight: '600'}}>Balance: </Text>
+                        {formatNumber(item.supac_balance) ?? '0'}
                       </Text>
                     </View>
 
@@ -568,11 +617,13 @@ export default function SupplierAccounts() {
                           {fontWeight: '700', verticalAlign: 'top'},
                         ]}>
                         <Icon name="calendar" size={12} color="#666" />{' '}
-                        {new Date(item.supac_date).toLocaleDateString('en-US', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        }) || 'N/A'}
+                        {new Date(item.supac_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-') || 'N/A'}
                       </Text>
                     </View>
                   </View>
@@ -692,7 +743,7 @@ export default function SupplierAccounts() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -700,22 +751,26 @@ export default function SupplierAccounts() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -726,6 +781,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  gradientBackground: {
+    flex: 1,
   },
 
   // Pagination Styling
@@ -748,7 +806,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -790,17 +848,20 @@ const styles = StyleSheet.create({
 
   // Filter Container
   filterContainer: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    marginHorizontal: 15,
-    marginVertical: 10,
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    marginTop: 10,
+    marginBottom: 4,
+    marginHorizontal: 12,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
-    zIndex: 1000,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   dateContainer: {
     flexDirection: 'row',
@@ -808,28 +869,33 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   datePicker: {
-    flex: 1,
-    marginHorizontal: 5,
+    width: '48%',
   },
   dateLabel: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: '600',
     marginBottom: 5,
     fontSize: 14,
   },
   dateButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
   },
   dateText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -837,43 +903,56 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '75%',
-    marginBottom: 10,
   },
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   radioText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     marginLeft: -5,
     fontWeight: '500',
   },
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#144272',
-    minHeight: 40,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 10,
   },
   dropdownDisabled: {
-    backgroundColor: '#9a9a9a48',
+    backgroundColor: '#dfdfdfff',
     borderColor: '#ccc',
   },
   dropDownContainer: {
-    backgroundColor: '#fff',
-    borderColor: '#144272',
-    zIndex: 3000,
+    backgroundColor: 'white',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    maxHeight: 200,
   },
 
-  //Summary Container Styling
+  // Summary Container
   summaryContainer: {
-    paddingHorizontal: 15,
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    marginHorizontal: 15,
-    borderRadius: 12,
-    paddingVertical: 10,
+    marginHorizontal: 12,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 14,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
+    marginBottom: 4,
   },
   innerSummaryCtx: {
     flexDirection: 'row',
@@ -882,38 +961,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   summaryLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 14,
+    color: '#555',
     fontWeight: '500',
   },
   summaryValue: {
     fontSize: 16,
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: 'bold',
   },
 
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
+    marginTop: 4,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
   name: {
     fontSize: 16,
@@ -922,18 +1002,17 @@ const styles = StyleSheet.create({
   },
   subText: {
     fontSize: 12,
-    color: '#555',
+    color: backgroundColors.dark,
     marginTop: 2,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '60%',
-    backgroundColor: '#fff',
     borderRadius: 15,
     width: '96%',
     alignSelf: 'center',
-    marginTop: 8,
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,

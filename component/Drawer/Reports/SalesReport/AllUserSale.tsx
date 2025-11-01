@@ -3,9 +3,9 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -19,6 +19,7 @@ import BASE_URL from '../../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../../CTX/UserContext';
 import RNPrint from 'react-native-print';
+import backgroundColors from '../../../Colors';
 
 interface ProductDropdown {
   id: number;
@@ -509,29 +510,225 @@ export default function AllUserSale() {
     setCurrentPageSummary(1);
   }, [startDate, endDate, userValue, prodValue, catValue]);
 
+  function formatNumber(num: number | string): string {
+    const n = typeof num === 'string' ? parseFloat(num) : num;
+    if (isNaN(n)) return '0';
+
+    const abs = Math.abs(n);
+
+    if (abs >= 10000000) {
+      return (n / 10000000).toFixed(n % 10000000 === 0 ? 0 : 2) + 'Cr';
+    } else if (abs >= 100000) {
+      return (n / 100000).toFixed(n % 100000 === 0 ? 0 : 2) + 'L';
+    } else if (abs >= 1000) {
+      return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2) + 'K';
+    } else {
+      return n.toString();
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>All User Sales</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="white" />
+          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
         {/* Filter Section */}
         <View style={styles.filterContainer}>
+          {/* Radio Buttons */}
+          <View style={styles.radioContainer}>
+            <TouchableOpacity
+              style={styles.radioButton}
+              onPress={() => {
+                setSelectionMode('salereport');
+                setCatValue('');
+                setUserValue('');
+                setProdValue('');
+              }}>
+              <RadioButton
+                value="salereport"
+                status={
+                  selectionMode === 'salereport' ? 'checked' : 'unchecked'
+                }
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
+              />
+              <Text style={styles.radioText}>Sale Report</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.radioButton}
+              onPress={() => {
+                setSelectionMode('saleSummary');
+                setCatValue('');
+                setUserValue('');
+                setProdValue('');
+              }}>
+              <RadioButton
+                value="saleSummary"
+                status={
+                  selectionMode === 'saleSummary' ? 'checked' : 'unchecked'
+                }
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
+              />
+              <Text style={styles.radioText}>Sale Summary</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Dropdowns */}
+          <DropDownPicker
+            items={transformedCategory}
+            open={catOpen}
+            setOpen={setCatOpen}
+            value={catValue}
+            setValue={setCatValue}
+            placeholder="Select Category"
+            disabled={
+              selectionMode === 'salereport' || selectionMode === 'saleSummary'
+            }
+            placeholderStyle={{color: '#666'}}
+            textStyle={{color: '#144272'}}
+            ArrowUpIconComponent={() => (
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
+            )}
+            ArrowDownIconComponent={() => (
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
+            )}
+            style={[
+              styles.dropdown,
+              (selectionMode === 'salereport' ||
+                selectionMode === 'saleSummary') &&
+                styles.dropdownDisabled,
+            ]}
+            dropDownContainerStyle={styles.dropDownContainer}
+            listMode="MODAL"
+            listItemLabelStyle={{
+              color: backgroundColors.dark,
+              fontWeight: '500',
+            }}
+            labelStyle={{
+              color: backgroundColors.dark,
+              fontSize: 16,
+            }}
+            searchable
+            searchTextInputStyle={{
+              borderWidth: 0,
+              width: '100%',
+            }}
+            searchContainerStyle={{
+              borderColor: backgroundColors.gray,
+            }}
+          />
+
+          <DropDownPicker
+            items={transformedProd}
+            open={prodOpen}
+            setOpen={setProdOpen}
+            value={prodValue}
+            setValue={setProdValue}
+            placeholder="Select Product"
+            disabled={
+              selectionMode === 'salereport' || selectionMode === 'saleSummary'
+            }
+            placeholderStyle={{color: '#666'}}
+            textStyle={{color: '#144272'}}
+            ArrowUpIconComponent={() => (
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
+            )}
+            ArrowDownIconComponent={() => (
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
+            )}
+            style={[
+              styles.dropdown,
+              (selectionMode === 'salereport' ||
+                selectionMode === 'saleSummary') &&
+                styles.dropdownDisabled,
+            ]}
+            dropDownContainerStyle={styles.dropDownContainer}
+            listMode="MODAL"
+            listItemLabelStyle={{
+              color: backgroundColors.dark,
+              fontWeight: '500',
+            }}
+            labelStyle={{
+              color: backgroundColors.dark,
+              fontSize: 16,
+            }}
+            searchable
+            searchTextInputStyle={{
+              borderWidth: 0,
+              width: '100%',
+            }}
+            searchContainerStyle={{
+              borderColor: backgroundColors.gray,
+            }}
+          />
+
+          <DropDownPicker
+            items={transformedUsers}
+            open={userOpen}
+            setOpen={setUserOpen}
+            value={userValue}
+            setValue={setUserValue}
+            placeholder="Select User"
+            placeholderStyle={{color: '#666'}}
+            textStyle={{color: '#144272'}}
+            ArrowUpIconComponent={() => (
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
+            )}
+            ArrowDownIconComponent={() => (
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
+            )}
+            style={[styles.dropdown, {zIndex: 1000}]}
+            dropDownContainerStyle={styles.dropDownContainer}
+            listMode="MODAL"
+            listItemLabelStyle={{
+              color: backgroundColors.dark,
+              fontWeight: '500',
+            }}
+            labelStyle={{
+              color: backgroundColors.dark,
+              fontSize: 16,
+            }}
+            searchable
+            searchTextInputStyle={{
+              borderWidth: 0,
+              width: '100%',
+            }}
+            searchContainerStyle={{
+              borderColor: backgroundColors.gray,
+            }}
+          />
+
           {/* Date Pickers */}
           <View style={styles.dateContainer}>
             <View style={styles.datePicker}>
@@ -542,7 +739,7 @@ export default function AllUserSale() {
                 <Text style={styles.dateText}>
                   {startDate.toLocaleDateString()}
                 </Text>
-                <Icon name="calendar" size={18} color="#144272" />
+                <Icon name="calendar" size={18} color={backgroundColors.dark} />
               </TouchableOpacity>
               {showStartDatePicker && (
                 <DateTimePicker
@@ -564,7 +761,7 @@ export default function AllUserSale() {
                 <Text style={styles.dateText}>
                   {endDate.toLocaleDateString()}
                 </Text>
-                <Icon name="calendar" size={18} color="#144272" />
+                <Icon name="calendar" size={18} color={backgroundColors.dark} />
               </TouchableOpacity>
               {showEndDatePicker && (
                 <DateTimePicker
@@ -578,152 +775,6 @@ export default function AllUserSale() {
               )}
             </View>
           </View>
-
-          {/* Radio Buttons */}
-          <View style={styles.radioContainer}>
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('salereport');
-                setCatValue('');
-                setUserValue('');
-                setProdValue('');
-              }}>
-              <RadioButton
-                value="salereport"
-                status={
-                  selectionMode === 'salereport' ? 'checked' : 'unchecked'
-                }
-                color="#144272"
-                uncheckedColor="#666"
-              />
-              <Text style={styles.radioText}>Sale Report</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('detailedsalereport');
-                setCatValue('');
-                setUserValue('');
-                setProdValue('');
-              }}>
-              <RadioButton
-                value="detailedsalereport"
-                status={
-                  selectionMode === 'detailedsalereport'
-                    ? 'checked'
-                    : 'unchecked'
-                }
-                color="#144272"
-                uncheckedColor="#666"
-              />
-              <Text style={styles.radioText}>Detailed Report</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.radioContainerSingle}>
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('saleSummary');
-                setCatValue('');
-                setUserValue('');
-                setProdValue('');
-              }}>
-              <RadioButton
-                value="saleSummary"
-                status={
-                  selectionMode === 'saleSummary' ? 'checked' : 'unchecked'
-                }
-                color="#144272"
-                uncheckedColor="#666"
-              />
-              <Text style={styles.radioText}>Sale Summary</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Dropdowns */}
-          <View style={styles.dropdownRow}>
-            <View style={styles.dropdownContainer}>
-              <DropDownPicker
-                items={transformedCategory}
-                open={catOpen}
-                setOpen={setCatOpen}
-                value={catValue}
-                setValue={setCatValue}
-                placeholder="Select Category"
-                disabled={
-                  selectionMode === 'salereport' ||
-                  selectionMode === 'saleSummary'
-                }
-                placeholderStyle={{color: '#666'}}
-                textStyle={{color: '#144272'}}
-                ArrowUpIconComponent={() => (
-                  <Icon name="chevron-up" size={18} color="#144272" />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon name="chevron-down" size={18} color="#144272" />
-                )}
-                style={[
-                  styles.dropdown,
-                  (selectionMode === 'salereport' ||
-                    selectionMode === 'saleSummary') &&
-                    styles.dropdownDisabled,
-                ]}
-                dropDownContainerStyle={styles.dropDownContainer}
-              />
-            </View>
-
-            <View style={styles.dropdownContainer}>
-              <DropDownPicker
-                items={transformedProd}
-                open={prodOpen}
-                setOpen={setProdOpen}
-                value={prodValue}
-                setValue={setProdValue}
-                placeholder="Select Product"
-                disabled={
-                  selectionMode === 'salereport' ||
-                  selectionMode === 'saleSummary'
-                }
-                placeholderStyle={{color: '#666'}}
-                textStyle={{color: '#144272'}}
-                ArrowUpIconComponent={() => (
-                  <Icon name="chevron-up" size={18} color="#144272" />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon name="chevron-down" size={18} color="#144272" />
-                )}
-                style={[
-                  styles.dropdown,
-                  (selectionMode === 'salereport' ||
-                    selectionMode === 'saleSummary') &&
-                    styles.dropdownDisabled,
-                ]}
-                dropDownContainerStyle={styles.dropDownContainer}
-              />
-            </View>
-          </View>
-
-          <DropDownPicker
-            items={transformedUsers}
-            open={userOpen}
-            setOpen={setUserOpen}
-            value={userValue}
-            setValue={setUserValue}
-            placeholder="Select User"
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
-            ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color="#144272" />
-            )}
-            ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color="#144272" />
-            )}
-            style={[styles.dropdown, {zIndex: 1000}]}
-            dropDownContainerStyle={styles.dropDownContainer}
-          />
         </View>
 
         {/* Summary Cards */}
@@ -736,11 +787,15 @@ export default function AllUserSale() {
                   <>
                     <View style={styles.innerSummaryCtx}>
                       <Text style={styles.summaryLabel}>Total Sales:</Text>
-                      <Text style={styles.summaryValue}>{totalSale}</Text>
+                      <Text style={styles.summaryValue}>
+                        {formatNumber(totalSale)}
+                      </Text>
                     </View>
                     <View style={styles.innerSummaryCtx}>
                       <Text style={styles.summaryLabel}>Total Profit:</Text>
-                      <Text style={styles.summaryValue}>{totalProfit}</Text>
+                      <Text style={styles.summaryValue}>
+                        {formatNumber(totalProfit)}
+                      </Text>
                     </View>
                   </>
                 );
@@ -756,11 +811,15 @@ export default function AllUserSale() {
                   <>
                     <View style={styles.innerSummaryCtx}>
                       <Text style={styles.summaryLabel}>Total Sales:</Text>
-                      <Text style={styles.summaryValue}>{totalSale}</Text>
+                      <Text style={styles.summaryValue}>
+                        {formatNumber(totalSale)}
+                      </Text>
                     </View>
                     <View style={styles.innerSummaryCtx}>
                       <Text style={styles.summaryLabel}>Total Profit:</Text>
-                      <Text style={styles.summaryValue}>{totalProfit}</Text>
+                      <Text style={styles.summaryValue}>
+                        {formatNumber(totalProfit)}
+                      </Text>
                     </View>
                   </>
                 );
@@ -775,112 +834,15 @@ export default function AllUserSale() {
                 return (
                   <View style={styles.innerSummaryCtx}>
                     <Text style={styles.summaryLabel}>Total Sales:</Text>
-                    <Text style={styles.summaryValue}>{totalSale}</Text>
+                    <Text style={styles.summaryValue}>
+                      {formatNumber(totalSale)}
+                    </Text>
                   </View>
                 );
               })()}
             </>
           )}
         </View>
-
-        {/* Detailed Sale Report List */}
-        {selectionMode === 'detailedsalereport' && (
-          <View style={styles.listContainer}>
-            <FlatList
-              data={paginatedDetailedData}
-              keyExtractor={(item, index) => `${item.id}-detailed-${index}`}
-              renderItem={({item}) => (
-                <View style={styles.card}>
-                  <View style={styles.headerRow}>
-                    <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {item.cust_name?.charAt(0) || 'C'}
-                      </Text>
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.productName}>{item.cust_name}</Text>
-                      <Text style={styles.subText}>
-                        Invoice: {item.sal_invoice_no}
-                      </Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.infoBox}>
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="calendar"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Date</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {new Date(item.sal_date).toLocaleDateString('en-US', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="phone"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Contact</Text>
-                      </View>
-                      <Text style={styles.valueText}>{item.cust_contact}</Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="map-marker"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Address</Text>
-                      </View>
-                      <Text style={styles.valueText}>{item.cust_address}</Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="currency-usd"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Sale</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {item.sal_total_amount}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Icon name="chart-line" size={48} color="#666" />
-                  <Text style={styles.emptyText}>
-                    No detailed sale records found.
-                  </Text>
-                </View>
-              }
-              contentContainerStyle={{paddingBottom: 70}}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        )}
 
         {/* Sale Report List */}
         {selectionMode === 'salereport' && (
@@ -890,95 +852,51 @@ export default function AllUserSale() {
               keyExtractor={(item, index) => `${item.id}-${index}`}
               renderItem={({item}) => (
                 <View style={styles.card}>
-                  <View style={styles.headerRow}>
-                    <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {item.cust_name?.charAt(0) || 'C'}
+                  {/* Avatar + Name + Actions */}
+                  <View style={styles.row}>
+                    <View>
+                      <Text style={styles.name}>{item.cust_name}</Text>
+                      <Text style={styles.subText}>
+                        <Text style={{fontWeight: '600'}}>Invoice#: </Text>
+                        {item.sal_invoice_no}
                       </Text>
                     </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.productName}>{item.cust_name}</Text>
-                      <Text style={styles.subText}>
-                        Invoice: {item.sal_invoice_no}
+
+                    <View style={[{alignSelf: 'flex-start', marginTop: 22}]}>
+                      <Text
+                        style={[
+                          styles.subText,
+                          {fontWeight: '700', verticalAlign: 'top'},
+                        ]}>
+                        <Icon name="calendar" size={12} color="#666" />{' '}
+                        {new Date(item.sal_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-') || 'N/A'}
                       </Text>
                     </View>
                   </View>
-
-                  <View style={styles.infoBox}>
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="calendar"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Date</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {new Date(item.sal_date).toLocaleDateString('en-US', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="receipt"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Order Total</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {item.sal_order_total}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="percent"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Discount</Text>
-                      </View>
-                      <Text style={styles.valueText}>{item.sal_discount}</Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="currency-usd"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Total Amount</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {item.sal_total_amount}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="trending-up"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Profit</Text>
-                      </View>
-                      <Text style={styles.valueText}>{item.sal_profit}</Text>
-                    </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      marginTop: 5,
+                    }}>
+                    <Text style={styles.subText}>
+                      <Text style={{fontWeight: '600'}}>Order Total: </Text>
+                      {formatNumber(item.sal_order_total) ?? '0'}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Text style={{fontWeight: '600'}}>Discount: </Text>
+                      {formatNumber(item.sal_discount) ?? '0'}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Text style={{fontWeight: '600'}}>Net Payable: </Text>
+                      {formatNumber(item.sal_total_amount) ?? '0'}
+                    </Text>
                   </View>
                 </View>
               )}
@@ -990,7 +908,7 @@ export default function AllUserSale() {
                   </Text>
                 </View>
               }
-              contentContainerStyle={{paddingBottom: 70}}
+              contentContainerStyle={{paddingBottom: 90}}
               showsVerticalScrollIndicator={false}
             />
           </View>
@@ -1006,47 +924,26 @@ export default function AllUserSale() {
               }
               renderItem={({item}) => (
                 <View style={styles.card}>
-                  <View style={styles.headerRow}>
-                    <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {item.sald_prod_name?.charAt(0) || 'P'}
-                      </Text>
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.productName}>
-                        {item.sald_prod_name}
+                  {/* Avatar + Name + Actions */}
+                  <View style={styles.row}>
+                    <View>
+                      <Text style={styles.name}>{item.sald_prod_name}</Text>
+                      <Text style={styles.subText}>
+                        <Text style={{fontWeight: '600'}}>Invoice#: </Text>
+                        {item.total_qty}
                       </Text>
                     </View>
                   </View>
-
-                  <View style={styles.infoBox}>
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="package-variant-closed"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Quantity</Text>
-                      </View>
-                      <Text style={styles.valueText}>{item.total_qty}</Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="currency-usd"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Sale Value</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {item.total_sale_value}
-                      </Text>
-                    </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      marginTop: 4,
+                    }}>
+                    <Text style={styles.subText}>
+                      <Text style={{fontWeight: '600'}}>Sale Value: </Text>
+                      {formatNumber(item.total_sale_value) ?? '0'}
+                    </Text>
                   </View>
                 </View>
               )}
@@ -1058,7 +955,7 @@ export default function AllUserSale() {
                   </Text>
                 </View>
               }
-              contentContainerStyle={{paddingBottom: 70}}
+              contentContainerStyle={{paddingBottom: 90}}
               showsVerticalScrollIndicator={false}
             />
           </View>
@@ -1106,62 +1003,6 @@ export default function AllUserSale() {
                 style={[
                   styles.pageButtonText,
                   currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Pagination Controls for Detailed Report */}
-        {selectionMode === 'detailedsalereport' && totalRecordsDetailed > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPageDetailed === 1}
-              onPress={() =>
-                setCurrentPageDetailed(prev => Math.max(prev - 1, 1))
-              }
-              style={[
-                styles.pageButton,
-                currentPageDetailed === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPageDetailed === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page{' '}
-                <Text style={styles.pageCurrent}>{currentPageDetailed}</Text> of{' '}
-                {totalPagesDetailed}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecordsDetailed} records
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              disabled={currentPageDetailed === totalPagesDetailed}
-              onPress={() =>
-                setCurrentPageDetailed(prev =>
-                  Math.min(prev + 1, totalPagesDetailed),
-                )
-              }
-              style={[
-                styles.pageButton,
-                currentPageDetailed === totalPagesDetailed &&
-                  styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPageDetailed === totalPagesDetailed &&
-                    styles.pageButtonTextDisabled,
                 ]}>
                 Next
               </Text>
@@ -1224,7 +1065,7 @@ export default function AllUserSale() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }
@@ -1232,22 +1073,26 @@ export default function AllUserSale() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -1259,106 +1104,118 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
 
   // Filter Container
   filterContainer: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    marginHorizontal: 15,
-    marginVertical: 10,
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    marginTop: 10,
+    marginBottom: 4,
+    marginHorizontal: 12,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
-    zIndex: 1000,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   datePicker: {
-    flex: 1,
-    marginHorizontal: 5,
+    width: '48%',
   },
   dateLabel: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: '600',
     marginBottom: 5,
     fontSize: 14,
   },
   dateButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+    height: 48,
   },
   dateText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
   radioContainer: {
     flexDirection: 'row',
-    width: '75%',
     justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  radioContainerSingle: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    marginBottom: 10,
+    width: '70%',
+    marginBottom: 6,
   },
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   radioText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     marginLeft: -5,
     fontWeight: '500',
   },
-  dropdownRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  dropdown: {
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+    height: 48,
     marginBottom: 10,
   },
-  dropdownContainer: {
-    width: '48%',
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: '#144272',
-    minHeight: 40,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff',
-  },
   dropdownDisabled: {
-    backgroundColor: '#9a9a9a48',
+    backgroundColor: '#dfdfdfff',
     borderColor: '#ccc',
   },
   dropDownContainer: {
-    backgroundColor: '#fff',
-    borderColor: '#144272',
-    zIndex: 3000,
+    backgroundColor: 'white',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    maxHeight: 200,
   },
 
-  // Summary Container Styling
+  // Summary Container
   summaryContainer: {
-    paddingHorizontal: 15,
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    marginHorizontal: 15,
-    borderRadius: 12,
-    paddingVertical: 10,
+    marginHorizontal: 12,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 14,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
+    marginBottom: 4,
   },
   innerSummaryCtx: {
     flexDirection: 'row',
@@ -1367,111 +1224,64 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   summaryLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 14,
+    color: '#555',
     fontWeight: '500',
   },
   summaryValue: {
     fontSize: 16,
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: 'bold',
   },
 
-  // Flat List Styling
+  // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
+    marginTop: 4,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    zIndex: 1000,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    justifyContent: 'space-between',
   },
-  avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  productName: {
+  name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
-    flexWrap: 'wrap',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: backgroundColors.dark,
     marginTop: 2,
-  },
-  infoBox: {
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-    flex: 1,
-  },
-  infoIcon: {
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '50%',
-    textAlign: 'right',
-    fontWeight: '500',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 50,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginHorizontal: 20,
+    borderRadius: 15,
+    width: '96%',
+    alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
-    color: '#666',
-    fontSize: 16,
     marginTop: 10,
-    fontWeight: '500',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Pagination Styling
@@ -1481,7 +1291,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -1494,7 +1304,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.info,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -1508,7 +1318,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: backgroundColors.light,
     fontWeight: '600',
     fontSize: 14,
   },

@@ -3,9 +3,9 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -168,18 +168,18 @@ export default function BelowReorderProducts() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Reorder Level Products</Text>
+            <Text style={styles.headerTitle}>Reorder Level Product</Text>
           </View>
 
           <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
@@ -193,31 +193,36 @@ export default function BelowReorderProducts() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Avatar + Name + Details */}
+                {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.prod_name?.charAt(0) || 'P'}
-                    </Text>
+                    <Image
+                      source={require('../../../../assets/product.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
-                    <Text style={styles.name}>{item.prod_name}</Text>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.name}>{item.prod_name}</Text>
+                      <View style={styles.catBadge}>
+                        <Text style={styles.badgeText}>{item.pcat_name}</Text>
+                      </View>
+                    </View>
+                    {/* small details inline */}
                     <Text style={styles.subText}>
-                      <Icon name="counter" size={12} color="#666" />{' '}
-                      {item.pcat_name || 'N/A'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="counter" size={12} color="#666" />{' '}
-                      {item.prod_qty || 'No category'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="autorenew" size={12} color="#666" />{' '}
-                      {item.prod_reorder_qty || 'N/A'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="cash" size={12} color="#666" />{' '}
+                      <Text style={styles.label}>Cost Price: </Text>
+                      {item.prod_costprice} |{' '}
+                      <Text style={styles.label}>Retail Price: </Text>
                       {item.prod_fretailprice}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Text style={styles.label}>Reorder QTY: </Text>
+                      {item.prod_reorder_qty}
                     </Text>
                   </View>
                 </View>
@@ -229,7 +234,7 @@ export default function BelowReorderProducts() {
                 <Text style={styles.emptyText}>No products found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 90, marginTop: 10}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -280,7 +285,7 @@ export default function BelowReorderProducts() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -288,22 +293,26 @@ export default function BelowReorderProducts() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -314,6 +323,9 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+  },
+  gradientBackground: {
+    flex: 1,
   },
 
   // Pagination Styling
@@ -336,7 +348,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -379,19 +391,21 @@ const styles = StyleSheet.create({
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
+    marginTop: 10,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -401,35 +415,50 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
   },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+  avatar: {
+    height: 45,
+    width: 45,
   },
   name: {
     fontSize: 16,
     fontWeight: '600',
     color: '#144272',
   },
+  catBadge: {
+    backgroundColor: '#e8f0fe',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: backgroundColors.primary,
+  },
+  badgeText: {
+    fontSize: 12,
+    color: backgroundColors.primary,
+    fontWeight: '500',
+  },
   subText: {
     fontSize: 12,
     color: '#555',
     marginTop: 2,
   },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: backgroundColors.dark,
+  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '75%',
-    backgroundColor: '#fff',
     borderRadius: 15,
-    marginTop: 8,
     width: '96%',
     alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,

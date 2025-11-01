@@ -6,6 +6,7 @@ import {
   ImageBackground,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -17,6 +18,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
+import backgroundColors from '../../Colors';
 
 interface ProfitLoss {
   expences: string;
@@ -176,30 +178,29 @@ export default function ProfitLossReport() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
-        {/* Modern Header */}
+      <View style={styles.gradientBackground}>
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Profit Loss Report</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="white" />
+          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
         <ScrollView style={styles.scrollContainer}>
           {/* Filter Section */}
           <View style={styles.filterContainer}>
-            <Text style={styles.filterTitle}>Select Date Range</Text>
-
             {/* Date Pickers */}
             <View style={styles.dateContainer}>
               <View style={styles.datePicker}>
@@ -210,7 +211,11 @@ export default function ProfitLossReport() {
                   <Text style={styles.dateText}>
                     {startDate.toLocaleDateString()}
                   </Text>
-                  <Icon name="calendar" size={18} color="#144272" />
+                  <Icon
+                    name="calendar"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 </TouchableOpacity>
                 {showStartDatePicker && (
                   <DateTimePicker
@@ -232,7 +237,11 @@ export default function ProfitLossReport() {
                   <Text style={styles.dateText}>
                     {endDate.toLocaleDateString()}
                   </Text>
-                  <Icon name="calendar" size={18} color="#144272" />
+                  <Icon
+                    name="calendar"
+                    size={18}
+                    color={backgroundColors.dark}
+                  />
                 </TouchableOpacity>
                 {showEndDatePicker && (
                   <DateTimePicker
@@ -250,46 +259,55 @@ export default function ProfitLossReport() {
 
           {/* Profit Loss Summary Cards */}
           <View style={styles.summaryContainer}>
-            <Text style={styles.summaryTitle}>Financial Summary</Text>
+            <Text style={styles.summaryTitle}>Profit & Loss Report</Text>
 
-            {/* Sale Profit Card */}
+            <Image
+              source={require('../../../assets/profit_loss.png')}
+              resizeMode="contain"
+              style={styles.profitLossPng}
+            />
+
             <View style={styles.summaryCard}>
-              <View style={styles.cardHeader}>
-                <Icon name="trending-up" size={24} color="#4CAF50" />
-                <Text style={styles.cardTitle}>Sale Profit</Text>
-              </View>
-              <Text style={styles.cardValue}>Rs. {saleProfit.toFixed(2)}</Text>
+              <Text style={styles.cardTitle}>HEADS</Text>
+              <Text style={styles.cardTitle}>AMOUNT</Text>
             </View>
-
-            {/* Sale Return Loss Card */}
-            <View style={styles.summaryCard}>
-              <View style={styles.cardHeader}>
-                <Icon name="undo" size={24} color="#FF9800" />
-                <Text style={styles.cardTitle}>Sale Return Profit</Text>
-              </View>
-              <Text style={[styles.cardValue]}>
-                Rs. {saleReturnProfit.toFixed(2)}
+            <View style={styles.summaryInnerCard}>
+              <Text style={styles.innerCardTitle}>Sale Profit</Text>
+              <Text
+                style={[styles.innerCardTitle, {color: backgroundColors.info}]}>
+                {saleProfit.toFixed(2)}
               </Text>
             </View>
-
-            {/* Expenses Card */}
-            <View style={styles.summaryCard}>
-              <View style={styles.cardHeader}>
-                <Icon name="cash-minus" size={24} color="#F44336" />
-                <Text style={styles.cardTitle}>Expenses</Text>
-              </View>
-              <Text style={[styles.cardValue]}>Rs. {expenses.toFixed(2)}</Text>
+            <View style={styles.summaryInnerCard}>
+              <Text style={styles.innerCardTitle}>Sale Return Profit</Text>
+              <Text
+                style={[styles.innerCardTitle, {color: backgroundColors.info}]}>
+                {saleReturnProfit.toFixed(2)}
+              </Text>
             </View>
-
-            {/* Net Profit Card */}
-            <View style={[styles.summaryCard, styles.netProfitCard]}>
-              <View style={styles.cardHeader}>
-                <Icon name={'cash-check'} size={24} color={'#4CAF50'} />
-                <Text style={[styles.cardTitle, styles.netProfitTitle]}>
-                  Net Profit
-                </Text>
-              </View>
-              <Text style={[styles.cardValue]}>Rs. {netProfit}</Text>
+            <View style={styles.summaryInnerCard}>
+              <Text style={styles.innerCardTitle}>Expenses</Text>
+              <Text
+                style={[
+                  styles.innerCardTitle,
+                  {color: backgroundColors.danger},
+                ]}>
+                {expenses.toFixed(2)}
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.summaryInnerCard,
+                {borderBottomWidth: 0, marginBottom: 50},
+              ]}>
+              <Text style={styles.innerCardTitle}>Net Profit</Text>
+              <Text
+                style={[
+                  styles.innerCardTitle,
+                  {color: backgroundColors.success},
+                ]}>
+                {netProfit.toFixed(2)}
+              </Text>
             </View>
           </View>
 
@@ -297,7 +315,7 @@ export default function ProfitLossReport() {
         </ScrollView>
 
         <Toast />
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }
@@ -305,22 +323,26 @@ export default function ProfitLossReport() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -332,109 +354,120 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
+
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
   },
 
   // Filter Container
   filterContainer: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    marginVertical: 10,
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    marginTop: 10,
+    marginBottom: 4,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
-  },
-  filterTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 15,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginBottom: 8,
   },
   datePicker: {
-    flex: 1,
-    marginHorizontal: 5,
+    width: '48%',
   },
   dateLabel: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: '600',
     marginBottom: 5,
     fontSize: 14,
   },
   dateButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+    height: 48,
   },
   dateText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
 
   // Summary Container
   summaryContainer: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    padding: 20,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 16,
-  },
-  summaryCard: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 14,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
+    marginBottom: 4,
   },
-  netProfitCard: {
-    borderWidth: 2,
-    borderColor: '#4CAF50',
+  summaryTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: backgroundColors.dark,
+    textAlign: 'center',
   },
-  cardHeader: {
+  profitLossPng: {
+    width: 250,
+    height: 250,
+
+    alignSelf: 'center',
+  },
+  summaryCard: {
+    backgroundColor: 'rgba(0,0,0,0.15)',
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    marginBottom: 12,
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+  },
+  summaryInnerCard: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    borderBottomWidth: 0.6,
+    borderBottomColor: '#999',
   },
   cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: backgroundColors.dark,
+  },
+  innerCardTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#144272',
-    marginLeft: 8,
-  },
-  netProfitTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  cardValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#144272',
-    textAlign: 'right',
+    color: backgroundColors.dark,
   },
 });

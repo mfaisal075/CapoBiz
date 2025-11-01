@@ -6,6 +6,7 @@ import {
   ImageBackground,
   TouchableOpacity,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -232,11 +233,7 @@ export default function PurchaseReturnStock() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <LinearGradient
-        colors={[backgroundColors.primary, backgroundColors.secondary]}
-        style={styles.gradientBackground}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
@@ -265,13 +262,25 @@ export default function PurchaseReturnStock() {
             placeholderStyle={{color: '#666'}}
             textStyle={{color: '#144272'}}
             ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color="#144272" />
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color="#144272" />
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
             )}
             style={styles.dropdown}
             dropDownContainerStyle={styles.dropDownContainer}
+            listItemLabelStyle={{
+              color: backgroundColors.dark,
+              fontWeight: '500',
+            }}
+            labelStyle={{
+              color: backgroundColors.dark,
+              fontSize: 16,
+            }}
           />
 
           {/* Date Pickers */}
@@ -284,7 +293,7 @@ export default function PurchaseReturnStock() {
                 <Text style={styles.dateText}>
                   {startDate.toLocaleDateString()}
                 </Text>
-                <Icon name="calendar" size={18} color="#144272" />
+                <Icon name="calendar" size={18} color={backgroundColors.dark} />
               </TouchableOpacity>
               {showStartDatePicker && (
                 <DateTimePicker
@@ -306,7 +315,7 @@ export default function PurchaseReturnStock() {
                 <Text style={styles.dateText}>
                   {endDate.toLocaleDateString()}
                 </Text>
-                <Icon name="calendar" size={18} color="#144272" />
+                <Icon name="calendar" size={18} color={backgroundColors.dark} />
               </TouchableOpacity>
               {showEndDatePicker && (
                 <DateTimePicker
@@ -329,35 +338,42 @@ export default function PurchaseReturnStock() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Avatar + Name + Details */}
+                {/* Avatar + Name + Actions */}
                 <View style={styles.row}>
                   <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.prod_name?.charAt(0) || 'P'}
-                    </Text>
+                    <Image
+                      source={require('../../../../assets/product.png')}
+                      style={styles.avatar}
+                    />
                   </View>
 
                   <View style={{flex: 1}}>
-                    <Text style={styles.name}>{item.prod_name}</Text>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.name}>{item.prod_name}</Text>
+                      <View style={styles.catBadge}>
+                        <Text style={styles.badgeText}>{statusVal}</Text>
+                      </View>
+                    </View>
+                    {/* small details inline */}
                     <Text style={styles.subText}>
-                      <Icon name="receipt" size={12} color="#666" />{' '}
-                      {item.stkm_invoice_no || 'No Invoice'}
+                      <Text style={styles.label}>Invoice: </Text>
+                      {item.stkm_invoice_no} |{' '}
+                      <Text style={styles.label}>QTY: </Text>
+                      {item.stkm_qty}
                     </Text>
                     <Text style={styles.subText}>
-                      <Icon name="cube-outline" size={12} color="#666" />{' '}
-                      {item.stkm_qty || '0'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="cash" size={12} color="#666" />{' '}
-                      {item.stkm_cost_price}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="calendar" size={12} color="#666" />{' '}
-                      {new Date(item.created_at).toLocaleDateString('en-US', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                      <Text style={styles.label}>Date: </Text>
+                      {new Date(item.created_at)
+                        .toLocaleDateString('en-GB', {
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                        })
+                        .replace(/ /g, '-')}
                     </Text>
                   </View>
                 </View>
@@ -420,7 +436,7 @@ export default function PurchaseReturnStock() {
             </TouchableOpacity>
           </View>
         )}
-      </LinearGradient>
+      </View>
     </SafeAreaView>
   );
 }
@@ -428,22 +444,26 @@ export default function PurchaseReturnStock() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -455,60 +475,81 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
+
+  // Filter Container
   filterContainer: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    marginHorizontal: 15,
-    marginVertical: 10,
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    marginTop: 10,
+    marginHorizontal: 12,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
-    zIndex: 1000,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
+
+  // Dropdown
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#144272',
-    minHeight: 40,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff',
-    marginBottom: 15,
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    marginBottom: 6,
   },
   dropDownContainer: {
-    backgroundColor: '#fff',
-    borderColor: '#144272',
-    zIndex: 3000,
+    backgroundColor: 'white',
+    borderColor: 'rgba(0,0,0,0.3)',
+    borderRadius: 10,
+    maxHeight: 200,
   },
+
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
   datePicker: {
-    flex: 1,
-    marginHorizontal: 5,
+    width: '48%',
   },
   dateLabel: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: '600',
     marginBottom: 5,
     fontSize: 14,
   },
   dateButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
   },
   dateText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
@@ -516,19 +557,21 @@ const styles = StyleSheet.create({
   // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
+    marginTop: 10,
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
     borderRadius: 10,
-    marginVertical: 4,
-    marginHorizontal: 8,
+    marginVertical: 5,
     padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    shadowOffset: {width: 0, height: 1},
-    elevation: 1,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
@@ -538,35 +581,50 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#144272',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
   },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+  avatar: {
+    height: 45,
+    width: 45,
   },
   name: {
     fontSize: 16,
     fontWeight: '600',
     color: '#144272',
   },
+  catBadge: {
+    backgroundColor: '#e8f0fe',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: backgroundColors.primary,
+  },
+  badgeText: {
+    fontSize: 12,
+    color: backgroundColors.primary,
+    fontWeight: '500',
+  },
   subText: {
     fontSize: 12,
     color: '#555',
     marginTop: 2,
   },
+  label: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: backgroundColors.dark,
+  },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: '75%',
-    backgroundColor: '#fff',
     borderRadius: 15,
-    marginTop: 8,
     width: '96%',
     alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
@@ -574,6 +632,7 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
   },
+
   paginationContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -593,7 +652,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: backgroundColors.secondary,
+    backgroundColor: backgroundColors.info,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,

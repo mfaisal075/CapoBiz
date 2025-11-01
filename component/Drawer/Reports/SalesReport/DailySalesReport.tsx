@@ -6,6 +6,7 @@ import {
   ImageBackground,
   TouchableOpacity,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -17,6 +18,7 @@ import BASE_URL from '../../../BASE_URL';
 import RNPrint from 'react-native-print';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../../CTX/UserContext';
+import backgroundColors from '../../../Colors';
 
 interface ProductDropdown {
   id: number;
@@ -346,22 +348,23 @@ export default function DailySaleReport() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Daily Sale Report</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="white" />
+          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -380,28 +383,25 @@ export default function DailySaleReport() {
                 status={
                   selectionMode === 'salereport' ? 'checked' : 'unchecked'
                 }
-                color="#144272"
-                uncheckedColor="#666"
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
               />
               <Text style={styles.radioText}>Daily Sale Report</Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('detailedsalereport');
-              }}>
+              style={[styles.radioButton, {opacity: 0.5}]}
+              disabled={true}>
               <RadioButton
                 value="detailedsalereport"
-                status={
-                  selectionMode === 'detailedsalereport'
-                    ? 'checked'
-                    : 'unchecked'
-                }
-                color="#144272"
-                uncheckedColor="#666"
+                status={'unchecked'}
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
+                disabled={true}
               />
-              <Text style={styles.radioText}>Detailed Daily Sale Report</Text>
+              <Text style={[styles.radioText, {color: '#999'}]}>
+                Detailed Daily Sale Report
+              </Text>
             </TouchableOpacity>
           </View>
 
@@ -417,16 +417,37 @@ export default function DailySaleReport() {
             placeholderStyle={{color: '#666'}}
             textStyle={{color: '#144272'}}
             ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color="#144272" />
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color="#144272" />
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
             )}
             style={[
               styles.dropdown,
               selectionMode === 'salereport' && styles.dropdownDisabled,
             ]}
             dropDownContainerStyle={styles.dropDownContainer}
+            listMode="MODAL"
+            listItemLabelStyle={{
+              color: backgroundColors.dark,
+              fontWeight: '500',
+            }}
+            labelStyle={{
+              color: backgroundColors.dark,
+              fontSize: 16,
+            }}
+            searchable
+            searchTextInputStyle={{
+              borderWidth: 0,
+              width: '100%',
+            }}
+            searchContainerStyle={{
+              borderColor: backgroundColors.gray,
+            }}
           />
 
           <DropDownPicker
@@ -440,10 +461,14 @@ export default function DailySaleReport() {
             placeholderStyle={{color: '#666'}}
             textStyle={{color: '#144272'}}
             ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color="#144272" />
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color="#144272" />
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
             )}
             style={[
               styles.dropdown,
@@ -451,6 +476,23 @@ export default function DailySaleReport() {
               selectionMode === 'salereport' && styles.dropdownDisabled,
             ]}
             dropDownContainerStyle={styles.dropDownContainer}
+            listMode="MODAL"
+            listItemLabelStyle={{
+              color: backgroundColors.dark,
+              fontWeight: '500',
+            }}
+            labelStyle={{
+              color: backgroundColors.dark,
+              fontSize: 16,
+            }}
+            searchable
+            searchTextInputStyle={{
+              borderWidth: 0,
+              width: '100%',
+            }}
+            searchContainerStyle={{
+              borderColor: backgroundColors.gray,
+            }}
           />
         </View>
 
@@ -481,140 +523,51 @@ export default function DailySaleReport() {
               keyExtractor={(item, index) => index.toString()}
               renderItem={({item}) => (
                 <View style={styles.card}>
-                  {/* Header Row */}
-                  <View style={styles.headerRow}>
-                    <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {item.cust_name?.charAt(0) || 'C'}
-                      </Text>
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.productName}>{item.cust_name}</Text>
-                      <Text style={styles.invcName}>{item.sal_invoice_no}</Text>
-                    </View>
-                  </View>
-
-                  {/* Info Section */}
-                  <View style={styles.infoBox}>
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="receipt"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Invoice</Text>
-                      </View>
-                      <Text style={styles.valueText}>
+                  {/* Avatar + Name + Actions */}
+                  <View style={styles.row}>
+                    <View>
+                      <Text style={styles.name}>{item.cust_name}</Text>
+                      <Text style={styles.subText}>
+                        <Text style={{fontWeight: '600'}}>Invoice#: </Text>
                         {item.sal_invoice_no}
                       </Text>
                     </View>
 
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="calendar"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Date</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {new Date(item.sal_date).toLocaleDateString('en-US', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })}
+                    <View style={[{alignSelf: 'flex-start', marginTop: 22}]}>
+                      <Text
+                        style={[
+                          styles.subText,
+                          {fontWeight: '700', verticalAlign: 'top'},
+                        ]}>
+                        <Icon name="calendar" size={12} color="#666" />{' '}
+                        {new Date(item.sal_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-') || 'N/A'}
                       </Text>
                     </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="cart"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Order Total</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {item.sal_order_total}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="sale"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Discount</Text>
-                      </View>
-                      <Text style={styles.valueText}>{item.sal_discount}</Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="cash-multiple"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Total Amount</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {item.sal_total_amount}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="check-decagram"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Paid</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {item.sal_payment_amount}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="wallet"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Balance</Text>
-                      </View>
-                      <Text style={styles.valueText}>
-                        {item.sal_change_amount}
-                      </Text>
-                    </View>
-
-                    <View style={styles.infoRow}>
-                      <View style={styles.labelRow}>
-                        <Icon
-                          name="trending-up"
-                          size={18}
-                          color="#144272"
-                          style={styles.infoIcon}
-                        />
-                        <Text style={styles.labelText}>Profit</Text>
-                      </View>
-                      <Text style={styles.valueText}>{item.sal_profit}</Text>
-                    </View>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      marginTop: 5,
+                    }}>
+                    <Text style={styles.subText}>
+                      <Text style={{fontWeight: '600'}}>Order Total: </Text>
+                      {item.sal_order_total ?? '0'}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Text style={{fontWeight: '600'}}>Discount: </Text>
+                      {item.sal_discount ?? '0'}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Text style={{fontWeight: '600'}}>Net Payable: </Text>
+                      {item.sal_total_amount ?? '0'}
+                    </Text>
                   </View>
                 </View>
               )}
@@ -624,19 +577,18 @@ export default function DailySaleReport() {
                   <Text style={styles.emptyText}>No record found.</Text>
                 </View>
               }
-              contentContainerStyle={{paddingBottom: 70}}
+              contentContainerStyle={{paddingBottom: 90}}
               showsVerticalScrollIndicator={false}
             />
           </View>
         )}
-        {selectionMode === 'detailedsalereport' && (
+        {/* {selectionMode === 'detailedsalereport' && (
           <View style={styles.listContainer}>
             <FlatList
               data={paginatedDataDetailed}
               keyExtractor={(item, index) => index.toString()}
               renderItem={({item}) => (
                 <View style={styles.card}>
-                  {/* Header Row */}
                   <View style={styles.headerRow}>
                     <View style={styles.avatarBox}>
                       <Text style={styles.avatarText}>
@@ -651,7 +603,6 @@ export default function DailySaleReport() {
                     </View>
                   </View>
 
-                  {/* Info Section */}
                   <View style={styles.infoBox}>
                     <View style={styles.infoRow}>
                       <View style={styles.labelRow}>
@@ -725,7 +676,7 @@ export default function DailySaleReport() {
               showsVerticalScrollIndicator={false}
             />
           </View>
-        )}
+        )} */}
 
         {/* Pagination Controls */}
         {selectionMode === 'salereport' && totalRecords > 0 && (
@@ -776,7 +727,7 @@ export default function DailySaleReport() {
           </View>
         )}
 
-        {selectionMode === 'detailedsalereport' && totalRecordsSingle > 0 && (
+        {/* {selectionMode === 'detailedsalereport' && totalRecordsSingle > 0 && (
           <View style={styles.paginationContainer}>
             <TouchableOpacity
               disabled={currentPageSingle === 1}
@@ -828,8 +779,8 @@ export default function DailySaleReport() {
               </Text>
             </TouchableOpacity>
           </View>
-        )}
-      </ImageBackground>
+        )} */}
+      </View>
     </SafeAreaView>
   );
 }
@@ -837,22 +788,26 @@ export default function DailySaleReport() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -864,63 +819,82 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
 
   // Filter Container
   filterContainer: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    marginHorizontal: 15,
-    marginVertical: 10,
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    marginTop: 10,
+    marginBottom: 4,
+    marginHorizontal: 12,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
-    zIndex: 1000,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   radioContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '95%',
-    marginBottom: 10,
+    width: '70%',
+    marginBottom: 6,
   },
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   radioText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     marginLeft: -5,
     fontWeight: '500',
   },
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#144272',
-    minHeight: 40,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+    height: 48,
     marginBottom: 10,
   },
   dropdownDisabled: {
-    backgroundColor: '#9a9a9a48',
+    backgroundColor: '#dfdfdfff',
     borderColor: '#ccc',
   },
   dropDownContainer: {
-    backgroundColor: '#fff',
-    borderColor: '#144272',
-    zIndex: 3000,
+    backgroundColor: 'white',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    maxHeight: 200,
   },
 
-  //Summary Container Styling
+  // Summary Container
   summaryContainer: {
-    paddingHorizontal: 15,
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    marginHorizontal: 15,
-    borderRadius: 12,
-    paddingVertical: 10,
+    marginHorizontal: 12,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 14,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
+    marginBottom: 4,
   },
   innerSummaryCtx: {
     flexDirection: 'row',
@@ -929,13 +903,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   summaryLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 14,
+    color: '#555',
     fontWeight: '500',
   },
   summaryValue: {
     fontSize: 16,
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: 'bold',
   },
 
@@ -999,105 +973,53 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
 
-  // Flat List Styling
+  // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
+    marginTop: 4,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    zIndex: 1000,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    justifyContent: 'space-between',
   },
-  avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  productName: {
+  name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
-    flexWrap: 'wrap',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: backgroundColors.dark,
     marginTop: 2,
-  },
-  infoBox: {
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-    flex: 1,
-  },
-  infoIcon: {
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '50%',
-    textAlign: 'right',
-    fontWeight: '500',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 50,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginHorizontal: 20,
+    borderRadius: 15,
+    width: '96%',
+    alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
-    color: '#666',
-    fontSize: 16,
     marginTop: 10,
-    fontWeight: '500',
-  },
-  invcName: {
-    fontSize: 12,
-    color: 'gray',
-    flexWrap: 'wrap',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 });
