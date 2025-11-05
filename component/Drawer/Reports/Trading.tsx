@@ -3,9 +3,9 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -15,6 +15,9 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import RNPrint from 'react-native-print';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
+import backgroundColors from '../../Colors';
+import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 interface TradeDetails {
   id: number;
@@ -31,8 +34,28 @@ interface TradeDetails {
 
 export default function TradingReport() {
   const {openDrawer} = useDrawer();
+  const {token} = useUser();
   const {bussName, bussAddress} = useUser();
   const [tradeDetails, setTradeDetails] = useState<TradeDetails[]>([]);
+  const [startDate, setStartDate] = useState(new Date());
+  const [endDate, setEndDate] = useState(new Date());
+  const [showStartDatePicker, setShowStartDatePicker] = useState(false);
+  const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+
+  const onStartDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    const currentDate = selectedDate || startDate;
+    setShowStartDatePicker(false);
+    setStartDate(currentDate);
+  };
+
+  const onEndDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
+    const currentDate = selectedDate || endDate;
+    setShowEndDatePicker(false);
+    setEndDate(currentDate);
+  };
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -155,7 +178,11 @@ export default function TradingReport() {
   // Fetch Trade Details
   const fetchTradeDetails = async () => {
     try {
-      const res = await axios.get(`${BASE_URL}/fetchalltradereport`);
+      const from = startDate.toISOString().split('T')[0];
+      const to = endDate.toISOString().split('T')[0];
+      const res = await axios.get(
+        `${BASE_URL}/fetchalltradereport?from=${from}&to=${to}&_token=${token}`,
+      );
       setTradeDetails(res.data.detail);
     } catch (error) {
       console.log(error);
@@ -164,27 +191,92 @@ export default function TradingReport() {
 
   useEffect(() => {
     fetchTradeDetails();
-  }, []);
+  }, [startDate, endDate]);
+
+  function formatNumber(num: number | string): string {
+    const n = typeof num === 'string' ? parseFloat(num) : num;
+    if (isNaN(n)) return '0';
+
+    const abs = Math.abs(n);
+
+    if (abs >= 10000000) {
+      return (n / 10000000).toFixed(n % 10000000 === 0 ? 0 : 2) + 'Cr';
+    } else if (abs >= 100000) {
+      return (n / 100000).toFixed(n % 100000 === 0 ? 0 : 2) + 'L';
+    } else if (abs >= 1000) {
+      return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2) + 'K';
+    } else {
+      return n.toString();
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Trading Report</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="white" />
+          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        {/* Date Pickers */}
+        <View style={styles.dateContainer}>
+          <View style={styles.datePicker}>
+            <Text style={styles.dateLabel}>From:</Text>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => setShowStartDatePicker(true)}>
+              <Text style={styles.dateText}>
+                {startDate.toLocaleDateString()}
+              </Text>
+              <Icon name="calendar" size={18} color={backgroundColors.dark} />
+            </TouchableOpacity>
+            {showStartDatePicker && (
+              <DateTimePicker
+                testID="startDatePicker"
+                value={startDate}
+                mode="date"
+                is24Hour={true}
+                display="default"
+                onChange={onStartDateChange}
+              />
+            )}
+          </View>
+
+          <View style={styles.datePicker}>
+            <Text style={styles.dateLabel}>To:</Text>
+            <TouchableOpacity
+              style={styles.dateButton}
+              onPress={() => setShowEndDatePicker(true)}>
+              <Text style={styles.dateText}>
+                {endDate.toLocaleDateString()}
+              </Text>
+              <Icon name="calendar" size={18} color={backgroundColors.dark} />
+            </TouchableOpacity>
+            {showEndDatePicker && (
+              <DateTimePicker
+                testID="endDatePicker"
+                value={endDate}
+                mode="date"
+                is24Hour={true}
+                display="default"
+                onChange={onEndDateChange}
+              />
+            )}
+          </View>
         </View>
 
         <View style={styles.listContainer}>
@@ -193,143 +285,44 @@ export default function TradingReport() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.trad_invoice_no?.charAt(0) || 'T'}
-                    </Text>
-                  </View>
-                  <View style={{flex: 1}}>
-                    <Text style={styles.productName}>
-                      {item.trad_invoice_no}
-                    </Text>
-                  </View>
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
+                  <Text style={styles.name}>{item.trad_invoice_no}</Text>
+
+                  <Text style={[styles.subValue, {verticalAlign: 'top'}]}>
+                    {item.trad_date
+                      ? new Date(item.trad_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')
+                      : 'N/A'}
+                  </Text>
                 </View>
-
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="account"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Supplier</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.sup_name ?? 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="account"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Customer</Text>
-                    </View>
-                    <Text style={styles.valueText}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    marginTop: 5,
+                  }}>
+                  <View>
+                    <Text style={styles.subText}>Customer: </Text>
+                    <Text style={styles.subValue}>
                       {item.cust_name ?? 'N/A'}
                     </Text>
                   </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="identifier"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Ref No.</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.trad_ref_no ?? 'N/A'}
+                  <View>
+                    <Text style={styles.subText}>Supplier: </Text>
+                    <Text style={styles.subValue}>
+                      {item.sup_name ?? 'N/A'}
                     </Text>
                   </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="calendar"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Date</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {new Date(item.trad_date).toLocaleDateString('en-US', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="cash"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Cost</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.trad_total_cost ?? '--'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="sale"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Sale</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.trad_total_sale ?? '--'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="trending-up"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Profit</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.trad_profit ?? '--'}
-                    </Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="cash-multiple"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Trade Total</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.trad_payable ?? '--'}
+                  <View>
+                    <Text style={styles.subText}>Profit: </Text>
+                    <Text style={styles.subValue}>
+                      {formatNumber(item.trad_profit) ?? '0'}
                     </Text>
                   </View>
                 </View>
@@ -341,7 +334,7 @@ export default function TradingReport() {
                 <Text style={styles.emptyText}>No record found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 70}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -392,7 +385,7 @@ export default function TradingReport() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }
@@ -400,22 +393,26 @@ export default function TradingReport() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -427,102 +424,102 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-
-  // Flat List Styling
-  listContainer: {
+  gradientBackground: {
     flex: 1,
-    paddingHorizontal: 8,
   },
-  card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    zIndex: 1000,
+
+  // Date Filter
+  dateContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+    marginTop: 10,
+    paddingHorizontal: 12,
   },
-  headerRow: {
+  datePicker: {
+    width: '48%',
+  },
+  dateLabel: {
+    color: backgroundColors.dark,
+    fontWeight: '600',
+    marginBottom: 5,
+    fontSize: 14,
+  },
+  dateButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  avatarBox: {
-    width: 48,
+    justifyContent: 'space-between',
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
     height: 48,
-    borderRadius: 24,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
+  },
+  dateText: {
+    color: backgroundColors.dark,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+
+  // FlatList Styling
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: '3%',
+  },
+  card: {
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
+  },
+  row: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    justifyContent: 'space-between',
   },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  productName: {
+  name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
-    flexWrap: 'wrap',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  infoBox: {
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-    flex: 1,
-  },
-  infoIcon: {
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '50%',
-    textAlign: 'right',
+    color: 'rgba(0,0,0,0.5)',
     fontWeight: '500',
+  },
+  subValue: {
+    fontSize: 13,
+    color: backgroundColors.dark,
+    fontWeight: '600',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 50,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginHorizontal: 20,
+    borderRadius: 15,
+    width: '96%',
+    alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
-    color: '#666',
-    fontSize: 16,
     marginTop: 10,
-    fontWeight: '500',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Pagination Styling
@@ -532,7 +529,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -545,7 +542,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.info,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -559,7 +556,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: backgroundColors.light,
     fontWeight: '600',
     fontSize: 14,
   },

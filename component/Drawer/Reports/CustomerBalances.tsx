@@ -3,9 +3,9 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -17,6 +17,7 @@ import {RadioButton} from 'react-native-paper';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
+import backgroundColors from '../../Colors';
 
 type TabType = 'receivables' | 'payables' | 'balances';
 
@@ -315,24 +316,42 @@ export default function CustomerBalances() {
     setCurrentPage(1); // Reset to first page when data changes
   }, [custValue, areaValue, selectedTab, selectionMode]);
 
+  function formatNumber(num: number | string): string {
+    const n = typeof num === 'string' ? parseFloat(num) : num;
+    if (isNaN(n)) return '0';
+
+    const abs = Math.abs(n);
+
+    if (abs >= 10000000) {
+      return (n / 10000000).toFixed(n % 10000000 === 0 ? 0 : 2) + 'Cr';
+    } else if (abs >= 100000) {
+      return (n / 100000).toFixed(n % 100000 === 0 ? 0 : 2) + 'L';
+    } else if (abs >= 1000) {
+      return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2) + 'K';
+    } else {
+      return n.toString();
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Customer Balances</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="white" />
+          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -372,8 +391,8 @@ export default function CustomerBalances() {
                 status={
                   selectionMode === 'allCustomers' ? 'checked' : 'unchecked'
                 }
-                color="#144272"
-                uncheckedColor="#666"
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
               />
               <Text style={styles.radioText}>All Customers</Text>
             </TouchableOpacity>
@@ -389,86 +408,126 @@ export default function CustomerBalances() {
                 status={
                   selectionMode === 'singleCustomer' ? 'checked' : 'unchecked'
                 }
-                color="#144272"
-                uncheckedColor="#666"
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
               />
               <Text style={styles.radioText}>Single Customer</Text>
             </TouchableOpacity>
           </View>
 
           {/* Dropdowns */}
-          <View style={styles.dropdownRow}>
-            <View style={styles.dropdownWrapper}>
-              <DropDownPicker
-                items={transformedCustomer}
-                open={custOpen}
-                setOpen={setCustOpen}
-                value={custValue}
-                setValue={setCustValue}
-                placeholder="Select Customer"
-                disabled={selectionMode === 'allCustomers'}
-                placeholderStyle={{color: '#666'}}
-                textStyle={{color: '#144272'}}
-                ArrowUpIconComponent={() => (
-                  <Icon name="chevron-up" size={18} color="#144272" />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon name="chevron-down" size={18} color="#144272" />
-                )}
-                style={[
-                  styles.dropdown,
-                  selectionMode === 'allCustomers' && styles.dropdownDisabled,
-                ]}
-                dropDownContainerStyle={styles.dropDownContainer}
-                zIndex={3000}
-                zIndexInverse={1000}
-              />
-            </View>
 
-            <View style={styles.dropdownWrapper}>
-              <DropDownPicker
-                items={transformedAreas}
-                open={areaOpen}
-                setOpen={setAreaOpen}
-                value={areaValue}
-                setValue={setAreaValue}
-                placeholder="Select Area"
-                disabled={selectionMode === 'singleCustomer'}
-                placeholderStyle={{color: '#666'}}
-                textStyle={{color: '#144272'}}
-                ArrowUpIconComponent={() => (
-                  <Icon name="chevron-up" size={18} color="#144272" />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon name="chevron-down" size={18} color="#144272" />
-                )}
-                style={[
-                  styles.dropdown,
-                  selectionMode === 'singleCustomer' && styles.dropdownDisabled,
-                ]}
-                dropDownContainerStyle={styles.dropDownContainer}
-                zIndex={2000}
-                zIndexInverse={2000}
+          <DropDownPicker
+            items={transformedCustomer}
+            open={custOpen}
+            setOpen={setCustOpen}
+            value={custValue}
+            setValue={setCustValue}
+            placeholder="Select Customer"
+            disabled={selectionMode === 'allCustomers'}
+            placeholderStyle={{color: '#666'}}
+            textStyle={{color: '#144272'}}
+            ArrowUpIconComponent={() => (
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
+            )}
+            ArrowDownIconComponent={() => (
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
               />
-            </View>
-          </View>
+            )}
+            style={[
+              styles.dropdown,
+              selectionMode === 'allCustomers' && styles.dropdownDisabled,
+            ]}
+            dropDownContainerStyle={styles.dropDownContainer}
+            zIndex={3000}
+            zIndexInverse={1000}
+            listMode="MODAL"
+            listItemLabelStyle={{
+              color: backgroundColors.dark,
+              fontWeight: '500',
+            }}
+            labelStyle={{
+              color: backgroundColors.dark,
+              fontSize: 16,
+            }}
+            searchable
+            searchTextInputStyle={{
+              borderWidth: 0,
+              width: '100%',
+            }}
+            searchContainerStyle={{
+              borderColor: backgroundColors.gray,
+            }}
+          />
+
+          <DropDownPicker
+            items={transformedAreas}
+            open={areaOpen}
+            setOpen={setAreaOpen}
+            value={areaValue}
+            setValue={setAreaValue}
+            placeholder="Select Area"
+            disabled={selectionMode === 'singleCustomer'}
+            placeholderStyle={{color: '#666'}}
+            textStyle={{color: '#144272'}}
+            ArrowUpIconComponent={() => (
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
+            )}
+            ArrowDownIconComponent={() => (
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
+            )}
+            style={[
+              styles.dropdown,
+              selectionMode === 'singleCustomer' && styles.dropdownDisabled,
+            ]}
+            dropDownContainerStyle={styles.dropDownContainer}
+            zIndex={2000}
+            zIndexInverse={2000}
+            listMode="MODAL"
+            listItemLabelStyle={{
+              color: backgroundColors.dark,
+              fontWeight: '500',
+            }}
+            labelStyle={{
+              color: backgroundColors.dark,
+              fontSize: 16,
+            }}
+            searchable
+            searchTextInputStyle={{
+              borderWidth: 0,
+              width: '100%',
+            }}
+            searchContainerStyle={{
+              borderColor: backgroundColors.gray,
+            }}
+          />
         </View>
 
-        {/* Summary Cards */}
-
-        {selectionMode === 'allCustomers' && selectedTab === 'receivables' && (
-          <View style={styles.summaryContainer}>
-            <View style={styles.innerSummaryCtx}>
-              <Text style={styles.summaryLabel}>
-                Total{' '}
-                {selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)}:{' '}
-              </Text>
-              <Text style={styles.summaryValue}>{totals.totalReceivable}</Text>
-            </View>
-          </View>
-        )}
-
         <View style={styles.listContainer}>
+          {/* Summary Cards */}
+          {selectionMode === 'allCustomers' &&
+            selectedTab === 'receivables' && (
+              <View style={styles.summaryContainer}>
+                <View style={styles.innerSummaryCtx}>
+                  <Text style={styles.summaryLabel}>
+                    Total{' '}
+                    {selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)}
+                    :{' '}
+                  </Text>
+                  <Text style={styles.summaryValue}>
+                    {formatNumber(totals.totalReceivable)}
+                  </Text>
+                </View>
+              </View>
+            )}
+
           <FlatList<AllCustomersReceivable | SingleCustomersReceivable>
             data={paginatedData}
             keyExtractor={(item, index) => index.toString()}
@@ -479,167 +538,77 @@ export default function CustomerBalances() {
 
               return (
                 <View style={styles.card}>
-                  {/* Header Row */}
-                  <View style={styles.headerRow}>
-                    <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {(isAllCustomers
-                          ? allCustomerItem.cust_name
-                          : singleCustomerItem.cust_name
-                        )?.charAt(0) || 'C'}
-                      </Text>
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.customerName}>
+                  {/* Avatar + Name + Actions */}
+                  <View style={styles.row}>
+                    <View>
+                      <Text style={styles.name}>
                         {isAllCustomers
                           ? allCustomerItem.cust_name
                           : singleCustomerItem.cust_name}
                       </Text>
                     </View>
+                    <View>
+                      <Text
+                        style={[
+                          styles.subText,
+                          {
+                            fontSize: 16,
+                            fontWeight: '600',
+                            color: backgroundColors.danger,
+                          },
+                        ]}>
+                        {selectedTab === 'receivables'
+                          ? formatNumber(allCustomerItem.custac_balance) ||
+                            '0.00'
+                          : formatNumber(allCustomerItem.Balance) || '0.00'}
+                      </Text>
+                    </View>
                   </View>
-
-                  {/* Info Section */}
-                  <View style={styles.infoBox}>
-                    {isAllCustomers ? (
-                      <>
-                        <View style={styles.infoRow}>
-                          <View style={styles.labelRow}>
-                            <Icon
-                              name="cash"
-                              size={18}
-                              color="#144272"
-                              style={styles.infoIcon}
-                            />
-                            <Text style={styles.labelText}>Balance</Text>
-                          </View>
-                          <Text style={styles.valueText}>
-                            Rs.{' '}
-                            {selectedTab === 'receivables'
-                              ? allCustomerItem.custac_balance?.toFixed(2) ||
-                                '0.00'
-                              : allCustomerItem.Balance?.toFixed(2) || '0.00'}
-                          </Text>
-                        </View>
-
-                        <View style={styles.infoRow}>
-                          <View style={styles.labelRow}>
-                            <Icon
-                              name="phone"
-                              size={18}
-                              color="#144272"
-                              style={styles.infoIcon}
-                            />
-                            <Text style={styles.labelText}>Contact 1</Text>
-                          </View>
-                          <Text style={styles.valueText}>
-                            {allCustomerItem.cust_contact || '--'}
-                          </Text>
-                        </View>
-
-                        <View style={styles.infoRow}>
-                          <View style={styles.labelRow}>
-                            <Icon
-                              name="phone-plus"
-                              size={18}
-                              color="#144272"
-                              style={styles.infoIcon}
-                            />
-                            <Text style={styles.labelText}>Contact 2</Text>
-                          </View>
-                          <Text style={styles.valueText}>
-                            {allCustomerItem.cust_sec_contact || '--'}
-                          </Text>
-                        </View>
-
-                        <View style={styles.infoRow}>
-                          <View style={styles.labelRow}>
-                            <Icon
-                              name="phone-ring"
-                              size={18}
-                              color="#144272"
-                              style={styles.infoIcon}
-                            />
-                            <Text style={styles.labelText}>Contact 3</Text>
-                          </View>
-                          <Text style={styles.valueText}>
-                            {allCustomerItem.cust_third_contact || '--'}
-                          </Text>
-                        </View>
-
-                        <View style={styles.infoRow}>
-                          <View style={styles.labelRow}>
-                            <Icon
-                              name="map-marker"
-                              size={18}
-                              color="#144272"
-                              style={styles.infoIcon}
-                            />
-                            <Text style={styles.labelText}>Address</Text>
-                          </View>
-                          <Text style={[styles.valueText, {maxWidth: '60%'}]}>
-                            {allCustomerItem.cust_address || '--'}
-                          </Text>
-                        </View>
-                      </>
-                    ) : (
-                      <>
-                        <View style={styles.infoRow}>
-                          <View style={styles.labelRow}>
-                            <Icon
-                              name="receipt"
-                              size={18}
-                              color="#144272"
-                              style={styles.infoIcon}
-                            />
-                            <Text style={styles.labelText}>
-                              Total Bill Amount
-                            </Text>
-                          </View>
-                          <Text style={styles.valueText}>
-                            Rs.{' '}
-                            {singleCustomerItem.custac_total_bill_amount?.toFixed(
-                              2,
-                            ) || '0.00'}
-                          </Text>
-                        </View>
-
-                        <View style={styles.infoRow}>
-                          <View style={styles.labelRow}>
-                            <Icon
-                              name="cash-check"
-                              size={18}
-                              color="#144272"
-                              style={styles.infoIcon}
-                            />
-                            <Text style={styles.labelText}>Paid Amount</Text>
-                          </View>
-                          <Text style={styles.valueText}>
-                            Rs.{' '}
-                            {singleCustomerItem.custac_paid_amount?.toFixed(
-                              2,
-                            ) || '0.00'}
-                          </Text>
-                        </View>
-
-                        <View style={styles.infoRow}>
-                          <View style={styles.labelRow}>
-                            <Icon
-                              name="cash-minus"
-                              size={18}
-                              color="#144272"
-                              style={styles.infoIcon}
-                            />
-                            <Text style={styles.labelText}>Balance</Text>
-                          </View>
-                          <Text style={styles.valueText}>
-                            Rs.{' '}
-                            {singleCustomerItem.custac_balance?.toFixed(2) ||
-                              '0.00'}
-                          </Text>
-                        </View>
-                      </>
-                    )}
-                  </View>
+                  {isAllCustomers ? (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        marginTop: 4,
+                      }}>
+                      <Image
+                        source={require('../../../assets/telephone.png')}
+                        style={styles.contactPng}
+                        tintColor={backgroundColors.primary}
+                      />
+                      <Text style={styles.subText}>
+                        {allCustomerItem.cust_contact || 'N/A'}
+                      </Text>
+                    </View>
+                  ) : (
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        width: '100%',
+                        marginTop: 4,
+                        justifyContent: 'space-between',
+                      }}>
+                      <View style={{flexDirection: 'row'}}>
+                        <Text style={{fontWeight: '600'}}>
+                          Total Bill Amount:{' '}
+                        </Text>
+                        <Text style={styles.subText}>
+                          {formatNumber(
+                            singleCustomerItem.custac_total_bill_amount,
+                          ) || '0.00'}
+                        </Text>
+                      </View>
+                      <View style={{flexDirection: 'row'}}>
+                        <Text style={{fontWeight: '600'}}>Paid Amount: </Text>
+                        <Text style={styles.subText}>
+                          {formatNumber(
+                            singleCustomerItem.custac_paid_amount,
+                          ) || '0.00'}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
                 </View>
               );
             }}
@@ -649,7 +618,7 @@ export default function CustomerBalances() {
                 <Text style={styles.emptyText}>No customers found.</Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 70}}
+            contentContainerStyle={{paddingBottom: 90}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -702,7 +671,7 @@ export default function CustomerBalances() {
         )}
 
         <Toast />
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }
@@ -710,22 +679,26 @@ export default function CustomerBalances() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.primary,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -737,41 +710,47 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
 
   // Filter Container
   filterContainer: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    marginHorizontal: 15,
-    marginVertical: 10,
-    borderRadius: 12,
-    padding: 15,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 15,
+    marginTop: 10,
+    marginBottom: 4,
+    marginHorizontal: 12,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
-    zIndex: 1000,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   toggleRow: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 15,
+    marginBottom: 12,
   },
   toggleButton: {
     flex: 1,
     padding: 8,
-    borderColor: '#144272',
+    borderColor: backgroundColors.gray,
     borderWidth: 1,
     marginHorizontal: 4,
     borderRadius: 8,
     backgroundColor: '#fff',
   },
   activeButton: {
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
   },
   toggleText: {
     textAlign: 'center',
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: '600',
   },
   activeText: {
@@ -780,51 +759,48 @@ const styles = StyleSheet.create({
   radioContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '95%',
-    marginBottom: 15,
+    width: '70%',
+    marginBottom: 6,
   },
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   radioText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     marginLeft: -5,
     fontWeight: '500',
   },
-  dropdownRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  dropdownWrapper: {
-    flex: 1,
-    marginHorizontal: 5,
-  },
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#144272',
-    minHeight: 40,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+    height: 48,
+    marginBottom: 10,
   },
   dropdownDisabled: {
-    backgroundColor: '#9a9a9a48',
+    backgroundColor: '#dfdfdfff',
     borderColor: '#ccc',
   },
   dropDownContainer: {
-    backgroundColor: '#fff',
-    borderColor: '#144272',
+    backgroundColor: 'white',
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    maxHeight: 200,
   },
 
-  //Summary Container Styling
+  // Summary Container
   summaryContainer: {
-    paddingHorizontal: 15,
-    marginBottom: 10,
-    backgroundColor: '#fff',
-    marginHorizontal: 15,
-    borderRadius: 12,
-    paddingVertical: 10,
+    borderRadius: 14,
+    marginVertical: 5,
+    padding: 10,
   },
   innerSummaryCtx: {
     flexDirection: 'row',
@@ -833,106 +809,73 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   summaryLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    fontWeight: '600',
   },
   summaryValue: {
     fontSize: 16,
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: 'bold',
   },
 
   // Flat List Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    marginTop: 10,
+    backgroundColor: backgroundColors.gray,
+    borderTopLeftRadius: 14,
+    borderTopRightRadius: 14,
+    paddingHorizontal: 12,
+    paddingTop: 10,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    zIndex: 1000,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
-  },
-  avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  customerName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#144272',
-    flexWrap: 'wrap',
-  },
-  infoBox: {
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
   },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-    flex: 1,
-  },
-  infoIcon: {
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
+  name: {
+    fontSize: 16,
     fontWeight: '600',
+    color: '#144272',
   },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '50%',
-    textAlign: 'right',
-    fontWeight: '500',
+  subText: {
+    fontSize: 12,
+    color: backgroundColors.dark,
+    marginTop: 2,
+  },
+  contactPng: {
+    height: 16,
+    width: 16,
+    marginRight: 4,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 50,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginHorizontal: 20,
+    borderRadius: 15,
+    width: '96%',
+    alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
-    color: '#666',
-    fontSize: 16,
     marginTop: 10,
-    fontWeight: '500',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Pagination Styling
@@ -942,7 +885,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -955,7 +898,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.info,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -969,7 +912,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: backgroundColors.light,
     fontWeight: '600',
     fontSize: 14,
   },

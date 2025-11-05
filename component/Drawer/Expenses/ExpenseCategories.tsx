@@ -7,6 +7,7 @@ import {
   FlatList,
   TextInput,
   Modal,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -230,7 +231,11 @@ export default function ExpenseCategories() {
       <View style={styles.gradientBackground}>
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>

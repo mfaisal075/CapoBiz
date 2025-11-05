@@ -3,9 +3,9 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -17,6 +17,7 @@ import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import RNPrint from 'react-native-print';
 import Toast from 'react-native-toast-message';
+import backgroundColors from '../../Colors';
 
 interface DayBookData {
   sale: number;
@@ -201,24 +202,42 @@ export default function DayBook() {
     await RNPrint.print({html});
   };
 
+  function formatNumber(num: number | string): string {
+    const n = typeof num === 'string' ? parseFloat(num) : num;
+    if (isNaN(n)) return '0.00';
+
+    const abs = Math.abs(n);
+
+    if (abs >= 10000000) {
+      return (n / 10000000).toFixed(n % 10000000 === 0 ? 0 : 2) + 'Cr';
+    } else if (abs >= 100000) {
+      return (n / 100000).toFixed(n % 100000 === 0 ? 0 : 2) + 'L';
+    } else if (abs >= 1000) {
+      return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2) + 'K';
+    } else {
+      return n.toString();
+    }
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
-        {/* Modern Header */}
+      <View style={styles.gradientBackground}>
+        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Day Book</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="white" />
+          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -228,11 +247,10 @@ export default function DayBook() {
             activeOpacity={0.8}
             onPress={() => setShowStartDatePicker(true)}
             style={styles.datePickerButton}>
-            <Icon name="calendar" size={20} color="white" />
             <Text style={styles.dateText}>
-              {startDate.toLocaleDateString()}
+              Date: {startDate.toLocaleDateString()}
             </Text>
-            <Icon name="chevron-down" size={20} color="white" />
+            <Icon name="calendar" size={20} color={backgroundColors.dark} />
           </TouchableOpacity>
         </View>
 
@@ -249,147 +267,190 @@ export default function DayBook() {
 
         <ScrollView style={styles.scrollContainer}>
           {dayBook ? (
-            <View style={styles.summaryContainer}>
-              <Text style={styles.summaryTitle}>Daily Summary</Text>
+            <>
+              <View style={[styles.summaryContainer, {backgroundColor: '#28a7461d'}]}>
+                {/* Income Section */}
+                <Text style={styles.summaryTitle}>Income</Text>
 
-              {/* Sales Card */}
-              <View style={styles.summaryCard}>
-                <View style={styles.cardHeader}>
-                  <Icon name="cart" size={24} color="#4CAF50" />
-                  <Text style={styles.cardTitle}>Sales</Text>
-                </View>
-                <Text style={styles.cardValue}>
-                  Rs. {dayBook.sale.toFixed(2)}
-                </Text>
-              </View>
+                <View style={styles.subContainer}>
+                  <View style={styles.iconContainer}>
+                    <Icon
+                      name="cart"
+                      size={16}
+                      color={backgroundColors.light}
+                    />
+                  </View>
 
-              {/* Sale Return Card */}
-              <View style={styles.summaryCard}>
-                <View style={styles.cardHeader}>
-                  <Icon name="cart-arrow-up" size={24} color="#FF5722" />
-                  <Text style={styles.cardTitle}>Sale Return</Text>
-                </View>
-                <Text style={styles.cardValue}>
-                  Rs. {dayBook.sale_return.toFixed(2)}
-                </Text>
-              </View>
-
-              {/* Purchase Card */}
-              <View style={styles.summaryCard}>
-                <View style={styles.cardHeader}>
-                  <Icon name="shopping" size={24} color="#2196F3" />
-                  <Text style={styles.cardTitle}>Purchase</Text>
-                </View>
-                <Text style={styles.cardValue}>
-                  Rs. {dayBook.purchase.toFixed(2)}
-                </Text>
-              </View>
-
-              {/* Purchase Return Card */}
-              <View style={styles.summaryCard}>
-                <View style={styles.cardHeader}>
-                  <Icon name="shopping-outline" size={24} color="#FF9800" />
-                  <Text style={styles.cardTitle}>Purchase Return</Text>
-                </View>
-                <Text style={styles.cardValue}>
-                  Rs. {dayBook.purchase_return.toFixed(2)}
-                </Text>
-              </View>
-
-              {/* Daily Expense Card */}
-              <View style={styles.summaryCard}>
-                <View style={styles.cardHeader}>
-                  <Icon name="cash-minus" size={24} color="#F44336" />
-                  <Text style={styles.cardTitle}>Daily Expense</Text>
-                </View>
-                <Text style={styles.cardValue}>
-                  Rs. {dayBook.exp.toFixed(2)}
-                </Text>
-              </View>
-
-              {/* Customer Payables Card */}
-              <View style={styles.summaryCard}>
-                <View style={styles.cardHeader}>
-                  <Icon name="account-arrow-left" size={24} color="#9C27B0" />
-                  <Text style={styles.cardTitle}>All Customer Payables</Text>
-                </View>
-                <Text style={styles.cardValue}>
-                  Rs. {dayBook.customerpayable.toFixed(2)}
-                </Text>
-              </View>
-
-              {/* Customer Receivables Card */}
-              <View style={styles.summaryCard}>
-                <View style={styles.cardHeader}>
-                  <Icon name="account-arrow-right" size={24} color="#00BCD4" />
-                  <Text style={styles.cardTitle}>All Customer Receivables</Text>
-                </View>
-                <Text style={styles.cardValue}>
-                  Rs. {dayBook.customerreceiveable.toFixed(2)}
-                </Text>
-              </View>
-
-              {/* Supplier Payables Card */}
-              <View style={styles.summaryCard}>
-                <View style={styles.cardHeader}>
-                  <Icon
-                    name="truck-delivery-outline"
-                    size={24}
-                    color="#795548"
-                  />
-                  <Text style={styles.cardTitle}>All Supplier Payables</Text>
-                </View>
-                <Text style={styles.cardValue}>
-                  Rs. {dayBook.supplierpayable.toFixed(2)}
-                </Text>
-              </View>
-
-              {/* Supplier Receivables Card */}
-              <View style={styles.summaryCard}>
-                <View style={styles.cardHeader}>
-                  <Icon name="truck-delivery" size={24} color="#607D8B" />
-                  <Text style={styles.cardTitle}>All Supplier Receivables</Text>
-                </View>
-                <Text style={styles.cardValue}>
-                  Rs. {dayBook.supplierreceivable.toFixed(2)}
-                </Text>
-              </View>
-
-              {/* Income & Expense Summary Cards */}
-              <View style={styles.incomeExpenseContainer}>
-                {/* Income Card */}
-                <View style={[styles.summaryCard, styles.incomeCard]}>
-                  <View style={styles.cardHeader}>
-                    <Icon name="trending-up" size={24} color="#4CAF50" />
-                    <Text style={[styles.cardTitle, styles.incomeExpenseTitle]}>
-                      Income
+                  <View style={styles.valueContainer}>
+                    <Text style={styles.label}>Sales</Text>
+                    <Text style={styles.value}>
+                      {formatNumber(dayBook.sale)}
                     </Text>
                   </View>
-                  <Text style={[styles.cardValue, styles.incomeExpenseValue]}>
-                    Rs. {parseFloat(dayBook.income).toFixed(2)}
-                  </Text>
                 </View>
 
-                {/* Expense Card */}
-                <View style={[styles.summaryCard, styles.expenseCard]}>
-                  <View style={styles.cardHeader}>
-                    <Icon name="trending-down" size={24} color="#F44336" />
-                    <Text style={[styles.cardTitle, styles.incomeExpenseTitle]}>
-                      Expense
+                <View style={styles.subContainer}>
+                  <View style={styles.iconContainer}>
+                    <Icon
+                      name="clipboard-arrow-left"
+                      size={16}
+                      color={backgroundColors.light}
+                    />
+                  </View>
+
+                  <View style={styles.valueContainer}>
+                    <Text style={styles.label}>Purchase Return</Text>
+                    <Text style={styles.value}>
+                      {formatNumber(dayBook.purchase_return)}
                     </Text>
                   </View>
-                  <Text style={[styles.cardValue, styles.incomeExpenseValue]}>
-                    Rs. {parseFloat(dayBook.expense).toFixed(2)}
+                </View>
+
+                <View style={styles.subContainer}>
+                  <View style={styles.iconContainer}>
+                    <Icon
+                      name="cash"
+                      size={16}
+                      color={backgroundColors.light}
+                    />
+                  </View>
+
+                  <View style={styles.valueContainer}>
+                    <Text style={styles.label}>All Customer Receivables</Text>
+                    <Text style={styles.value}>
+                      {formatNumber(dayBook.customerreceiveable)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.subContainer}>
+                  <View style={styles.iconContainer}>
+                    <Icon
+                      name="account-cash"
+                      size={16}
+                      color={backgroundColors.light}
+                    />
+                  </View>
+
+                  <View style={styles.valueContainer}>
+                    <Text style={styles.label}>All Supplier Payables</Text>
+                    <Text style={styles.value}>
+                      {formatNumber(dayBook.supplierpayable)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.totalContainer}>
+                  <Text style={styles.totalLabel}>Total Income</Text>
+                  <Text style={styles.totalValue}>
+                    {formatNumber(dayBook.income)}
                   </Text>
                 </View>
               </View>
-            </View>
+
+              <View style={[styles.summaryContainer, {backgroundColor: '#dc35461f'}]}>
+                {/* Income Section */}
+                <Text style={styles.summaryTitle}>Expense</Text>
+
+                <View style={styles.subContainer}>
+                  <View style={styles.expIconContainer}>
+                    <Icon
+                      name="cart-plus"
+                      size={16}
+                      color={backgroundColors.light}
+                    />
+                  </View>
+
+                  <View style={styles.valueContainer}>
+                    <Text style={styles.label}>Purchase</Text>
+                    <Text style={styles.value}>
+                      {formatNumber(dayBook.purchase)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.subContainer}>
+                  <View style={styles.expIconContainer}>
+                    <Icon
+                      name="clipboard-arrow-left"
+                      size={16}
+                      color={backgroundColors.light}
+                    />
+                  </View>
+
+                  <View style={styles.valueContainer}>
+                    <Text style={styles.label}>Sale Return</Text>
+                    <Text style={styles.value}>
+                      {formatNumber(dayBook.sale_return)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.subContainer}>
+                  <View style={styles.expIconContainer}>
+                    <Icon
+                      name="cash-minus"
+                      size={16}
+                      color={backgroundColors.light}
+                    />
+                  </View>
+
+                  <View style={styles.valueContainer}>
+                    <Text style={styles.label}>Daily Expense</Text>
+                    <Text style={styles.value}>
+                      {formatNumber(dayBook.exp)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.subContainer}>
+                  <View style={styles.expIconContainer}>
+                    <Icon
+                      name="account-cash"
+                      size={16}
+                      color={backgroundColors.light}
+                    />
+                  </View>
+
+                  <View style={styles.valueContainer}>
+                    <Text style={styles.label}>All Customer Payables</Text>
+                    <Text style={styles.value}>
+                      {formatNumber(dayBook.customerpayable)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.subContainer}>
+                  <View style={styles.expIconContainer}>
+                    <Icon
+                      name="account-cash"
+                      size={16}
+                      color={backgroundColors.light}
+                    />
+                  </View>
+
+                  <View style={styles.valueContainer}>
+                    <Text style={styles.label}>All Supplier Receivables</Text>
+                    <Text style={styles.value}>
+                      {formatNumber(dayBook.supplierreceivable)}
+                    </Text>
+                  </View>
+                </View>
+
+                <View style={styles.totalContainer}>
+                  <Text style={styles.expTotalLabel}>Total Expense</Text>
+                  <Text style={styles.expTotalValue}>
+                    {formatNumber(dayBook.expense)}
+                  </Text>
+                </View>
+              </View>
+            </>
           ) : (
             <View style={styles.noDataContainer}>
               <Icon
                 name="file-document-outline"
                 size={64}
-                color="rgba(255,255,255,0.5)"
+                color="rgba(0,0,0,0.5)"
               />
               <Text style={styles.noDataText}>No data found for this date</Text>
             </View>
@@ -399,7 +460,7 @@ export default function DayBook() {
         </ScrollView>
 
         <Toast />
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }
@@ -407,22 +468,26 @@ export default function DayBook() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -434,97 +499,129 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
+
   datePickerContainer: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    marginTop: 10,
   },
   datePickerButton: {
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+    height: 48,
   },
   dateText: {
-    color: 'white',
+    color: backgroundColors.dark,
     fontSize: 16,
     fontWeight: '600',
-    flex: 1,
     textAlign: 'center',
   },
+
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
+    marginTop: 4,
   },
   summaryContainer: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    padding: 20,
-    marginVertical: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: backgroundColors.light,
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    marginTop: 10,
+    marginBottom: 4,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 0,
   },
   summaryTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 16,
+    color: backgroundColors.dark,
+    marginBottom: 10,
   },
-  summaryCard: {
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
+  label: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: backgroundColors.dark,
+    marginBottom: 10,
   },
-  cardHeader: {
+  value: {
+    fontSize: 16,
+    color: backgroundColors.dark,
+    marginBottom: 10,
+  },
+  subContainer: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 8,
+    paddingHorizontal: 6,
+  },
+  totalContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 4,
+    marginTop: 4,
   },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-    marginLeft: 8,
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: backgroundColors.primary,
   },
-  cardValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#144272',
-    textAlign: 'right',
+  totalValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: backgroundColors.primary,
   },
-  incomeExpenseContainer: {
+  expTotalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: backgroundColors.danger,
+  },
+  expTotalValue: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: backgroundColors.danger,
+  },
+  iconContainer: {
+    padding: 8,
+    backgroundColor: backgroundColors.dark,
+    borderRadius: 100,
+    marginRight: 10,
+  },
+  expIconContainer: {
+    padding: 8,
+    backgroundColor: backgroundColors.dark,
+    borderRadius: 100,
+    marginRight: 10,
+  },
+  valueContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8,
-  },
-  incomeCard: {
     flex: 1,
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-    backgroundColor: 'rgba(255, 255, 255, 1)',
-  },
-  expenseCard: {
-    flex: 1,
-    borderWidth: 2,
-    borderColor: '#F44336',
-    backgroundColor: 'rgba(255, 255, 255, 1)',
-  },
-  incomeExpenseTitle: {
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  incomeExpenseValue: {
-    fontSize: 16,
+    borderBottomWidth: 0.2,
+    borderBottomColor: backgroundColors.dark,
   },
   noDataContainer: {
     backgroundColor: 'rgba(255,255,255,0.1)',

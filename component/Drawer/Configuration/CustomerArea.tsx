@@ -3,12 +3,12 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   ScrollView,
   FlatList,
   TextInput,
   Modal,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -18,6 +18,7 @@ import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
+import backgroundColors from '../../Colors';
 
 interface Areas {
   id: number;
@@ -29,23 +30,29 @@ export default function CustomerArea() {
   const {openDrawer} = useDrawer();
   const [area, setArea] = useState('');
   const {token} = useUser();
-  const [areas, setAreas] = useState<Areas[] | []>([]);
   const [selectedArea, setSelectedArea] = useState<number | null>(null);
   const [editArea, setEditArea] = useState<string | ''>('');
+  const [modalVisible, setModalVisible] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<Areas[]>([]);
+  const [masterData, setMasterData] = useState<Areas[]>([]);
 
-  {
-    /*customer*/
-  }
-  const [customer, setcustomer] = useState(false);
+  // Pagination for Customer
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
 
-  const togglecustomer = () => {
-    setcustomer(!customer);
-  };
+  const currentData = filteredData;
+  const totalRecords = currentData.length;
+  const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
-  const [isModalV, setModalV] = useState(false);
-  const [edit, setedit] = useState(false);
+  // Slice data for pagination
+  const paginatedData = currentData.slice(
+    (currentPage - 1) * recordsPerPage,
+    currentPage * recordsPerPage,
+  );
 
-  const toggleEdit = async (id: number) => {
+  // Get Data to edit
+  const getAreaToEdit = async (id: number) => {
     try {
       const res = await axios.get(
         `${BASE_URL}/editarea?id=${id}&_token=${token}`,
@@ -55,27 +62,12 @@ export default function CustomerArea() {
           },
         },
       );
-      setedit(!edit);
       setEditArea(res.data.area_name);
       setSelectedArea(id);
     } catch (error) {
       console.log(error);
     }
   };
-
-  // Pagination for Customer
-  const [currentPage, setCurrentPage] = useState(1);
-  const recordsPerPage = 10;
-
-  const currentData = areas;
-  const totalRecords = currentData.length;
-  const totalPages = Math.ceil(totalRecords / recordsPerPage);
-
-  // Slice data for pagination
-  const paginatedData = currentData.slice(
-    (currentPage - 1) * recordsPerPage,
-    currentPage * recordsPerPage,
-  );
 
   // Delete Area
   const handleDeleteArea = async () => {
@@ -95,7 +87,7 @@ export default function CustomerArea() {
         });
         setSelectedArea(null);
         handleFetchAreas();
-        setModalV(false);
+        setModalVisible('');
       }
     } catch (error) {
       console.log(error);
@@ -162,7 +154,7 @@ export default function CustomerArea() {
 
         setSelectedArea(null);
         setEditArea('');
-        setedit(!edit);
+        setModalVisible('');
         handleFetchAreas();
       }
     } catch (error) {
@@ -179,7 +171,10 @@ export default function CustomerArea() {
         },
       });
 
-      setAreas(res.data.area);
+      const areaData = res.data.area;
+
+      setFilteredData(areaData);
+      setMasterData(areaData);
     } catch (error) {
       console.log(error);
     }
@@ -236,7 +231,7 @@ export default function CustomerArea() {
       console.log('Response: ', data);
 
       if (response.status === 200 && data.status === 200) {
-        setcustomer(false);
+        setModalVisible('');
         setArea('');
         Toast.show({
           type: 'success',
@@ -251,29 +246,61 @@ export default function CustomerArea() {
     }
   };
 
+  // Search Filter
+  const searchFilter = (text: string) => {
+    if (text) {
+      const newData = masterData.filter(item => {
+        const itemData = item.area_name
+          ? item.area_name.toLocaleUpperCase()
+          : ''.toLocaleLowerCase();
+        const textData = text.toLocaleUpperCase();
+        return itemData.indexOf(textData) > -1;
+      });
+      setFilteredData(newData);
+      setSearchQuery(text);
+    } else {
+      setFilteredData(masterData);
+      setSearchQuery(text);
+    }
+  };
+
   useEffect(() => {
     handleFetchAreas();
   }, []);
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Areas</Text>
+            <Text style={styles.headerTitle}>Area List</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerBtn} onPress={togglecustomer}>
-            <Icon name="plus" size={24} color="white" />
+          <TouchableOpacity
+            style={[styles.headerBtn]}
+            onPress={() => setModalVisible('Add')}>
+            <Icon name="plus" size={24} color="#fff" />
           </TouchableOpacity>
+        </View>
+
+        {/* Search Filter */}
+        <View style={styles.searchFilter}>
+          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+          <TextInput
+            placeholder="Search by category name"
+            style={styles.search}
+            value={searchQuery}
+            onChangeText={text => searchFilter(text)}
+          />
         </View>
 
         <View style={styles.listContainer}>
@@ -282,50 +309,40 @@ export default function CustomerArea() {
             keyExtractor={(item, index) => index.toString()}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  <View style={styles.headerTxtContainer}>
-                    <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {item.area_name?.charAt(0) || 'A'}
-                      </Text>
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.productName}>{item.area_name}</Text>
-                    </View>
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
+                  <View>
+                    <Text style={styles.name}>{item.area_name}</Text>
                   </View>
-                  <View style={styles.actionContainer}>
-                    <TouchableOpacity
-                      style={styles.acctionBtn}
-                      onPress={() => {
-                        toggleEdit(item.id);
-                      }}>
-                      <Icon name="pencil" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.acctionBtn}
-                      onPress={() => {
-                        setModalV(!isModalV);
-                        setSelectedArea(item.id);
-                      }}>
-                      <Icon name="delete" size={20} color={'red'} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
 
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
+                  <View
+                    style={{
+                      alignSelf: 'center',
+                      flexDirection: 'row',
+                      gap: 10,
+                    }}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setModalVisible('Edit');
+                        getAreaToEdit(item.id);
+                      }}>
                       <Icon
-                        name="map"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
+                        name="pencil"
+                        size={20}
+                        color={backgroundColors.dark}
                       />
-                      <Text style={styles.labelText}>Area Name</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.area_name}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedArea(item.id);
+                        setModalVisible('Delete');
+                      }}>
+                      <Icon
+                        name="delete"
+                        size={20}
+                        color={backgroundColors.danger}
+                      />
+                    </TouchableOpacity>
                   </View>
                 </View>
               </View>
@@ -342,32 +359,32 @@ export default function CustomerArea() {
         </View>
 
         {/* Add Area Modal */}
-        <Modal visible={customer} transparent animationType="slide">
+        <Modal
+          visible={modalVisible === 'Add'}
+          transparent
+          animationType="slide">
           <View style={styles.addCustomerModalOverlay}>
             <ScrollView style={styles.addCustomerModalContainer}>
               <View style={styles.addCustomerHeader}>
                 <Text style={styles.addCustomerTitle}>Add New Area</Text>
                 <TouchableOpacity
                   onPress={() => {
-                    setcustomer(!customer);
+                    setModalVisible('');
                     setArea('');
                   }}
                   style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
               <View style={styles.addCustomerForm}>
-                <View style={styles.addCustomerFullRow}>
-                  <Text style={styles.addCustomerLabel}>Area Name *</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter area name"
-                    value={area}
-                    onChangeText={text => setArea(text)}
-                  />
-                </View>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  placeholder="Enter area name"
+                  value={area}
+                  onChangeText={text => setArea(text)}
+                />
 
                 <TouchableOpacity
                   style={styles.addCustomerSubmitBtn}
@@ -382,7 +399,10 @@ export default function CustomerArea() {
         </Modal>
 
         {/* Delete Area Modal */}
-        <Modal visible={isModalV} transparent animationType="fade">
+        <Modal
+          visible={modalVisible === 'Delete'}
+          transparent
+          animationType="fade">
           <View style={styles.addCustomerModalOverlay}>
             <View style={styles.deleteModalContainer}>
               <View style={styles.delAnim}>
@@ -402,8 +422,12 @@ export default function CustomerArea() {
               <View style={styles.deleteModalActions}>
                 <TouchableOpacity
                   style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
-                  onPress={() => setModalV(!isModalV)}>
-                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
+                  onPress={() => setModalVisible('')}>
+                  <Text
+                    style={[
+                      styles.deleteModalBtnText,
+                      {color: backgroundColors.dark},
+                    ]}>
                     Cancel
                   </Text>
                 </TouchableOpacity>
@@ -420,33 +444,33 @@ export default function CustomerArea() {
         </Modal>
 
         {/* Edit Area Modal */}
-        <Modal visible={edit} transparent animationType="slide">
+        <Modal
+          visible={modalVisible === 'Edit'}
+          transparent
+          animationType="slide">
           <View style={styles.addCustomerModalOverlay}>
             <ScrollView style={styles.addCustomerModalContainer}>
               <View style={styles.addCustomerHeader}>
                 <Text style={styles.addCustomerTitle}>Edit Area</Text>
                 <TouchableOpacity
                   onPress={() => {
-                    setedit(!edit);
+                    setModalVisible('');
                     setArea('');
                     setSelectedArea(null);
                   }}
                   style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
               <View style={styles.addCustomerForm}>
-                <View style={styles.addCustomerFullRow}>
-                  <Text style={styles.addCustomerLabel}>Area Name *</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter area name"
-                    value={editArea}
-                    onChangeText={t => setEditArea(t)}
-                  />
-                </View>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  placeholder="Enter area name"
+                  value={editArea}
+                  onChangeText={t => setEditArea(t)}
+                />
 
                 <TouchableOpacity
                   style={styles.addCustomerSubmitBtn}
@@ -508,7 +532,7 @@ export default function CustomerArea() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }
@@ -516,22 +540,31 @@ export default function CustomerArea() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -543,118 +576,77 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
 
-  // Flat List Styling
+  // Search Filter
+  searchFilter: {
+    width: '94%',
+    alignSelf: 'center',
+    height: 48,
+    marginVertical: 10,
+    paddingHorizontal: 10,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  search: {
+    height: '100%',
+    fontSize: 14,
+    color: backgroundColors.dark,
+    width: '100%',
+  },
+
+  // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: 12,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    zIndex: 1000,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
     justifyContent: 'space-between',
   },
-  headerTxtContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '50%',
-  },
-  avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
+  name: {
     fontSize: 18,
-  },
-  productName: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
-    flexWrap: 'wrap',
-  },
-  actionContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    justifyContent: 'space-between',
-  },
-  acctionBtn: {
-    padding: 8,
-    backgroundColor: '#14417212',
-    borderRadius: 8,
+    paddingVertical: 4,
   },
   subText: {
     fontSize: 12,
-    color: '#666',
+    color: '#555',
     marginTop: 2,
-  },
-  infoBox: {
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-    flex: 1,
-  },
-  infoIcon: {
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '50%',
-    textAlign: 'right',
-    fontWeight: '500',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 50,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginHorizontal: 20,
+    borderRadius: 15,
+    width: '96%',
+    alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
-    color: '#666',
-    fontSize: 16,
     marginTop: 10,
-    fontWeight: '500',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Pagination Styling
@@ -664,7 +656,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -677,7 +669,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.info,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -691,7 +683,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: backgroundColors.light,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -727,7 +719,7 @@ const styles = StyleSheet.create({
   addCustomerModalContainer: {
     backgroundColor: 'white',
     borderRadius: 15,
-    maxHeight: '40%',
+    maxHeight: '30%',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
@@ -746,7 +738,7 @@ const styles = StyleSheet.create({
   addCustomerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
   },
   addCustomerCloseBtn: {
     padding: 5,
@@ -766,20 +758,25 @@ const styles = StyleSheet.create({
   },
   addCustomerInput: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    height: 45,
+    backgroundColor: backgroundColors.light,
+    borderColor: '#ccc',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
+    height: 48,
+    color: backgroundColors.dark,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   addCustomerSubmitBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 10,
     paddingVertical: 15,
     marginTop: 20,

@@ -3,9 +3,9 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -17,6 +17,7 @@ import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import RNPrint from 'react-native-print';
+import backgroundColors from '../../Colors';
 
 interface StockMovement {
   id: number;
@@ -206,22 +207,23 @@ export default function Stockmovement() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Stock Movement</Text>
           </View>
 
-          <TouchableOpacity style={styles.headerBtn} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="white" />
+          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
+            <Icon name="printer" size={24} color="#fff" />
           </TouchableOpacity>
         </View>
 
@@ -279,95 +281,44 @@ export default function Stockmovement() {
             style={{marginTop: 10}}
             renderItem={({item}) => (
               <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  <View style={styles.avatarBox}>
-                    <Text style={styles.avatarText}>
-                      {item.prod_name?.charAt(0) || 'P'}
-                    </Text>
-                  </View>
-                  <View style={{flex: 1}}>
-                    <Text style={styles.productName}>{item.prod_name}</Text>
-                    <Text style={styles.invcName}>
-                      Invoice: {item.stkm_invoice_no}
-                    </Text>
-                  </View>
+                {/* Avatar + Name + Actions */}
+                <View style={styles.row}>
+                  <Text style={styles.name}>{item.stkm_invoice_no}</Text>
+
+                  <Text style={[styles.subValue, {verticalAlign: 'top'}]}>
+                    {item.created_at
+                      ? new Date(item.created_at)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')
+                      : 'N/A'}
+                  </Text>
                 </View>
-
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="counter"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Quantity</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.stkm_qty}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="currency-usd"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Cost Prince</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.stkm_cost_price}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="cash-multiple"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Total Cost</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.stkm_total_cost || '0'}
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    marginTop: 5,
+                  }}>
+                  <View>
+                    <Text style={styles.subText}>Product: </Text>
+                    <Text style={styles.subValue}>
+                      {item.prod_name ?? 'N/A'}
                     </Text>
                   </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="check-circle"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Stock Status</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {item.stkm_stock_status}
+                  <View>
+                    <Text style={styles.subText}>Quantity: </Text>
+                    <Text style={styles.subValue}>
+                      {item.stkm_qty ?? 'N/A'}
                     </Text>
                   </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="calendar"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Date</Text>
-                    </View>
-                    <Text style={styles.valueText}>
-                      {new Date(item.created_at).toLocaleDateString('en-US', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
+                  <View>
+                    <Text style={styles.subText}>Status: </Text>
+                    <Text style={styles.subValue}>
+                      {item.stkm_stock_status ?? '0'}
                     </Text>
                   </View>
                 </View>
@@ -430,7 +381,7 @@ export default function Stockmovement() {
             </TouchableOpacity>
           </View>
         )}
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }
@@ -438,22 +389,26 @@ export default function Stockmovement() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -465,142 +420,101 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
 
   // Date Fields Styling
   dateContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 10,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
+    marginTop: 10,
   },
   datePicker: {
-    flex: 1,
-    marginHorizontal: 5,
+    width: '48%',
   },
   dateLabel: {
-    color: '#fff',
+    color: backgroundColors.dark,
     fontWeight: '600',
     marginBottom: 5,
     fontSize: 14,
   },
   dateButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#144272',
-    borderRadius: 8,
+    justifyContent: 'space-between',
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#fff',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+    height: 48,
   },
   dateText: {
-    color: '#144272',
+    color: backgroundColors.dark,
     fontSize: 14,
     fontWeight: '500',
   },
 
-  // Flat List Styling
+  // FlatList Styling
   listContainer: {
     flex: 1,
-    paddingHorizontal: 8,
+    paddingHorizontal: '3%',
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
+    marginVertical: 5,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    zIndex: 1000,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
-  headerRow: {
+  row: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    justifyContent: 'space-between',
   },
-  avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  productName: {
+  name: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#144272',
-    flexWrap: 'wrap',
-  },
-  invcName: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'gray',
-    flexWrap: 'wrap',
   },
   subText: {
     fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  infoBox: {
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
-    flex: 1,
-  },
-  infoIcon: {
-    marginRight: 6,
-  },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
-    fontWeight: '600',
-  },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '50%',
-    textAlign: 'right',
+    color: 'rgba(0,0,0,0.5)',
     fontWeight: '500',
+  },
+  subValue: {
+    fontSize: 13,
+    color: backgroundColors.dark,
+    fontWeight: '600',
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 50,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginHorizontal: 20,
+    borderRadius: 15,
+    width: '96%',
+    alignSelf: 'center',
+    marginTop: 60,
+    paddingVertical: 20,
   },
   emptyText: {
-    color: '#666',
-    fontSize: 16,
     marginTop: 10,
-    fontWeight: '500',
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
   },
 
   // Pagination Styling
@@ -610,7 +524,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     paddingHorizontal: 20,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     position: 'absolute',
@@ -623,7 +537,7 @@ const styles = StyleSheet.create({
     elevation: 6,
   },
   pageButton: {
-    backgroundColor: '#fff',
+    backgroundColor: backgroundColors.info,
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 20,
@@ -637,7 +551,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ddd',
   },
   pageButtonText: {
-    color: '#144272',
+    color: backgroundColors.light,
     fontWeight: '600',
     fontSize: 14,
   },

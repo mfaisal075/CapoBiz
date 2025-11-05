@@ -3,11 +3,11 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   TextInput,
   Modal,
   ScrollView,
+  Image,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import React, {useState} from 'react';
@@ -17,6 +17,7 @@ import Toast from 'react-native-toast-message';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
+import backgroundColors from '../../Colors';
 
 interface ResetPassword {
   oldPassword: string;
@@ -96,21 +97,20 @@ export default function PasswordReset() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Password Reset</Text>
           </View>
-
-          <View style={styles.headerBtn} />
         </View>
 
         <ScrollView style={styles.listContainer}>
@@ -135,7 +135,7 @@ export default function PasswordReset() {
                   <Icon
                     name="lock-outline"
                     size={18}
-                    color="#144272"
+                    color={backgroundColors.dark}
                     style={styles.infoIcon}
                   />
                   <Text style={styles.labelText}>Current Password</Text>
@@ -155,7 +155,7 @@ export default function PasswordReset() {
                   <Icon
                     name="lock-plus"
                     size={18}
-                    color="#144272"
+                    color={backgroundColors.dark}
                     style={styles.infoIcon}
                   />
                   <Text style={styles.labelText}>New Password</Text>
@@ -175,7 +175,7 @@ export default function PasswordReset() {
                   <Icon
                     name="lock-check"
                     size={18}
-                    color="#144272"
+                    color={backgroundColors.dark}
                     style={styles.infoIcon}
                   />
                   <Text style={styles.labelText}>Confirm Password</Text>
@@ -235,7 +235,7 @@ export default function PasswordReset() {
         </Modal>
 
         <Toast />
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }
@@ -243,22 +243,31 @@ export default function PasswordReset() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -270,11 +279,14 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
 
   // List Container
   listContainer: {
     flex: 1,
-    paddingHorizontal: 15,
+    paddingHorizontal: 12,
     paddingTop: 20,
   },
 
@@ -300,7 +312,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.dark,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -311,7 +323,7 @@ const styles = StyleSheet.create({
   productName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#144272',
+    color: backgroundColors.dark,
   },
   subText: {
     fontSize: 12,
@@ -338,7 +350,7 @@ const styles = StyleSheet.create({
   },
   labelText: {
     fontSize: 14,
-    color: '#144272',
+    color: backgroundColors.dark,
     fontWeight: '600',
   },
   input: {
@@ -356,7 +368,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 10,
     paddingVertical: 15,
     marginTop: 10,
