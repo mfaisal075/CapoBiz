@@ -6,6 +6,7 @@ import {
   ImageBackground,
   TouchableOpacity,
   ScrollView,
+  Image,
 } from 'react-native';
 import React, {useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -14,6 +15,7 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import backgroundColors from '../../Colors';
 
 export default function SaleInvoice() {
   const {openDrawer} = useDrawer();
@@ -57,21 +59,20 @@ export default function SaleInvoice() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Sale Invoice</Text>
+            <Text style={styles.headerTitle}>Configure Sale Invoice</Text>
           </View>
-
-          <View style={styles.headerBtn} />
         </View>
 
         <ScrollView
@@ -80,7 +81,7 @@ export default function SaleInvoice() {
           {/* Invoice Language Section */}
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
-              <Icon name="translate" size={20} color="#144272" />
+              <Icon name="translate" size={20} color={backgroundColors.dark} />
               <Text style={styles.sectionTitle}>Invoice Language</Text>
             </View>
 
@@ -96,8 +97,8 @@ export default function SaleInvoice() {
                   activeOpacity={0.7}>
                   <RadioButton.Android
                     value="English"
-                    color="#144272"
-                    uncheckedColor="#666"
+                    color={backgroundColors.primary}
+                    uncheckedColor={backgroundColors.dark}
                   />
                   <Text style={styles.radioText}>English</Text>
                 </TouchableOpacity>
@@ -107,8 +108,8 @@ export default function SaleInvoice() {
                   activeOpacity={0.7}>
                   <RadioButton.Android
                     value="Urdu"
-                    color="#144272"
-                    uncheckedColor="#666"
+                    color={backgroundColors.primary}
+                    uncheckedColor={backgroundColors.dark}
                   />
                   <Text style={styles.radioText}>Urdu</Text>
                 </TouchableOpacity>
@@ -119,7 +120,12 @@ export default function SaleInvoice() {
           {/* Make Fields Editable Section */}
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
-              <Icon name="pencil-box-multiple" size={20} color="#144272" />
+              <Icon
+                name="pencil-box-multiple"
+                size={20}
+                color={backgroundColors.dark}
+              />
+
               <Text style={styles.sectionTitle}>Make Fields Editable</Text>
             </View>
 
@@ -139,8 +145,8 @@ export default function SaleInvoice() {
                       ? 'checked'
                       : 'unchecked'
                   }
-                  color="#144272"
-                  uncheckedColor="#666"
+                  color={backgroundColors.primary}
+                  uncheckedColor={backgroundColors.dark}
                 />
                 <Text style={styles.checkboxText}>Quantity</Text>
               </TouchableOpacity>
@@ -160,8 +166,8 @@ export default function SaleInvoice() {
                       ? 'checked'
                       : 'unchecked'
                   }
-                  color="#144272"
-                  uncheckedColor="#666"
+                  color={backgroundColors.primary}
+                  uncheckedColor={backgroundColors.dark}
                 />
                 <Text style={styles.checkboxText}>Unit Price</Text>
               </TouchableOpacity>
@@ -171,7 +177,11 @@ export default function SaleInvoice() {
           {/* Invoice Size Section */}
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
-              <Icon name="format-size" size={20} color="#144272" />
+              <Icon
+                name="format-size"
+                size={20}
+                color={backgroundColors.dark}
+              />
               <Text style={styles.sectionTitle}>Invoice Size</Text>
             </View>
 
@@ -187,8 +197,8 @@ export default function SaleInvoice() {
                   activeOpacity={0.7}>
                   <RadioButton.Android
                     value="A4"
-                    color="#144272"
-                    uncheckedColor="#666"
+                    color={backgroundColors.primary}
+                    uncheckedColor={backgroundColors.dark}
                   />
                   <Text style={styles.radioText}>A4</Text>
                 </TouchableOpacity>
@@ -198,8 +208,8 @@ export default function SaleInvoice() {
                   activeOpacity={0.7}>
                   <RadioButton.Android
                     value="A5"
-                    color="#144272"
-                    uncheckedColor="#666"
+                    color={backgroundColors.primary}
+                    uncheckedColor={backgroundColors.dark}
                   />
                   <Text style={styles.radioText}>A5</Text>
                 </TouchableOpacity>
@@ -209,8 +219,8 @@ export default function SaleInvoice() {
                   activeOpacity={0.7}>
                   <RadioButton.Android
                     value="receipt"
-                    color="#144272"
-                    uncheckedColor="#666"
+                    color={backgroundColors.primary}
+                    uncheckedColor={backgroundColors.dark}
                   />
                   <Text style={styles.radioText}>Receipt Size</Text>
                 </TouchableOpacity>
@@ -221,7 +231,11 @@ export default function SaleInvoice() {
           {/* Show Builty Section */}
           <View style={styles.card}>
             <View style={styles.sectionHeader}>
-              <Icon name="file-document" size={20} color="#144272" />
+              <Icon
+                name="file-document"
+                size={20}
+                color={backgroundColors.dark}
+              />
               <Text style={styles.sectionTitle}>Show Builty Section</Text>
             </View>
 
@@ -235,8 +249,8 @@ export default function SaleInvoice() {
                   activeOpacity={0.7}>
                   <RadioButton.Android
                     value="Y"
-                    color="#144272"
-                    uncheckedColor="#666"
+                    color={backgroundColors.primary}
+                    uncheckedColor={backgroundColors.dark}
                   />
                   <Text style={styles.radioText}>Yes</Text>
                 </TouchableOpacity>
@@ -246,8 +260,8 @@ export default function SaleInvoice() {
                   activeOpacity={0.7}>
                   <RadioButton.Android
                     value="N"
-                    color="#144272"
-                    uncheckedColor="#666"
+                    color={backgroundColors.primary}
+                    uncheckedColor={backgroundColors.dark}
                   />
                   <Text style={styles.radioText}>No</Text>
                 </TouchableOpacity>
@@ -265,7 +279,7 @@ export default function SaleInvoice() {
           </TouchableOpacity>
         </ScrollView>
         <Toast />
-      </ImageBackground>
+      </View>
     </SafeAreaView>
   );
 }
@@ -273,22 +287,31 @@ export default function SaleInvoice() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -300,22 +323,27 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
+  gradientBackground: {
+    flex: 1,
+  },
+
   contentContainer: {
     flex: 1,
-    paddingHorizontal: 15,
+    paddingHorizontal: 12,
     paddingTop: 10,
   },
   card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 12,
+    marginBottom: 15,
+    padding: 10,
+    borderWidth: 0.8,
+    borderColor: '#00000036',
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -328,7 +356,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginLeft: 8,
   },
   radioGroup: {
@@ -369,10 +397,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 12,
     paddingVertical: 15,
-    marginVertical: 20,
+    marginTop: 5,
     shadowColor: '#000',
     shadowOpacity: 0.2,
     shadowRadius: 4,

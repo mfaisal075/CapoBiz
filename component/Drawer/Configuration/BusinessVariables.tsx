@@ -3,12 +3,11 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   ScrollView,
-  FlatList,
   TextInput,
   Modal,
+  Image,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -18,6 +17,7 @@ import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
+import backgroundColors from '../../Colors';
 
 interface BusinessDetails {
   id: number;
@@ -26,6 +26,10 @@ interface BusinessDetails {
   bus_contact1: string;
   bus_language: string;
   bus_email: string;
+  bus_address: string;
+  bus_address_ur: string;
+  bus_contact2: string;
+  bus_contact3: string;
 }
 
 interface EditBusiness {
@@ -52,13 +56,43 @@ const initialEditBusiness: EditBusiness = {
   bus_name_ur: '',
 };
 
+interface AddBussiness {
+  name: string;
+  urName: string;
+  add: string;
+  urAddress: string;
+  contact1: string;
+  contact2: string;
+  contact3: string;
+  busEmail: string;
+}
+
+const initialAddBusiness: AddBussiness = {
+  add: '',
+  busEmail: '',
+  contact1: '',
+  contact2: '',
+  contact3: '',
+  name: '',
+  urAddress: '',
+  urName: '',
+};
+
 export default function BusinessVariables() {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
-  const [busDetails, setBusDetails] = useState<BusinessDetails[]>([]);
+  const [busDetails, setBusDetails] = useState<BusinessDetails | null>(null);
   const [editBus, setEditBus] = useState<EditBusiness>(initialEditBusiness);
   const [modal, setModal] = useState('');
-  const [selectedBus, setSelectedBus] = useState<number | null>(null);
+  const [addForm, setAddForm] = useState(initialAddBusiness);
+
+  // Add OnChange
+  const onChange = (field: keyof AddBussiness, value: string) => {
+    setAddForm(prev => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
 
   // Edit OnChange
   const editOnChange = (field: keyof EditBusiness, value: string) => {
@@ -71,31 +105,20 @@ export default function BusinessVariables() {
   const fetchBusinesses = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchcomp`);
-      setBusDetails(res.data.comp);
+      const comp = Array.isArray(res.data.comp)
+        ? res.data.comp[0]
+        : res.data.comp;
+      setBusDetails(comp ?? null);
     } catch (error) {
       console.log(error);
     }
   };
 
-  // Pagination for Customer
-  const [currentPage, setCurrentPage] = useState(1);
-  const recordsPerPage = 10;
-
-  const currentData = busDetails;
-  const totalRecords = currentData.length;
-  const totalPages = Math.ceil(totalRecords / recordsPerPage);
-
-  // Slice data for pagination
-  const paginatedData = currentData.slice(
-    (currentPage - 1) * recordsPerPage,
-    currentPage * recordsPerPage,
-  );
-
   // Fetch Business Details to Edit it
-  const editBusiness = async (id: any) => {
+  const editBusiness = async () => {
     try {
       const res = await axios.get(
-        `${BASE_URL}/editcomp?id=${id}&_token=${token}`,
+        `${BASE_URL}/editcomp?id=${busDetails?.id}&_token=${token}`,
       );
       setEditBus({
         id: res.data.id,
@@ -186,7 +209,7 @@ export default function BusinessVariables() {
   const delBusiness = async () => {
     try {
       const res = await axios.post(`${BASE_URL}/compdelete`, {
-        id: selectedBus,
+        id: busDetails?.id,
       });
 
       const data = res.data;
@@ -199,11 +222,84 @@ export default function BusinessVariables() {
           visibilityTime: 1500,
         });
 
-        setSelectedBus(null);
         fetchBusinesses();
         setModal('');
       }
-    } catch (error) {}
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Add Busniess
+  const addComp = async () => {
+    if (
+      !addForm.name.trim() ||
+      !addForm.urName.trim() ||
+      !addForm.add.trim() ||
+      !addForm.contact1.trim()
+    ) {
+      Toast.show({
+        type: 'error',
+        text1: 'Required fields missing',
+        text2: 'Please fill all required fields marked with *',
+        visibilityTime: 2500,
+      });
+      return;
+    }
+
+    const emailPattern = /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (addForm.busEmail && !emailPattern.test(addForm.busEmail)) {
+      Toast.show({
+        type: 'error',
+        text1: 'Invalid Email',
+        text2: 'Please enter a valid email address',
+        visibilityTime: 2500,
+      });
+      return;
+    }
+    try {
+      const res = await axios.post(`${BASE_URL}/addcomp`, {
+        comp_name: addForm.name,
+        comp_urdu_name: addForm.urName,
+        comp_address: addForm.add,
+        comp_urdu_address: addForm.urAddress,
+        comp_cont1: addForm.contact1,
+        comp_con2: addForm.contact2,
+        comp_con3: addForm.contact3,
+        comp_email: addForm.busEmail,
+      });
+
+      const data = res.data;
+
+      if (res.status === 200 && data.status === 200) {
+        Toast.show({
+          type: 'success',
+          text1: 'Addedd!',
+          text2: 'Bussiness details has been added successfully',
+          visibilityTime: 2500,
+        });
+
+        setAddForm(initialAddBusiness);
+        setModal('');
+        fetchBusinesses();
+      } else if (res.status === 200 && data.status === 404) {
+        Toast.show({
+          type: 'info',
+          text1: 'Warning!',
+          text2: 'This email  already exist!',
+          visibilityTime: 2500,
+        });
+      } else if (res.status === 200 && data.status === 405) {
+        Toast.show({
+          type: 'info',
+          text1: 'Warning!',
+          text2: 'This Company Name already exist already exist!',
+          visibilityTime: 2500,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   useEffect(() => {
@@ -212,129 +308,150 @@ export default function BusinessVariables() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ImageBackground
-        source={require('../../../assets/screen.jpg')}
-        resizeMode="cover"
-        style={styles.background}>
+      <View style={styles.gradientBackground}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
+            <Image
+              source={require('../../../assets/menu.png')}
+              tintColor="white"
+              style={styles.menuIcon}
+            />
           </TouchableOpacity>
 
           <View style={styles.headerCenter}>
             <Text style={styles.headerTitle}>Business Variables</Text>
           </View>
 
-          <TouchableOpacity
-            style={[styles.headerBtn, {backgroundColor: 'transparent'}]}>
-            <Icon name="plus" size={24} color="transparent" />
-          </TouchableOpacity>
+          {busDetails === null && (
+            <TouchableOpacity
+              style={[styles.headerBtn]}
+              onPress={() => setModal('Add')}>
+              <Icon name="plus" size={24} color="#fff" />
+            </TouchableOpacity>
+          )}
         </View>
 
-        <View style={styles.listContainer}>
-          <FlatList
-            data={paginatedData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  <View style={styles.headerTxtContainer}>
-                    <View style={styles.avatarBox}>
-                      <Text style={styles.avatarText}>
-                        {item.bus_name?.charAt(0) || 'B'}
-                      </Text>
-                    </View>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.productName}>{item.bus_name}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.actionContainer}>
-                    <TouchableOpacity
-                      style={styles.acctionBtn}
-                      onPress={() => {
-                        setModal('Edit');
-                        editBusiness(item.id);
-                      }}>
-                      <Icon name="pencil" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.acctionBtn}
-                      onPress={() => {
-                        setModal('Delete');
-                      }}>
-                      <Icon name="delete" size={20} color={'red'} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {/* Info Section */}
-                <View style={styles.infoBox}>
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="translate"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Urdu Name</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.bus_name_ur}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="phone"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Contact</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.bus_contact1}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="mail"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Email</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.bus_email}</Text>
-                  </View>
-
-                  <View style={styles.infoRow}>
-                    <View style={styles.labelRow}>
-                      <Icon
-                        name="alphabetical"
-                        size={18}
-                        color="#144272"
-                        style={styles.infoIcon}
-                      />
-                      <Text style={styles.labelText}>Language</Text>
-                    </View>
-                    <Text style={styles.valueText}>{item.bus_language}</Text>
-                  </View>
+        {/* Details Section */}
+        {busDetails === null ? (
+          <View
+            style={{flex: 1, justifyContent: 'center', alignItems: 'center'}}>
+            <Icon
+              name="folder-open-outline"
+              size={100}
+              color={'#999'}
+              style={{marginBottom: 20}}
+            />
+            <Text
+              style={{
+                fontSize: 18,
+                color: backgroundColors.dark,
+                fontWeight: '600',
+              }}>
+              No Business Details Found
+            </Text>
+            <Text
+              style={{
+                fontSize: 14,
+                color: '#666',
+                marginTop: 8,
+                textAlign: 'center',
+              }}>
+              Add your first business by clicking the plus button above
+            </Text>
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.detailsContainer}
+            showsVerticalScrollIndicator={false}>
+            {/* Inner Details */}
+            <View style={styles.innerDetails}>
+              <View style={styles.innerHeader}>
+                <Text style={styles.headerText}>Business Details</Text>
+                <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                  <TouchableOpacity
+                    onPress={() => {
+                      editBusiness();
+                      setModal('Edit');
+                    }}>
+                    <Icon
+                      name="square-edit-outline"
+                      size={24}
+                      color={backgroundColors.primary}
+                    />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.headerBtn]}
+                    onPress={() => setModal('Delete')}>
+                    <Icon
+                      name="delete"
+                      size={24}
+                      color={backgroundColors.danger}
+                    />
+                  </TouchableOpacity>
                 </View>
               </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-group" size={48} color="#666" />
-                <Text style={styles.emptyText}>No record found.</Text>
+
+              {/* Details */}
+              <View style={styles.detailsView}>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.label}>Name</Text>
+                  <Text style={styles.value}>
+                    {busDetails?.bus_name ?? '--'}
+                  </Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.label}>Urdu Name</Text>
+                  <Text style={styles.value}>
+                    {busDetails?.bus_name_ur ?? '--'}
+                  </Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.label}>Address</Text>
+                  <Text style={styles.value}>
+                    {busDetails?.bus_address ?? '--'}
+                  </Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.label}>Urdu Address</Text>
+                  <Text style={styles.value}>
+                    {busDetails?.bus_address_ur ?? '--'}
+                  </Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.label}>Contact 1</Text>
+                  <Text style={styles.value}>
+                    {busDetails?.bus_contact1 ?? '--'}
+                  </Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.label}>Contact 2</Text>
+                  <Text style={styles.value}>
+                    {busDetails?.bus_contact2 ?? '--'}
+                  </Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.label}>Contact 3</Text>
+                  <Text style={styles.value}>
+                    {busDetails?.bus_contact3 ?? '--'}
+                  </Text>
+                </View>
+                <View style={styles.detailsRow}>
+                  <Text style={styles.label}>Business Email</Text>
+                  <Text style={styles.value}>
+                    {busDetails?.bus_email ?? '--'}
+                  </Text>
+                </View>
+                <View style={[styles.detailsRow, {borderBottomWidth: 0}]}>
+                  <Text style={styles.label}>Business Language</Text>
+                  <Text style={styles.value}>
+                    {busDetails?.bus_language ?? '--'}
+                  </Text>
+                </View>
               </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
+            </View>
+          </ScrollView>
+        )}
 
         {/* Delete Modal */}
         <Modal visible={modal === 'Delete'} transparent animationType="fade">
@@ -360,7 +477,11 @@ export default function BusinessVariables() {
                   onPress={() => {
                     setModal('');
                   }}>
-                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
+                  <Text
+                    style={[
+                      styles.deleteModalBtnText,
+                      {color: backgroundColors.dark},
+                    ]}>
                     Cancel
                   </Text>
                 </TouchableOpacity>
@@ -387,139 +508,104 @@ export default function BusinessVariables() {
                     setEditBus(initialEditBusiness);
                   }}
                   style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
               <View style={styles.addCustomerForm}>
                 {/* Name Row */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Name *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter company name"
-                      value={editBus.bus_name}
-                      onChangeText={t => editOnChange('bus_name', t)}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Urdu Name</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter Urdu name"
-                      value={editBus.bus_name_ur}
-                      onChangeText={t => editOnChange('bus_name_ur', t)}
-                    />
-                  </View>
-                </View>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#888"
+                  placeholder="Name *"
+                  value={editBus.bus_name}
+                  onChangeText={t => editOnChange('bus_name', t)}
+                />
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#888"
+                  placeholder="Urdu Name *"
+                  value={editBus.bus_name_ur}
+                  onChangeText={t => editOnChange('bus_name_ur', t)}
+                />
 
                 {/* Address Row */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Address *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter address"
-                      value={editBus.bus_address}
-                      onChangeText={t => editOnChange('bus_address', t)}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Urdu Address</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter Urdu address"
-                      value={editBus.bus_address_ur}
-                      onChangeText={t => editOnChange('bus_address_ur', t)}
-                    />
-                  </View>
-                </View>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#888"
+                  placeholder="Address *"
+                  value={editBus.bus_address}
+                  onChangeText={t => editOnChange('bus_address', t)}
+                />
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  placeholder="Urdu Address"
+                  value={editBus.bus_address_ur}
+                  onChangeText={t => editOnChange('bus_address_ur', t)}
+                />
 
                 {/* Contact 1 & 2 Row */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 1</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="0300-1234567"
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      value={editBus.bus_contact1}
-                      onChangeText={text => {
-                        let cleaned = text.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        editOnChange('bus_contact1', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 2</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="0300-1234567"
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      value={editBus.bus_contact2}
-                      onChangeText={text => {
-                        let cleaned = text.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        editOnChange('bus_contact2', cleaned);
-                      }}
-                    />
-                  </View>
-                </View>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  placeholder="Contact 1 *"
+                  keyboardType="phone-pad"
+                  maxLength={12}
+                  value={editBus.bus_contact1}
+                  onChangeText={text => {
+                    let cleaned = text.replace(/[^0-9-]/g, '');
+                    cleaned = cleaned.replace(/-/g, '');
+                    if (cleaned.length > 4)
+                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                    editOnChange('bus_contact1', cleaned);
+                  }}
+                />
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  placeholder="Contact 2 *"
+                  keyboardType="phone-pad"
+                  maxLength={12}
+                  value={editBus.bus_contact2}
+                  onChangeText={text => {
+                    let cleaned = text.replace(/[^0-9-]/g, '');
+                    cleaned = cleaned.replace(/-/g, '');
+                    if (cleaned.length > 4)
+                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                    editOnChange('bus_contact2', cleaned);
+                  }}
+                />
 
                 {/* Contact 3 & Email Row */}
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact 3</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="0300-1234567"
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      value={editBus.bus_contact3}
-                      onChangeText={text => {
-                        let cleaned = text.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        editOnChange('bus_contact3', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Business Email</Text>
-                    <TextInput
-                      style={[
-                        styles.addCustomerInput,
-                        {backgroundColor: '#f0f0f0'},
-                      ]}
-                      placeholderTextColor="#999"
-                      placeholder="business@example.com"
-                      value={editBus.bus_email}
-                      editable={false}
-                    />
-                  </View>
-                </View>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  placeholder="Contact 2 *"
+                  keyboardType="phone-pad"
+                  maxLength={12}
+                  value={editBus.bus_contact3}
+                  onChangeText={text => {
+                    let cleaned = text.replace(/[^0-9-]/g, '');
+                    cleaned = cleaned.replace(/-/g, '');
+                    if (cleaned.length > 4)
+                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                    editOnChange('bus_contact3', cleaned);
+                  }}
+                />
+                <TextInput
+                  style={[
+                    styles.addCustomerInput,
+                    {backgroundColor: '#f0f0f0'},
+                  ]}
+                  placeholderTextColor="#999"
+                  placeholder="Business Email"
+                  value={editBus.bus_email}
+                  editable={false}
+                />
 
                 {/* Update Button */}
                 <TouchableOpacity
@@ -536,55 +622,121 @@ export default function BusinessVariables() {
           </View>
         </Modal>
 
-        {/* Pagination Controls */}
-        {totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
+        {/* Add Business Modal */}
+        <Modal visible={modal === 'Add'} transparent animationType="slide">
+          <View style={styles.addCustomerModalOverlay}>
+            <ScrollView style={styles.addCustomerModalContainer}>
+              <View style={styles.addCustomerHeader}>
+                <Text style={styles.addCustomerTitle}>Add Company</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setModal('');
+                  }}
+                  style={styles.addCustomerCloseBtn}>
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
+                </TouchableOpacity>
+              </View>
 
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
-            </View>
+              <View style={styles.addCustomerForm}>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#888"
+                  placeholder="Name *"
+                  value={addForm.name}
+                  onChangeText={t => onChange('name', t)}
+                />
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#888"
+                  placeholder="Urdu Name *"
+                  value={addForm.urName}
+                  onChangeText={t => onChange('urName', t)}
+                />
 
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() =>
-                setCurrentPage(prev => Math.min(prev + 1, totalPages))
-              }
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#888"
+                  placeholder="Address *"
+                  value={addForm.add}
+                  onChangeText={t => onChange('add', t)}
+                />
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#888"
+                  placeholder="Urdu Address"
+                  value={addForm.urAddress}
+                  onChangeText={t => onChange('urAddress', t)}
+                />
+
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#888"
+                  placeholder="Contact 1 *"
+                  value={addForm.contact1}
+                  maxLength={11}
+                  keyboardType="number-pad"
+                  onChangeText={t => {
+                    let cleaned = t.replace(/[^0-9-]/g, '');
+                    cleaned = cleaned.replace(/-/g, '');
+                    if (cleaned.length > 4)
+                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                    onChange('contact1', cleaned);
+                  }}
+                />
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#888"
+                  placeholder="Contact 2"
+                  value={addForm.contact2}
+                  maxLength={11}
+                  keyboardType="number-pad"
+                  onChangeText={t => {
+                    let cleaned = t.replace(/[^0-9-]/g, '');
+                    cleaned = cleaned.replace(/-/g, '');
+                    if (cleaned.length > 4)
+                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                    onChange('contact2', cleaned);
+                  }}
+                />
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#888"
+                  placeholder="Contact 3"
+                  value={addForm.contact3}
+                  maxLength={11}
+                  keyboardType='number-pad'
+                  onChangeText={t => {
+                    let cleaned = t.replace(/[^0-9-]/g, '');
+                    cleaned = cleaned.replace(/-/g, '');
+                    if (cleaned.length > 4)
+                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                    onChange('contact3', cleaned);
+                  }}
+                />
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#888"
+                  placeholder="Business Email"
+                  value={addForm.busEmail}
+                  onChangeText={t => onChange('busEmail', t)}
+                />
+
+                {/* Add Button */}
+                <TouchableOpacity
+                  style={styles.addCustomerSubmitBtn}
+                  onPress={addComp}>
+                  <Icon name="office-building" size={20} color="white" />
+                  <Text style={styles.addCustomerSubmitText}>Add Company</Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+            <Toast />
           </View>
-        )}
-      </ImageBackground>
+        </Modal>
+      </View>
     </SafeAreaView>
   );
 }
@@ -592,22 +744,31 @@ export default function BusinessVariables() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
-  },
-  background: {
-    flex: 1,
+    backgroundColor: backgroundColors.gray,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
     paddingVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: backgroundColors.primary,
   },
   headerBtn: {
-    padding: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
     borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  addBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: backgroundColors.light,
+  },
+  menuIcon: {
+    width: 28,
+    height: 28,
   },
   headerCenter: {
     flex: 1,
@@ -619,118 +780,61 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
   },
-
-  // Flat List Styling
-  listContainer: {
+  gradientBackground: {
     flex: 1,
-    paddingHorizontal: 8,
   },
-  card: {
-    backgroundColor: '#ffffffde',
-    borderRadius: 16,
-    marginVertical: 8,
+
+  // Details container
+  detailsContainer: {
+    flex: 1,
+    paddingHorizontal: '3%',
+  },
+
+  // Inner Details
+  innerDetails: {
+    backgroundColor: backgroundColors.light,
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    marginBottom: 30,
+    marginTop: 10,
     shadowColor: '#000',
     shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    zIndex: 1000,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 2,
   },
-  headerRow: {
+  innerHeader: {
+    width: '100%',
+    height: 50,
+    borderBottomColor: backgroundColors.primary,
+    borderBottomWidth: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
     justifyContent: 'space-between',
-  },
-  headerTxtContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
-    width: '50%',
   },
-  avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: '#144272',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  productName: {
+  headerText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#144272',
-    flexWrap: 'wrap',
+    color: backgroundColors.dark,
   },
-  actionContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    justifyContent: 'space-between',
-  },
-  acctionBtn: {
-    padding: 8,
-    backgroundColor: '#14417212',
-    borderRadius: 8,
-  },
-  subText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
-  },
-  infoBox: {
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 12,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 1,
+  detailsView: {
     flex: 1,
   },
-  infoIcon: {
-    marginRight: 6,
+  detailsRow: {
+    alignItems: 'baseline',
+    paddingVertical: 10,
+    borderBottomWidth: 0.6,
+    borderBottomColor: backgroundColors.primary,
   },
-  labelText: {
-    fontSize: 13,
-    color: '#144272',
+  label: {
+    fontSize: 14,
     fontWeight: '600',
+    color: backgroundColors.primary,
   },
-  valueText: {
-    fontSize: 13,
-    color: '#333',
-    maxWidth: '50%',
-    textAlign: 'right',
-    fontWeight: '500',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 50,
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    paddingVertical: 40,
-    paddingHorizontal: 20,
-    borderRadius: 16,
-    marginHorizontal: 20,
-  },
-  emptyText: {
-    color: '#666',
+  value: {
     fontSize: 16,
-    marginTop: 10,
-    fontWeight: '500',
+    color: backgroundColors.dark,
   },
 
   // Pagination Styling
@@ -853,12 +957,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 15,
   },
   addCustomerModalContainer: {
     backgroundColor: 'white',
     borderRadius: 15,
-    maxHeight: '90%',
+    maxHeight: '80%',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
@@ -877,7 +981,7 @@ const styles = StyleSheet.create({
   addCustomerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
   },
   addCustomerCloseBtn: {
     padding: 5,
@@ -895,25 +999,27 @@ const styles = StyleSheet.create({
     flex: 1,
     marginHorizontal: 5,
   },
-  addCustomerFullRow: {
-    marginBottom: 15,
-  },
   addCustomerLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 5,
   },
   addCustomerInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    height: 45,
-    borderRadius: 8,
+    backgroundColor: backgroundColors.light,
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 14,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
+    borderWidth: 1.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 10,
+    height: 48,
+    color: backgroundColors.dark,
+    marginBottom: 8,
   },
   addCustomerDropdownRow: {
     marginBottom: 15,
@@ -948,7 +1054,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 10,
     paddingVertical: 15,
     marginTop: 20,
