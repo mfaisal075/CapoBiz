@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -78,7 +79,7 @@ const initialAddBusiness: AddBussiness = {
   urName: '',
 };
 
-export default function BusinessVariables() {
+export default function BusinessVariables({navigation}: any) {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [busDetails, setBusDetails] = useState<BusinessDetails | null>(null);
@@ -304,6 +305,18 @@ export default function BusinessVariables() {
 
   useEffect(() => {
     fetchBusinesses();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -706,7 +719,7 @@ export default function BusinessVariables() {
                   placeholder="Contact 3"
                   value={addForm.contact3}
                   maxLength={11}
-                  keyboardType='number-pad'
+                  keyboardType="number-pad"
                   onChangeText={t => {
                     let cleaned = t.replace(/[^0-9-]/g, '');
                     cleaned = cleaned.replace(/-/g, '');
@@ -911,16 +924,10 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
-  },
   deleteModalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 8,
   },
   deleteModalMessage: {

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -38,7 +39,7 @@ interface AllAccountsList {
   fixac_description: string;
 }
 
-export default function FixAccounts() {
+export default function FixAccounts({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [open, setOpen] = useState(false);
@@ -316,6 +317,18 @@ export default function FixAccounts() {
     fetchAccountsDropdown();
     fetchAllAccountsList();
     fetchSingleAccountList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate, accValue]);
 
   function formatNumber(num: number | string): string {

@@ -20,6 +20,7 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import DropDownPicker from 'react-native-dropdown-picker';
 import backgroundColors from '../../Colors';
+import {BackHandler} from 'react-native';
 
 interface Orders {
   id: number;
@@ -64,7 +65,7 @@ interface InvoiceState {
   sald_total_fretailprice: string;
 }
 
-export default function SalesOrderList() {
+export default function SalesOrderList({navigation}: any) {
   const {token, bussName, bussAddress, bussContact} = useUser();
   const {openDrawer} = useDrawer();
   const [saleOrders, setSaleOrders] = useState<Orders[]>([]);
@@ -144,6 +145,18 @@ export default function SalesOrderList() {
 
   useEffect(() => {
     fetchSaleOrderList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate, status]);
 
   return (
@@ -172,7 +185,7 @@ export default function SalesOrderList() {
               <Text style={styles.dateText}>
                 {startDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showStartDatePicker && (
               <DateTimePicker
@@ -194,7 +207,7 @@ export default function SalesOrderList() {
               <Text style={styles.dateText}>
                 {endDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showEndDatePicker && (
               <DateTimePicker
@@ -221,13 +234,22 @@ export default function SalesOrderList() {
             placeholderStyle={{color: '#666'}}
             textStyle={{color: '#144272'}}
             ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color="#144272" />
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color="#144272" />
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
             )}
             style={styles.dropdown}
             dropDownContainerStyle={styles.dropDownContainer}
+            labelStyle={{
+              fontSize: 14,
+              color: backgroundColors.dark,
+              fontWeight: '600',
+            }}
           />
         </View>
 
@@ -773,8 +795,8 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#144272',
+    fontWeight: '600',
+    color: backgroundColors.dark,
   },
 
   // Dropdown

@@ -1,4 +1,5 @@
 import {
+  BackHandler,
   Image,
   Modal,
   SafeAreaView,
@@ -234,6 +235,18 @@ const UserDetails = ({navigation, route}: any) => {
 
   useEffect(() => {
     fetchRoleDropDown();
+
+    const backKey = () => {
+      navigation.navigate('Users');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -346,7 +359,7 @@ const UserDetails = ({navigation, route}: any) => {
                 onPress={() => {
                   setModalVisible('');
                 }}>
-                <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
+                <Text style={[styles.deleteModalBtnText, {color: backgroundColors.dark}]}>
                   Cancel
                 </Text>
               </TouchableOpacity>
@@ -636,16 +649,10 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
-  },
   deleteModalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 8,
   },
   deleteModalMessage: {

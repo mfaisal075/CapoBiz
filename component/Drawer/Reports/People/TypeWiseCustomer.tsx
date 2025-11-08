@@ -7,6 +7,7 @@ import {
   ImageBackground,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -34,7 +35,7 @@ interface TypeWiseList {
   custtyp_name: string;
 }
 
-export default function TypeWiseCustomer() {
+export default function TypeWiseCustomer({navigation}: any) {
   const {token} = useUser();
   const {bussName, bussAddress} = useUser();
   const {openDrawer} = useDrawer();
@@ -170,6 +171,18 @@ export default function TypeWiseCustomer() {
   useEffect(() => {
     fetchTypeDropdown();
     fetchAreaList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [typeValue]);
   return (
     <SafeAreaView style={styles.container}>

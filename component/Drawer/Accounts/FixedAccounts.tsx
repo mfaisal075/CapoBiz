@@ -11,6 +11,7 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -53,7 +54,7 @@ const initialFixedAccAddFrom: FixedAccAddForm = {
   desc: '',
 };
 
-export default function FixedAccounts() {
+export default function FixedAccounts({navigation}: any) {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [Open, setOpen] = useState(false);
@@ -290,6 +291,18 @@ export default function FixedAccounts() {
     fetchFixesDropdown();
     fetchFixedAccDetails();
     fetchInvc();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [fixedAccValue, fromDate, toDate]);
 
   return (
@@ -705,6 +718,7 @@ export default function FixedAccounts() {
                       keyboardType="number-pad"
                       value={cashAddFrom.amount}
                       onChangeText={t => cashOnChange('amount', t)}
+                      maxLength={9}
                     />
                   </View>
 

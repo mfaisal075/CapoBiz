@@ -1,5 +1,6 @@
 import {
   ActivityIndicator,
+  BackHandler,
   Image,
   Modal,
   StyleSheet,
@@ -230,6 +231,18 @@ const ExpenseDetails = ({navigation, route}: any) => {
   useEffect(() => {
     fetchExDetails();
     getExpenseDropdown();
+
+    const backKey = () => {
+      navigation.navigate('Manage Expenses');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
   return (
     <SafeAreaView style={styles.container}>
@@ -406,57 +419,44 @@ const ExpenseDetails = ({navigation, route}: any) => {
             </View>
 
             <View style={styles.modalForm}>
-              <View style={styles.dropdownRow}>
-                <Text style={styles.label}>Expense Category *</Text>
-                <DropDownPicker
-                  items={transformedCategories}
-                  open={editCatOpen}
-                  setOpen={setEditCatOpen}
-                  value={editCategoryValue}
-                  setValue={setEditCategoryValue}
-                  placeholder="Select expense category"
-                  placeholderStyle={styles.dropdownPlaceholder}
-                  textStyle={styles.dropdownText}
-                  style={styles.dropdown}
-                  dropDownContainerStyle={styles.dropdownContainer}
-                  listMode="SCROLLVIEW"
-                />
-              </View>
+              <DropDownPicker
+                items={transformedCategories}
+                open={editCatOpen}
+                setOpen={setEditCatOpen}
+                value={editCategoryValue}
+                setValue={setEditCategoryValue}
+                placeholder="Select category *"
+                placeholderStyle={styles.dropdownPlaceholder}
+                textStyle={styles.dropdownText}
+                style={styles.dropdown}
+                dropDownContainerStyle={styles.dropdownContainer}
+                listMode="SCROLLVIEW"
+              />
 
-              <View style={styles.row}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Amount *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholderTextColor="#999"
-                    maxLength={11}
-                    placeholder="Enter amount"
-                    keyboardType="numeric"
-                    value={editFrom.amount}
-                    onChangeText={t => {
-                      const filtered = t
-                        .replace(/[^0-9.]/g, '')
-                        .replace(/(\..*)\./g, '$1');
-                      editOnChange('amount', filtered);
-                    }}
-                  />
-                </View>
-              </View>
-              <View style={[styles.row, {marginVertical: 10}]}>
-                <View style={styles.field}>
-                  <Text style={styles.label}>Added By *</Text>
-                  <TextInput
-                    style={styles.input}
-                    placeholderTextColor="#999"
-                    placeholder="Enter name"
-                    value={editFrom.addedBy}
-                    onChangeText={t => editOnChange('addedBy', t)}
-                  />
-                </View>
-              </View>
+              <TextInput
+                style={styles.input}
+                placeholderTextColor="#999"
+                maxLength={9}
+                placeholder="Enter amount"
+                keyboardType="numeric"
+                value={editFrom.amount}
+                onChangeText={t => {
+                  const filtered = t
+                    .replace(/[^0-9.]/g, '')
+                    .replace(/(\..*)\./g, '$1');
+                  editOnChange('amount', filtered);
+                }}
+              />
+
+              <TextInput
+                style={styles.input}
+                placeholderTextColor="#999"
+                placeholder="Added By *"
+                value={editFrom.addedBy}
+                onChangeText={t => editOnChange('addedBy', t)}
+              />
 
               <View style={styles.dateRow}>
-                <Text style={styles.label}>Date</Text>
                 <TouchableOpacity
                   style={styles.dateInput}
                   onPress={() => setShowEditDatePicker(true)}>
@@ -480,7 +480,6 @@ const ExpenseDetails = ({navigation, route}: any) => {
               </View>
 
               <View style={styles.fullRow}>
-                <Text style={styles.label}>Description *</Text>
                 <TextInput
                   style={[
                     styles.input,
@@ -662,7 +661,7 @@ const styles = StyleSheet.create({
   deleteModalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 8,
   },
   deleteModalMessage: {
@@ -695,7 +694,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   cancelBtnText: {
-    color: '#144272',
+    color: backgroundColors.dark,
   },
 
   // Edit Expense Modal Styles
@@ -745,22 +744,35 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 0.6,
+    borderColor: '#00000047',
     height: 45,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
     color: '#333',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: backgroundColors.light,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 6,
+    marginBottom: 10,
   },
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    minHeight: 42,
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+    height: 48,
+    marginBottom: 10,
   },
   dropdownContainer: {
     backgroundColor: 'white',
@@ -779,19 +791,28 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   dateInput: {
+    borderWidth: 0.6,
+    borderColor: '#00000047',
+    height: 48,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#333',
+    backgroundColor: backgroundColors.light,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    height: 45,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#f9f9f9',
   },
   dateText: {
     fontSize: 14,
-    color: '#333',
+    color: backgroundColors.dark,
+    fontWeight: '600',
   },
   submitBtn: {
     flexDirection: 'row',
@@ -800,7 +821,7 @@ const styles = StyleSheet.create({
     backgroundColor: backgroundColors.primary,
     borderRadius: 10,
     paddingVertical: 15,
-    marginTop: 20,
+    marginTop: 10,
   },
   submitText: {
     color: 'white',

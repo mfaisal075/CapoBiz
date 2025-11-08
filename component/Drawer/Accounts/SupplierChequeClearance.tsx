@@ -1,4 +1,5 @@
 import {
+  BackHandler,
   Image,
   ImageBackground,
   Modal,
@@ -47,7 +48,7 @@ interface ChequeData {
   chi_date: string;
 }
 
-const SupplierChequeClearance = () => {
+const SupplierChequeClearance = ({navigation}: any) => {
   const {openDrawer} = useDrawer();
   const [suppDropdown, setSuppDropdown] = useState<Suppliers[]>([]);
   const transformedSupp = suppDropdown.map(supp => ({
@@ -175,6 +176,18 @@ const SupplierChequeClearance = () => {
     fetchSuppDropdown();
     getSuppData();
     fetchChequeInfo();
+
+    const backKey = () => {
+      navigation.navigate('Supplier Account');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [suppValue]);
 
   return (
@@ -292,6 +305,15 @@ const SupplierChequeClearance = () => {
                       setLoadChequeData(item);
                       setClearanceDate(new Date(item.chi_date));
                     }}>
+                    <Text
+                      style={{
+                        fontSize: 10,
+                        fontWeight: '500',
+                        color: backgroundColors.danger,
+                        textDecorationLine: 'underline',
+                      }}>
+                      Click to Load the Cheque
+                    </Text>
                     <View style={styles.chequeHeader}>
                       <Text style={styles.chequeName}>{item.sup_name}</Text>
                       <Icon

@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   ScrollView,
   Image,
@@ -17,6 +16,7 @@ import RNPrint from 'react-native-print';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import backgroundColors from '../../Colors';
+import {BackHandler} from 'react-native';
 
 interface Capital {
   stockvalue: number;
@@ -28,7 +28,7 @@ interface Capital {
   business_capital: number;
 }
 
-export default function BusinessCapital() {
+export default function BusinessCapital({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [capital, setCapital] = useState<Capital | null>(null);
@@ -130,6 +130,18 @@ export default function BusinessCapital() {
 
   useEffect(() => {
     fetchCapital();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   function formatNumber(num?: number | string): string {
@@ -143,7 +155,9 @@ export default function BusinessCapital() {
     if (abs >= 1e33) {
       return (n / 1e33).toFixed(n % 1e33 === 0 ? 0 : 2) + 'Dec';
     } else if (abs >= 1000000000000000) {
-      return (n / 1000000000000000).toFixed(n % 1000000000000000 === 0 ? 0 : 2) + 'Q';
+      return (
+        (n / 1000000000000000).toFixed(n % 1000000000000000 === 0 ? 0 : 2) + 'Q'
+      );
     } else if (abs >= 1000000000000) {
       return (n / 1000000000000).toFixed(n % 1000000000000 === 0 ? 0 : 2) + 'T';
     } else if (abs >= 1000000000) {

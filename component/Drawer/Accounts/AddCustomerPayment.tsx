@@ -20,6 +20,7 @@ import Toast from 'react-native-toast-message';
 import {Modal} from 'react-native';
 import backgroundColors from '../../Colors';
 import RNPrint from 'react-native-print';
+import {BackHandler} from 'react-native';
 
 interface Customers {
   id: number;
@@ -54,7 +55,7 @@ const initialChequeAddForm: ChequeAddFrom = {
   note: '',
 };
 
-const AddCustomerPayment = () => {
+const AddCustomerPayment = ({navigation}: any) => {
   const {openDrawer} = useDrawer();
   const [custDropdown, setCustDropdown] = useState<Customers[]>([]);
   const transformedCust = custDropdown.slice(1).map(cust => ({
@@ -538,6 +539,18 @@ const AddCustomerPayment = () => {
   useEffect(() => {
     fetchCustDropdown();
     getCustData();
+
+    const backKey = () => {
+      navigation.navigate('Customer Account');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [customerVal]);
 
   return (
@@ -704,7 +717,6 @@ const AddCustomerPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Date</Text>
                     <TouchableOpacity
                       onPress={() => setShowDatePicker('cash')}
                       style={styles.dateInput}>
@@ -818,7 +830,6 @@ const AddCustomerPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Date</Text>
                     <TouchableOpacity
                       onPress={() => setShowDatePicker('cheque')}
                       style={styles.dateInput}>
@@ -1082,8 +1093,8 @@ const AddCustomerPayment = () => {
 
               <TouchableOpacity
                 onPress={() => {
-                  printCheReceipt()
-                  setCashType('')
+                  printCheReceipt();
+                  setCashType('');
                   setChiReceipt(null);
                 }}
                 style={styles.modalButton}>
@@ -1293,8 +1304,8 @@ const styles = StyleSheet.create({
     height: 48,
   },
   dateText: {
-    flex: 1,
     color: backgroundColors.dark,
+    fontWeight: '600',
     fontSize: 14,
     marginLeft: 8,
   },

@@ -22,6 +22,7 @@ import Toast from 'react-native-toast-message';
 import LottieView from 'lottie-react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
+import {BackHandler} from 'react-native';
 
 interface Customers {
   id: number;
@@ -40,7 +41,7 @@ interface ChequeData {
   chi_date: string;
 }
 
-const ChequeClearance = () => {
+const ChequeClearance = ({navigation}: any) => {
   const {openDrawer} = useDrawer();
   const [custDropdown, setCustDropdown] = useState<Customers[]>([]);
   const transformedCust = custDropdown.map(cust => ({
@@ -168,6 +169,18 @@ const ChequeClearance = () => {
     fetchCustDropdown();
     getCustData();
     fetchChequeInfo();
+
+    const backKey = () => {
+      navigation.navigate('Customer Account');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [customerVal]);
 
   return (

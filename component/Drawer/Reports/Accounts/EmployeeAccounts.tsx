@@ -6,6 +6,7 @@ import {
   Image,
   TouchableOpacity,
   FlatList,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -49,7 +50,7 @@ interface SingleEmployeeList {
   pre_balance: number;
 }
 
-export default function EmployeeAccounts() {
+export default function EmployeeAccounts({navigation}: any) {
   const {openDrawer} = useDrawer();
   const [open, setOpen] = useState(false);
   const {bussName, bussAddress} = useUser();
@@ -361,6 +362,18 @@ export default function EmployeeAccounts() {
     fetchAllEmployeeList();
     fetchEmployeeDropdown();
     fetchSingleEmployeeList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate, empValue]);
 
   function formatNumber(num: number | string): string {

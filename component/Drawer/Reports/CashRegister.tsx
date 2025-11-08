@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -34,7 +35,7 @@ interface CashRegisterData {
   creg_closing_date: string;
 }
 
-export default function CashRegister() {
+export default function CashRegister({navigation}: any) {
   const {token} = useUser();
   const {bussAddress, bussName} = useUser();
   const {openDrawer} = useDrawer();
@@ -253,6 +254,18 @@ export default function CashRegister() {
   useEffect(() => {
     fetchUsersDropdown();
     fetchCashRegister();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [userValue, startDate, endDate]);
 
   function formatNumber(num: number | string): string {

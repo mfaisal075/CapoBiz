@@ -3,9 +3,9 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -36,7 +36,7 @@ interface DataWiseList {
   created_at: string;
 }
 
-export default function SaleReturnReport() {
+export default function SaleReturnReport({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [prodOpen, setProdOpen] = useState(false);
@@ -303,6 +303,18 @@ export default function SaleReturnReport() {
     fetchProdDropdown();
     fetchDataSaleReturn();
     fetchProductSaleReturn();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate, prodValue]);
 
   function formatNumber(num: number | string): string {

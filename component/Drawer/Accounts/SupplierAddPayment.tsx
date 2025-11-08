@@ -9,6 +9,7 @@ import {
   ScrollView,
   Modal,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -59,7 +60,7 @@ const initialChequeAddForm: ChequeAddFrom = {
   note: '',
 };
 
-const SupplierAddPayment = () => {
+const SupplierAddPayment = ({navigation}: any) => {
   const {openDrawer} = useDrawer();
   const [selectedTab, setSelectedTab] = useState('Cash');
   const [suppDropdown, setSuppDropdown] = useState<Supplier[]>([]);
@@ -263,6 +264,18 @@ const SupplierAddPayment = () => {
   useEffect(() => {
     fetchSuppDropdown();
     getSuppData();
+
+    const backKey = () => {
+      navigation.navigate('Supplier Account');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [suppValue]);
 
   return (
@@ -429,7 +442,6 @@ const SupplierAddPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Date</Text>
                     <TouchableOpacity
                       onPress={() => setShowDatePicker('cash')}
                       style={styles.dateInput}>
@@ -522,6 +534,7 @@ const SupplierAddPayment = () => {
                       placeholderTextColor={'rgba(0,0,0,0.7)'}
                       keyboardType="number-pad"
                       onChangeText={t => chequeOnChange('amount', t)}
+                      maxLength={9}
                     />
                   </View>
                 </View>
@@ -542,11 +555,14 @@ const SupplierAddPayment = () => {
 
                 <View style={styles.inputRow}>
                   <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Date</Text>
                     <TouchableOpacity
                       onPress={() => setShowDatePicker('cheque')}
                       style={styles.dateInput}>
-                      <Icon name="event" size={20} color={backgroundColors.dark} />
+                      <Icon
+                        name="event"
+                        size={20}
+                        color={backgroundColors.dark}
+                      />
                       <Text style={styles.dateText}>
                         {chequeAddFrom.date
                           ? chequeAddFrom.date.toLocaleDateString()
@@ -854,7 +870,7 @@ const styles = StyleSheet.create({
     height: 48,
   },
   dateText: {
-    flex: 1,
+    fontWeight: '600',
     color: backgroundColors.dark,
     fontSize: 14,
     marginLeft: 8,
@@ -869,7 +885,6 @@ const styles = StyleSheet.create({
   readOnlyText: {
     color: 'rgba(0,0,0,0.8)',
     fontSize: 14,
-    
   },
   submitBtn: {
     backgroundColor: backgroundColors.primary,

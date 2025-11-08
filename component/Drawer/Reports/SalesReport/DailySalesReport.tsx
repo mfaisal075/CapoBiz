@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -60,7 +61,7 @@ interface DailyDetailedReports {
   sal_change_amount: string;
 }
 
-export default function DailySaleReport() {
+export default function DailySaleReport({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussAddress, bussName} = useUser();
   const [prodOpen, setProdOpen] = useState(false);
@@ -344,6 +345,18 @@ export default function DailySaleReport() {
     fetchProdDropdown();
     fetchDailyReport();
     fetchDailyDetailedReport();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [catValue, prodValue]);
 
   return (

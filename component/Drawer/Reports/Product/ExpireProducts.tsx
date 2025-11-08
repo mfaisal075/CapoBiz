@@ -3,11 +3,10 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   Image,
   TouchableOpacity,
-  ScrollView,
   FlatList,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -17,7 +16,6 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../../CTX/UserContext';
 import RNPrint from 'react-native-print';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../../Colors';
 
 interface ExpiredList {
@@ -33,7 +31,7 @@ interface ExpiredList {
   pcat_name: string;
 }
 
-export default function ExpireProducts() {
+export default function ExpireProducts({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussAddress, bussName} = useUser();
   const [expiredList, setExpiredList] = useState<ExpiredList[]>([]);
@@ -175,6 +173,18 @@ export default function ExpireProducts() {
 
   useEffect(() => {
     fetchExpiredList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (

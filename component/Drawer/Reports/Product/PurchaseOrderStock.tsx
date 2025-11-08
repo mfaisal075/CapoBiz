@@ -20,6 +20,7 @@ import RNPrint from 'react-native-print';
 import {useUser} from '../../../CTX/UserContext';
 import {RadioButton} from 'react-native-paper';
 import backgroundColors from '../../../Colors';
+import {BackHandler} from 'react-native';
 
 interface CompletedList {
   id: number;
@@ -35,7 +36,7 @@ interface CompletedList {
   pordd_invoice_no: string;
 }
 
-export default function PurchaseOrderStock() {
+export default function PurchaseOrderStock({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [open, setOpen] = useState(false);
@@ -340,7 +341,19 @@ export default function PurchaseOrderStock() {
   }, [statusVal, endDate, startDate, selectionMode]);
 
   useEffect(() => {
-    setCurrentPage(1); // Reset pagination when selection mode or filters change
+    setCurrentPage(1);
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [selectionMode, statusVal]);
 
   return (

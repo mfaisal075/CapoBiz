@@ -9,6 +9,7 @@ import {
   TextInput,
   Modal,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -26,7 +27,7 @@ interface Areas {
   area_status: string;
 }
 
-export default function CustomerArea() {
+export default function CustomerArea({navigation}: any) {
   const {openDrawer} = useDrawer();
   const [area, setArea] = useState('');
   const {token} = useUser();
@@ -266,6 +267,18 @@ export default function CustomerArea() {
 
   useEffect(() => {
     handleFetchAreas();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -381,7 +394,7 @@ export default function CustomerArea() {
                 <TextInput
                   style={styles.addCustomerInput}
                   placeholderTextColor="#999"
-                  placeholder="Enter area name"
+                  placeholder="Enter area name *"
                   value={area}
                   onChangeText={text => setArea(text)}
                 />
@@ -750,27 +763,21 @@ const styles = StyleSheet.create({
   addCustomerFullRow: {
     marginBottom: 15,
   },
-  addCustomerLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-    marginBottom: 5,
-  },
   addCustomerInput: {
-    borderWidth: 1,
-    backgroundColor: backgroundColors.light,
-    borderColor: '#ccc',
+    borderWidth: 0.6,
+    borderColor: '#00000047',
+    height: 45,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    height: 48,
-    color: backgroundColors.dark,
+    color: '#333',
+    backgroundColor: backgroundColors.light,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 2,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 6,
   },
   addCustomerSubmitBtn: {
     flexDirection: 'row',
@@ -805,7 +812,7 @@ const styles = StyleSheet.create({
   deleteModalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 8,
   },
   deleteModalMessage: {

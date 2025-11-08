@@ -8,6 +8,7 @@ import {
   View,
   ScrollView,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -53,7 +54,7 @@ const initialChequeAddForm: ChequeAddFrom = {
   note: '',
 };
 
-const LabourAddPayment = () => {
+const LabourAddPayment = ({navigation}: any) => {
   const {openDrawer} = useDrawer();
   const [labourDropdown, setLabourDropdown] = useState<Labour[]>([]);
   const transformedLabr = labourDropdown.map(lab => ({
@@ -198,6 +199,18 @@ const LabourAddPayment = () => {
   useEffect(() => {
     fetchLabrDropdown();
     getLabrData();
+
+    const backKey = () => {
+      navigation.navigate('Labour Account');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [labourValue]);
 
   return (
@@ -305,6 +318,7 @@ const LabourAddPayment = () => {
                   placeholderTextColor={'rgba(0,0,0,0.7)'}
                   keyboardType="number-pad"
                   onChangeText={t => cashOnChange('amount', t)}
+                  maxLength={9}
                 />
               </View>
             </View>
@@ -325,7 +339,6 @@ const LabourAddPayment = () => {
 
             <View style={styles.inputRow}>
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Date *</Text>
                 <TouchableOpacity
                   onPress={() => setShowDatePicker('cash')}
                   style={styles.dateInput}>
@@ -580,7 +593,7 @@ const styles = StyleSheet.create({
     height: 48,
   },
   dateText: {
-    flex: 1,
+    fontWeight: '600',
     color: backgroundColors.dark,
     fontSize: 14,
     marginLeft: 8,

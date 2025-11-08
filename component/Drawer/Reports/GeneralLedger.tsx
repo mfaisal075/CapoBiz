@@ -6,6 +6,7 @@ import {
   Image,
   TouchableOpacity,
   FlatList,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -31,7 +32,7 @@ interface Ledger {
   cflo_invoice_no: string;
 }
 
-export default function GeneralLedger() {
+export default function GeneralLedger({navigation}: any) {
   const {token} = useUser();
   const {bussAddress, bussName} = useUser();
   const {openDrawer} = useDrawer();
@@ -205,6 +206,18 @@ export default function GeneralLedger() {
 
   useEffect(() => {
     fetchLedger();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate]);
 
   function formatNumber(num: number | string): string {

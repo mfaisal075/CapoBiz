@@ -6,6 +6,7 @@ import {
   Image,
   TouchableOpacity,
   FlatList,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -45,7 +46,7 @@ interface SingleLabourList {
   labrac_date: string;
 }
 
-export default function LabourAccounts() {
+export default function LabourAccounts({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [open, setOpen] = useState(false);
@@ -337,6 +338,18 @@ export default function LabourAccounts() {
     fetchAllLabourList();
     fetchLabourDropdown();
     fetchSingleLabourList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate, labValue]);
 
   function formatNumber(num: number | string): string {

@@ -8,9 +8,10 @@ import {
   Modal,
   ScrollView,
   Image,
+  BackHandler,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
@@ -94,6 +95,20 @@ export default function PasswordReset() {
       });
     }
   };
+
+  useEffect(() => {
+    const backKey = () => {
+      navigation.navigate('Dashboard' as never);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>

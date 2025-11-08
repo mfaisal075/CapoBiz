@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -44,7 +45,7 @@ interface CategoryWiseExpanseData {
   expc_name: string;
 }
 
-export default function ExpenseReport() {
+export default function ExpenseReport({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussAddress, bussName} = useUser();
   const [categoryDropdown, setCategoryDropdown] = useState<Category[]>([]);
@@ -320,6 +321,18 @@ export default function ExpenseReport() {
     fetchExpanseCatDropdown();
     fetchCateWiseExpanses();
     fetchExpanses();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate, catValue]);
 
   function formatNumber(num: number | string): string {

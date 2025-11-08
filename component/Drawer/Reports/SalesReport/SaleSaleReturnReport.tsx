@@ -7,6 +7,7 @@ import {
   FlatList,
   Animated,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState, useRef} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -47,7 +48,7 @@ interface SaleData {
   cust_name: string;
 }
 
-export default function SaleSaleReturnReport() {
+export default function SaleSaleReturnReport({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [usersDropdown, setUsersDropdown] = useState<Users[]>([]);
@@ -476,6 +477,18 @@ export default function SaleSaleReturnReport() {
   useEffect(() => {
     fetchUserDropdown();
     fetchSaleData();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate, userValue]);
 
   return (

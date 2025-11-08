@@ -3,10 +3,10 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   Image,
   TouchableOpacity,
   FlatList,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -42,7 +42,7 @@ interface SupplierChequeList {
   chi_clear_date: string;
 }
 
-export default function CustomerAccounts() {
+export default function CustomerAccounts({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [statusOpen, setStatusOpen] = useState(false);
@@ -307,6 +307,18 @@ export default function CustomerAccounts() {
   useEffect(() => {
     fetchCustomerChequeList();
     fetchSupplierChequeList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate, statusValue]);
 
   function formatNumber(num: number | string): string {

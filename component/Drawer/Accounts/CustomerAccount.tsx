@@ -8,6 +8,7 @@ import {
   FlatList,
   Animated,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useRef, useState} from 'react';
 import {RadioButton} from 'react-native-paper';
@@ -316,6 +317,18 @@ export default function CustomerAccount() {
     fetchAllCustAccounts();
     fetchCustWithoutDetails();
     fetchCustWithDetails();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard' as never);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [customerVal, fromDate, toDate]);
 
   return (

@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -15,7 +16,6 @@ import BASE_URL from '../../../BASE_URL';
 import {useUser} from '../../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import RNPrint from 'react-native-print';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../../Colors';
 
 interface ReOrderList {
@@ -30,7 +30,7 @@ interface ReOrderList {
   pcat_name: string;
 }
 
-export default function BelowReorderProducts() {
+export default function BelowReorderProducts({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [reOrderList, setReOrderList] = useState<ReOrderList[]>([]);
@@ -164,6 +164,18 @@ export default function BelowReorderProducts() {
 
   useEffect(() => {
     fetchReOrderList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (

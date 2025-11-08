@@ -3,10 +3,10 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -19,7 +19,6 @@ import BASE_URL from '../../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../../CTX/UserContext';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../../Colors';
 
 interface StockInList {
@@ -34,7 +33,7 @@ interface StockInList {
   ums_name: string;
 }
 
-export default function PurchaseReturnStock() {
+export default function PurchaseReturnStock({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [open, setOpen] = useState(false);
@@ -229,6 +228,18 @@ export default function PurchaseReturnStock() {
 
   useEffect(() => {
     fetchStockInList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [statusVal, startDate, endDate]);
 
   return (

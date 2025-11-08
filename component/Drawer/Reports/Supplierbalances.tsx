@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -42,7 +43,7 @@ interface SingleSupplierData {
   supac_paid_amount: number;
 }
 
-export default function SupplierBalances() {
+export default function SupplierBalances({navigation}: any) {
   const [selectedTab, setSelectedTab] = useState<TabType>('receivables');
   const [suppOpen, setSuppOpen] = useState(false);
   const [suppValue, setSuppValue] = useState('');
@@ -271,7 +272,19 @@ export default function SupplierBalances() {
     fetchSuppDropdown();
     fetchAllSuppData();
     fetchSingleSuppData();
-    setCurrentPage(1); // Reset to first page when data changes
+    setCurrentPage(1);
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [suppValue, selectedTab, selectionMode]);
 
   function formatNumber(num: number | string): string {

@@ -8,6 +8,7 @@ import {
   Modal,
   ScrollView,
   TextInput,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -217,6 +218,18 @@ export default function ManageExpenses({navigation}: any) {
   useEffect(() => {
     fetchExpenses();
     getExpenseDropdown();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -340,31 +353,43 @@ export default function ManageExpenses({navigation}: any) {
               </View>
 
               <View style={styles.modalForm}>
-                <View style={styles.dropdownRow}>
-                  <Text style={styles.label}>Expense Category *</Text>
-                  <DropDownPicker
-                    items={transformedCategories}
-                    open={categoryOpen}
-                    setOpen={setCategoryOpen}
-                    value={categoryValue}
-                    setValue={setCategoryValue}
-                    placeholder="Select expense category"
-                    placeholderStyle={styles.dropdownPlaceholder}
-                    textStyle={styles.dropdownText}
-                    style={styles.dropdown}
-                    dropDownContainerStyle={styles.dropdownContainer}
-                    listMode="SCROLLVIEW"
-                  />
-                </View>
+                <DropDownPicker
+                  items={transformedCategories}
+                  open={categoryOpen}
+                  setOpen={setCategoryOpen}
+                  value={categoryValue}
+                  setValue={setCategoryValue}
+                  placeholder="Select category *"
+                  placeholderStyle={styles.dropdownPlaceholder}
+                  textStyle={styles.dropdownText}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  listItemLabelStyle={{
+                    color: backgroundColors.dark,
+                    fontWeight: '500',
+                  }}
+                  labelStyle={{
+                    color: backgroundColors.dark,
+                    fontSize: 16,
+                  }}
+                  searchable
+                  searchTextInputStyle={{
+                    borderWidth: 0,
+                    width: '100%',
+                  }}
+                  searchContainerStyle={{
+                    borderColor: backgroundColors.gray,
+                  }}
+                />
 
                 <View style={styles.row}>
                   <View style={styles.field}>
-                    <Text style={styles.label}>Amount *</Text>
                     <TextInput
                       style={styles.input}
                       placeholderTextColor="#999"
-                      maxLength={11}
-                      placeholder="Enter amount"
+                      maxLength={9}
+                      placeholder="Enter amount *"
                       keyboardType="numeric"
                       value={addFrom.amount}
                       onChangeText={t => {
@@ -379,11 +404,10 @@ export default function ManageExpenses({navigation}: any) {
                 </View>
                 <View style={[styles.row, {marginVertical: 10}]}>
                   <View style={styles.field}>
-                    <Text style={styles.label}>Added By *</Text>
                     <TextInput
                       style={styles.input}
                       placeholderTextColor="#999"
-                      placeholder="Enter name"
+                      placeholder="Added By *"
                       value={addFrom.addedBy}
                       onChangeText={t => addOnChange('addedBy', t)}
                       editable={!loading}
@@ -392,14 +416,17 @@ export default function ManageExpenses({navigation}: any) {
                 </View>
 
                 <View style={styles.dateRow}>
-                  <Text style={styles.label}>Date</Text>
                   <TouchableOpacity
                     style={styles.dateInput}
                     onPress={() => setShowDatePicker(true)}>
                     <Text style={styles.dateText}>
                       {addFrom.date.toLocaleDateString('en-GB')}
                     </Text>
-                    <Icon name="calendar" size={20} color="#144272" />
+                    <Icon
+                      name="calendar"
+                      size={20}
+                      color={backgroundColors.dark}
+                    />
                   </TouchableOpacity>
                   {showDatePicker && (
                     <DateTimePicker
@@ -412,14 +439,13 @@ export default function ManageExpenses({navigation}: any) {
                 </View>
 
                 <View style={styles.fullRow}>
-                  <Text style={styles.label}>Description *</Text>
                   <TextInput
                     style={[
                       styles.input,
                       {height: 100, textAlignVertical: 'top'},
                     ]}
                     placeholderTextColor="#999"
-                    placeholder="Enter description"
+                    placeholder="Enter description *"
                     value={addFrom.description}
                     onChangeText={t => addOnChange('description', t)}
                     multiline
@@ -693,22 +719,34 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    height: 48,
+    borderWidth: 0.6,
+    borderColor: '#00000047',
+    height: 45,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
     color: '#333',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: backgroundColors.light,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 6,
   },
   dropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
     minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 4,
+    height: 48,
+    marginBottom: 10,
   },
   dropdownContainer: {
     backgroundColor: 'white',
@@ -727,19 +765,28 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   dateInput: {
+    borderWidth: 0.6,
+    borderColor: '#00000047',
+    height: 48,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#333',
+    backgroundColor: backgroundColors.light,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    height: 45,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    backgroundColor: '#f9f9f9',
   },
   dateText: {
     fontSize: 14,
-    color: '#333',
+    color: backgroundColors.dark,
+    fontWeight: '600',
   },
   submitBtn: {
     flexDirection: 'row',

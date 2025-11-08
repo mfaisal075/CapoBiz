@@ -8,6 +8,7 @@ import {
   View,
   ScrollView,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -17,7 +18,6 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Toast from 'react-native-toast-message';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 
 interface Transporter {
@@ -39,7 +39,7 @@ const initialTransporterAddFrom: TransporterAddForm = {
   note: '',
 };
 
-const TransporterAddPayment = () => {
+const TransporterAddPayment = ({navigation}: any) => {
   const {openDrawer} = useDrawer();
   const [transDropdown, setTransDropdown] = useState<Transporter[]>([]);
   const transformedTrans = transDropdown.map(trans => ({
@@ -172,6 +172,18 @@ const TransporterAddPayment = () => {
   useEffect(() => {
     getTransData();
     fetchTransDropdown();
+
+    const backKey = () => {
+      navigation.navigate('Transporter Account');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [transValue]);
 
   return (
@@ -300,7 +312,6 @@ const TransporterAddPayment = () => {
 
             <View style={styles.inputRow}>
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Date *</Text>
                 <TouchableOpacity
                   onPress={() => setShowDatePicker(true)}
                   style={styles.dateInput}>
@@ -316,14 +327,13 @@ const TransporterAddPayment = () => {
 
             <View style={styles.inputRow}>
               <View style={styles.inputContainer}>
-                <Text style={styles.inputLabel}>Payment Type</Text>
                 <DropDownPicker
                   items={paymentType}
                   open={cashTypeOpen}
                   value={cashType}
                   setValue={setCashType}
                   setOpen={setCashTypeOpen}
-                  placeholder="Select type..."
+                  placeholder="Select Type *"
                   placeholderStyle={[
                     styles.dropdownPlaceholder,
                     {marginLeft: 10},

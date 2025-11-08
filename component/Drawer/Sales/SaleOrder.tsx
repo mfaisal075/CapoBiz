@@ -21,6 +21,7 @@ import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
 import backgroundColors from '../../Colors';
+import {BackHandler} from 'react-native';
 
 interface Customers {
   id: number;
@@ -78,7 +79,7 @@ const initialEditFrom: EditForm = {
   editProdQty: '',
 };
 
-export default function SaleOrder() {
+export default function SaleOrder({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {token} = useUser();
   const [Open, setOpen] = useState(false);
@@ -426,6 +427,18 @@ export default function SaleOrder() {
   useEffect(() => {
     fetchCustomers();
     fetchAddToCartOrders();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -508,6 +521,7 @@ export default function SaleOrder() {
                 value={prodQty}
                 onChangeText={setProdQty}
                 keyboardType="numeric"
+                maxLength={6}
               />
             </View>
 
@@ -519,6 +533,7 @@ export default function SaleOrder() {
                 value={prodPrice}
                 onChangeText={setProdPrice}
                 keyboardType="decimal-pad"
+                maxLength={9}
               />
             </View>
 
@@ -894,6 +909,7 @@ export default function SaleOrder() {
                 keyboardType="numeric"
                 value={editForm.editProdQty}
                 onChangeText={t => editOnChange('editProdQty', t)}
+                maxLength={6}
               />
 
               <Text style={styles.editLabel}>Unit Price</Text>
@@ -902,6 +918,7 @@ export default function SaleOrder() {
                 keyboardType="numeric"
                 value={editForm.editProdPrice}
                 onChangeText={t => editOnChange('editProdPrice', t)}
+                maxLength={9}
               />
 
               <TouchableOpacity

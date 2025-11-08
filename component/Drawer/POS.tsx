@@ -9,6 +9,7 @@ import {
   FlatList,
   Modal,
   ToastAndroid,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
@@ -980,6 +981,18 @@ export default function POS({navigation}: any) {
       setNetPayable(Number(prevBalance || 0)); // Only previous balance remains
       setBalance(Number(prevBalance || 0));
     }
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [
     currentVal,
     orderTotal,
@@ -1223,6 +1236,7 @@ export default function POS({navigation}: any) {
                 keyboardType="numeric"
                 value={quantity}
                 onChangeText={setQuantity}
+                maxLength={6}
               />
             </View>
 
@@ -1234,6 +1248,7 @@ export default function POS({navigation}: any) {
                 keyboardType="numeric"
                 value={price}
                 onChangeText={setPrice}
+                maxLength={9}
               />
             </View>
 
@@ -1468,6 +1483,7 @@ export default function POS({navigation}: any) {
                       keyboardType="numeric"
                       value={discount}
                       onChangeText={setDiscount}
+                      maxLength={9}
                     />
                   </View>
                   <View style={styles.discountTypeContainer}>
@@ -1530,6 +1546,7 @@ export default function POS({navigation}: any) {
                     keyboardType="numeric"
                     placeholderTextColor="rgba(0,0,0,0.7)"
                     value={paid}
+                    maxLength={9}
                     onChangeText={setPaid}
                   />
                 </View>

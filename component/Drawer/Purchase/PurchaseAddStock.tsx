@@ -23,6 +23,7 @@ import BASE_URL from '../../BASE_URL';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import backgroundColors from '../../Colors';
+import {BackHandler} from 'react-native';
 
 interface Supplier {
   id: number;
@@ -87,8 +88,8 @@ interface OrderDetails {
   prchd_total_cost: string;
 }
 
-export default function PurchaseAddStock() {
-  const {token, bussName, bussAddress, bussContact} = useUser();
+export default function PurchaseAddStock({navigation}: any) {
+  const {token, bussName, bussAddress} = useUser();
   const {openDrawer} = useDrawer();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
@@ -452,6 +453,18 @@ export default function PurchaseAddStock() {
     fetchAddToCartOrders();
     fetchTransporter();
     fetchSuppData();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [currentsupplier]);
 
   return (
@@ -511,11 +524,12 @@ export default function PurchaseAddStock() {
               <Text style={styles.inputLabel}>Quantity *</Text>
               <TextInput
                 style={styles.input}
-                placeholderTextColor="rgba(255,255,255,0.7)"
+                placeholderTextColor="rgba(0,0,0,0.5)"
                 placeholder="0"
                 value={quantity}
                 onChangeText={setQuantity}
                 keyboardType="numeric"
+                maxLength={6}
               />
             </View>
 
@@ -523,11 +537,12 @@ export default function PurchaseAddStock() {
               <Text style={styles.inputLabel}>Purchase Price *</Text>
               <TextInput
                 style={styles.input}
-                placeholderTextColor="rgba(255,255,255,0.7)"
+                placeholderTextColor="rgba(0,0,0,0.5)"
                 placeholder="0.00"
                 value={purchasePrice}
                 onChangeText={setPurchasePrice}
                 keyboardType="decimal-pad"
+                maxLength={9}
               />
             </View>
 
@@ -921,6 +936,7 @@ export default function PurchaseAddStock() {
                     value={checkOutFrom.builty}
                     onChangeText={t => checkoutOnChange('builty', t)}
                     keyboardType="number-pad"
+                    maxLength={9}
                   />
                 </View>
                 {/* Freight Charges */}
@@ -936,16 +952,18 @@ export default function PurchaseAddStock() {
                     }
                     onChangeText={t => checkoutOnChange('freCharges', t)}
                     keyboardType="decimal-pad"
+                    maxLength={9}
                   />
                 </View>
-                {/* Vehicle Number */}
+                {/* Vehicle */}
                 <View style={styles.inputGroup}>
                   <TextInput
                     style={styles.input}
                     placeholderTextColor="rgba(0,0,0,0.7)"
-                    placeholder="Vehicle Number"
+                    placeholder="Vehicle#"
                     value={checkOutFrom.vehicle}
                     onChangeText={t => checkoutOnChange('vehicle', t)}
+                    maxLength={9}
                   />
                 </View>
                 {/* Paid Amount */}
@@ -957,6 +975,7 @@ export default function PurchaseAddStock() {
                     value={checkOutFrom.paidAmount}
                     onChangeText={t => checkoutOnChange('paidAmount', t)}
                     keyboardType="decimal-pad"
+                    maxLength={9}
                   />
                 </View>
               </View>
@@ -1405,6 +1424,7 @@ const styles = StyleSheet.create({
   dateText: {
     flex: 1,
     color: backgroundColors.dark,
+    fontWeight: '500',
     fontSize: 16,
     marginLeft: 8,
   },

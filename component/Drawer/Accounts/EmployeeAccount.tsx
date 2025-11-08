@@ -23,6 +23,7 @@ import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
+import {BackHandler} from 'react-native';
 
 interface Employee {
   id: number;
@@ -56,7 +57,7 @@ const initialEmployeeAddFrom: EmployeeAddForm = {
   addedBy: '',
 };
 
-export default function EmployeeAccount() {
+export default function EmployeeAccount({navigation}: any) {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [Open, setOpen] = useState(false);
@@ -331,6 +332,18 @@ export default function EmployeeAccount() {
   useEffect(() => {
     fetchEmpDropdown();
     fetchEmployeeDetails();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [empValue, fromDate, toDate]);
 
   function formatNumber(num: number | string): string {
@@ -919,7 +932,7 @@ const styles = StyleSheet.create({
     height: 48,
   },
   dateText: {
-    flex: 1,
+    fontWeight: '600',
     color: backgroundColors.dark,
     fontSize: 14,
     marginLeft: 8,

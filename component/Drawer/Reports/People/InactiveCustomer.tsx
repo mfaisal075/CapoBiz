@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -27,7 +28,7 @@ interface InactiveList {
   custtyp_name: string;
 }
 
-export default function InactiveCustomer() {
+export default function InactiveCustomer({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [inactiveList, setInactiveList] = useState<InactiveList[]>([]);
@@ -145,6 +146,18 @@ export default function InactiveCustomer() {
 
   useEffect(() => {
     fetchAreaList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (

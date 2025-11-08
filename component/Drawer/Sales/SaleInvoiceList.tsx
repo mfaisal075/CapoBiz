@@ -8,6 +8,7 @@ import {
   Modal,
   ScrollView,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -16,7 +17,6 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
-import DropDownPicker from 'react-native-dropdown-picker';
 import backgroundColors from '../../Colors';
 import Toast from 'react-native-toast-message';
 import RNPrint from 'react-native-print';
@@ -65,15 +65,8 @@ interface InvoiceSaleDetails {
   ums_name: string;
 }
 
-interface Users {
-  id: number;
-  name: string;
-}
-
-export default function SaleInvoiceList() {
+export default function SaleInvoiceList({navigation}: any) {
   const {openDrawer} = useDrawer();
-  const [userOpen, setUserOpen] = useState(false);
-  const [userValue, setUserValue] = useState('');
   const [invcList, setInvcList] = useState<InvoiceList[]>([]);
   const [modalVisible, setModalVisible] = useState('');
   const [startDate, setStartDate] = useState(new Date());
@@ -85,11 +78,6 @@ export default function SaleInvoiceList() {
   const [invcSaleDetails, setInvcSaleDetails] = useState<InvoiceSaleDetails[]>(
     [],
   );
-  const [users, setUsers] = useState<Users[]>([]);
-  const transformedUsers = users.map(user => ({
-    label: user.name,
-    value: user.id.toString(),
-  }));
 
   const onStartDateChange = (
     event: DateTimePickerEvent,
@@ -127,7 +115,6 @@ export default function SaleInvoiceList() {
       const res = await axios.post(`${BASE_URL}/getinvoices`, {
         from,
         to,
-        user_id: userValue,
       });
 
       setInvcList(res.data.inv_data);
@@ -147,16 +134,6 @@ export default function SaleInvoiceList() {
       setInvcSaleDetails(res.data.saledetail);
     } catch (error) {
       console.log();
-    }
-  };
-
-  // Fetch Users List Dropdown
-  const fetchUserDropdown = async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/fetchusersdropdown`);
-      setUsers(res.data);
-    } catch (error) {
-      console.log(error);
     }
   };
 
@@ -453,8 +430,19 @@ export default function SaleInvoiceList() {
 
   useEffect(() => {
     fetchinvcLisr();
-    fetchUserDropdown();
-  }, [startDate, endDate, userValue]);
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
+  }, [startDate, endDate]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -484,7 +472,7 @@ export default function SaleInvoiceList() {
               <Text style={styles.dateText}>
                 {startDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showStartDatePicker && (
               <DateTimePicker
@@ -506,7 +494,7 @@ export default function SaleInvoiceList() {
               <Text style={styles.dateText}>
                 {endDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showEndDatePicker && (
               <DateTimePicker
@@ -519,40 +507,6 @@ export default function SaleInvoiceList() {
               />
             )}
           </View>
-        </View>
-
-        {/* User Filter */}
-        <View style={{marginHorizontal: 12, marginVertical: 4}}>
-          <DropDownPicker
-            items={transformedUsers}
-            open={userOpen}
-            setOpen={setUserOpen}
-            value={userValue}
-            setValue={setUserValue}
-            placeholder="Select User"
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: backgroundColors.dark}}
-            ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
-            )}
-            ArrowDownIconComponent={() => (
-              <Icon
-                name="chevron-down"
-                size={18}
-                color={backgroundColors.dark}
-              />
-            )}
-            style={styles.dropdown}
-            dropDownContainerStyle={styles.dropdownContainer}
-            searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
-            searchContainerStyle={{
-              borderColor: backgroundColors.gray,
-            }}
-          />
         </View>
 
         {/* Flatlist */}
@@ -888,7 +842,9 @@ export default function SaleInvoiceList() {
                   </Text>
                 </View>
 
-                <TouchableOpacity style={styles.printBtn} onPress={printReceipt}>
+                <TouchableOpacity
+                  style={styles.printBtn}
+                  onPress={printReceipt}>
                   <Icon
                     name="printer"
                     size={20}
@@ -1012,6 +968,7 @@ const styles = StyleSheet.create({
   listContainer: {
     flex: 1,
     paddingHorizontal: '3%',
+    marginTop: 4,
   },
   card: {
     backgroundColor: backgroundColors.light,

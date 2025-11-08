@@ -9,6 +9,7 @@ import {
   FlatList,
   TextInput,
   Modal,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
@@ -283,6 +284,18 @@ export default function SupplierPeople({navigation}: any) {
   useEffect(() => {
     handleFetchData();
     handleFetchAreas();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true; // prevents default behavior (exit app)
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -948,7 +961,7 @@ const styles = StyleSheet.create({
   addCustomerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: backgroundColors.primary,
+    color: backgroundColors.dark,
   },
   addCustomerCloseBtn: {
     padding: 5,
@@ -976,15 +989,20 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   addCustomerInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 0.6,
+    borderColor: '#00000047',
     height: 45,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
     color: '#333',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: backgroundColors.light,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 6,
   },
   addCustomerDropdownRow: {
     marginBottom: 15,

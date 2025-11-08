@@ -23,6 +23,7 @@ import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import backgroundColors from '../../Colors';
+import {BackHandler} from 'react-native';
 
 interface Supplier {
   id: number;
@@ -57,7 +58,7 @@ interface InvoiceListWithout {
   cart_id?: number;
 }
 
-export default function PurchaseReturn() {
+export default function PurchaseReturn({navigation}: any) {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [selectedOption, setSelectedOption] = useState<'with' | 'without'>(
@@ -625,6 +626,18 @@ export default function PurchaseReturn() {
     fetchSupplierData();
     fetchInvcWith();
     fetchInvcWithout();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [currentpsupplier]);
 
   // Render editable quantity component for "With Invoice" items
@@ -640,6 +653,7 @@ export default function PurchaseReturn() {
             value={editingQuantity}
             onChangeText={setEditingQuantity}
             keyboardType="numeric"
+            maxLength={6}
             autoFocus
           />
           <TouchableOpacity onPress={saveQuantity} style={styles.saveButton}>
@@ -951,6 +965,7 @@ export default function PurchaseReturn() {
                       value={quantity}
                       onChangeText={setQuantity}
                       keyboardType="numeric"
+                      maxLength={6}
                     />
                   </View>
                 </View>
@@ -1395,7 +1410,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingHorizontal: 12,
   },
-  
+
   dateInput: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -19,8 +19,8 @@ import BASE_URL from '../../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../../CTX/UserContext';
 import RNPrint from 'react-native-print';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../../Colors';
+import {BackHandler} from 'react-native';
 
 interface Supplier {
   id: number;
@@ -47,7 +47,7 @@ interface SingleSupplierList {
   supac_balance: string;
 }
 
-export default function SupplierAccounts() {
+export default function SupplierAccounts({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [open, setOpen] = useState(false);
@@ -359,6 +359,18 @@ export default function SupplierAccounts() {
     fetchSupDropdown();
     fetchAllSupList();
     fetchSingleCustList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate, supValue]);
 
   return (

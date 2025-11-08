@@ -10,6 +10,7 @@ import {
   Modal,
   ScrollView,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -27,7 +28,7 @@ interface RolesInterface {
   role_status: string;
 }
 
-export default function Roles() {
+export default function Roles({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {token} = useUser();
   const [role, setRole] = useState<string | ''>('');
@@ -249,6 +250,18 @@ export default function Roles() {
 
   useEffect(() => {
     handleFetchRoles();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   // Search Filter
@@ -359,7 +372,7 @@ export default function Roles() {
                     setRole('');
                   }}
                   style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
@@ -368,7 +381,7 @@ export default function Roles() {
                   <TextInput
                     style={styles.addCustomerInput}
                     placeholderTextColor={backgroundColors.dark}
-                    placeholder="Enter role name"
+                    placeholder="Enter role name *"
                     value={role}
                     onChangeText={text => setRole(text)}
                   />
@@ -408,7 +421,11 @@ export default function Roles() {
                 <TouchableOpacity
                   style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
                   onPress={() => setModalV(!isModalV)}>
-                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
+                  <Text
+                    style={[
+                      styles.deleteModalBtnText,
+                      {color: backgroundColors.dark},
+                    ]}>
                     Cancel
                   </Text>
                 </TouchableOpacity>
@@ -803,7 +820,7 @@ const styles = StyleSheet.create({
   deleteModalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 8,
   },
   deleteModalMessage: {

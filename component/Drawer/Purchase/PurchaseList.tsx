@@ -8,6 +8,7 @@ import {
   Modal,
   ScrollView,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -64,7 +65,7 @@ interface Transporter {
   trans_name: string;
 }
 
-export default function PurchaseList() {
+export default function PurchaseList({navigation}: any) {
   const {openDrawer} = useDrawer();
   const [purchaseList, setPurchaseList] = useState<PurchaseList[]>([]);
   const [modalVisible, setModalVisible] = useState('');
@@ -146,6 +147,18 @@ export default function PurchaseList() {
   useEffect(() => {
     fetchInvoices();
     fetchTransporters();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate]);
 
   return (
@@ -175,7 +188,7 @@ export default function PurchaseList() {
               <Text style={styles.dateText}>
                 {startDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showStartDatePicker && (
               <DateTimePicker
@@ -197,7 +210,7 @@ export default function PurchaseList() {
               <Text style={styles.dateText}>
                 {endDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showEndDatePicker && (
               <DateTimePicker
@@ -754,8 +767,8 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#144272',
+    fontWeight: '600',
+    color: backgroundColors.dark,
   },
 
   // Modal stying

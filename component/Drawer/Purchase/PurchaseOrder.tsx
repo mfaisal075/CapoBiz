@@ -9,6 +9,7 @@ import {
   FlatList,
   Modal,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useRef, useState} from 'react';
 import {Checkbox} from 'react-native-paper';
@@ -328,6 +329,18 @@ export default function PurchaseOrder() {
 
       fetchAddToCartOrders();
     }
+
+    const backKey = () => {
+      navigation.navigate('Dashboard' as never);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [currentsupplier]);
 
   return (
@@ -391,6 +404,7 @@ export default function PurchaseOrder() {
                 style={styles.input}
                 placeholderTextColor="rgba(0,0,0,0.7)"
                 placeholder="0"
+                maxLength={6}
                 value={quantity}
                 onChangeText={setQuantity}
                 keyboardType="numeric"
@@ -402,6 +416,7 @@ export default function PurchaseOrder() {
               <TextInput
                 style={styles.input}
                 placeholderTextColor="rgba(0,0,0,0.7)"
+                maxLength={9}
                 placeholder="0.00"
                 value={purchasePrice}
                 onChangeText={setPurchasePrice}
@@ -414,6 +429,7 @@ export default function PurchaseOrder() {
               <TextInput
                 style={styles.input}
                 placeholderTextColor="rgba(0,0,0,0.7)"
+                maxLength={9}
                 placeholder="0.00"
                 value={retailPrice}
                 onChangeText={setRetailPrice}

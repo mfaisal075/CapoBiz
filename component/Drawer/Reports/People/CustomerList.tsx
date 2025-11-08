@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -25,7 +26,7 @@ interface CustList {
   cust_email: string;
 }
 
-export default function CustomerList() {
+export default function CustomerList({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [filteredData, setFilteredData] = useState<CustList[]>([]);
@@ -149,6 +150,18 @@ export default function CustomerList() {
 
   useEffect(() => {
     fetchCustList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (

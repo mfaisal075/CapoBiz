@@ -9,6 +9,7 @@ import {
   Modal,
   ScrollView,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -57,7 +58,6 @@ const initialUserForm: UserForm = {
 export default function User({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {token} = useUser();
-  const [customer, setcustomer] = useState(false);
   const [roleDropDown, setRoleDropDown] = useState<RolesDropDown[]>([]);
   const [roleValue, setRoleValue] = useState<string | null>(null);
   const [roleOpen, setRoleOpen] = useState(false);
@@ -170,7 +170,7 @@ export default function User({navigation}: any) {
         });
         setUserForm(initialUserForm);
         setRoleValue(null);
-        setcustomer(false);
+        setModalVisible('');
         handleFetchData();
       } else if (res.status === 200 && data.status === 404) {
         Toast.show({
@@ -252,6 +252,18 @@ export default function User({navigation}: any) {
   useEffect(() => {
     handleFetchData();
     fetchRoleDropDown();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -358,144 +370,138 @@ export default function User({navigation}: any) {
                 <Text style={styles.addCustomerTitle}>Add New User</Text>
                 <TouchableOpacity
                   onPress={() => {
-                    setcustomer(!customer);
+                    setModalVisible('');
                     setUserForm(initialUserForm);
                     setRoleValue(null);
                   }}
                   style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
               <View style={styles.addCustomerForm}>
                 <View style={styles.addCustomerDropdownRow}>
                   <View style={styles.addCustomerDropdownField}>
-                    <Text style={styles.addCustomerLabel}>Role *</Text>
                     <DropDownPicker
                       items={transformedRoleDropDown}
                       open={roleOpen}
                       setOpen={setRoleOpen}
                       value={roleValue}
                       setValue={setRoleValue}
-                      placeholder="Select Role"
+                      placeholder="Select Role *"
                       placeholderStyle={styles.addCustomerDropdownPlaceholder}
                       textStyle={styles.addCustomerDropdownText}
                       ArrowUpIconComponent={() => (
-                        <Icon name="chevron-up" size={18} color="#144272" />
+                        <Icon
+                          name="chevron-up"
+                          size={18}
+                          color={backgroundColors.dark}
+                        />
                       )}
                       ArrowDownIconComponent={() => (
-                        <Icon name="chevron-down" size={18} color="#144272" />
+                        <Icon
+                          name="chevron-down"
+                          size={18}
+                          color={backgroundColors.dark}
+                        />
                       )}
                       style={styles.addCustomerDropdown}
                       dropDownContainerStyle={
                         styles.addCustomerDropdownContainer
                       }
-                      listItemLabelStyle={{color: '#144272'}}
                       listMode="SCROLLVIEW"
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Name *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter full name"
-                      value={userForm.name}
-                      onChangeText={text => handleUserIputChange('name', text)}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Contact *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="0300-1234567"
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      value={userForm.contact}
-                      onChangeText={text => {
-                        let cleaned = text.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        handleUserIputChange('contact', cleaned);
+                      listItemLabelStyle={{
+                        color: backgroundColors.dark,
+                        fontWeight: '500',
+                      }}
+                      labelStyle={{
+                        color: backgroundColors.dark,
+                        fontSize: 16,
+                      }}
+                      searchable
+                      searchTextInputStyle={{
+                        borderWidth: 0,
+                        width: '100%',
+                      }}
+                      searchContainerStyle={{
+                        borderColor: backgroundColors.gray,
                       }}
                     />
                   </View>
                 </View>
 
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>CNIC *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="12345-1234567-1"
-                      keyboardType="numeric"
-                      maxLength={15}
-                      value={userForm.cnic}
-                      onChangeText={text => {
-                        let cleaned = text.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 5)
-                          cleaned =
-                            cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                        if (cleaned.length > 13)
-                          cleaned =
-                            cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                        if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                        handleUserIputChange('cnic', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Email *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="user@example.com"
-                      keyboardType="email-address"
-                      value={userForm.email}
-                      onChangeText={text => handleUserIputChange('email', text)}
-                    />
-                  </View>
-                </View>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  placeholder="Enter name *"
+                  value={userForm.name}
+                  onChangeText={text => handleUserIputChange('name', text)}
+                />
 
-                <View style={styles.addCustomerRow}>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>Password *</Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Enter password"
-                      secureTextEntry
-                      value={userForm.password}
-                      onChangeText={text =>
-                        handleUserIputChange('password', text)
-                      }
-                    />
-                  </View>
-                  <View style={styles.addCustomerField}>
-                    <Text style={styles.addCustomerLabel}>
-                      Confirm Password *
-                    </Text>
-                    <TextInput
-                      style={styles.addCustomerInput}
-                      placeholderTextColor="#999"
-                      placeholder="Confirm password"
-                      secureTextEntry
-                      value={userForm.confirmPassword}
-                      onChangeText={text =>
-                        handleUserIputChange('confirmPassword', text)
-                      }
-                    />
-                  </View>
-                </View>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  placeholder="Contact *"
+                  keyboardType="phone-pad"
+                  maxLength={12}
+                  value={userForm.contact}
+                  onChangeText={text => {
+                    let cleaned = text.replace(/[^0-9-]/g, '');
+                    cleaned = cleaned.replace(/-/g, '');
+                    if (cleaned.length > 4)
+                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                    handleUserIputChange('contact', cleaned);
+                  }}
+                />
+
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  placeholder="CNIC *"
+                  keyboardType="numeric"
+                  maxLength={15}
+                  value={userForm.cnic}
+                  onChangeText={text => {
+                    let cleaned = text.replace(/[^0-9-]/g, '');
+                    cleaned = cleaned.replace(/-/g, '');
+                    if (cleaned.length > 5)
+                      cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
+                    if (cleaned.length > 13)
+                      cleaned =
+                        cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
+                    if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
+                    handleUserIputChange('cnic', cleaned);
+                  }}
+                />
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  placeholder="Email *"
+                  keyboardType="email-address"
+                  value={userForm.email}
+                  onChangeText={text => handleUserIputChange('email', text)}
+                />
+
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  placeholder="Enter password *"
+                  secureTextEntry
+                  value={userForm.password}
+                  onChangeText={text => handleUserIputChange('password', text)}
+                />
+
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  placeholder="Confirm password *"
+                  secureTextEntry
+                  value={userForm.confirmPassword}
+                  onChangeText={text =>
+                    handleUserIputChange('confirmPassword', text)
+                  }
+                />
 
                 <TouchableOpacity
                   style={styles.addCustomerSubmitBtn}
@@ -785,7 +791,7 @@ const styles = StyleSheet.create({
   addCustomerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
   },
   addCustomerCloseBtn: {
     padding: 5,
@@ -813,15 +819,21 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   addCustomerInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 0.6,
+    borderColor: '#00000047',
     height: 45,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
     color: '#333',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: backgroundColors.light,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 6,
+    marginBottom: 10,
   },
   addCustomerDropdownRow: {
     marginBottom: 15,
@@ -830,12 +842,17 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   addCustomerDropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    minHeight: 42,
-    zIndex: 999,
+    backgroundColor: backgroundColors.light,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.3)',
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 2,
+    height: 48,
   },
   addCustomerDropdownContainer: {
     backgroundColor: 'white',
@@ -856,7 +873,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#144272',
+    backgroundColor: backgroundColors.primary,
     borderRadius: 10,
     paddingVertical: 15,
     marginTop: 20,

@@ -7,6 +7,7 @@ import {
   ImageBackground,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -34,7 +35,7 @@ interface AreaList {
   cust_name: string;
 }
 
-export default function AreaWiseCustomer() {
+export default function AreaWiseCustomer({navigation}: any) {
   const {token, bussName, bussAddress} = useUser();
   const {openDrawer} = useDrawer();
   const [areaOpen, setAreaOpen] = useState(false);
@@ -169,6 +170,18 @@ export default function AreaWiseCustomer() {
   useEffect(() => {
     fetchAreaDropdown();
     fetchAreaList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [areaValue]);
 
   return (

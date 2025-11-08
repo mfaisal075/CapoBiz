@@ -8,6 +8,7 @@ import {
   Modal,
   ScrollView,
   Image,
+  BackHandler,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import React, {useEffect, useState} from 'react';
@@ -63,7 +64,7 @@ interface SingleInvoice {
   sale_detail?: SaleDetailItem[];
 }
 
-export default function SaleDispatchList() {
+export default function SaleDispatchList({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {token, bussName, bussAddress, bussContact} = useUser();
   const [dispList, setDispList] = useState<DispatchList[]>([]);
@@ -73,11 +74,6 @@ export default function SaleDispatchList() {
   const [showStartDatePicker, setShowStartDatePicker] = useState(false);
   const [endDate, setEndDate] = useState(new Date());
   const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-  const [selectedDispatch, setSelectedDispatch] = useState<{
-    dispatch: DispatchDataItem;
-    index: number;
-    transporter?: Transporter;
-  } | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -137,6 +133,18 @@ export default function SaleDispatchList() {
 
   useEffect(() => {
     fetchDispatchList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate]);
 
   return (
@@ -167,7 +175,7 @@ export default function SaleDispatchList() {
               <Text style={styles.dateText}>
                 {startDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showStartDatePicker && (
               <DateTimePicker
@@ -189,7 +197,7 @@ export default function SaleDispatchList() {
               <Text style={styles.dateText}>
                 {endDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showEndDatePicker && (
               <DateTimePicker

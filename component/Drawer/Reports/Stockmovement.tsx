@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -30,7 +31,7 @@ interface StockMovement {
   created_at: string;
 }
 
-export default function Stockmovement() {
+export default function Stockmovement({navigation}: any) {
   const {token} = useUser();
   const {bussAddress, bussName} = useUser();
   const {openDrawer} = useDrawer();
@@ -203,6 +204,18 @@ export default function Stockmovement() {
 
   useEffect(() => {
     fetchSKM();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate]);
 
   return (

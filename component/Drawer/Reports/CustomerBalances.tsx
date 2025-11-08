@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -49,7 +50,7 @@ interface SingleCustomersReceivable {
   custac_balance: number;
 }
 
-export default function CustomerBalances() {
+export default function CustomerBalances({navigation}: any) {
   const [selectedTab, setSelectedTab] = useState<TabType>('receivables');
   const [custOpen, setCustOpen] = useState(false);
   const [custValue, setCustValue] = useState('');
@@ -313,7 +314,19 @@ export default function CustomerBalances() {
     fetchAreaDropdown();
     fetchAllCustData();
     fetchSingleCustData();
-    setCurrentPage(1); // Reset to first page when data changes
+    setCurrentPage(1);
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [custValue, areaValue, selectedTab, selectionMode]);
 
   function formatNumber(num: number | string): string {

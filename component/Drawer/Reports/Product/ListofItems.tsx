@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -38,7 +39,7 @@ interface Category {
   pcat_name: string;
 }
 
-export default function ListofItems() {
+export default function ListofItems({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussAddress, bussName} = useUser();
   const [allProductsList, setAllProductsList] = useState<AllProductList[]>([]);
@@ -220,7 +221,19 @@ export default function ListofItems() {
   }, [catValue]);
 
   useEffect(() => {
-    setCurrentPage(1); // Reset pagination when selection mode changes
+    setCurrentPage(1);
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [selectionMode]);
 
   return (

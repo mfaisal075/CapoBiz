@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -46,7 +47,7 @@ interface SingleTransporterList {
   transac_balance: string;
 }
 
-export default function TransporterAccounts() {
+export default function TransporterAccounts({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [open, setOpen] = useState(false);
@@ -346,6 +347,18 @@ export default function TransporterAccounts() {
     fetchAllTransList();
     fetchTransDropdown();
     fetchSingleCustList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate, tranValue]);
 
   function formatNumber(num: number | string): string {

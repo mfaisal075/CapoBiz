@@ -18,6 +18,7 @@ import BASE_URL from '../../BASE_URL';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useUser} from '../../CTX/UserContext';
 import backgroundColors from '../../Colors';
+import {BackHandler} from 'react-native';
 
 interface Returns {
   salr_return_invoice_no: string;
@@ -39,7 +40,7 @@ interface InvoiceDetails {
   salrd_total_price: string;
 }
 
-export default function SalesReturnList() {
+export default function SalesReturnList({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress, bussContact} = useUser();
   const [saleReturns, setSaleReturns] = useState<Returns[]>([]);
@@ -108,6 +109,18 @@ export default function SalesReturnList() {
 
   useEffect(() => {
     fetchSaleReturnList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate]);
 
   return (
@@ -138,7 +151,7 @@ export default function SalesReturnList() {
               <Text style={styles.dateText}>
                 {startDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showStartDatePicker && (
               <DateTimePicker
@@ -160,7 +173,7 @@ export default function SalesReturnList() {
               <Text style={styles.dateText}>
                 {endDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showEndDatePicker && (
               <DateTimePicker
@@ -640,7 +653,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    marginTop: 15,
+    marginTop: 10,
     marginBottom: 10,
   },
   dateInputWrapper: {

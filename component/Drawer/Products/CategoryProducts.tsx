@@ -17,13 +17,14 @@ import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
 import backgroundColors from '../../Colors';
+import {BackHandler} from 'react-native';
 
 interface Categories {
   id: number;
   pcat_name: string;
 }
 
-export default function CategoryProducts() {
+export default function CategoryProducts({navigation}: any) {
   const {openDrawer} = useDrawer();
   const [addCate, setAddCate] = useState('');
   const [modal, setModal] = useState<string | ''>('');
@@ -225,6 +226,18 @@ export default function CategoryProducts() {
 
   useEffect(() => {
     fetchCatDropdown();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -389,17 +402,16 @@ export default function CategoryProducts() {
                     setSelectedCate(null);
                   }}
                   style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
               {/* Form */}
               <View style={styles.addCustomerForm}>
                 <View style={styles.addCustomerFullRow}>
-                  <Text style={styles.addCustomerLabel}>Category Name *</Text>
                   <TextInput
                     style={styles.addCustomerInput}
-                    placeholder="Enter category name"
+                    placeholder="Enter category name *"
                     placeholderTextColor="#999"
                     value={editCate}
                     onChangeText={t => setEditCate(t)}
@@ -434,17 +446,16 @@ export default function CategoryProducts() {
                     setAddCate('');
                   }}
                   style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
               {/* Form */}
               <View style={styles.addCustomerForm}>
                 <View style={styles.addCustomerFullRow}>
-                  <Text style={styles.addCustomerLabel}>Category Name *</Text>
                   <TextInput
                     style={styles.addCustomerInput}
-                    placeholder="Enter category name"
+                    placeholder="Enter category name *"
                     placeholderTextColor="#999"
                     value={addCate}
                     onChangeText={t => setAddCate(t)}
@@ -777,7 +788,7 @@ const styles = StyleSheet.create({
   addCustomerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: backgroundColors.primary,
+    color: backgroundColors.dark,
   },
   addCustomerCloseBtn: {
     padding: 5,
@@ -796,15 +807,20 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   addCustomerInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 0.6,
+    borderColor: '#00000047',
     height: 45,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
     color: '#333',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: backgroundColors.light,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 6,
   },
   addCustomerSubmitBtn: {
     flexDirection: 'row',

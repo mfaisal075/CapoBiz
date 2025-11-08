@@ -8,6 +8,7 @@ import {
   FlatList,
   Image,
   TextInput,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -54,7 +55,7 @@ const initialAddAttendance: AddAttendance = {
   status: '',
 };
 
-export default function AllEmployeeAttendanceList() {
+export default function AllEmployeeAttendanceList({navigation}: any) {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [modal, setModal] = useState('');
@@ -456,6 +457,18 @@ export default function AllEmployeeAttendanceList() {
   useEffect(() => {
     fetchEmpList();
     empDropdownList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [fromDate, toDate]);
 
   return (

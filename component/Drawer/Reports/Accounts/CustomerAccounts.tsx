@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -38,7 +39,7 @@ interface Customers {
   cust_address: string;
 }
 
-export default function CustomerAccounts() {
+export default function CustomerAccounts({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [open, setOpen] = useState(false);
@@ -318,7 +319,19 @@ export default function CustomerAccounts() {
   }, [startDate, endDate, custValue]);
 
   useEffect(() => {
-    setCurrentPage(1); // Reset pagination when selection mode changes
+    setCurrentPage(1);
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [selectionMode]);
 
   // Calculate totals based on current selection
@@ -383,7 +396,11 @@ export default function CustomerAccounts() {
               <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color={backgroundColors.dark} />
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
             )}
             style={[
               styles.dropdown,

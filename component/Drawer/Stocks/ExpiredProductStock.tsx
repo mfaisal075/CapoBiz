@@ -3,11 +3,11 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   Image,
   TextInput,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -16,7 +16,6 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import backgroundColors from '../../Colors';
-import LinearGradient from 'react-native-linear-gradient';
 
 type Product = {
   pcat_name: string;
@@ -32,9 +31,8 @@ interface Categories {
   pcat_name: string;
 }
 
-export default function ExpiredProductStock() {
+export default function ExpiredProductStock({navigation}: any) {
   const {openDrawer} = useDrawer();
-  const [exProducts, setExProducts] = useState<Product[]>([]);
   const [category, setCategory] = useState(false);
   const [currentCategory, setCurrentCategory] = useState('');
   const [categories, setCategories] = useState<Categories[]>([]);
@@ -106,6 +104,18 @@ export default function ExpiredProductStock() {
   useEffect(() => {
     fetchExpireProd();
     fetchCatDropdown();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [currentCategory]);
 
   return (

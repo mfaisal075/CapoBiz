@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -32,7 +33,7 @@ interface TradeDetails {
   trad_profit: string;
 }
 
-export default function TradingReport() {
+export default function TradingReport({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {token} = useUser();
   const {bussName, bussAddress} = useUser();
@@ -191,6 +192,18 @@ export default function TradingReport() {
 
   useEffect(() => {
     fetchTradeDetails();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate]);
 
   function formatNumber(num: number | string): string {

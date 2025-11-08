@@ -17,6 +17,7 @@ import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import backgroundColors from '../../Colors';
 import LottieView from 'lottie-react-native';
+import {BackHandler} from 'react-native';
 
 interface CashClose {
   sales_total: string;
@@ -88,6 +89,18 @@ export default function SaleCashClose({navigation}: any) {
   useEffect(() => {
     checkCashClose();
     fetchData();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (

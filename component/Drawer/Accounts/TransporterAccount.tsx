@@ -5,21 +5,19 @@ import {
   TouchableOpacity,
   View,
   SafeAreaView,
-  ImageBackground,
   ScrollView,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
-import {RadioButton} from 'react-native-paper';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import {useNavigation} from '@react-navigation/native';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
 
 interface Transporter {
@@ -270,6 +268,18 @@ export default function TransporterAccount() {
     getTransData();
     fetchAllTransporterData();
     fetchTransportDetails();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard' as never);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [transValue, fromDate, toDate]);
 
   useEffect(() => {

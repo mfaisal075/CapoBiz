@@ -3,12 +3,12 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   ScrollView,
   Image,
+  BackHandler,
 } from 'react-native';
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import {RadioButton, Checkbox} from 'react-native-paper';
 import axios from 'axios';
@@ -17,7 +17,7 @@ import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import backgroundColors from '../../Colors';
 
-export default function SaleInvoice() {
+export default function SaleInvoice({navigation}: any) {
   const {openDrawer} = useDrawer();
   const [selectedLang, setSelectedLang] = useState<'English' | 'Urdu'>(
     'English',
@@ -56,6 +56,19 @@ export default function SaleInvoice() {
       console.log(error);
     }
   };
+  useEffect(() => {
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
+  }, []);
 
   return (
     <SafeAreaView style={styles.container}>

@@ -14,6 +14,7 @@ import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import backgroundColors from '../Colors';
+import {BackHandler} from 'react-native';
 
 interface Profiles {
   id: number;
@@ -76,6 +77,18 @@ export default function FixedAccountsPeople({navigation}: any) {
 
   useEffect(() => {
     fetchProfiles();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (

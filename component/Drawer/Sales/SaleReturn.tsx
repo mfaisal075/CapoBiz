@@ -11,6 +11,7 @@ import {
   ScrollView,
   Animated,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState, useRef} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -89,7 +90,7 @@ interface InvoiceItems {
   salrd_total_price: number;
 }
 
-export default function SaleReturn() {
+export default function SaleReturn({navigation}: any) {
   const {token, bussName, bussContact, bussAddress} = useUser();
   const {openDrawer} = useDrawer();
   const [searchTerm, setSearchTerm] = useState('');
@@ -236,14 +237,6 @@ export default function SaleReturn() {
       Toast.show({
         type: 'error',
         text1: 'Please enter quantity',
-      });
-      return;
-    }
-
-    if (!subQty) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please enter sub quantity',
       });
       return;
     }
@@ -573,6 +566,18 @@ export default function SaleReturn() {
     emptyCartWithoutInv();
     fetchCartItems();
     fetchCartItemsWithout();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -855,17 +860,7 @@ export default function SaleReturn() {
                       value={qty}
                       onChangeText={setQty}
                       keyboardType="numeric"
-                    />
-                  </View>
-
-                  <View style={styles.inputGroup}>
-                    <TextInput
-                      style={styles.input}
-                      placeholderTextColor="rgba(0,0,0,0.7)"
-                      placeholder="Enter sub quantity"
-                      value={subQty}
-                      onChangeText={setSubQty}
-                      keyboardType="numeric"
+                      maxLength={6}
                     />
                   </View>
                 </View>
@@ -1011,20 +1006,12 @@ export default function SaleReturn() {
                         </Text>
                         <Text style={styles.detailTextPrice}>
                           {(
-                            parseFloat(item.sub_price) *
-                              parseFloat(item.return_subqty) +
-                            parseFloat(item.price) * parseFloat(item.return_qty)
+                            parseFloat(item.sub_price) * parseFloat(item.price)
                           ).toFixed(2)}
                         </Text>
                       </View>
 
                       <View style={styles.cartItemDetails}>
-                        <Text style={styles.detailText}>
-                          <Text style={{fontWeight: '600'}}>
-                            Sub QTY Price:
-                          </Text>{' '}
-                          {item.sub_price}
-                        </Text>
                         <TouchableOpacity
                           onPress={() => delCartItemWithout(item.prod_id)}
                           style={styles.deleteBtn}>
@@ -1102,6 +1089,7 @@ export default function SaleReturn() {
                       editForm.return_qty ? String(editForm.return_qty) : ''
                     }
                     onChangeText={t => editOnChange('return_qty', t)}
+                    maxLength={6}
                     placeholder="Enter return quantity"
                   />
                 </View>

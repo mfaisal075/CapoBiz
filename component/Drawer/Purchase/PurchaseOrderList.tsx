@@ -8,6 +8,7 @@ import {
   Modal,
   ScrollView,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -74,7 +75,7 @@ interface FinalizedInvc {
   prchd_total_cost: string;
 }
 
-export default function PurchaseOrderList() {
+export default function PurchaseOrderList({navigation}: any) {
   const {token, bussName, bussAddress} = useUser();
   const [orderList, setOrderList] = useState<OrderList[]>([]);
   const {openDrawer} = useDrawer();
@@ -155,6 +156,18 @@ export default function PurchaseOrderList() {
 
   useEffect(() => {
     fetchOrders();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate, status]);
   return (
     <SafeAreaView style={styles.container}>
@@ -183,7 +196,7 @@ export default function PurchaseOrderList() {
               <Text style={styles.dateText}>
                 {startDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showStartDatePicker && (
               <DateTimePicker
@@ -205,7 +218,7 @@ export default function PurchaseOrderList() {
               <Text style={styles.dateText}>
                 {endDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showEndDatePicker && (
               <DateTimePicker
@@ -232,13 +245,22 @@ export default function PurchaseOrderList() {
             placeholderStyle={{color: '#666'}}
             textStyle={{color: '#144272'}}
             ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color="#144272" />
+              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color="#144272" />
+              <Icon
+                name="chevron-down"
+                size={18}
+                color={backgroundColors.dark}
+              />
             )}
             style={styles.dropdown}
             dropDownContainerStyle={styles.dropDownContainer}
+            labelStyle={{
+              fontSize: 14,
+              fontWeight: '600',
+              color: backgroundColors.dark,
+            }}
           />
         </View>
 
@@ -790,8 +812,8 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#144272',
+    fontWeight: '600',
+    color: backgroundColors.dark,
   },
 
   // Modal stying

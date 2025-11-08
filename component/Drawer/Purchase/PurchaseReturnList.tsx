@@ -17,6 +17,7 @@ import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import backgroundColors from '../../Colors';
+import {BackHandler} from 'react-native';
 
 interface PurchaseReturn {
   prchr_return_invoice_no: string;
@@ -53,7 +54,7 @@ interface ReturnDetails {
   created_at: string;
 }
 
-export default function PurchaseReturnList() {
+export default function PurchaseReturnList({navigation}: any) {
   const {openDrawer} = useDrawer();
   const [purchaseReturnList, setPurchaseReturnList] = useState<
     PurchaseReturn[]
@@ -150,6 +151,18 @@ export default function PurchaseReturnList() {
 
   useEffect(() => {
     fetchOrders();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate]);
 
   return (
@@ -179,7 +192,7 @@ export default function PurchaseReturnList() {
               <Text style={styles.dateText}>
                 {startDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showStartDatePicker && (
               <DateTimePicker
@@ -201,7 +214,7 @@ export default function PurchaseReturnList() {
               <Text style={styles.dateText}>
                 {endDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color="#144272" />
+              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
             {showEndDatePicker && (
               <DateTimePicker
@@ -714,8 +727,8 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 14,
-    fontWeight: '500',
-    color: '#144272',
+    fontWeight: '600',
+    color: backgroundColors.dark,
   },
 
   // Modal stying

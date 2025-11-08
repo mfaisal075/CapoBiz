@@ -8,6 +8,7 @@ import {
   ScrollView,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -328,7 +329,19 @@ export default function SupplierAccount() {
   }, [suppValue, fromDate, toDate]);
 
   useEffect(() => {
-    setCurrentPageSingle(1); // Reset pagination when switching between detail types
+    setCurrentPageSingle(1);
+
+    const backKey = () => {
+      navigation.navigate('Dashboard' as never);
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [selectedOption]);
 
   return (
@@ -657,11 +670,7 @@ export default function SupplierAccount() {
                   )
                 ) : accountDetailsWith.length === 0 ? (
                   <View style={styles.emptyState}>
-                    <Icon
-                      name="receipt"
-                      size={40}
-                      color="rgba(0,0,0,0.5)"
-                    />
+                    <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
                     <Text style={styles.emptyStateText}>
                       No detailed transactions found
                     </Text>
@@ -778,11 +787,7 @@ export default function SupplierAccount() {
 
                 {allSuppData.length === 0 ? (
                   <View style={styles.emptyState}>
-                    <Icon
-                      name="people"
-                      size={40}
-                      color="rgba(0,0,0,0.5)"
-                    />
+                    <Icon name="people" size={40} color="rgba(0,0,0,0.5)" />
                     <Text style={styles.emptyStateText}>
                       No supplier accounts found
                     </Text>

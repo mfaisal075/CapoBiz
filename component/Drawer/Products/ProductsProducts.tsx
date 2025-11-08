@@ -21,6 +21,7 @@ import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import backgroundColors from '../../Colors';
+import {BackHandler} from 'react-native';
 
 interface Products {
   id: number;
@@ -420,6 +421,18 @@ export default function CustomerPeople({navigation}: any) {
     fetchUom();
     fetchSuppliers();
     getBarCode();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -537,7 +550,7 @@ export default function CustomerPeople({navigation}: any) {
                     setStartDate(new Date());
                   }}
                   style={styles.addProductCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
@@ -695,10 +708,18 @@ export default function CustomerPeople({navigation}: any) {
                         placeholderStyle={styles.addProductDropdownPlaceholder}
                         textStyle={styles.addProductDropdownText}
                         ArrowUpIconComponent={() => (
-                          <Icon name="chevron-up" size={18} color="#144272" />
+                          <Icon
+                            name="chevron-up"
+                            size={18}
+                            color={backgroundColors.dark}
+                          />
                         )}
                         ArrowDownIconComponent={() => (
-                          <Icon name="chevron-down" size={18} color="#144272" />
+                          <Icon
+                            name="chevron-down"
+                            size={18}
+                            color={backgroundColors.dark}
+                          />
                         )}
                         style={styles.addProductDropdown}
                         dropDownContainerStyle={styles.addProductDropdownList}
@@ -726,10 +747,18 @@ export default function CustomerPeople({navigation}: any) {
                         placeholderStyle={styles.addProductDropdownPlaceholder}
                         textStyle={styles.addProductDropdownText}
                         ArrowUpIconComponent={() => (
-                          <Icon name="chevron-up" size={18} color="#144272" />
+                          <Icon
+                            name="chevron-up"
+                            size={18}
+                            color={backgroundColors.dark}
+                          />
                         )}
                         ArrowDownIconComponent={() => (
-                          <Icon name="chevron-down" size={18} color="#144272" />
+                          <Icon
+                            name="chevron-down"
+                            size={18}
+                            color={backgroundColors.dark}
+                          />
                         )}
                         style={[styles.addProductDropdown, {zIndex: 999}]}
                         dropDownContainerStyle={styles.addProductDropdownList}
@@ -774,6 +803,7 @@ export default function CustomerPeople({navigation}: any) {
                         styles.addProductDisabledInput,
                     ]}
                     placeholderTextColor="#999"
+                    maxLength={6}
                     placeholder="Enter opening quantity"
                     value={
                       manageStock.includes('on') ? '0' : addForm.opening_qty
@@ -796,6 +826,7 @@ export default function CustomerPeople({navigation}: any) {
                     ]}
                     placeholderTextColor="#999"
                     placeholder="Enter reorder level"
+                    maxLength={6}
                     value={
                       manageStock.includes('on') ? '0' : addForm.reorder_qty
                     }
@@ -817,6 +848,7 @@ export default function CustomerPeople({navigation}: any) {
                     placeholder="Enter cost price"
                     value={addForm.cost_price}
                     keyboardType="numeric"
+                    maxLength={9}
                     onChangeText={t => {
                       onChnage('cost_price', t);
                       // Calculate final price if possible
@@ -841,6 +873,7 @@ export default function CustomerPeople({navigation}: any) {
                     placeholderTextColor="#999"
                     placeholder="Enter retail price"
                     value={addForm.retail_price}
+                    maxLength={9}
                     keyboardType="numeric"
                     onChangeText={t => {
                       onChnage('retail_price', t);
@@ -868,6 +901,7 @@ export default function CustomerPeople({navigation}: any) {
                     placeholder="Enter discount percentage"
                     value={addForm.discount}
                     keyboardType="numeric"
+                    maxLength={6}
                     onChangeText={t => {
                       onChnage('discount', t);
                       // Calculate final price if possible
@@ -896,6 +930,7 @@ export default function CustomerPeople({navigation}: any) {
                     value={addForm.final_price || '0.00'}
                     editable={false}
                     placeholderTextColor="#999"
+                    maxLength={9}
                   />
                 </View>
 
@@ -990,13 +1025,17 @@ export default function CustomerPeople({navigation}: any) {
                           }
                           textStyle={styles.addProductDropdownText}
                           ArrowUpIconComponent={() => (
-                            <Icon name="chevron-up" size={18} color="#144272" />
+                            <Icon
+                              name="chevron-up"
+                              size={18}
+                              color={backgroundColors.dark}
+                            />
                           )}
                           ArrowDownIconComponent={() => (
                             <Icon
                               name="chevron-down"
                               size={18}
-                              color="#144272"
+                              color={backgroundColors.dark}
                             />
                           )}
                           style={[styles.addProductDropdown, {zIndex: 999}]}
@@ -1027,6 +1066,7 @@ export default function CustomerPeople({navigation}: any) {
                             if (subUom.includes('on'))
                               onChnage('equivalent', t);
                           }}
+                          maxLength={9}
                         />
                       </View>
                     </View>
@@ -1049,6 +1089,7 @@ export default function CustomerPeople({navigation}: any) {
                           onChangeText={t => {
                             if (subUom.includes('on')) onChnage('sub_price', t);
                           }}
+                          maxLength={9}
                         />
                       </View>
                     </View>
@@ -1342,7 +1383,7 @@ const styles = StyleSheet.create({
   addProductTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: backgroundColors.primary,
+    color: backgroundColors.dark,
   },
   addProductCloseBtn: {
     padding: 5,
@@ -1370,15 +1411,20 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   addProductInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 0.6,
+    borderColor: '#00000047',
     height: 45,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
     color: '#333',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: backgroundColors.light,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 6,
   },
   addProductDisabledInput: {
     backgroundColor: '#e0e0e0',

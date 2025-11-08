@@ -3,10 +3,10 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -28,7 +28,7 @@ interface OrderList {
   cust_name: string;
 }
 
-export default function SaleOrderReport() {
+export default function SaleOrderReport({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {token, bussName, bussAddress} = useUser();
   const [orderList, setOrderList] = useState<OrderList[]>([]);
@@ -174,6 +174,18 @@ export default function SaleOrderReport() {
 
   useEffect(() => {
     fetchOrderList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate]);
 
   function formatNumber(num: number | string): string {

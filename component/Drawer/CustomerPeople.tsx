@@ -9,6 +9,7 @@ import {
   TextInput,
   Image,
   Modal,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
@@ -295,6 +296,18 @@ export default function CustomerPeople({navigation}: any) {
     fetchCustomers();
     fetchType();
     fetchAreas();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -399,7 +412,7 @@ export default function CustomerPeople({navigation}: any) {
                     setAddForm(initialAddCustomer);
                   }}
                   style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
@@ -567,7 +580,7 @@ export default function CustomerPeople({navigation}: any) {
                         width: '100%',
                       }}
                       searchContainerStyle={{
-                        borderColor: backgroundColors.gray
+                        borderColor: backgroundColors.gray,
                       }}
                     />
                   </View>
@@ -596,7 +609,7 @@ export default function CustomerPeople({navigation}: any) {
                         width: '100%',
                       }}
                       searchContainerStyle={{
-                        borderColor: backgroundColors.gray
+                        borderColor: backgroundColors.gray,
                       }}
                     />
                   </View>
@@ -619,7 +632,11 @@ export default function CustomerPeople({navigation}: any) {
                       color={backgroundColors.primary}
                       uncheckedColor={backgroundColors.dark}
                     />
-                    <Text style={[styles.addCustomerLabel, {marginLeft: 8, marginBottom: 0}]}>
+                    <Text
+                      style={[
+                        styles.addCustomerLabel,
+                        {marginLeft: 8, marginBottom: 0},
+                      ]}>
                       Enable Opening Balance
                     </Text>
                   </TouchableOpacity>
@@ -957,7 +974,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 15,
   },
   addCustomerModalContainer: {
     backgroundColor: 'white',
@@ -981,7 +998,7 @@ const styles = StyleSheet.create({
   addCustomerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: backgroundColors.primary,
+    color: backgroundColors.dark,
   },
   addCustomerCloseBtn: {
     padding: 5,
@@ -1004,15 +1021,20 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   addCustomerInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderWidth: 0.6,
+    borderColor: '#00000047',
     height: 45,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
     color: '#333',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: backgroundColors.light,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 6,
   },
   addCustomerDropdownRow: {
     marginBottom: 15,

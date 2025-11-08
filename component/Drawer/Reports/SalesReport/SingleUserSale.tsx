@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ScrollView,
   FlatList,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -56,7 +57,7 @@ interface SaleSummary {
   total_sale_value: number;
 }
 
-export default function SingleUserSale() {
+export default function SingleUserSale({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussAddress, bussName} = useUser();
   const [prodOpen, setProdOpen] = useState(false);
@@ -501,6 +502,18 @@ export default function SingleUserSale() {
     fetchUserDropdown();
     fetchSalesSummary();
     fetchSales();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate, endDate, catValue, prodValue, userValue]);
 
   function formatNumber(num: number | string): string {

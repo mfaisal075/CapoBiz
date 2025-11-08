@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   Image,
@@ -16,8 +15,8 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../../CTX/UserContext';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../../Colors';
+import {BackHandler} from 'react-native';
 
 interface SupplierList {
   id: number;
@@ -28,7 +27,7 @@ interface SupplierList {
   sup_email: string;
 }
 
-export default function SupplierList() {
+export default function SupplierList({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
   const [supplierList, setSupplierList] = useState<SupplierList[]>([]);
@@ -142,6 +141,18 @@ export default function SupplierList() {
 
   useEffect(() => {
     fetchSuplierList();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (

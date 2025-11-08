@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Image,
+  BackHandler,
 } from 'react-native';
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -28,7 +29,7 @@ interface AttendanceCart {
   att_status: string;
 }
 
-export default function AllEmployeeAttendance() {
+export default function AllEmployeeAttendance({navigation}: any) {
   const {openDrawer} = useDrawer();
   const [attCart, setAttCart] = useState<AttendanceCart[]>([]);
   const [clockInPickerFor, setClockInPickerFor] = useState<number | null>(null);
@@ -346,6 +347,20 @@ export default function AllEmployeeAttendance() {
     }
   };
 
+  useEffect(() => {
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
+  }, []);
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.gradientBackground}>
@@ -380,7 +395,10 @@ export default function AllEmployeeAttendance() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionButton, {backgroundColor: backgroundColors.danger}]}
+            style={[
+              styles.actionButton,
+              {backgroundColor: backgroundColors.danger},
+            ]}
             onPress={() => {
               handleReset();
             }}>

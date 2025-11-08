@@ -8,6 +8,7 @@ import {
   TextInput,
   Modal,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -25,7 +26,7 @@ interface Categories {
   created_at: string;
 }
 
-export default function ExpenseCategories() {
+export default function ExpenseCategories({navigation}: any) {
   const {token} = useUser();
   const {openDrawer} = useDrawer();
   const [modalVisible, setModalVisible] = useState('');
@@ -224,6 +225,18 @@ export default function ExpenseCategories() {
 
   useEffect(() => {
     fetchCategories();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -357,7 +370,7 @@ export default function ExpenseCategories() {
                 <TouchableOpacity
                   style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
                   onPress={() => setModalVisible('')}>
-                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
+                  <Text style={[styles.deleteModalBtnText, {color: backgroundColors.dark}]}>
                     Cancel
                   </Text>
                 </TouchableOpacity>
@@ -388,16 +401,15 @@ export default function ExpenseCategories() {
                     setEditCategory('');
                   }}
                   style={styles.closeBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  <Icon name="close" size={20} color={backgroundColors.dark} />
                 </TouchableOpacity>
               </View>
 
               {/* Form */}
               <View style={styles.formRow}>
-                <Text style={styles.inputLabel}>Category Name *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter category name"
+                  placeholder="Enter category name *"
                   placeholderTextColor="#999"
                   value={editCategory}
                   onChangeText={t => setEditCategory(t)}
@@ -437,10 +449,9 @@ export default function ExpenseCategories() {
 
               {/* Form */}
               <View style={styles.formRow}>
-                <Text style={styles.inputLabel}>Category Name *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Enter category name"
+                  placeholder="Enter category name *"
                   placeholderTextColor="#999"
                   value={category}
                   onChangeText={t => setCategory(t)}
@@ -695,16 +706,10 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
-  },
   deleteModalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 8,
   },
   deleteModalMessage: {
@@ -781,14 +786,20 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
+    borderWidth: 0.6,
+    borderColor: '#00000047',
+    height: 45,
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: backgroundColors.dark,
-    backgroundColor: '#f9f9f9',
+    color: '#333',
+    backgroundColor: backgroundColors.light,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    shadowOffset: {width: 2, height: 2},
+    elevation: 6,
   },
   submitBtn: {
     flexDirection: 'row',

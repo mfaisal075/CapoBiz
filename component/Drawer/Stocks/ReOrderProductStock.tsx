@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   Image,
@@ -16,8 +15,8 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useUser} from '../../CTX/UserContext';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
+import {BackHandler} from 'react-native';
 
 type Product = {
   id: number;
@@ -34,7 +33,7 @@ interface Categories {
   pcat_name: string;
 }
 
-export default function ReOrderProductStock() {
+export default function ReOrderProductStock({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {token} = useUser();
   const [category, setCategory] = useState(false);
@@ -113,6 +112,18 @@ export default function ReOrderProductStock() {
   useEffect(() => {
     fetchProd();
     fetchCatDropdown();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [currentCategory]);
 
   return (
@@ -341,7 +352,7 @@ const styles = StyleSheet.create({
   },
   dropDownContainer: {
     backgroundColor: backgroundColors.light,
-    
+
     borderColor: 'transparent',
     borderTopWidth: 1,
     marginTop: 5,

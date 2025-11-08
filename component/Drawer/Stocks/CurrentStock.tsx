@@ -7,6 +7,7 @@ import {
   FlatList,
   TextInput,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -36,7 +37,7 @@ interface Categories {
   pcat_name: string;
 }
 
-export default function CurrentStock() {
+export default function CurrentStock({navigation}: any) {
   const {openDrawer} = useDrawer();
   const [categories, setCategories] = useState<Categories[]>([]);
   const [category, setCategory] = useState(false);
@@ -109,6 +110,18 @@ export default function CurrentStock() {
   useEffect(() => {
     fetchStock();
     fetchCatDropdown();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [currentCategory]);
 
   return (

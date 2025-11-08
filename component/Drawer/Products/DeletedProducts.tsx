@@ -9,6 +9,7 @@ import {
   Modal,
   Image,
   TextInput,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -30,9 +31,8 @@ interface Products {
   prod_expirydate: string;
 }
 
-export default function DeletedProducts() {
+export default function DeletedProducts({navigation}: any) {
   const {openDrawer} = useDrawer();
-  const [delProducts, setDelProducts] = useState<Products[]>([]);
   const [selectedProd, setSelectedProd] = useState<any | null>(null);
   const [modalVisible, setModalVisible] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -116,6 +116,18 @@ export default function DeletedProducts() {
 
   useEffect(() => {
     fetchProds();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -222,7 +234,11 @@ export default function DeletedProducts() {
                 <TouchableOpacity
                   style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
                   onPress={() => setModalVisible('')}>
-                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
+                  <Text
+                    style={[
+                      styles.deleteModalBtnText,
+                      {color: backgroundColors.dark},
+                    ]}>
                     Cancel
                   </Text>
                 </TouchableOpacity>
@@ -448,7 +464,7 @@ const styles = StyleSheet.create({
   deleteModalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
     marginBottom: 8,
   },
   deleteModalMessage: {

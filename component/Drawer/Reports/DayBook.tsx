@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Image,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -33,7 +34,7 @@ interface DayBookData {
   expense: string;
 }
 
-export default function DayBook() {
+export default function DayBook({navigation}: any) {
   const {token, bussName, bussAddress} = useUser();
   const {openDrawer} = useDrawer();
   const [dayBook, setDayBook] = useState<DayBookData | null>(null);
@@ -64,6 +65,18 @@ export default function DayBook() {
 
   useEffect(() => {
     fetchDayBook();
+
+    const backKey = () => {
+      navigation.navigate('Dashboard');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, [startDate]);
 
   // Handle Print
@@ -268,7 +281,11 @@ export default function DayBook() {
         <ScrollView style={styles.scrollContainer}>
           {dayBook ? (
             <>
-              <View style={[styles.summaryContainer, {backgroundColor: '#28a7461d'}]}>
+              <View
+                style={[
+                  styles.summaryContainer,
+                  {backgroundColor: '#28a7461d'},
+                ]}>
                 {/* Income Section */}
                 <Text style={styles.summaryTitle}>Income</Text>
 
@@ -348,7 +365,11 @@ export default function DayBook() {
                 </View>
               </View>
 
-              <View style={[styles.summaryContainer, {backgroundColor: '#dc35461f'}]}>
+              <View
+                style={[
+                  styles.summaryContainer,
+                  {backgroundColor: '#dc35461f'},
+                ]}>
                 {/* Income Section */}
                 <Text style={styles.summaryTitle}>Expense</Text>
 
