@@ -1,4 +1,5 @@
 import {
+  BackHandler,
   Image,
   ScrollView,
   StyleSheet,
@@ -436,6 +437,18 @@ const ProductDetails = ({navigation, route}: any) => {
     fetchCatgories();
     fetchUom();
     fetchSuppliers();
+
+    const backKey = () => {
+      navigation.navigate('Products');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (

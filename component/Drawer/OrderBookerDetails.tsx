@@ -1,4 +1,5 @@
 import {
+  BackHandler,
   Image,
   Modal,
   SafeAreaView,
@@ -20,12 +21,15 @@ import Toast from 'react-native-toast-message';
 import DropDownPicker from 'react-native-dropdown-picker';
 
 interface OrderBooker {
-  name: string;
-  cnic: string;
-  area: string;
-  contact: string;
-  email: string;
-  pic: string;
+  booker: {
+    name: string;
+    cnic: string;
+    area: string;
+    contact: string;
+    email: string;
+    pic: string;
+  };
+  areas: Array<1>;
 }
 
 interface EditForm {
@@ -153,7 +157,7 @@ const OrderBookerDetails = ({navigation, route}: any) => {
         email: booker.email || '',
         contact: booker.contact || '',
         cnic: booker.cnic || '',
-        areas: parsedAreas, // ✅ now numbers
+        areas: parsedAreas,
       });
     } catch (error) {
       console.log(error);
@@ -243,6 +247,18 @@ const OrderBookerDetails = ({navigation, route}: any) => {
   useEffect(() => {
     handleFetchAreas();
     fetchObDetails();
+
+    const backKey = () => {
+      navigation.navigate('Order Booker');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (
@@ -280,7 +296,7 @@ const OrderBookerDetails = ({navigation, route}: any) => {
             source={require('../../assets/man.png')}
             style={styles.avatar}
           />
-          <Text style={styles.custName}>{orderBooker?.name}</Text>
+          <Text style={styles.custName}>{orderBooker?.booker?.name}</Text>
         </View>
 
         {/* Inner Details */}
@@ -306,23 +322,31 @@ const OrderBookerDetails = ({navigation, route}: any) => {
           <View style={styles.detailsView}>
             <View style={styles.detailsRow}>
               <Text style={styles.label}>Name</Text>
-              <Text style={styles.value}>{orderBooker?.name ?? '--'}</Text>
+              <Text style={styles.value}>
+                {orderBooker?.booker?.name ?? '--'}
+              </Text>
             </View>
             <View style={styles.detailsRow}>
               <Text style={styles.label}>CNIC</Text>
-              <Text style={styles.value}>{orderBooker?.cnic ?? '--'}</Text>
+              <Text style={styles.value}>
+                {orderBooker?.booker?.cnic ?? '--'}
+              </Text>
             </View>
             <View style={styles.detailsRow}>
               <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>{orderBooker?.email ?? '--'}</Text>
+              <Text style={styles.value}>
+                {orderBooker?.booker?.email ?? '--'}
+              </Text>
             </View>
             <View style={styles.detailsRow}>
               <Text style={styles.label}>Contact</Text>
-              <Text style={styles.value}>{orderBooker?.contact ?? '--'}</Text>
+              <Text style={styles.value}>
+                {orderBooker?.booker?.contact ?? '--'}
+              </Text>
             </View>
             <View style={[styles.detailsRow, {borderBottomWidth: 0}]}>
               <Text style={styles.label}>Area</Text>
-              <Text style={styles.value}>{orderBooker?.area ?? '--'}</Text>
+              <Text style={styles.value}>{orderBooker?.areas.join(', ') ?? '--'}</Text>
             </View>
           </View>
         </View>

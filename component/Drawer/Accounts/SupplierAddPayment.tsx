@@ -20,6 +20,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import Toast from 'react-native-toast-message';
 import backgroundColors from '../../Colors';
+import RNPrint from 'react-native-print';
 
 interface Supplier {
   id: string;
@@ -206,6 +207,155 @@ const SupplierAddPayment = ({navigation}: any) => {
     }
   };
 
+  const printReceipt = async () => {
+    if (!receipt) return;
+
+    const formattedDate = new Date(receipt?.date)
+      .toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+      .replace(/ /g, '-');
+
+    const htmlContent = `
+      <html>
+        <head>
+          <style>
+            body {
+              font-family: 'Arial', sans-serif;
+              padding: 20px;
+              color: #000;
+              font-size: 14px;
+              background-color: #fff;
+            }
+  
+            .header {
+              text-align: center;
+              margin-bottom: 10px;
+            }
+  
+            .header h2 {
+              margin: 0;
+              font-size: 20px;
+            }
+  
+            .sub-header {
+              text-align: center;
+              margin-bottom: 15px;
+              font-size: 14px;
+            }
+  
+            .section-title {
+              text-align: center;
+              font-weight: bold;
+              margin-top: 10px;
+              text-decoration: underline;
+            }
+  
+            table {
+              width: 100%;
+              margin-top: 15px;
+              border-collapse: collapse;
+            }
+  
+            td {
+              padding: 6px 0;
+              vertical-align: top;
+            }
+  
+            .label {
+              width: 45%;
+              font-weight: bold;
+            }
+  
+            .value {
+              width: 55%;
+              text-align: right;
+            }
+  
+            .footer {
+              text-align: center;
+              margin-top: 20px;
+              font-size: 12px;
+              color: #555;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h2>Point of Sale System</h2>
+            <div>IMTIAZ</div>
+            <div>Gujranwala</div>
+          </div>
+  
+          <div class="section-title">Supplier Payment</div>
+  
+          <table>
+            <tr>
+              <td class="label">Date:</td>
+              <td class="value">${formattedDate}</td>
+            </tr>
+            ${
+              selectedTab === 'Cheque' &&
+              `<tr>
+                  <td class="label">Cheque:</td>
+                  <td class="value">${receipt?.cheque_number}</td>
+                </tr>`
+            }
+            <tr>
+              <td class="label">Customer Name:</td>
+              <td class="value">${
+                selectedTab === 'Cash'
+                  ? receipt?.suppliername
+                  : receipt?.supplier_name
+              }</td>
+            </tr>
+            <tr>
+              <td class="label">Payment:</td>
+              <td class="value">${receipt?.amount}</td>
+            </tr>
+            <tr>
+              <td class="label">Previous Balance:</td>
+              <td class="value">${
+                selectedTab === 'Cash'
+                  ? receipt.prev_balance
+                  : receipt.previous_balance
+              }</td>
+            </tr>
+            ${
+              selectedTab === 'Cash' &&
+              `<tr>
+              <td class="label">Net Balance:</td>
+              <td class="value">${receipt?.net_balance}</td>
+            </tr>`
+            }
+            <tr>
+              <td class="label">Payment Type:</td>
+              <td class="value">${receipt.type}</td>
+            </tr>
+            <tr>
+              <td class="label">Payment Method:</td>
+              <td class="value">${
+                selectedTab === 'Cash' ? 'By Cash' : 'By Cheque'
+              }</td>
+            </tr>
+          </table>
+  
+          <div class="footer">
+            Software Developed with love by <b>Technic Mentors</b> | 0300-4900046
+          </div>
+        </body>
+      </html>
+    `;
+
+    try {
+      await RNPrint.print({html: htmlContent});
+    } catch (error) {
+      console.error('Print error:', error);
+    }
+  };
+
   // Add Cheque Payment
   const addChequePayment = async () => {
     if (!suppValue) {
@@ -245,6 +395,7 @@ const SupplierAddPayment = ({navigation}: any) => {
       const data = res.data;
 
       if (res.status === 200 && data.status === 200) {
+        setReceipt(data.supp_account || data);
         Toast.show({
           type: 'success',
           text1: 'Added!',
@@ -618,54 +769,70 @@ const SupplierAddPayment = ({navigation}: any) => {
 
               <View style={styles.modalDetails}>
                 <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Invoice No:</Text>
-                  <Text style={styles.modalValue}>
-                    {receipt?.supac_invoice_no || 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Amount:</Text>
-                  <Text style={[styles.modalValue, {color: '#4CAF50'}]}>
-                    Rs. {receipt?.supac_paid_amount || cashAddFrom.amount}
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Method:</Text>
-                  <Text style={styles.modalValue}>
-                    {receipt?.supac_payment_method || 'Cash'}
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Type:</Text>
-                  <Text style={styles.modalValue}>
-                    {receipt?.supac_payment_type || cashType}
-                  </Text>
-                </View>
-                <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>Date:</Text>
                   <Text style={styles.modalValue}>
-                    {receipt?.supac_date ||
-                      cashAddFrom.date.toLocaleDateString()}
+                    {receipt?.date || 'N/A'}
+                  </Text>
+                </View>
+                {selectedTab === 'Cheque' && (
+                  <View style={styles.modalRow}>
+                    <Text style={styles.modalLabel}>Cheque No:</Text>
+                    <Text style={styles.modalValue}>
+                      {receipt?.cheque_number || 'N/A'}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Supplier Name:</Text>
+                  <Text style={[styles.modalValue]}>
+                    {selectedTab === 'Cash'
+                      ? receipt?.suppliername
+                      : receipt?.supplier_name}
                   </Text>
                 </View>
                 <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Note:</Text>
+                  <Text style={styles.modalLabel}>Payment:</Text>
                   <Text style={styles.modalValue}>
-                    {receipt?.supac_note || cashAddFrom.note}
+                    {receipt?.amount || '0'}
                   </Text>
                 </View>
                 <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>Balance:</Text>
-                  <Text style={[styles.modalValue, {color: '#ff4444'}]}>
-                    {receipt?.supac_balance || '0.00'}
+                  <Text style={styles.modalLabel}>Previous Balance:</Text>
+                  <Text style={styles.modalValue}>
+                    {selectedTab === 'Cash'
+                      ? receipt?.prev_balance
+                      : receipt?.previous_balance}
+                  </Text>
+                </View>
+                {selectedTab === 'Cash' && (
+                  <View style={styles.modalRow}>
+                    <Text style={styles.modalLabel}>Net Balance:</Text>
+                    <Text style={styles.modalValue}>
+                      {receipt?.net_balance ?? '0'}
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Payment Type:</Text>
+                  <Text style={styles.modalValue}>{receipt?.type ?? '--'}</Text>
+                </View>
+                <View style={styles.modalRow}>
+                  <Text style={styles.modalLabel}>Payment Method:</Text>
+                  <Text style={[styles.modalValue]}>
+                    {selectedTab === 'Cash' ? 'By Cash' : 'By Cheque'}
                   </Text>
                 </View>
               </View>
 
               <TouchableOpacity
-                onPress={() => setReceipt(null)}
+                onPress={() => {
+                  printReceipt();
+                  setCashType('');
+                  setReceipt(null);
+                }}
                 style={styles.modalButton}>
-                <Text style={styles.modalButtonText}>Close</Text>
+                <Icon name="print" size={20} color={backgroundColors.light} />
+                <Text style={styles.modalButtonText}>Print</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -914,7 +1081,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: backgroundColors.dark,
     textAlign: 'center',
     marginBottom: 15,
   },
@@ -934,7 +1101,11 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   modalButton: {
-    backgroundColor: '#144272',
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 10,
+    alignSelf: 'center',
+    backgroundColor: backgroundColors.primary,
     paddingVertical: 12,
     borderRadius: 8,
   },

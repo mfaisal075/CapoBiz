@@ -57,6 +57,17 @@ interface SaleSummary {
   total_sale_value: number;
 }
 
+interface SaleDetail {
+  sald_prod_name: string;
+  sald_qty: string;
+  sald_cost_price: string;
+  sald_retail_price: string;
+  sald_fretail_price: string;
+  sald_total_fretailprice: string;
+  pcat_name: string;
+  ums_name: string;
+}
+
 export default function AllUserSale({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {bussName, bussAddress} = useUser();
@@ -84,6 +95,9 @@ export default function AllUserSale({navigation}: any) {
   const [salesReport, setSalesReport] = useState<SalesReport[]>([]);
   const [salesDetailedRep, setSalesDetailedRep] = useState<SalesReport[]>([]);
   const [salesSummary, setSalesSummary] = useState<SaleSummary[]>([]);
+  const [saleDetails, setSaleDetails] = useState<Record<string, SaleDetail[]>>(
+    {},
+  );
 
   const [selectionMode, setSelectionMode] = useState<
     'salereport' | 'detailedsalereport' | 'saleSummary' | ''
@@ -196,34 +210,67 @@ export default function AllUserSale({navigation}: any) {
         .join('');
     } else if (selectionMode === 'detailedsalereport') {
       rows = dataList
-        .map(
-          (item, index) => `
+        .map((item, index) => {
+          const invoiceNo = item.sal_invoice_no;
+          const details = saleDetails[invoiceNo] || [];
+
+          // Main sale row
+          let mainRow = `
+      <tr>
+        <td colspan="7" style="border:1px solid #000; padding:8px 4px; background:#f5f5f5; font-weight:bold;">
+          Invoice #: ${item.sal_invoice_no} | Customer: ${
+            item.cust_name
+          } | Date: ${new Date(item.sal_date).toLocaleDateString('en-US', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+          })} | Contact: ${item.cust_contact || 'N/A'} | Address: ${
+            item.cust_address || 'N/A'
+          } | Sale: ${item.sal_total_amount}
+        </td>
+      </tr>`;
+
+          // Details header
+          let detailsHeader = `
+      <tr style="background:#e8e8e8;">
+        <th style="border:1px solid #000; padding:4px; text-align:center;">Sr#</th>
+        <th style="border:1px solid #000; padding:4px;">UOM</th>
+        <th style="border:1px solid #000; padding:4px;">Product</th>
+        <th style="border:1px solid #000; padding:4px;">Qty</th>
+        <th style="border:1px solid #000; padding:4px;">Unit Price</th>
+        <th style="border:1px solid #000; padding:4px;">Total Price</th>
+        <th style="border:1px solid #000; padding:4px;">Category</th>
+      </tr>`;
+
+          // Details rows
+          let detailsRows = details
+            .map(
+              (detail, detailIndex) => `
       <tr>
         <td style="border:1px solid #000; padding:4px; text-align:center;">${
-          index + 1
+          detailIndex + 1
+        }</td>
+        <td style="border:1px solid #000; padding:4px;">${detail.ums_name}</td>
+        <td style="border:1px solid #000; padding:4px;">${
+          detail.sald_prod_name
+        }</td>
+        <td style="border:1px solid #000; padding:4px;">${detail.sald_qty}</td>
+        <td style="border:1px solid #000; padding:4px;">${
+          detail.sald_fretail_price
         }</td>
         <td style="border:1px solid #000; padding:4px;">${
-          item.sal_invoice_no
+          detail.sald_total_fretailprice
         }</td>
-        <td style="border:1px solid #000; padding:4px;">${item.cust_name}</td>
-        <td style="border:1px solid #000; padding:4px;">${new Date(
-          item.sal_date,
-        ).toLocaleDateString('en-US', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        })}</td>
-        <td style="border:1px solid #000; padding:4px;">${
-          item.cust_contact || 'N/A'
-        }</td>
-        <td style="border:1px solid #000; padding:4px;">${
-          item.cust_address || 'N/A'
-        }</td>
-        <td style="border:1px solid #000; padding:4px;">${
-          item.sal_total_amount
-        }</td>
+        <td style="border:1px solid #000; padding:4px;">${detail.pcat_name}</td>
       </tr>`,
-        )
+            )
+            .join('');
+
+          // Spacer row
+          let spacerRow = `<tr><td colspan="7" style="padding:8px;"></td></tr>`;
+
+          return mainRow + detailsHeader + detailsRows + spacerRow;
+        })
         .join('');
     } else {
       rows = dataList
@@ -262,16 +309,7 @@ export default function AllUserSale({navigation}: any) {
         <th style="border:1px solid #000; padding:6px;">Sale Value</th>
       </tr>`
         : selectionMode === 'detailedsalereport'
-        ? `
-      <tr style="background:#f0f0f0;">
-        <th style="border:1px solid #000; padding:6px;">Sr#</th>
-        <th style="border:1px solid #000; padding:6px;">Invoice</th>
-        <th style="border:1px solid #000; padding:6px;">Customer</th>
-        <th style="border:1px solid #000; padding:6px;">Date</th>
-        <th style="border:1px solid #000; padding:6px;">Contact</th>
-        <th style="border:1px solid #000; padding:6px;">Address</th>
-        <th style="border:1px solid #000; padding:6px;">Sale</th>
-      </tr>`
+        ? '' // Header is now part of each sale's details
         : `<tr style="background:#f0f0f0;">
         <th style="border:1px solid #000; padding:6px;">Sr#</th>
         <th style="border:1px solid #000; padding:6px;">Customer</th>
@@ -439,6 +477,7 @@ export default function AllUserSale({navigation}: any) {
         user_id: userValue,
       });
       setSalesDetailedRep(res.data.sales || []);
+      setSaleDetails(res.data.saledetails || {});
       console.log(salesDetailedRep.length);
     } catch (error) {
       console.log(error);
@@ -585,6 +624,28 @@ export default function AllUserSale({navigation}: any) {
               <Text style={styles.radioText}>Sale Report</Text>
             </TouchableOpacity>
 
+            <TouchableOpacity
+              style={styles.radioButton}
+              onPress={() => {
+                setSelectionMode('detailedsalereport');
+                setCatValue('');
+                setUserValue('');
+                setProdValue('');
+              }}>
+              <RadioButton
+                value="detailedsalereport"
+                status={
+                  selectionMode === 'detailedsalereport'
+                    ? 'checked'
+                    : 'unchecked'
+                }
+                color={backgroundColors.primary}
+                uncheckedColor={backgroundColors.dark}
+              />
+              <Text style={styles.radioText}>Detailed Sale Report</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={[styles.radioContainer, {marginBottom: 4}]}>
             <TouchableOpacity
               style={styles.radioButton}
               onPress={() => {
@@ -927,6 +988,76 @@ export default function AllUserSale({navigation}: any) {
           </View>
         )}
 
+        {/* Sale Report List */}
+        {selectionMode === 'detailedsalereport' && (
+          <View style={styles.listContainer}>
+            <FlatList
+              data={paginatedDetailedData}
+              keyExtractor={(item, index) => `${item.id}-${index}`}
+              renderItem={({item}) => (
+                <View style={styles.card}>
+                  {/* Avatar + Name + Actions */}
+                  <View style={styles.row}>
+                    <View>
+                      <Text style={styles.name}>{item.cust_name}</Text>
+                      <Text style={styles.subText}>
+                        <Text style={{fontWeight: '600'}}>Invoice#: </Text>
+                        {item.sal_invoice_no}
+                      </Text>
+                    </View>
+
+                    <View style={[{alignSelf: 'flex-start', marginTop: 22}]}>
+                      <Text
+                        style={[
+                          styles.subText,
+                          {fontWeight: '700', verticalAlign: 'top'},
+                        ]}>
+                        <Icon name="calendar" size={12} color="#666" />{' '}
+                        {new Date(item.sal_date)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-') || 'N/A'}
+                      </Text>
+                    </View>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      marginTop: 5,
+                    }}>
+                    <Text style={styles.subText}>
+                      <Text style={{fontWeight: '600'}}>Order Total: </Text>
+                      {formatNumber(item.sal_order_total) ?? '0'}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Text style={{fontWeight: '600'}}>Discount: </Text>
+                      {formatNumber(item.sal_discount) ?? '0'}
+                    </Text>
+                    <Text style={styles.subText}>
+                      <Text style={{fontWeight: '600'}}>Net Payable: </Text>
+                      {formatNumber(item.sal_total_amount) ?? '0'}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Icon name="chart-line" size={48} color="#666" />
+                  <Text style={styles.emptyText}>
+                    No detailed sale records found.
+                  </Text>
+                </View>
+              }
+              contentContainerStyle={{paddingBottom: 90}}
+              showsVerticalScrollIndicator={false}
+            />
+          </View>
+        )}
+
         {/* Sale Summary List */}
         {selectionMode === 'saleSummary' && (
           <View style={styles.listContainer}>
@@ -976,6 +1107,55 @@ export default function AllUserSale({navigation}: any) {
 
         {/* Pagination Controls for Sale Report */}
         {selectionMode === 'salereport' && totalRecords > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              style={[
+                styles.pageButton,
+                currentPage === 1 && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === 1 && styles.pageButtonTextDisabled,
+                ]}>
+                Prev
+              </Text>
+            </TouchableOpacity>
+
+            <View style={styles.pageIndicator}>
+              <Text style={styles.pageIndicatorText}>
+                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
+                {totalPages}
+              </Text>
+              <Text style={styles.totalText}>
+                Total: {totalRecords} records
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() =>
+                setCurrentPage(prev => Math.min(prev + 1, totalPages))
+              }
+              style={[
+                styles.pageButton,
+                currentPage === totalPages && styles.pageButtonDisabled,
+              ]}>
+              <Text
+                style={[
+                  styles.pageButtonText,
+                  currentPage === totalPages && styles.pageButtonTextDisabled,
+                ]}>
+                Next
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Pagination Controls for Details Sale Report */}
+        {selectionMode === 'detailedsalereport' && totalRecords > 0 && (
           <View style={styles.paginationContainer}>
             <TouchableOpacity
               disabled={currentPage === 1}
@@ -1177,8 +1357,7 @@ const styles = StyleSheet.create({
   radioContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '70%',
-    marginBottom: 6,
+    width: '80%',
   },
   radioButton: {
     flexDirection: 'row',

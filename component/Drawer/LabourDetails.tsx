@@ -1,4 +1,5 @@
 import {
+  BackHandler,
   Image,
   Modal,
   ScrollView,
@@ -237,6 +238,18 @@ const LabourDetails = ({navigation, route}: any) => {
 
   useEffect(() => {
     fetchLabDetails();
+
+    const backKey = () => {
+      navigation.navigate('Labour');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
   return (
     <SafeAreaView style={styles.container}>

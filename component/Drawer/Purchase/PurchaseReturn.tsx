@@ -58,8 +58,21 @@ interface InvoiceListWithout {
   cart_id?: number;
 }
 
+interface InvoiceData {
+  prod_name: string;
+  prchr_sup_id: number;
+  created_at: string;
+  sup_name: string;
+  sup_contact: string;
+  sup_company_name: string;
+  sup_address: string;
+  prchrd_return_qty: number;
+  prchrd_price: string;
+  prchrd_total_price: number;
+}
+
 export default function PurchaseReturn({navigation}: any) {
-  const {token} = useUser();
+  const {token, bussName, bussAddress, bussContact} = useUser();
   const {openDrawer} = useDrawer();
   const [selectedOption, setSelectedOption] = useState<'with' | 'without'>(
     'with',
@@ -99,6 +112,8 @@ export default function PurchaseReturn({navigation}: any) {
   const [editingQuantity, setEditingQuantity] = useState<string>('');
   const [editingType, setEditingType] = useState<'with' | 'without'>('with');
   const [ref, setRef] = useState('');
+  const [invcData, setInvcData] = useState<InvoiceData | null>(null);
+  const [invcDetails, setInvcDetails] = useState<InvoiceData[]>([]);
 
   // Cart Animation
   const bounceAnim = useRef(new Animated.Value(0)).current;
@@ -544,9 +559,10 @@ export default function PurchaseReturn({navigation}: any) {
       });
 
       const data = res.data;
-      console.log(data);
 
       if (res.status === 200 && data.status === 200) {
+        setInvcData(data.return_detail[0]);
+        setInvcDetails(res.data.return_detail);
         Toast.show({
           type: 'success',
           text1: 'Order completed successfully!',
@@ -556,7 +572,7 @@ export default function PurchaseReturn({navigation}: any) {
         emptyCartWithoutInvc();
         setSupData(null);
         setCurrentpsupplier('');
-        setModalVisible('');
+        setModalVisible('Invc');
       } else if (res.status === 200 && data.status === 202) {
         Toast.show({
           type: 'error',
@@ -1259,6 +1275,212 @@ export default function PurchaseReturn({navigation}: any) {
           </SafeAreaView>
         </Modal>
 
+        {/* Invoice Modal */}
+        <Modal
+          visible={modalVisible === 'Invc'}
+          animationType="slide"
+          transparent
+          presentationStyle="overFullScreen">
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContainer}>
+              {/* Modal Handle */}
+              <View style={styles.modalHandle} />
+
+              {/* Header */}
+              <View style={styles.modalHeader}>
+                <View style={styles.headerLeft}>
+                  <View style={styles.invoiceIconContainer}>
+                    <Icon name="receipt" size={24} color="#144272" />
+                  </View>
+                  <View>
+                    <Text style={styles.modalTitle}>
+                      Purchase Return Invoice
+                    </Text>
+                    <Text style={styles.modalSubtitle}>Return Details</Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  onPress={() => {
+                    setModalVisible('');
+                    setInvcData(null);
+                    // setInvcDetails([]);
+                  }}
+                  style={styles.closeButton}>
+                  <Icon name="close" size={24} color="#666" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                style={styles.modalContent}
+                showsVerticalScrollIndicator={false}>
+                {/* Company Info Card */}
+                <View style={styles.companyCard}>
+                  <View style={styles.companyHeader}>
+                    <Text style={styles.companyName}>{bussName || 'N/A'}</Text>
+                  </View>
+                  <Text style={styles.companyAddress}>
+                    {bussAddress || 'N/A'}
+                  </Text>
+                  <Text style={styles.companyContact}>
+                    {bussContact || 'Contact: N/A'}
+                  </Text>
+                </View>
+
+                {/* Order Info Grid */}
+                <View style={styles.orderInfoGrid}>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Invoice Date</Text>
+                    <Text style={styles.infoValue}>
+                      {invcData?.created_at
+                        ? new Date(invcData.created_at)
+                            .toLocaleDateString('en-GB', {
+                              day: '2-digit',
+                              month: 'short',
+                              year: 'numeric',
+                            })
+                            .replace(/ /g, '-')
+                        : 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Supplier Name:</Text>
+                    <Text style={styles.infoValue}>
+                      {invcData?.sup_name ?? 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Company:</Text>
+                    <Text style={styles.infoValue}>
+                      {invcData?.sup_company_name ?? 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Contact</Text>
+                    <Text style={styles.infoValue}>
+                      {invcData?.sup_company_name ?? 'N/A'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoCard}>
+                    <Text style={styles.infoLabel}>Address: </Text>
+                    <Text style={styles.infoValue}>
+                      {invcData?.sup_address ?? 'N/A'}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Order Table Section */}
+                <View style={styles.tableSection}>
+                  <Text style={styles.sectionTitle}>Invoice Items</Text>
+
+                  {/* Table Container */}
+                  <View style={styles.tableContainer}>
+                    {/* Table Header */}
+                    <View style={styles.tableHeader}>
+                      <Text style={[styles.tableHeaderText, styles.col1]}>
+                        Sr#
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col2]}>
+                        Product
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col3]}>
+                        Return QTY
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col4]}>
+                        Unit Price
+                      </Text>
+                      <Text style={[styles.tableHeaderText, styles.col5]}>
+                        Total Price
+                      </Text>
+                    </View>
+
+                    {/* Table Rows */}
+                    <FlatList
+                      data={invcDetails}
+                      keyExtractor={index => index.toString()}
+                      renderItem={({item, index}) => (
+                        <View style={[styles.tableRow]}>
+                          <Text
+                            style={[styles.tableCell, styles.col1]}
+                            numberOfLines={2}>
+                            {index + 1}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col2]}>
+                            {item.prod_name}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col3]}>
+                            {item.prchrd_return_qty}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col4]}>
+                            {Number(item.prchrd_price).toLocaleString()}
+                          </Text>
+                          <Text style={[styles.tableCell, styles.col5]}>
+                            {Number(item.prchrd_total_price).toLocaleString()}
+                          </Text>
+                        </View>
+                      )}
+                      scrollEnabled={false}
+                      ListFooterComponent={
+                        <View
+                          style={{
+                            borderTopWidth: 1.5,
+                            borderTopColor: backgroundColors.dark,
+                            flexDirection: 'row',
+                            paddingVertical: 2.5,
+                          }}>
+                          <Text
+                            style={[
+                              styles.tableHeaderText,
+                              {flex: 0.33, textAlign: 'left'},
+                            ]}>
+                            Totals
+                          </Text>
+                          <Text
+                            style={[
+                              styles.tableCell,
+                              {flex: 0.22, fontWeight: '600'},
+                            ]}>
+                            {invcDetails?.reduce(
+                              (sum, item) => sum + item.prchrd_return_qty,
+                              0,
+                            ) ?? 0}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.tableCell,
+                              {
+                                flex: 0.34,
+                                textAlign: 'right',
+                                fontWeight: '600',
+                              },
+                            ]}>
+                            {invcDetails?.reduce(
+                              (sum, item) => sum + item.prchrd_total_price,
+                              0,
+                            ) ?? 0}
+                          </Text>
+                        </View>
+                      }
+                    />
+                  </View>
+                </View>
+
+                {/* Footer */}
+                <View style={styles.modalFooter}>
+                  <Text style={styles.thankYou}>Thank you for your visit</Text>
+                  <View style={styles.developerInfo}>
+                    <Text style={styles.developerText}>
+                      Software Developed with ❤️ by
+                    </Text>
+                    <Text style={styles.companyContact}>
+                      Technic Mentors | +923111122144
+                    </Text>
+                  </View>
+                </View>
+              </ScrollView>
+            </View>
+          </View>
+        </Modal>
+
         <Toast />
       </View>
     </SafeAreaView>
@@ -1916,5 +2138,220 @@ const styles = StyleSheet.create({
     zIndex: 10000,
     top: 7,
     left: 6,
+  },
+
+  // Modal Receipt stying
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#FAFBFC',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '80%',
+    paddingBottom: 20,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#DDD',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  invoiceIconContainer: {
+    width: 48,
+    height: 48,
+    backgroundColor: '#2a652b24',
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1A1A1A',
+    marginBottom: 2,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '500',
+  },
+  closeButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 20,
+    backgroundColor: backgroundColors.gray,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // Company Card
+  companyCard: {
+    marginHorizontal: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: backgroundColors.dark,
+    borderStyle: 'dotted',
+  },
+  companyHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  companyName: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#144272',
+  },
+  companyAddress: {
+    fontSize: 14,
+    color: '#666',
+    fontWeight: '400',
+  },
+
+  // Info Grid
+  orderInfoGrid: {
+    marginTop: 10,
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 2,
+    borderStyle: 'dotted',
+    marginHorizontal: 20,
+  },
+  infoCard: {
+    width: '60%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    borderRadius: 8,
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: backgroundColors.dark,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  infoValue: {
+    fontSize: 14,
+    color: backgroundColors.dark,
+    fontWeight: '400',
+  },
+
+  // Totals Section
+  totalsSection: {
+    marginHorizontal: 20,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+
+  // Footer
+  modalFooter: {
+    paddingHorizontal: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#F0F0F0',
+    marginTop: 4,
+  },
+  thankYou: {
+    fontSize: 16,
+    color: '#144272',
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  developerInfo: {
+    alignItems: 'center',
+  },
+  developerText: {
+    fontSize: 12,
+    color: '#888',
+    fontWeight: '500',
+    textAlign: 'center',
+    marginBottom: 4,
+  },
+  companyContact: {
+    fontSize: 12,
+    color: '#144272',
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  modalContent: {
+    flex: 1,
+  },
+
+  // Table Section
+  tableSection: {
+    marginTop: 20,
+    marginHorizontal: 20,
+    borderBottomWidth: 2,
+    borderColor: backgroundColors.dark,
+    borderStyle: 'dotted',
+  },
+  tableContainer: {
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    borderBottomColor: backgroundColors.dark,
+    borderBottomWidth: 1.5,
+    paddingBottom: 5,
+  },
+  tableHeaderText: {
+    color: backgroundColors.dark,
+    fontWeight: '600',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 6,
+    alignItems: 'center',
+  },
+  tableCell: {
+    fontSize: 12,
+    color: backgroundColors.dark,
+    textAlign: 'center',
+  },
+
+  // Column widths
+  col1: {
+    flex: 0.1,
+  },
+  col2: {
+    flex: 0.22, // Product
+  },
+  col3: {
+    flex: 0.23, // Qty
+  },
+  col4: {
+    flex: 0.2, // Price
+  },
+  col5: {
+    flex: 0.2, // Total
   },
 });

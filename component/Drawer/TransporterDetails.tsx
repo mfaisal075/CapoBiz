@@ -1,4 +1,5 @@
 import {
+  BackHandler,
   Image,
   Modal,
   ScrollView,
@@ -237,6 +238,18 @@ const TransporterDetails = ({navigation, route}: any) => {
 
   useEffect(() => {
     getTransDetails();
+
+    const backKey = () => {
+      navigation.navigate('Transporter');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (

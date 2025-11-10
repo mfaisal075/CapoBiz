@@ -9,6 +9,7 @@ import {
   ScrollView,
   Image,
   BackHandler,
+  Modal,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -18,8 +19,8 @@ import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
-import LinearGradient from 'react-native-linear-gradient';
 import backgroundColors from '../../Colors';
+import RNPrint from 'react-native-print';
 
 interface Labour {
   id: string;
@@ -73,6 +74,7 @@ const LabourAddPayment = ({navigation}: any) => {
     useState<ChequeAddFrom>(initialChequeAddForm);
   const [cashType, setCashType] = useState('');
   const [cashTypeOpen, setCashTypeOpen] = useState(false);
+  const [receipt, setReceipt] = useState<any | null>(null);
 
   // Cash Payment Add Form OnChange
   const cashOnChange = (field: keyof LabourAddForm, value: string | Date) => {
@@ -180,6 +182,7 @@ const LabourAddPayment = ({navigation}: any) => {
       const data = res.data;
 
       if (res.status === 200 && data.status === 200) {
+        setReceipt(data);
         Toast.show({
           type: 'success',
           text1: 'Added!',
@@ -193,6 +196,135 @@ const LabourAddPayment = ({navigation}: any) => {
       }
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  const printReceipt = async () => {
+    if (!receipt) return;
+
+    const formattedDate = new Date(receipt?.date)
+      .toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+      .replace(/ /g, '-');
+
+    const htmlContent = `
+          <html>
+            <head>
+              <style>
+                body {
+                  font-family: 'Arial', sans-serif;
+                  padding: 20px;
+                  color: #000;
+                  font-size: 14px;
+                  background-color: #fff;
+                }
+      
+                .header {
+                  text-align: center;
+                  margin-bottom: 10px;
+                }
+      
+                .header h2 {
+                  margin: 0;
+                  font-size: 20px;
+                }
+      
+                .sub-header {
+                  text-align: center;
+                  margin-bottom: 15px;
+                  font-size: 14px;
+                }
+      
+                .section-title {
+                  text-align: center;
+                  font-weight: bold;
+                  margin-top: 10px;
+                  text-decoration: underline;
+                }
+      
+                table {
+                  width: 100%;
+                  margin-top: 15px;
+                  border-collapse: collapse;
+                }
+      
+                td {
+                  padding: 6px 0;
+                  vertical-align: top;
+                }
+      
+                .label {
+                  width: 45%;
+                  font-weight: bold;
+                }
+      
+                .value {
+                  width: 55%;
+                  text-align: right;
+                }
+      
+                .footer {
+                  text-align: center;
+                  margin-top: 20px;
+                  font-size: 12px;
+                  color: #555;
+                }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h2>Point of Sale System</h2>
+                <div>IMTIAZ</div>
+                <div>Gujranwala</div>
+              </div>
+      
+              <div class="section-title">Labour Payment</div>
+      
+              <table>
+                <tr>
+                  <td class="label">Date:</td>
+                  <td class="value">${formattedDate}</td>
+                </tr>
+                <tr>
+                  <td class="label">Labour Name:</td>
+                  <td class="value">${receipt?.labour_name}</td>
+                </tr>
+                <tr>
+                  <td class="label">Payment:</td>
+                  <td class="value">${receipt?.amount}</td>
+                </tr>
+                <tr>
+                  <td class="label">Previous Balance:</td>
+                  <td class="value">${receipt.previous_balance}</td>
+                </tr>
+                <tr>
+                  <td class="label">Net Balance:</td>
+                  <td class="value">${receipt?.net_balance}</td>
+                </tr>
+                <tr>
+                  <td class="label">Payment Type:</td>
+                  <td class="value">${receipt.type}</td>
+                </tr>
+                <tr>
+                  <td class="label">Payment Method:</td>
+                  <td class="value">By Cash</td>
+                </tr>
+              </table>
+      
+              <div class="footer">
+                Software Developed with love by <b>Technic Mentors</b> | 0300-4900046
+              </div>
+            </body>
+          </html>
+        `;
+
+    try {
+      await RNPrint.print({html: htmlContent});
+    } catch (error) {
+      console.error('Print error:', error);
     }
   };
 
@@ -418,6 +550,65 @@ const LabourAddPayment = ({navigation}: any) => {
         )}
       </View>
 
+      {/* Cash Payment Receipt Modal */}
+      <Modal
+        visible={!!receipt}
+        animationType="fade"
+        transparent={true}
+        onRequestClose={() => setReceipt(null)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Payment Receipt</Text>
+
+            <View style={styles.modalDetails}>
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>Date:</Text>
+                <Text style={styles.modalValue}>{receipt?.date || 'N/A'}</Text>
+              </View>
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>Labour Name:</Text>
+                <Text style={[styles.modalValue]}>{receipt?.labour_name}</Text>
+              </View>
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>Payment:</Text>
+                <Text style={styles.modalValue}>{receipt?.amount || '0'}</Text>
+              </View>
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>Previous Balance:</Text>
+                <Text style={styles.modalValue}>
+                  {receipt?.previous_balance}
+                </Text>
+              </View>
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>Net Balance:</Text>
+                <Text style={styles.modalValue}>
+                  {receipt?.net_balance ?? '0'}
+                </Text>
+              </View>
+
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>Payment Type:</Text>
+                <Text style={styles.modalValue}>{receipt?.type ?? '--'}</Text>
+              </View>
+              <View style={styles.modalRow}>
+                <Text style={styles.modalLabel}>Payment Method:</Text>
+                <Text style={[styles.modalValue]}>By Cash</Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              onPress={() => {
+                printReceipt();
+                setCashType('');
+                setReceipt(null);
+              }}
+              style={styles.modalButton}>
+              <Icon name="print" size={20} color={backgroundColors.light} />
+              <Text style={styles.modalButtonText}>Print</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <Toast />
     </SafeAreaView>
   );
@@ -608,6 +799,56 @@ const styles = StyleSheet.create({
   submitBtnText: {
     color: 'white',
     fontSize: 16,
+    fontWeight: '600',
+  },
+  // Receipt Modal
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    width: '100%',
+    borderRadius: 16,
+    padding: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: backgroundColors.dark,
+    textAlign: 'center',
+    marginBottom: 15,
+  },
+  modalDetails: {
+    marginBottom: 15,
+  },
+  modalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  modalLabel: {
+    fontWeight: '600',
+    color: '#333',
+  },
+  modalValue: {
+    fontWeight: '400',
+  },
+  modalButton: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 10,
+    alignSelf: 'center',
+    backgroundColor: backgroundColors.primary,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  modalButtonText: {
+    color: '#fff',
+    textAlign: 'center',
     fontWeight: '600',
   },
 });

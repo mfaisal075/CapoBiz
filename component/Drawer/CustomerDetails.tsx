@@ -1,4 +1,5 @@
 import {
+  BackHandler,
   Image,
   Modal,
   StyleSheet,
@@ -334,6 +335,18 @@ const CustomerDetails = ({navigation, route}: any) => {
     fetchCustDetails();
     fetchType();
     fetchAreas();
+
+    const backKey = () => {
+      navigation.navigate('Customer');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
   return (
     <SafeAreaView style={styles.container}>
@@ -781,13 +794,13 @@ const CustomerDetails = ({navigation, route}: any) => {
                     placeholderStyle={styles.editCustomerDropdownPlaceholder}
                     listMode="SCROLLVIEW"
                     searchable
-                      searchTextInputStyle={{
-                        borderWidth: 0,
-                        width: '100%',
-                      }}
-                      searchContainerStyle={{
-                        borderColor: backgroundColors.gray
-                      }}
+                    searchTextInputStyle={{
+                      borderWidth: 0,
+                      width: '100%',
+                    }}
+                    searchContainerStyle={{
+                      borderColor: backgroundColors.gray,
+                    }}
                   />
                 </View>
               </View>

@@ -1,4 +1,5 @@
 import {
+  BackHandler,
   Image,
   ScrollView,
   StyleSheet,
@@ -49,6 +50,18 @@ const AccountsDetails = ({navigation, route}: any) => {
 
   useEffect(() => {
     fetchProfileDetails();
+
+    const backKey = () => {
+      navigation.navigate('Fixed Account');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
   return (
     <SafeAreaView style={styles.container}>
@@ -65,7 +78,7 @@ const AccountsDetails = ({navigation, route}: any) => {
               color={backgroundColors.light}
             />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Customer Details</Text>
+          <Text style={styles.headerTitle}>Fixed Account Details</Text>
         </View>
       </View>
 
@@ -125,7 +138,9 @@ const AccountsDetails = ({navigation, route}: any) => {
           </View>
           <View style={styles.detailsRow}>
             <Text style={styles.label}>Address</Text>
-            <Text style={styles.value}>{profile?.expenseprofile.fixprf_business_address ?? '--'}</Text>
+            <Text style={styles.value}>
+              {profile?.expenseprofile.fixprf_business_address ?? '--'}
+            </Text>
           </View>
         </View>
       </ScrollView>

@@ -1,4 +1,5 @@
 import {
+  BackHandler,
   Image,
   Modal,
   SafeAreaView,
@@ -272,6 +273,18 @@ const EmployeeDetails = ({navigation, route}: any) => {
 
   useEffect(() => {
     fetchEmpDetails();
+
+    const backKey = () => {
+      navigation.navigate('Employees');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
   return (
     <SafeAreaView style={styles.container}>
@@ -634,7 +647,10 @@ const EmployeeDetails = ({navigation, route}: any) => {
                     uncheckedColor={backgroundColors.dark}
                     onPress={() => setEditWorker('Worker')}
                   />
-                  <Text style={{color: backgroundColors.dark, fontWeight: 'bold'}}>Worker</Text>
+                  <Text
+                    style={{color: backgroundColors.dark, fontWeight: 'bold'}}>
+                    Worker
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -648,7 +664,10 @@ const EmployeeDetails = ({navigation, route}: any) => {
                     uncheckedColor={backgroundColors.dark}
                     onPress={() => setEditWorker('other')}
                   />
-                  <Text style={{color: backgroundColors.dark, fontWeight: 'bold'}}>Other</Text>
+                  <Text
+                    style={{color: backgroundColors.dark, fontWeight: 'bold'}}>
+                    Other
+                  </Text>
                 </TouchableOpacity>
               </View>
 

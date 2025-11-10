@@ -1,4 +1,5 @@
 import {
+  BackHandler,
   Image,
   Modal,
   StyleSheet,
@@ -272,6 +273,18 @@ const SupplierDetails = ({navigation, route}: any) => {
   useEffect(() => {
     fetchSupDetails();
     handleFetchAreas();
+
+    const backKey = () => {
+      navigation.navigate('Suppliers');
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backKey,
+    );
+
+    return () => backHandler.remove();
   }, []);
 
   return (

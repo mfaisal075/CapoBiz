@@ -444,6 +444,8 @@ export default function SaleReturn({navigation}: any) {
   const emptyCartWithoutInv = async () => {
     try {
       await axios.get(`${BASE_URL}/emptyreturncart`);
+      setCartItemsWithout([]);
+      setOrderTotalWithout(0);
     } catch (error) {
       console.log(error);
     }
@@ -995,7 +997,7 @@ export default function SaleReturn({navigation}: any) {
                           {item.product_name}
                         </Text>
                         <Text style={styles.quantityValue}>
-                          {item.return_qty} - {item.return_subqty}
+                          {item.return_qty}
                         </Text>
                       </View>
 
@@ -1006,12 +1008,16 @@ export default function SaleReturn({navigation}: any) {
                         </Text>
                         <Text style={styles.detailTextPrice}>
                           {(
-                            parseFloat(item.sub_price) * parseFloat(item.price)
+                            parseFloat(item.return_qty) * parseFloat(item.price)
                           ).toFixed(2)}
                         </Text>
                       </View>
 
-                      <View style={styles.cartItemDetails}>
+                      <View
+                        style={[
+                          styles.cartItemDetails,
+                          {justifyContent: 'flex-end'},
+                        ]}>
                         <TouchableOpacity
                           onPress={() => delCartItemWithout(item.prod_id)}
                           style={styles.deleteBtn}>
