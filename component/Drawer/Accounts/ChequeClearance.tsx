@@ -9,7 +9,8 @@ import {
   View,
   Modal,
   ScrollView,
-  ImageBackground,
+  BackHandler,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -21,8 +22,25 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import Toast from 'react-native-toast-message';
 import LottieView from 'lottie-react-native';
 import LinearGradient from 'react-native-linear-gradient';
-import backgroundColors from '../../Colors';
-import {BackHandler} from 'react-native';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+  success: '#10B981',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  shadow: '#000',
+};
 
 interface Customers {
   id: number;
@@ -185,336 +203,251 @@ const ChequeClearance = ({navigation}: any) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.headerContainer}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={openDrawer} style={styles.menuBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Cheque Clearance</Text>
+            <View style={{width: 24}} />
           </View>
-        </View>
+        </LinearGradient>
+      </View>
 
-        <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Cheque Information</Text>
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={{paddingBottom: 100}}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Cheque Information</Text>
 
-            {/* Customer Selection */}
-            <View style={styles.dropdownRow}>
-              <Icon
-                name="person"
-                size={28}
-                color={backgroundColors.dark}
-                style={styles.personIcon}
-              />
-              <DropDownPicker
-                items={transformedCust}
-                open={Open}
-                value={customerVal}
-                setValue={setCustomerVal}
-                setOpen={setOpen}
-                placeholder="Choose customer..."
-                placeholderStyle={styles.dropdownPlaceholder}
-                textStyle={styles.dropdownText}
-                style={styles.dropdown}
-                dropDownContainerStyle={styles.dropdownContainer}
-                ArrowUpIconComponent={() => (
-                  <Icon
-                    name="keyboard-arrow-up"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon
-                    name="keyboard-arrow-down"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                listMode="SCROLLVIEW"
-                listItemLabelStyle={{
-                  color: backgroundColors.dark,
-                  fontWeight: '500',
-                }}
-                labelStyle={{
-                  color: backgroundColors.dark,
-                  marginLeft: 30,
-                  fontSize: 16,
-                }}
-                searchable
-                searchTextInputStyle={{
-                  borderWidth: 0,
-                  width: '100%',
-                }}
-                searchContainerStyle={{
-                  borderColor: backgroundColors.gray,
-                }}
-              />
+          {/* Customer Selection */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Select Customer</Text>
+            <DropDownPicker
+              items={transformedCust}
+              open={Open}
+              value={customerVal}
+              setValue={setCustomerVal}
+              setOpen={setOpen}
+              placeholder="Choose customer..."
+              placeholderStyle={{color: '#999'}}
+              textStyle={{color: THEME.textDark}}
+              style={styles.dropdown}
+              dropDownContainerStyle={styles.dropdownContainer}
+              listMode="SCROLLVIEW"
+              zIndex={3000}
+              zIndexInverse={1000}
+              searchable
+            />
+          </View>
+
+          {custData && (
+            <View style={styles.customerInfoBox}>
+              <Text style={styles.custInfoTitle}>{custData.cust_name}</Text>
+              <Text style={styles.custInfoSub}>
+                {custData.cust_fathername} | {custData.cust_address}
+              </Text>
             </View>
+          )}
 
-            {custData && (
-              <View style={styles.customerInfo}>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Customer Name:</Text>
-                  <Text style={styles.infoValue}>
-                    {custData.cust_name ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Father Name:</Text>
-                  <Text style={styles.infoValue}>
-                    {custData.cust_fathername ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Address:</Text>
-                  <Text style={styles.infoValue}>
-                    {custData.cust_address ?? 'N/A'}
-                  </Text>
-                </View>
+          {/* Cheque List */}
+          <View style={{marginTop: 10}}>
+            {chequeData.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Icon name="receipt" size={48} color="#ccc" />
+                <Text style={styles.emptyText}>No cheques found.</Text>
               </View>
-            )}
-
-            {/* Cheque List */}
-            <View style={{marginTop: 16}}>
-              {chequeData.length === 0 ? (
-                <View style={{alignItems: 'center', marginTop: 20}}>
-                  <Text style={styles.noRecordText}>No cheques found.</Text>
-                </View>
-              ) : (
-                chequeData.map((item, index) => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={[
-                      styles.chequeItem,
-                      loadchequeData?.id === item.id && {
-                        backgroundColor: 'rgba(0,0,0,0.15)',
-                      },
-                    ]}
-                    onPress={() => {
-                      setLoadChequeData(item);
-                      setClearanceDate(new Date(item.chi_date));
-                    }}>
-                    <Text
-                      style={{
-                        fontSize: 10,
-                        fontWeight: '500',
-                        color: backgroundColors.danger,
-                        textDecorationLine: 'underline',
-                      }}>
-                      Click to Load the Cheque
-                    </Text>
-                    <View style={styles.chequeHeader}>
-                      <Text style={styles.chequeName}>{item.cust_name}</Text>
-                      <Icon
-                        name="receipt"
-                        size={20}
-                        color={
-                          loadchequeData?.id === item.id
-                            ? backgroundColors.primary
-                            : backgroundColors.dark
-                        }
-                      />
-                    </View>
-
-                    <View style={styles.chequeDetails}>
-                      {[
-                        {
-                          label: 'Date:',
-                          value: new Date(item.chi_date)
-                            .toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                            .replace(/\//g, '-'),
-                        },
-                        {
-                          label: 'Cheque No:',
-                          value: item.chi_number,
-                        },
-                        {
-                          label: 'Amount:',
-                          value: `Rs. ${item.chi_amount}`,
-                        },
-                        {
-                          label: 'Status:',
-                          value: item.chi_status,
-                        },
-                        {
-                          label: 'Method:',
-                          value: item.chi_payment_method,
-                        },
-                      ].map((field, idx) => (
-                        <View
-                          key={idx}
-                          style={[
-                            styles.chequeDetailRow,
-                            idx % 2 === 0 && {
-                              backgroundColor: 'rgba(255,255,255,0.05)',
-                            },
-                          ]}>
-                          <Text style={styles.chequeDetailLabel}>
-                            {field.label}
-                          </Text>
-                          <Text style={styles.chequeDetailValue}>
-                            {field.value}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  </TouchableOpacity>
-                ))
-              )}
-            </View>
-
-            {/* Selected Cheque Details */}
-            {loadchequeData && (
-              <View style={styles.selectedChequeSection}>
-                <Text style={styles.sectionTitle}>Selected Cheque Details</Text>
-
-                <View style={styles.inputRow}>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Amount *</Text>
-                    <Text style={styles.readOnlyInput}>
-                      {loadchequeData.chi_amount}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.inputRow}>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Cheque Number *</Text>
-                    <Text style={styles.readOnlyInput}>
-                      {loadchequeData.chi_number}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.inputRow}>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Payment Method *</Text>
-                    <Text style={styles.readOnlyInput}>
-                      {loadchequeData.chi_payment_method}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.inputRow}>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Clearance Date *</Text>
-                    <TouchableOpacity
-                      onPress={() => setShowDatePicker(true)}
-                      style={styles.dateInput}>
-                      <Icon
-                        name="event"
-                        size={20}
-                        color={backgroundColors.dark}
-                      />
-                      <Text style={styles.dateText}>
-                        {clearanceDate
-                          ? clearanceDate.toLocaleDateString()
-                          : 'Select Date'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                <View style={styles.inputRow}>
-                  <View style={styles.inputContainer}>
-                    <Text style={styles.inputLabel}>Note *</Text>
-
-                    <View style={styles.textArea}>
-                      <TextInput
-                        style={[styles.input]}
-                        value={note}
-                        placeholder="Enter clearance note"
-                        placeholderTextColor={'rgba(0,0,0,0.7)'}
-                        onChangeText={t => setNote(t)}
-                        numberOfLines={3}
-                        multiline
-                      />
-                    </View>
-                  </View>
-                </View>
-
+            ) : (
+              chequeData.map((item, index) => (
                 <TouchableOpacity
-                  style={styles.submitBtn}
+                  key={item.id}
+                  style={[
+                    styles.chequeItem,
+                    loadchequeData?.id === item.id && styles.chequeItemSelected,
+                  ]}
                   onPress={() => {
-                    setModalVisible('confirmation');
+                    setLoadChequeData(item);
+                    setClearanceDate(new Date(item.chi_date));
                   }}>
-                  <Text style={styles.submitBtnText}>Clear Cheque</Text>
+                  <View style={styles.chequeHeader}>
+                    <Text style={styles.chequeNumber}>#{item.chi_number}</Text>
+                    <Icon
+                      name={
+                        loadchequeData?.id === item.id
+                          ? 'check-circle'
+                          : 'radio-button-unchecked'
+                      }
+                      size={24}
+                      color={
+                        loadchequeData?.id === item.id
+                          ? THEME.primary
+                          : THEME.textGray
+                      }
+                    />
+                  </View>
+
+                  <View style={styles.chequeBody}>
+                    <View style={styles.chequeRow}>
+                      <Text style={styles.chequeLabel}>Amount:</Text>
+                      <Text style={styles.chequeValue}>
+                        Rs. {item.chi_amount}
+                      </Text>
+                    </View>
+                    <View style={styles.chequeRow}>
+                      <Text style={styles.chequeLabel}>Date:</Text>
+                      <Text style={styles.chequeValue}>
+                        {new Date(item.chi_date).toLocaleDateString('en-GB')}
+                      </Text>
+                    </View>
+                    <View style={styles.chequeRow}>
+                      <Text style={styles.chequeLabel}>Status:</Text>
+                      <Text
+                        style={[styles.chequeValue, {color: THEME.warning}]}>
+                        {item.chi_status}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+          </View>
+
+          {/* Selected Cheque Details */}
+          {loadchequeData && (
+            <View style={styles.clearanceSection}>
+              <Text style={styles.sectionHeader}>Clearance Details</Text>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Amount</Text>
+                <Text style={styles.readOnlyInput}>
+                  {loadchequeData.chi_amount}
+                </Text>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Cheque Number</Text>
+                <Text style={styles.readOnlyInput}>
+                  {loadchequeData.chi_number}
+                </Text>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Payment Method</Text>
+                <Text style={styles.readOnlyInput}>
+                  {loadchequeData.chi_payment_method}
+                </Text>
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Clearance Date</Text>
+                <TouchableOpacity
+                  onPress={() => setShowDatePicker(true)}
+                  style={styles.dateInput}>
+                  <Icon name="event" size={20} color={THEME.primary} />
+                  <Text style={styles.dateText}>
+                    {clearanceDate
+                      ? clearanceDate.toLocaleDateString()
+                      : 'Select Date'}
+                  </Text>
                 </TouchableOpacity>
               </View>
-            )}
-          </View>
-        </ScrollView>
 
-        {/* Date Picker */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={clearanceDate || new Date()}
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={(event, selectedDate) => {
-              setShowDatePicker(false);
-              if (selectedDate) {
-                setClearanceDate(selectedDate);
-              }
-            }}
-            themeVariant="dark"
-          />
-        )}
-
-        {/* Confirmation Modal */}
-        <Modal
-          visible={modalVisible === 'confirmation'}
-          onDismiss={() => setModalVisible('')}
-          transparent
-          animationType="fade">
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <View style={styles.delAnim}>
-                <LottieView
-                  style={{flex: 1}}
-                  source={require('../../../assets/warning.json')}
-                  autoPlay
-                  loop={false}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Note</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  value={note}
+                  placeholder="Enter clearance note"
+                  placeholderTextColor={'#999'}
+                  onChangeText={t => setNote(t)}
+                  numberOfLines={3}
+                  multiline
                 />
               </View>
 
-              <Text style={styles.modalTitle}>Are you sure?</Text>
-              <Text style={styles.modalMessage}>
-                Do you really want to clear this cheque?
-              </Text>
+              <TouchableOpacity
+                style={styles.submitBtn}
+                onPress={() => {
+                  setModalVisible('confirmation');
+                }}>
+                <Text style={styles.submitBtnText}>Clear Cheque</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+        <View style={{height: 50}} />
+      </ScrollView>
 
-              <View style={styles.modalButtonContainer}>
-                <TouchableOpacity
-                  onPress={() => setModalVisible('')}
-                  style={[styles.modalButton, styles.cancelButton]}>
-                  <Text style={styles.modalButtonText}>Cancel</Text>
-                </TouchableOpacity>
+      {/* Date Picker */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={clearanceDate || new Date()}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={(event, selectedDate) => {
+            setShowDatePicker(false);
+            if (selectedDate) {
+              setClearanceDate(selectedDate);
+            }
+          }}
+        />
+      )}
 
-                <TouchableOpacity
-                  onPress={() => {
-                    clearCheque();
-                    setModalVisible('');
-                  }}
-                  style={[styles.modalButton, styles.confirmButton]}>
-                  <Text style={styles.modalButtonText}>Yes</Text>
-                </TouchableOpacity>
-              </View>
+      {/* Confirmation Modal */}
+      <Modal
+        visible={modalVisible === 'confirmation'}
+        onDismiss={() => setModalVisible('')}
+        transparent
+        animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.animContainer}>
+              <LottieView
+                style={{flex: 1}}
+                source={require('../../../assets/warning.json')}
+                autoPlay
+                loop={false}
+              />
+            </View>
+
+            <Text style={styles.modalTitle}>Are you sure?</Text>
+            <Text style={styles.modalMessage}>
+              Do you really want to clear this cheque?
+            </Text>
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                onPress={() => setModalVisible('')}
+                style={[styles.modalBtn, styles.cancelBtn]}>
+                <Text style={styles.modalBtnText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => {
+                  clearCheque();
+                  setModalVisible('');
+                }}
+                style={[styles.modalBtn, styles.confirmBtn]}>
+                <Text style={styles.modalBtnText}>Yes, Clear</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
-      </View>
+        </View>
+      </Modal>
+      <BottomBar />
     </SafeAreaView>
   );
 };
@@ -522,265 +455,226 @@ const ChequeClearance = ({navigation}: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 20,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 20,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerTop: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
+  menuBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
 
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    paddingTop: 10,
   },
-  section: {
-    backgroundColor: backgroundColors.light,
+
+  // --- Card ---
+  card: {
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    marginVertical: 8,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 2,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    marginBottom: 16,
-  },
-  dropdownRow: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    color: 'rgba(0,0,0,0.8)',
+  cardTitle: {
     fontSize: 14,
-    marginBottom: 6,
-    fontWeight: '500',
+    fontWeight: '700',
+    color: THEME.textDark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  inputGroup: {
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textGray,
+    marginBottom: 5,
   },
   dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: '#F9FAFB',
+    borderColor: THEME.border,
     borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
     height: 48,
-    marginBottom: 4,
   },
   dropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
+    backgroundColor: '#fff',
+    borderColor: THEME.border,
   },
-  dropdownText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-  },
-  dropdownPlaceholder: {
-    color: 'rgba(0,0,0,0.7)',
-    marginLeft: 30,
-    fontSize: 16,
-  },
-  personIcon: {
-    position: 'absolute',
-    zIndex: 10000,
-    top: 7,
-    left: 6,
-  },
-  customerInfo: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
+  customerInfoBox: {
+    backgroundColor: THEME.primaryLight,
     padding: 12,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 10,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: THEME.primary,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+  custInfoTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.primary,
   },
-  infoLabel: {
-    color: backgroundColors.dark,
+  custInfoSub: {
+    fontSize: 13,
+    color: THEME.textGray,
+    marginTop: 2,
+  },
+
+  // --- Cheque List ---
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+  },
+  emptyText: {
+    marginTop: 10,
     fontSize: 14,
-    fontWeight: '500',
-  },
-  infoValue: {
-    color: backgroundColors.dark,
-    fontSize: 14,
+    color: THEME.textGray,
   },
   chequeItem: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: '#F9FAFB',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
+    padding: 15,
+    marginBottom: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: THEME.border,
+  },
+  chequeItemSelected: {
+    borderColor: THEME.primary,
+    backgroundColor: THEME.primaryLight,
   },
   chequeHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 5,
+    marginBottom: 10,
   },
-  chequeName: {
-    color: backgroundColors.dark,
+  chequeNumber: {
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  chequeDetails: {
-    borderRadius: 8,
-    overflow: 'hidden',
+  chequeBody: {
+    gap: 5,
   },
-  chequeDetailRow: {
+  chequeRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingVertical: 4,
-    paddingHorizontal: 6,
   },
-  chequeDetailLabel: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '500',
+  chequeLabel: {
+    fontSize: 13,
+    color: THEME.textGray,
   },
-  chequeDetailValue: {
-    color: backgroundColors.dark,
-    fontSize: 14,
+  chequeValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textDark,
   },
-  selectedChequeSection: {
+
+  // --- Clearance Form ---
+  clearanceSection: {
     marginTop: 20,
     paddingTop: 20,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
+    borderTopColor: THEME.border,
   },
-  inputRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 16,
-    gap: 16,
-  },
-  inputContainer: {
-    flex: 1,
-  },
-  input: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    color: backgroundColors.dark,
-    fontSize: 14,
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 15,
   },
   readOnlyInput: {
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: '#F3F4F6',
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-    color: backgroundColors.dark,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     fontSize: 14,
-    fontWeight: '400',
+    color: THEME.textDark,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  input: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: THEME.textDark,
   },
   textArea: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
     height: 80,
-    color: backgroundColors.dark,
-    fontSize: 14,
+    textAlignVertical: 'top',
   },
   dateInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: backgroundColors.light,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: THEME.border,
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
+    paddingHorizontal: 15,
     height: 48,
+    gap: 10,
   },
   dateText: {
-    flex: 1,
-    color: backgroundColors.dark,
     fontSize: 14,
-    marginLeft: 8,
+    color: THEME.textDark,
   },
   submitBtn: {
-    backgroundColor: backgroundColors.primary,
+    backgroundColor: THEME.primary,
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 10,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   submitBtnText: {
-    color: 'white',
+    color: THEME.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  noRecordText: {
-    color: 'rgba(0,0,0,0.7)',
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
-  modalContainer: {
+
+  // --- Modal ---
+  modalOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -793,52 +687,46 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
+    elevation: 5,
   },
-  modalIconContainer: {
-    width: 60,
-    height: 60,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
+  animContainer: {
+    width: 100,
+    height: 100,
+    marginBottom: 10,
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 8,
-    color: '#144272',
+    color: THEME.textDark,
+    marginBottom: 10,
   },
   modalMessage: {
     fontSize: 14,
-    color: '#555',
-    marginBottom: 20,
+    color: THEME.textGray,
     textAlign: 'center',
+    marginBottom: 20,
   },
-  modalButtonContainer: {
+  modalActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
     gap: 10,
+    width: '100%',
   },
-  modalButton: {
+  modalBtn: {
     flex: 1,
-    padding: 12,
-    borderRadius: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
     alignItems: 'center',
   },
-  cancelButton: {
-    backgroundColor: '#ff6b6b',
+  cancelBtn: {
+    backgroundColor: '#F3F4F6',
   },
-  confirmButton: {
-    backgroundColor: '#28a745',
+  confirmBtn: {
+    backgroundColor: THEME.primary,
   },
-  modalButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
+  modalBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textDark,
   },
 });
 

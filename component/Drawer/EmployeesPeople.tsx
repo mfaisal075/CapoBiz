@@ -10,6 +10,8 @@ import {
   Modal,
   Image,
   BackHandler,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
@@ -19,7 +21,23 @@ import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import backgroundColors from '../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import LottieView from 'lottie-react-native';
+import BottomBar from '../BottomBar';
+
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F0F2F5', // Slightly darker white for contrast
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+  danger: '#EF4444',
+};
 
 interface Employee {
   id: number;
@@ -77,6 +95,7 @@ export default function EmployeesPeople({navigation}: any) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredData, setFilteredData] = useState<Employee[]>([]);
   const [masterData, setMasterData] = useState<Employee[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -109,6 +128,7 @@ export default function EmployeesPeople({navigation}: any) {
 
   // Fetch Employee
   const fetchEmployees = async () => {
+    setLoading(true);
     try {
       const res = await axios.get(`${BASE_URL}/fetchemployeedata`);
 
@@ -118,6 +138,8 @@ export default function EmployeesPeople({navigation}: any) {
       setFilteredData(employeeData);
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -294,101 +316,178 @@ export default function EmployeesPeople({navigation}: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Employees</Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={() => setModalVisible('AddEmp')}
-            style={[styles.headerBtn]}>
-            <Text style={styles.addBtnText}>Add</Text>
-            <Icon name="plus" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Filter */}
-        <View style={styles.searchFilter}>
-          <Icon name="magnify" size={36} color={backgroundColors.dark} />
-          <TextInput
-            placeholder="Search by supplier name"
-            style={styles.search}
-            value={searchQuery}
-            onChangeText={text => searchFilter(text)}
-          />
-        </View>
-
-        <View style={styles.listContainer}>
-          <FlatList
-            data={currentData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
+      <View style={styles.mainContent}>
+        {/* --- HEADER --- */}
+        <View style={styles.headerWrapper}>
+          <LinearGradient
+            colors={[THEME.gradientStart, THEME.gradientEnd]}
+            style={styles.headerContainer}>
+            <View style={styles.headerContent}>
+              <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+                <Icon name="menu" size={24} color={THEME.white} />
+              </TouchableOpacity>
+              <Text style={styles.headerTitle}>Employees</Text>
               <TouchableOpacity
-                style={styles.card}
-                onPress={() => {
-                  navigation.navigate('EmployeeDetails', {
-                    id: item.id,
-                  });
-                }}>
-                {/* Avatar + Name + Actions */}
-                <View style={styles.row}>
-                  <View style={styles.avatarBox}>
-                    <Image
-                      source={require('../../assets/man.png')}
-                      style={styles.avatar}
-                    />
-                  </View>
+                onPress={() => setModalVisible('AddEmp')}
+                style={styles.iconBtn}>
+                <Icon name="plus" size={24} color={THEME.white} />
+              </TouchableOpacity>
+            </View>
+          </LinearGradient>
 
-                  <View style={{flex: 1}}>
-                    <Text style={styles.name}>{item.emp_name}</Text>
-                    {/* small details inline */}
-                    <Text style={styles.subText}>
-                      <Icon name="phone" size={12} color="#666" />{' '}
-                      {item.emp_contact || 'No contact'}
-                    </Text>
-                  </View>
-
-                  {/* Actions on right */}
-                  <View style={styles.actionRow}>
-                    <Icon
-                      name="chevron-right"
-                      size={28}
-                      color={backgroundColors.dark}
-                    />
-                  </View>
-                </View>
+          {/* Floating Search Bar */}
+          <View style={styles.floatingSearchContainer}>
+            <Icon name="magnify" size={22} color={THEME.primary} />
+            <TextInput
+              placeholder="Search employees..."
+              placeholderTextColor={THEME.textGray}
+              style={styles.floatingSearchInput}
+              value={searchQuery}
+              onChangeText={searchFilter}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => searchFilter('')}>
+                <Icon name="close-circle" size={18} color={THEME.textGray} />
               </TouchableOpacity>
             )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-group" size={48} color="#666" />
-                <Text style={styles.emptyText}>No record found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
+          </View>
         </View>
 
-        {/*Add Employee*/}
+        {/* --- CONTENT LIST --- */}
+        <View style={styles.listContainer}>
+          {loading ? (
+            <View style={styles.centerContent}>
+              <LottieView
+                source={require('../../assets/Loading-Dots.json')}
+                autoPlay
+                loop
+                style={styles.lottie}
+              />
+            </View>
+          ) : (
+            <>
+              <View style={styles.tableHeaderRow}>
+                <Text style={styles.tableHeaderLabel}>EMPLOYEE LIST</Text>
+                <Text style={styles.tableHeaderCount}>
+                  {totalRecords} Found
+                </Text>
+              </View>
+
+              <FlatList
+                data={currentData}
+                keyExtractor={(item, index) => index.toString()}
+                contentContainerStyle={{paddingBottom: 160}}
+                showsVerticalScrollIndicator={false}
+                renderItem={({item}) => (
+                  <TouchableOpacity
+                    activeOpacity={0.75}
+                    style={styles.cardRow}
+                    onPress={() =>
+                      navigation.navigate('EmployeeDetails', {id: item.id})
+                    }>
+                    {/* Avatar Section */}
+                    <View style={styles.avatarContainer}>
+                      <Text style={styles.avatarText}>
+                        {item.emp_name
+                          ? item.emp_name.charAt(0).toUpperCase()
+                          : 'E'}
+                      </Text>
+                    </View>
+
+                    {/* Info Section */}
+                    <View style={styles.infoContainer}>
+                      <View
+                        style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          marginBottom: 4,
+                        }}>
+                        <Text style={styles.nameText} numberOfLines={1}>
+                          {item.emp_name}
+                        </Text>
+                        <View style={styles.badgeContainer}>
+                          <View style={styles.areaBadge}>
+                            <Text
+                              style={styles.areaBadgeText}
+                              numberOfLines={1}>
+                              {item.emp_type || 'Worker'}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                      <View style={styles.iconTextRow}>
+                        <Icon
+                          name="phone-outline"
+                          size={14}
+                          color={THEME.textGray}
+                        />
+                        <Text style={styles.subText}>
+                          {item.emp_contact || 'No Contact'}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Arrow */}
+                    <Icon
+                      name="chevron-right"
+                      size={24}
+                      color={THEME.primary}
+                      style={{marginLeft: 6}}
+                    />
+                  </TouchableOpacity>
+                )}
+                ListEmptyComponent={
+                  <View style={styles.centerContent}>
+                    <Icon name="account-search" size={60} color="#D1D5DB" />
+                    <Text style={styles.emptyText}>No employees found</Text>
+                  </View>
+                }
+              />
+            </>
+          )}
+        </View>
+
+        {/* --- PAGINATION (Floating) --- */}
+        {totalRecords > 0 && (
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              disabled={currentPage === 1}
+              onPress={() => setCurrentPage(prev => prev - 1)}
+              style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+              <Icon name="chevron-left" size={24} color={THEME.white} />
+            </TouchableOpacity>
+
+            <Text style={styles.pageText}>
+              Page {currentPage} of {totalPages}
+            </Text>
+
+            <TouchableOpacity
+              disabled={currentPage === totalPages}
+              onPress={() => setCurrentPage(prev => prev + 1)}
+              style={[
+                styles.pageBtn,
+                currentPage === totalPages && styles.disabledBtn,
+              ]}>
+              <Icon name="chevron-right" size={24} color={THEME.white} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/*Add Employee Modal*/}
         <Modal
           visible={modalVisible === 'AddEmp'}
           transparent
           animationType="slide">
-          <View style={styles.addEmployeeModalOverlay}>
-            <ScrollView style={styles.addEmployeeModalContainer}>
-              <View style={styles.addEmployeeHeader}>
-                <Text style={styles.addEmployeeTitle}>Add New Employee</Text>
+          <View style={styles.modalOverlay}>
+            <ScrollView style={styles.modalContainer}>
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Add New Employee</Text>
                 <TouchableOpacity
                   onPress={() => {
                     setModalVisible('');
@@ -396,53 +495,63 @@ export default function EmployeesPeople({navigation}: any) {
                     setEnableBal([]);
                     setWorker('Worker');
                   }}
-                  style={styles.addEmployeeCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
+                  style={styles.closeBtn}>
+                  <Icon name="close" size={24} color={THEME.textDark} />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.addEmployeeForm}>
+              <View style={styles.modalForm}>
                 {/* Row 1 */}
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Employee Name *</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Employee Name *</Text>
                   <TextInput
-                    style={styles.addEmployeeInput}
+                    style={styles.textInput}
+                    placeholder="Enter name"
+                    placeholderTextColor="#999"
                     value={addForm.emp_name}
                     onChangeText={t => onChange('emp_name', t)}
                   />
                 </View>
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Father Name</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Father Name</Text>
                   <TextInput
-                    style={styles.addEmployeeInput}
+                    style={styles.textInput}
+                    placeholder="Enter father name"
+                    placeholderTextColor="#999"
                     value={addForm.fathername}
                     onChangeText={t => onChange('fathername', t)}
                   />
                 </View>
 
                 {/* Row 2 */}
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Email</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Email</Text>
                   <TextInput
-                    style={styles.addEmployeeInput}
+                    style={styles.textInput}
+                    placeholder="Enter email"
+                    placeholderTextColor="#999"
                     value={addForm.email}
                     onChangeText={t => onChange('email', t)}
                   />
                 </View>
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Address</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Address</Text>
                   <TextInput
-                    style={styles.addEmployeeInput}
+                    style={styles.textInput}
+                    placeholder="Enter address"
+                    placeholderTextColor="#999"
                     value={addForm.address}
                     onChangeText={t => onChange('address', t)}
                   />
                 </View>
 
                 {/* Row 3 */}
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Contact</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Contact</Text>
                   <TextInput
-                    style={styles.addEmployeeInput}
+                    style={styles.textInput}
+                    placeholder="03XX-XXXXXXX"
+                    placeholderTextColor="#999"
                     value={addForm.contact}
                     keyboardType="phone-pad"
                     maxLength={12}
@@ -458,10 +567,12 @@ export default function EmployeesPeople({navigation}: any) {
                     }}
                   />
                 </View>
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>CNIC</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>CNIC</Text>
                   <TextInput
-                    style={styles.addEmployeeInput}
+                    style={styles.textInput}
+                    placeholder="XXXXX-XXXXXXX-X"
+                    placeholderTextColor="#999"
                     value={addForm.cnic}
                     keyboardType="numeric"
                     maxLength={15}
@@ -480,12 +591,12 @@ export default function EmployeesPeople({navigation}: any) {
                 </View>
 
                 {/* Extra Contacts */}
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>
-                    Contact Person One
-                  </Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Contact Person One</Text>
                   <TextInput
-                    style={styles.addEmployeeInput}
+                    style={styles.textInput}
+                    placeholder="Contact person name"
+                    placeholderTextColor="#999"
                     value={addForm.contact_person_one}
                     keyboardType="phone-pad"
                     maxLength={12}
@@ -499,10 +610,12 @@ export default function EmployeesPeople({navigation}: any) {
                     }}
                   />
                 </View>
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Contact</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Contact</Text>
                   <TextInput
-                    style={styles.addEmployeeInput}
+                    style={styles.textInput}
+                    placeholder="03XX-XXXXXXX"
+                    placeholderTextColor="#999"
                     value={addForm.sec_contact}
                     keyboardType="phone-pad"
                     maxLength={12}
@@ -519,12 +632,12 @@ export default function EmployeesPeople({navigation}: any) {
                   />
                 </View>
 
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>
-                    Contact Person Two
-                  </Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Contact Person Two</Text>
                   <TextInput
-                    style={styles.addEmployeeInput}
+                    style={styles.textInput}
+                    placeholder="Contact person name"
+                    placeholderTextColor="#999"
                     value={addForm.contact_person_two}
                     keyboardType="phone-pad"
                     maxLength={12}
@@ -538,10 +651,12 @@ export default function EmployeesPeople({navigation}: any) {
                     }}
                   />
                 </View>
-                <View style={styles.addEmployeeField}>
-                  <Text style={styles.addEmployeeLabel}>Contact</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Contact</Text>
                   <TextInput
-                    style={styles.addEmployeeInput}
+                    style={styles.textInput}
+                    placeholder="03XX-XXXXXXX"
+                    placeholderTextColor="#999"
                     value={addForm.third_contact}
                     keyboardType="phone-pad"
                     maxLength={12}
@@ -559,32 +674,41 @@ export default function EmployeesPeople({navigation}: any) {
                 </View>
 
                 {/* Worker / Other */}
-                <View style={styles.addEmployeeFullRow}>
-                  <Text style={styles.addEmployeeLabel}>Employee Type *</Text>
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <RadioButton
-                      value="Worker"
-                      status={Worker === 'Worker' ? 'checked' : 'unchecked'}
-                      color={backgroundColors.primary}
-                      uncheckedColor={backgroundColors.dark}
-                      onPress={() => setWorker('Worker')}
-                    />
-                    <Text style={styles.addEmployeeRadioText}>Worker</Text>
+                <View style={styles.radioGroup}>
+                  <Text style={styles.inputLabel}>Employee Type *</Text>
+                  <View style={styles.radioRow}>
+                    <TouchableOpacity
+                      style={styles.radioBtn}
+                      onPress={() => setWorker('Worker')}>
+                      <RadioButton
+                        value="Worker"
+                        status={Worker === 'Worker' ? 'checked' : 'unchecked'}
+                        color={THEME.primary}
+                        uncheckedColor={THEME.textGray}
+                        onPress={() => setWorker('Worker')}
+                      />
+                      <Text style={styles.radioText}>Worker</Text>
+                    </TouchableOpacity>
 
-                    <RadioButton
-                      value="other"
-                      status={Worker === 'other' ? 'checked' : 'unchecked'}
-                      color={backgroundColors.primary}
-                      uncheckedColor={backgroundColors.dark}
-                      onPress={() => setWorker('other')}
-                    />
-                    <Text style={styles.addEmployeeRadioText}>Other</Text>
+                    <TouchableOpacity
+                      style={styles.radioBtn}
+                      onPress={() => setWorker('other')}>
+                      <RadioButton
+                        value="other"
+                        status={Worker === 'other' ? 'checked' : 'unchecked'}
+                        color={THEME.primary}
+                        uncheckedColor={THEME.textGray}
+                        onPress={() => setWorker('other')}
+                      />
+                      <Text style={styles.radioText}>Other</Text>
+                    </TouchableOpacity>
                   </View>
 
                   {Worker === 'other' && (
                     <TextInput
-                      style={styles.addEmployeeInput}
+                      style={[styles.textInput, {marginTop: 10}]}
                       placeholder="Enter type"
+                      placeholderTextColor="#999"
                       value={addForm.employeetype}
                       onChangeText={t => onChange('employeetype', t)}
                     />
@@ -605,12 +729,12 @@ export default function EmployeesPeople({navigation}: any) {
                       status={
                         enableBal.includes('on') ? 'checked' : 'unchecked'
                       }
-                      color={backgroundColors.primary}
-                      uncheckedColor={backgroundColors.dark}
+                      color={THEME.primary}
+                      uncheckedColor={THEME.textGray}
                     />
                     <Text
                       style={[
-                        styles.addEmployeeLabel,
+                        styles.inputLabel,
                         {marginLeft: 8, marginBottom: 0},
                       ]}>
                       Enable Opening Balance
@@ -620,21 +744,20 @@ export default function EmployeesPeople({navigation}: any) {
 
                 {enableBal.includes('on') && (
                   <>
-                    <View style={styles.addEmployeeFullRow}>
-                      <Text style={styles.addEmployeeLabel}>
-                        Opening Balance
-                      </Text>
+                    <View style={styles.inputGroup}>
+                      <Text style={styles.inputLabel}>Opening Balance</Text>
                       <TextInput
-                        style={styles.addEmployeeInput}
+                        style={styles.textInput}
                         placeholder="Enter opening balance"
+                        placeholderTextColor="#999"
                         keyboardType="numeric"
                         value={addForm.opening_balance}
                         onChangeText={t => onChange('opening_balance', t)}
                       />
                     </View>
 
-                    <View style={styles.addEmployeeDropdownRow}>
-                      <Text style={styles.addEmployeeLabel}>Payment Type</Text>
+                    <View style={[styles.inputGroup, {zIndex: 1000}]}>
+                      <Text style={styles.inputLabel}>Payment Type</Text>
                       <DropDownPicker
                         items={paymentTypeItem}
                         open={paymentType}
@@ -642,12 +765,10 @@ export default function EmployeesPeople({navigation}: any) {
                         value={current}
                         setValue={setcurrentpaymentType}
                         placeholder="Select payment type"
-                        style={styles.addEmployeeDropdown}
-                        dropDownContainerStyle={
-                          styles.addEmployeeDropdownContainer
-                        }
-                        textStyle={styles.addEmployeeDropdownText}
-                        placeholderStyle={styles.addEmployeeDropdownPlaceholder}
+                        style={styles.dropdown}
+                        dropDownContainerStyle={styles.dropdownContainer}
+                        textStyle={{color: THEME.textDark}}
+                        placeholderStyle={{color: '#999'}}
                         listMode="SCROLLVIEW"
                         disabled={!enableBal.includes('on')}
                       />
@@ -657,64 +778,18 @@ export default function EmployeesPeople({navigation}: any) {
 
                 {/* Submit */}
                 <TouchableOpacity
-                  style={styles.addEmployeeSubmitBtn}
+                  style={styles.submitBtn}
                   onPress={addEmployee}>
                   <Icon name="account-plus-outline" size={20} color="white" />
-                  <Text style={styles.addEmployeeSubmitText}>Add Employee</Text>
+                  <Text style={styles.submitBtnText}>Add Employee</Text>
                 </TouchableOpacity>
               </View>
             </ScrollView>
             <Toast />
           </View>
         </Modal>
-
-        {/* Pagination Controls */}
-        {totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => prev - 1)}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() => setCurrentPage(prev => prev + 1)}
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -722,309 +797,325 @@ export default function EmployeesPeople({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  mainContent: {
+    flex: 1,
+  },
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 20,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 40, // Extra space for floating search
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    elevation: 8,
+    zIndex: 0,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
+  },
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  // --- Floating Search ---
+  floatingSearchContainer: {
+    position: 'absolute',
+    bottom: -24,
+    left: 12,
+    right: 12,
+    backgroundColor: THEME.white,
+    borderRadius: 10,
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.light,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
-  },
-
-  // Search Filter
-  searchFilter: {
-    width: '94%',
-    alignSelf: 'center',
-    height: 48,
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  search: {
-    height: '100%',
-    fontSize: 14,
-    color: backgroundColors.dark,
-    width: '100%',
-  },
-
-  // Add Modal Styling
-  addEmployeeModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  addEmployeeModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    maxHeight: '90%',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 10,
+    elevation: 5,
   },
-  addEmployeeHeader: {
+  floatingSearchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    color: THEME.textDark,
+  },
+
+  // --- List & Table Header ---
+  listContainer: {
+    flex: 1,
+    paddingTop: 10,
+  },
+  tableHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    marginBottom: 10,
+    paddingHorizontal: 14,
   },
-  addEmployeeTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
+  tableHeaderLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textGray,
+    letterSpacing: 0.5,
   },
-  addEmployeeCloseBtn: {
-    padding: 5,
-  },
-  addEmployeeForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  addEmployeeField: {
-    flex: 1,
-    marginBottom: 5,
-  },
-  addEmployeeFullRow: {
-    marginBottom: 15,
-  },
-  addEmployeeLabel: {
-    fontSize: 14,
+  tableHeaderCount: {
+    fontSize: 12,
     fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 5,
-  },
-  addEmployeeInput: {
-    borderWidth: 0.6,
-    borderColor: '#00000047',
-    height: 45,
+    color: THEME.primary,
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#333',
-    backgroundColor: backgroundColors.light,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 6,
-  },
-  addEmployeeRadioText: {
-    color: backgroundColors.dark,
-    fontWeight: 'bold',
-    fontSize: 14,
-    marginRight: 15,
-  },
-  addEmployeeDropdownRow: {
-    marginBottom: 15,
-  },
-  addEmployeeDropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    minHeight: 42,
-    zIndex: 999,
-  },
-  addEmployeeDropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    zIndex: 1000,
-    maxHeight: 160,
-  },
-  addEmployeeDropdownText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  addEmployeeDropdownPlaceholder: {
-    color: '#999',
-    fontSize: 14,
-  },
-  addEmployeeSubmitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 20,
-  },
-  addEmployeeSubmitText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
   },
 
-  // FlatList Styling
-  listContainer: {
-    flex: 1,
-    paddingHorizontal: '3%',
-  },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  row: {
+  // --- Card Row ---
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    width: '94%',
+    alignSelf: 'center',
+    marginBottom: 6,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#222',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.19,
+    shadowRadius: 14,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
-  avatarBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  avatarContainer: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
-  },
-  avatar: {
-    height: 45,
-    width: 45,
+    marginRight: 14,
   },
   avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+    fontSize: 20,
+    fontWeight: '800',
+    color: THEME.primary,
+    letterSpacing: 0.5,
   },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  nameText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 0,
+  },
+  iconTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    marginBottom: 2,
   },
   subText: {
     fontSize: 12,
-    color: '#555',
-    marginTop: 2,
+    color: THEME.textGray,
+    marginLeft: 4,
+    flexShrink: 1,
   },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 8,
-    marginLeft: 10,
+  badgeContainer: {
+    marginLeft: 12,
+    marginRight: 8,
+    alignItems: 'flex-end',
+    flex: 0,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  areaBadge: {
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
+    marginTop: 0,
   },
-  emptyText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+  areaBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: THEME.textDark,
+    maxWidth: 80,
   },
 
-  // Pagination Component
+  // --- Pagination ---
   paginationContainer: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  pageBtn: {
+    padding: 5,
+  },
+  disabledBtn: {
+    opacity: 0.3,
+  },
+  pageText: {
+    color: THEME.white,
+    fontSize: 13,
+    fontWeight: '600',
+    marginHorizontal: 15,
+  },
+
+  // --- Empty & Loading ---
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  lottie: {
+    width: 150,
+    height: 150,
+  },
+  emptyText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: THEME.textGray,
+    fontWeight: '500',
+  },
+
+  // --- Add Modal Styles (Preserving existing modal styles used in JSX) ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
   },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    paddingHorizontal: 10,
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
+  modalTitle: {
+    fontSize: 18,
     fontWeight: '700',
-    color: '#FFD166',
+    color: THEME.textDark,
   },
-  totalText: {
-    color: '#fff',
+  closeBtn: {
+    padding: 4,
+  },
+  modalForm: {
+    padding: 16,
+  },
+  inputGroup: {
+    marginBottom: 10,
+  },
+  inputLabel: {
     fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 5,
+    textTransform: 'uppercase',
+  },
+  textInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: THEME.textDark,
+  },
+  radioGroup: {
+    marginBottom: 15,
+  },
+  radioRow: {
+    flexDirection: 'row',
+    gap: 15,
+  },
+  radioBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingRight: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  radioText: {
+    fontSize: 14,
+    color: THEME.textDark,
+    fontWeight: '500',
+  },
+  dropdown: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+    borderRadius: 8,
+    minHeight: 45,
+  },
+  dropdownContainer: {
+    borderColor: '#E5E7EB',
+    backgroundColor: THEME.white,
+  },
+  submitBtn: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 10,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 3,
+  },
+  submitBtnText: {
+    color: THEME.white,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  // Used in Modal for loader or other
+  loadingContainer: {
+    height: 400,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });

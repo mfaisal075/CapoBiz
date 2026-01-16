@@ -9,18 +9,47 @@ import {
   ScrollView,
   TextInput,
   BackHandler,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
-import DateTimePicker from '@react-native-community/datetimepicker';
-import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import backgroundColors from '../../Colors';
 import {ActivityIndicator} from 'react-native-paper';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  shadow: '#000',
+};
+
+// --- HELPER: Get Initials ---
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  const parts = name.split(' ');
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 interface Expenses {
   expc_name: string;
@@ -75,11 +104,8 @@ export default function ManageExpenses({navigation}: any) {
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
-
   const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
-
-  // Slice data for pagination
   const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
@@ -104,9 +130,7 @@ export default function ManageExpenses({navigation}: any) {
   const fetchExpenses = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchexpenses`);
-
       const expData = res.data.exp;
-
       setFilteredData(expData);
       setMasterData(expData);
       setTotalExpense(res.data.total);
@@ -223,136 +247,185 @@ export default function ManageExpenses({navigation}: any) {
       navigation.navigate('Dashboard');
       return true;
     };
-
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
       backKey,
     );
-
     return () => backHandler.remove();
   }, []);
 
+  // --- RENDER ITEM ---
+  const renderItem = ({item}: {item: Expenses}) => {
+    return (
+      <TouchableOpacity
+        activeOpacity={0.7}
+        style={styles.cardRow}
+        onPress={() => navigation.navigate('ExpenseDetails', {id: item.id})}>
+        {/* Avatar Section */}
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatarText}>{getInitials(item.expc_name)}</Text>
+        </View>
+
+        {/* Info Section */}
+        <View style={styles.infoContainer}>
+          <Text style={styles.nameText} numberOfLines={1}>
+            {item.expc_name}
+          </Text>
+          <View style={styles.iconTextRow}>
+            <Icon
+              name="calendar-month-outline"
+              size={14}
+              color={THEME.textGray}
+            />
+            <Text style={styles.subText}>
+              {new Date(item.exp_date).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </Text>
+          </View>
+        </View>
+
+        {/* Right Section */}
+        <View style={{alignItems: 'flex-end', marginLeft: 10}}>
+          <Text style={styles.amountText}>{item.exp_amount}</Text>
+          <Icon name="chevron-right" size={20} color={THEME.textLight} />
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Manage Expenses</Text>
+            <TouchableOpacity
+              onPress={() => setModalVisible('Add')}
+              style={styles.iconBtn}>
+              <Icon name="plus" size={24} color={THEME.white} />
+            </TouchableOpacity>
           </View>
+        </LinearGradient>
 
-          <TouchableOpacity
-            onPress={() => {
-              setModalVisible('Add');
-            }}
-            style={[styles.headerBtn]}>
-            <Icon name="plus" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.searchFilter}>
-          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+        {/* Floating Search Bar */}
+        <View style={styles.floatingSearchContainer}>
+          <Icon name="magnify" size={22} color={THEME.primary} />
           <TextInput
-            placeholder="Search by category name"
-            style={styles.search}
+            placeholder="Search expenses..."
+            placeholderTextColor={THEME.textLight}
+            style={styles.floatingSearchInput}
             value={searchQuery}
-            onChangeText={text => searchFilter(text)}
+            onChangeText={searchFilter}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => searchFilter('')}>
+              <Icon name="close-circle" size={18} color={THEME.textLight} />
+            </TouchableOpacity>
+          )}
         </View>
+      </View>
 
-        {/* Total Expense */}
-        {currentData.length > 0 && (
-          <View style={styles.totalContainer}>
-            <Text style={styles.totalText}>Total Expense Amount:</Text>
-            <Text style={styles.totalText}>{totalExpense ?? '0'}</Text>
+      {/* --- CONTENT --- */}
+      <View style={styles.listContainer}>
+        {/* Summary Card */}
+        {totalRecords > 0 && (
+          <View style={styles.summaryCard}>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryIconContainer}>
+                <Icon name="wallet-outline" size={24} color={THEME.primary} />
+              </View>
+              <View>
+                <Text style={styles.summaryLabel}>Total Expenses</Text>
+                <Text style={styles.summaryValue}>{totalExpense || '0'}</Text>
+              </View>
+            </View>
           </View>
         )}
 
-        {/* Expenses List */}
-        <View style={styles.listContainer}>
-          <FlatList
-            data={currentData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => {
-                  navigation.navigate('ExpenseDetails', {
-                    id: item.id,
-                  });
-                }}>
-                {/* Avatar + Name + Actions */}
-                <View style={styles.row}>
-                  <View>
-                    <Text style={styles.name}>{item.expc_name}</Text>
-                    <Text style={styles.subText}>
-                      <Icon name="calendar" size={12} color="#666" />{' '}
-                      {new Date(item.exp_date).toLocaleDateString('en-US', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="cash" size={12} color="#666" />{' '}
-                      {item.exp_amount}
-                    </Text>
-                  </View>
-
-                  <View style={styles.actionRow}>
-                    <Icon
-                      name="chevron-right"
-                      size={28}
-                      color={backgroundColors.dark}
-                    />
-                  </View>
-                </View>
-              </TouchableOpacity>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-group" size={48} color="#666" />
-                <Text style={styles.emptyText}>No record found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
+        {/* List Header */}
+        <View style={styles.tableHeaderRow}>
+          <Text style={styles.tableHeaderLabel}>RECENT EXPENSES</Text>
+          <Text style={styles.tableHeaderCount}>{totalRecords} Found</Text>
         </View>
 
-        {/* Add Expense Modal */}
-        <Modal
-          visible={modalVisible === 'Add'}
-          transparent
-          animationType="slide">
-          <View style={styles.modalOverlay}>
-            <ScrollView style={styles.modalContainer}>
-              <View
-                style={[
-                  styles.modalHeader,
-                  {
-                    paddingHorizontal: 15,
-                    marginTop: 10,
-                    borderBottomWidth: 1,
-                  },
-                ]}>
-                <Text style={styles.modalTitle}>Add New Expense</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setAddFrom(initialAddExpense);
-                    setCategoryValue('');
-                  }}
-                  style={styles.modalCloseBtn}>
-                  <Icon name="close" size={20} color={backgroundColors.dark} />
-                </TouchableOpacity>
-              </View>
+        <FlatList
+          data={currentData}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={renderItem}
+          contentContainerStyle={{paddingBottom: 150}}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.centerContent}>
+              <Icon name="clipboard-text-outline" size={60} color="#D1D5DB" />
+              <Text style={styles.emptyText}>No expenses found</Text>
+            </View>
+          }
+        />
+      </View>
 
-              <View style={styles.modalForm}>
+      {/* --- PAGINATION (Bottom Floating) --- */}
+      {totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => prev - 1)}
+            style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+            <Icon name="chevron-left" size={24} color={THEME.white} />
+          </TouchableOpacity>
+
+          <Text style={styles.pageText}>
+            Page {currentPage} of {totalPages}
+          </Text>
+
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() => setCurrentPage(prev => prev + 1)}
+            style={[
+              styles.pageBtn,
+              currentPage === totalPages && styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-right" size={24} color={THEME.white} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* --- ADD EXPENSE MODAL --- */}
+      <Modal visible={modalVisible === 'Add'} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>New Expense</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setAddFrom(initialAddExpense);
+                  setCategoryValue('');
+                }}
+                style={styles.closeModalBtn}>
+                <Icon name="close" size={22} color={THEME.textDark} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              style={{width: '100%'}}>
+              <View style={styles.formRow}>
+                <Text style={styles.label}>Category</Text>
                 <DropDownPicker
                   items={transformedCategories}
                   open={categoryOpen}
@@ -360,179 +433,111 @@ export default function ManageExpenses({navigation}: any) {
                   value={categoryValue}
                   setValue={setCategoryValue}
                   placeholder="Select category *"
-                  placeholderStyle={styles.dropdownPlaceholder}
-                  textStyle={styles.dropdownText}
+                  placeholderStyle={{color: THEME.textLight}}
+                  textStyle={{color: THEME.textDark}}
                   style={styles.dropdown}
                   dropDownContainerStyle={styles.dropdownContainer}
                   listMode="SCROLLVIEW"
-                  listItemLabelStyle={{
-                    color: backgroundColors.dark,
-                    fontWeight: '500',
-                  }}
-                  labelStyle={{
-                    color: backgroundColors.dark,
-                    fontSize: 16,
-                  }}
-                  searchable
-                  searchTextInputStyle={{
-                    borderWidth: 0,
-                    width: '100%',
-                  }}
-                  searchContainerStyle={{
-                    borderColor: backgroundColors.gray,
-                  }}
+                  zIndex={3000}
+                  zIndexInverse={1000}
                 />
+              </View>
 
-                <View style={styles.row}>
-                  <View style={styles.field}>
-                    <TextInput
-                      style={styles.input}
-                      placeholderTextColor="#999"
-                      maxLength={9}
-                      placeholder="Enter amount *"
-                      keyboardType="numeric"
-                      value={addFrom.amount}
-                      onChangeText={t => {
-                        const filtered = t
-                          .replace(/[^0-9.]/g, '')
-                          .replace(/(\..*)\./g, '$1');
-                        addOnChange('amount', filtered);
-                      }}
-                      editable={!loading}
-                    />
-                  </View>
-                </View>
-                <View style={[styles.row, {marginVertical: 10}]}>
-                  <View style={styles.field}>
-                    <TextInput
-                      style={styles.input}
-                      placeholderTextColor="#999"
-                      placeholder="Added By *"
-                      value={addFrom.addedBy}
-                      onChangeText={t => addOnChange('addedBy', t)}
-                      editable={!loading}
-                    />
-                  </View>
-                </View>
+              <View style={styles.formRow}>
+                <Text style={styles.label}>Amount</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter amount *"
+                  placeholderTextColor={THEME.textLight}
+                  keyboardType="numeric"
+                  value={addFrom.amount}
+                  onChangeText={t => {
+                    const filtered = t
+                      .replace(/[^0-9.]/g, '')
+                      .replace(/(\..*)\./g, '$1');
+                    addOnChange('amount', filtered);
+                  }}
+                  editable={!loading}
+                />
+              </View>
 
-                <View style={styles.dateRow}>
-                  <TouchableOpacity
-                    style={styles.dateInput}
-                    onPress={() => setShowDatePicker(true)}>
-                    <Text style={styles.dateText}>
-                      {addFrom.date.toLocaleDateString('en-GB')}
-                    </Text>
-                    <Icon
-                      name="calendar"
-                      size={20}
-                      color={backgroundColors.dark}
-                    />
-                  </TouchableOpacity>
-                  {showDatePicker && (
-                    <DateTimePicker
-                      value={addFrom.date}
-                      mode="date"
-                      display="default"
-                      onChange={onDateChange}
-                    />
-                  )}
-                </View>
+              <View style={styles.formRow}>
+                <Text style={styles.label}>Added By</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="Enter name *"
+                  placeholderTextColor={THEME.textLight}
+                  value={addFrom.addedBy}
+                  onChangeText={t => addOnChange('addedBy', t)}
+                  editable={!loading}
+                />
+              </View>
 
-                <View style={styles.fullRow}>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {height: 100, textAlignVertical: 'top'},
-                    ]}
-                    placeholderTextColor="#999"
-                    placeholder="Enter description *"
-                    value={addFrom.description}
-                    onChangeText={t => addOnChange('description', t)}
-                    multiline
-                    numberOfLines={4}
-                    editable={!loading}
-                  />
-                </View>
-
+              <View style={styles.formRow}>
+                <Text style={styles.label}>Date</Text>
                 <TouchableOpacity
+                  style={styles.dateInput}
+                  onPress={() => setShowDatePicker(true)}>
+                  <Text style={styles.dateText}>
+                    {addFrom.date.toLocaleDateString('en-GB')}
+                  </Text>
+                  <Icon name="calendar" size={20} color={THEME.primary} />
+                </TouchableOpacity>
+                {showDatePicker && (
+                  <DateTimePicker
+                    value={addFrom.date}
+                    mode="date"
+                    display="default"
+                    onChange={onDateChange}
+                  />
+                )}
+              </View>
+
+              <View style={styles.formRow}>
+                <Text style={styles.label}>Description</Text>
+                <TextInput
                   style={[
-                    styles.submitBtn,
-                    loading && styles.submitButtonDisabled,
+                    styles.input,
+                    {height: 80, textAlignVertical: 'top', paddingTop: 10},
                   ]}
-                  onPress={handleAddExpense}
-                  disabled={loading}>
+                  placeholder="Enter description *"
+                  placeholderTextColor={THEME.textLight}
+                  value={addFrom.description}
+                  onChangeText={t => addOnChange('description', t)}
+                  multiline
+                  numberOfLines={3}
+                  editable={!loading}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.submitBtn, loading && {opacity: 0.7}]}
+                onPress={handleAddExpense}
+                activeOpacity={0.8}
+                disabled={loading}>
+                <LinearGradient
+                  colors={[THEME.gradientStart, THEME.gradientEnd]}
+                  style={styles.submitBtnGradient}>
                   {loading ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
                     <>
                       <Icon
-                        name="plus-circle-outline"
+                        name="check-circle-outline"
                         size={20}
                         color="white"
                       />
-                      <Text style={styles.submitText}>Add Expense</Text>
+                      <Text style={styles.submitBtnText}>Save Expense</Text>
                     </>
                   )}
-                </TouchableOpacity>
-              </View>
+                </LinearGradient>
+              </TouchableOpacity>
             </ScrollView>
-            <Toast />
           </View>
-        </Modal>
-
-        {/* Pagination Controls */}
-        {totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => prev - 1)}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text
-                style={{
-                  color: '#fff',
-                  fontSize: 12,
-                  marginTop: 2,
-                  opacity: 0.8,
-                }}>
-                Total: {totalRecords} records
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() => setCurrentPage(prev => prev + 1)}
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+          <Toast />
+        </View>
+      </Modal>
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -540,324 +545,324 @@ export default function ManageExpenses({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 20,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 40, // Extra space for floating search
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
+  },
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  // --- Floating Search ---
+  floatingSearchContainer: {
+    position: 'absolute',
+    bottom: -24,
+    left: 12,
+    right: 12,
+    backgroundColor: THEME.white,
+    borderRadius: 10,
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  headerCenter: {
+  floatingSearchInput: {
     flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    color: THEME.textDark,
   },
 
-  // Search Filter
-  searchFilter: {
-    width: '94%',
-    alignSelf: 'center',
-    height: 48,
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  search: {
-    height: '100%',
-    fontSize: 14,
-    color: backgroundColors.dark,
-    width: '100%',
-  },
-
-  // FlatList Styling
+  // --- List & Summary ---
   listContainer: {
     flex: 1,
-    paddingHorizontal: 12,
+    paddingTop: 10,
   },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+  summaryCard: {
+    backgroundColor: THEME.white,
+    marginHorizontal: 15,
+    marginBottom: 15,
+    borderRadius: 14,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
     shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
     elevation: 2,
   },
-  row: {
+  summaryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
-  name: {
-    fontSize: 16,
+  summaryIconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    color: THEME.textGray,
     fontWeight: '600',
-    color: '#144272',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: THEME.primary,
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 14,
+  },
+  tableHeaderLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textGray,
+    letterSpacing: 0.5,
+  },
+  tableHeaderCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.primary,
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+
+  // --- Card Row ---
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 15,
+    width: '94%',
+    alignSelf: 'center',
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#222',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  avatarContainer: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: THEME.primary,
+    letterSpacing: 0.5,
+  },
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  nameText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 4,
+  },
+  iconTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   subText: {
     fontSize: 12,
-    color: '#555',
-    marginTop: 2,
+    color: THEME.textGray,
+    marginLeft: 4,
   },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 8,
-    marginLeft: 10,
+  amountText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.primary,
+    marginBottom: 2,
   },
-  emptyContainer: {
+  centerContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
+    paddingVertical: 50,
   },
   emptyText: {
+    fontSize: 14,
+    color: THEME.textGray,
     marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
   },
 
-  // Total Container
-  totalContainer: {
-    padding: 15,
+  // --- Pagination ---
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 90,
+    alignSelf: 'center',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: '#fff',
-    marginHorizontal: 15,
-    borderRadius: 12,
-    marginVertical: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+    alignItems: 'center',
+    backgroundColor: THEME.primary,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 30,
+    elevation: 10,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  totalText: {
-    color: backgroundColors.dark,
-    fontWeight: 'bold',
-    fontSize: 16,
+  pageBtn: {
+    padding: 5,
+  },
+  disabledBtn: {
+    opacity: 0.5,
+  },
+  pageText: {
+    color: THEME.white,
+    fontSize: 14,
+    fontWeight: '600',
+    marginHorizontal: 15,
   },
 
-  // Modal Styles
+  // --- Modals ---
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    paddingHorizontal: 16,
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    width: '100%',
+    borderRadius: 16,
+    padding: 20,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    maxHeight: '85%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 10,
-    paddingHorizontal: 10,
-  },
-  modalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    maxHeight: '75%',
-    width: '95%',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  modalCloseBtn: {
+  closeModalBtn: {
     padding: 5,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
   },
-  modalForm: {
-    padding: 15,
-  },
-  field: {
-    flex: 1,
-  },
-  fullRow: {
-    marginBottom: 15,
-  },
-  dropdownRow: {
+  formRow: {
     marginBottom: 15,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 5,
+    color: THEME.textDark,
+    marginBottom: 8,
   },
   input: {
-    borderWidth: 0.6,
-    borderColor: '#00000047',
-    height: 45,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    height: 50,
+    borderRadius: 10,
+    paddingHorizontal: 15,
     fontSize: 14,
-    color: '#333',
-    backgroundColor: backgroundColors.light,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 6,
+    color: THEME.textDark,
+    backgroundColor: '#F9FAFB',
   },
   dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: '#F9FAFB',
+    borderColor: THEME.border,
     borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
-    height: 48,
-    marginBottom: 10,
+    height: 50,
   },
   dropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-  },
-  dropdownText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  dropdownPlaceholder: {
-    color: '#999',
-    fontSize: 14,
-  },
-  dateRow: {
-    marginBottom: 15,
+    backgroundColor: '#fff',
+    borderColor: THEME.border,
   },
   dateInput: {
-    borderWidth: 0.6,
-    borderColor: '#00000047',
-    height: 48,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#333',
-    backgroundColor: backgroundColors.light,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: THEME.border,
+    height: 50,
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    backgroundColor: '#F9FAFB',
   },
   dateText: {
     fontSize: 14,
-    color: backgroundColors.dark,
-    fontWeight: '600',
+    color: THEME.textDark,
   },
   submitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
     borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 20,
+    overflow: 'hidden',
+    marginTop: 10,
   },
-  submitText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  submitButtonDisabled: {
-    opacity: 0.7,
-  },
-
-  // Pagination Component
-  paginationContainer: {
+  submitBtnGradient: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
+    paddingVertical: 14,
+    gap: 8,
   },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
+  submitBtnText: {
     color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    paddingHorizontal: 10,
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
+    fontSize: 16,
     fontWeight: '700',
-    color: '#FFD166',
   },
 });

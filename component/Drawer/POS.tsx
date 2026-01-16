@@ -10,8 +10,11 @@ import {
   Modal,
   ToastAndroid,
   BackHandler,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
-import React, {useEffect, useState} from 'react';
+import React, {useEffect, useState, useCallback} from 'react';
+import {useFocusEffect} from '@react-navigation/native';
 import {useDrawer} from '../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import axios from 'axios';
@@ -21,7 +24,31 @@ import Toast from 'react-native-toast-message';
 import {useUser} from '../CTX/UserContext';
 import RNPrint from 'react-native-print';
 import backgroundColors from '../Colors';
-import {Image} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import LottieView from 'lottie-react-native';
+import BottomBar from '../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  border: '#E5E7EB',
+  success: '#10B981',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  shadow: '#000',
+  cardBackground: '#FFFFFF',
+  lightGreen: '#E8F5E9',
+  darkGreen: '#1B5E20',
+};
+
+const {width, height} = Dimensions.get('window');
 
 interface Customers {
   id: number;
@@ -153,6 +180,9 @@ export default function POS({navigation}: any) {
     [],
   );
   const [cashReg, setCashReg] = useState('');
+  const [showWarningModal, setShowWarningModal] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
+  const [warningTitle, setWarningTitle] = useState('Warning');
   const [custDetails, setCustDetails] =
     useState<CustomerDetails>(initialCustDetails);
 
@@ -283,12 +313,12 @@ export default function POS({navigation}: any) {
 
     try {
       const formData = new FormData();
-      formData.append('search_name', selectedProduct.value);
-      formData.append('prod_id', selectedProduct.prod_id);
-      formData.append('qty', selectedProduct.prod_qty);
-      formData.append('uom', currentValue);
-      formData.append('qty', quantity);
-      formData.append('unitprice', price);
+      formData.append('search_name', String(selectedProduct.value));
+      formData.append('prod_id', String(selectedProduct.prod_id));
+      // formData.append('qty', String(selectedProduct.prod_qty));
+      formData.append('uom', String(currentValue));
+      formData.append('qty', String(quantity));
+      formData.append('unitprice', String(price));
 
       console.log(formData);
 
@@ -316,27 +346,18 @@ export default function POS({navigation}: any) {
         setProdName('');
         setProdStock('');
         setCurrentValue('');
-      } else if (res.status === 200 && data.status === 100) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Product has been expired!',
-          visibilityTime: 3000,
-        });
-      } else if (res.status === 200 && data.status === 201) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'The require quantity is not available!',
-          visibilityTime: 3000,
-        });
-      } else if (res.status === 200 && data.status === 202) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'The require quantity is not available anymore!',
-          visibilityTime: 3000,
-        });
+      } else if (res.status === 200 && data.status == 100) {
+        setWarningTitle('Warning!');
+        setWarningMessage('Product has been expired!');
+        setShowWarningModal(true);
+      } else if (res.status === 200 && data.status == 201) {
+        setWarningTitle('Warning!');
+        setWarningMessage('The require quantity is not available!');
+        setShowWarningModal(true);
+      } else if (res.status === 200 && data.status == 202) {
+        setWarningTitle('Warning!');
+        setWarningMessage('Product not found!');
+        setShowWarningModal(true);
       } else if (res.status === 200 && data.status === 203) {
         Toast.show({
           type: 'error',
@@ -951,7 +972,6 @@ export default function POS({navigation}: any) {
     checkCashClose();
     fetchCustDropdown();
     fetchCustData();
-    loadCartItems();
     fetchUoms();
 
     const discountValue = parseFloat(discount) || 0;
@@ -1001,199 +1021,121 @@ export default function POS({navigation}: any) {
     discountType,
     paid,
     cartItems.length,
+    cartItems.length,
   ]);
 
-  // Enhanced Cart Item Component
-  const CartItemComponent = ({item}: {item: CartItem}) => (
-    <View style={styles.cartItemContainer}>
-      <View style={styles.cartItemLeft}>
-        <View style={styles.productInfo}>
-          <Text style={styles.productName} numberOfLines={2}>
-            {item.product_name}
-          </Text>
-          <View style={styles.priceRow}>
-            <Text
-              style={[
-                styles.unitPrice,
-                {
-                  fontWeight: '500',
-                  backgroundColor: '#2a652b38',
-                  paddingHorizontal: 8,
-                  paddingVertical: 4,
-                  borderRadius: 6,
-                  alignSelf: 'flex-start',
-                },
-              ]}>
-              {uom.find(uom => uom.id.toString() === item.uom_id)?.ums_name}
-            </Text>
+  // Auto-Empty Cart on Focus - Ensures cart is empty when navigating from any other screen
+  useFocusEffect(
+    useCallback(() => {
+      const emptyCartOnFocus = async () => {
+        try {
+          // First, empty the cart
+          await axios.get(`${BASE_URL}/emptycart`);
+          // Then load cart items (which will be empty now)
+          await loadCartItems();
+          // Reset cart-related states
+          setCartItems([]);
+          setOrderTotal('0');
+          setDiscount('');
+          setDiscountAmount(0);
+          setPaid('');
+          setNetPayable(Number(prevBalance || 0));
+          setBalance(Number(prevBalance || 0));
+        } catch (error) {
+          console.log('Error emptying cart on focus:', error);
+        }
+      };
 
-            <Text style={styles.unitPrice}>
-              <Text style={{fontWeight: '600'}}>Retail Price:</Text>{' '}
-              {item.retail_price}
-            </Text>
-            <Text style={styles.unitPrice}>
-              <Text style={{fontWeight: '600'}}>Discount:</Text> {item.discount}
-            </Text>
-            <Text style={styles.unitPrice}>
-              <Text style={{fontWeight: '600'}}>Unit Price:</Text>{' '}
-              {item.fretail_price}
-            </Text>
-          </View>
-        </View>
-      </View>
+      emptyCartOnFocus();
 
-      <View style={styles.cartItemRight}>
-        <View style={styles.quantityControls}>
-          <TouchableOpacity
-            onPress={() => minusCart(item.prod_id)}
-            style={styles.quantityBtn}>
-            <Icon name="remove" size={18} color={backgroundColors.dark} />
-          </TouchableOpacity>
-
-          <Text style={styles.quantityValue}>{item.qty}</Text>
-
-          <TouchableOpacity
-            onPress={() => plusCart(item.prod_id)}
-            style={styles.quantityBtn}>
-            <Icon name="add" size={18} color={backgroundColors.dark} />
-          </TouchableOpacity>
-        </View>
-
-        <Text style={styles.itemTotal}>
-          {(Number(item.fretail_price) * Number(item.qty)).toFixed(2)}
-        </Text>
-
-        <TouchableOpacity
-          onPress={() => removeFromCart(item.prod_id)}
-          style={styles.deleteBtn}>
-          <Icon name="delete" size={20} color="#FF5252" />
-        </TouchableOpacity>
-      </View>
-    </View>
+      return () => {
+        // Optional: Cleanup if needed when losing focus
+      };
+    }, []),
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Point of Sale</Text>
-          </View>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <TouchableOpacity
-            onPress={() => setModalVisible('Cart')}
-            style={[styles.headerBtn]}>
-            <Icon name="add-shopping-cart" size={26} color="#fff" />
-            {cartItems.length > 0 && (
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>{cartItems.length}</Text>
-              </View>
-            )}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContent}>
+          <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+            <Icon name="menu" size={24} color={THEME.white} />
           </TouchableOpacity>
+          <Text style={styles.headerTitle}>Point of Sale</Text>
+          <View style={{width: 24}} />
+        </LinearGradient>
+
+        <View style={styles.floatingSearchContainer}>
+          <Icon name="search" size={22} color={THEME.primary} />
+          <TextInput
+            style={styles.floatingSearchInput}
+            placeholderTextColor={THEME.textGray}
+            placeholder="Search by name or barcode..."
+            value={searchTerm}
+            onChangeText={handleSearch}
+          />
+          {searchTerm.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setSearchTerm('');
+                setShowResults(false);
+              }}>
+              <Icon name="cancel" size={18} color={THEME.textGray} />
+            </TouchableOpacity>
+          )}
         </View>
+      </View>
 
-        {/* Search Results Overlay */}
-        {searchTerm.length > 0 && showResults && searchResults.length > 0 && (
-          <View style={styles.searchResultsOverlay}>
-            <FlatList
-              data={searchResults}
-              keyExtractor={item => item.prod_id.toString()}
-              renderItem={({item}) => (
-                <TouchableOpacity
-                  style={styles.searchResultItem}
-                  onPress={() => {
-                    setSearchTerm(item.value);
-                    setProdName(item.prod_name);
-                    setSelectedProduct(item);
-
-                    const uomOptions = [
-                      {label: item.ums_name, value: item.prod_ums_id},
-                    ];
-
-                    if (item.prod_have_sub_uom === 'Y' && item.prod_sub_uom) {
-                      uomOptions.push({
-                        label: item.prod_sub_uom,
-                        value: item.prod_ums_id,
-                      });
-                    }
-
-                    setProdStock(item.prod_qty);
-                    setUomItems(uomOptions);
-                    setCurrentValue(item.prod_ums_id);
-                    setQuantity('1');
-                    setPrice(item.prod_price);
-                    setShowResults(false);
-                  }}>
-                  <Text style={styles.searchResultText} numberOfLines={1}>
-                    {item.label.replace(/\n/g, ' ')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
-          </View>
-        )}
-
-        <ScrollView
-          style={styles.mainContent}
-          showsVerticalScrollIndicator={false}>
-          {/* Product Search Card */}
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Text style={styles.cardTitle}>Add to Cart</Text>
+      <ScrollView
+        style={styles.mainContent}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{paddingBottom: 100}}>
+        {/* Selected Product Form */}
+        {selectedProduct && (
+          <View style={styles.productInfoCard}>
+            <View style={styles.productInfoHeader}>
+              <Text style={styles.selectedProductName}>
+                {prodName || 'N/A'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedProduct(null);
+                  setProdName('');
+                  setProdStock('');
+                  setPrice('');
+                  setQuantity('');
+                  setUomItems([]);
+                  setSearchTerm('');
+                }}>
+                <Icon name="close" size={20} color={THEME.textGray} />
+              </TouchableOpacity>
             </View>
 
-            <View style={styles.searchContainer}>
-              <View style={styles.searchInputWrapper}>
-                <Icon
-                  name="search"
-                  size={20}
-                  color={backgroundColors.dark}
-                  style={styles.searchIcon}
-                />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholderTextColor="rgba(0,0,0,0.7)"
-                  placeholder="Search by name or barcode..."
-                  value={searchTerm}
-                  onChangeText={handleSearch}
-                />
-              </View>
+            <View style={styles.stockBadge}>
+              <Icon name="inventory" size={14} color={THEME.white} />
+              <Text style={styles.stockText}>Stock: {prodStock || 'N/A'}</Text>
             </View>
 
-            {selectedProduct && (
-              <View style={styles.productInfoRow}>
-                <View style={styles.productInfoItem}>
-                  <Text style={styles.label}>Product</Text>
-                  <Text style={styles.value}>{prodName || 'N/A'}</Text>
-                </View>
-                <View style={styles.productInfoItem}>
-                  <Text style={styles.label}>Stock</Text>
-                  <Text style={styles.value}>{prodStock || 'N/A'}</Text>
-                </View>
-              </View>
-            )}
-
-            <View style={styles.productControlItem}>
+            {/* Redesigned Input Layout */}
+            <View style={{marginBottom: 8, marginTop: 12}}>
+              <Text style={[styles.controlLabel, {marginBottom: 0}]}>UOM</Text>
               <DropDownPicker
                 open={isOpen}
                 value={currentValue}
                 items={uomItems}
                 setOpen={setIsOpen}
                 setValue={setCurrentValue}
-                placeholder="UOM"
-                placeholderStyle={{
-                  color: 'rgba(0,0,0,0.7)',
-                  fontSize: 16,
-                }}
-                style={styles.modernDropdown}
+                placeholder="Select UOM"
+                placeholderStyle={styles.dropdownPlaceholder}
+                style={[styles.modernDropdown, {minHeight: 40}]}
                 dropDownContainerStyle={styles.modernDropdownContainer}
                 textStyle={styles.dropdownText}
                 onChangeValue={value => {
@@ -1209,688 +1151,921 @@ export default function POS({navigation}: any) {
                   <Icon
                     name="keyboard-arrow-up"
                     size={18}
-                    color={backgroundColors.dark}
+                    color={THEME.primary}
                   />
                 )}
                 ArrowDownIconComponent={() => (
                   <Icon
                     name="keyboard-arrow-down"
                     size={18}
-                    color={backgroundColors.dark}
+                    color={THEME.primary}
                   />
                 )}
                 listMode="SCROLLVIEW"
-                labelStyle={{
-                  color: backgroundColors.dark,
-                  fontSize: 16,
-                }}
-                listItemLabelStyle={{color: backgroundColors.dark}}
               />
             </View>
 
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.quantityInput}
-                placeholderTextColor="rgba(0,0,0,0.7)"
-                placeholder="Quantity"
-                keyboardType="numeric"
-                value={quantity}
-                onChangeText={setQuantity}
-                maxLength={6}
-              />
-            </View>
+            <View style={styles.qtyPriceRow}>
+              <View style={styles.compactInputWrapper}>
+                <Text style={styles.controlLabel}>Quantity</Text>
+                <TextInput
+                  style={styles.compactInput}
+                  placeholderTextColor={THEME.textGray}
+                  placeholder="Qty"
+                  keyboardType="numeric"
+                  value={quantity}
+                  onChangeText={setQuantity}
+                  maxLength={6}
+                />
+              </View>
 
-            <View style={styles.inputContainer}>
-              <TextInput
-                style={styles.priceInput}
-                placeholderTextColor="rgba(0,0,0,0.7)"
-                placeholder="Unit Price"
-                keyboardType="numeric"
-                value={price}
-                onChangeText={setPrice}
-                maxLength={9}
-              />
+              <View style={styles.compactInputWrapper}>
+                <Text style={styles.controlLabel}>Unit Price</Text>
+                <TextInput
+                  style={styles.compactInput}
+                  placeholderTextColor={THEME.textGray}
+                  placeholder="Price"
+                  keyboardType="numeric"
+                  value={price}
+                  onChangeText={setPrice}
+                  maxLength={9}
+                />
+              </View>
             </View>
 
             <TouchableOpacity
-              style={styles.addToCartBtn}
+              style={styles.compactAddBtn}
               onPress={handleAddToCart}>
-              <Icon
-                name="add-shopping-cart"
-                size={20}
-                color={backgroundColors.light}
-              />
-              <Text style={styles.addToCartText}>Add to Cart</Text>
+              <Icon name="add-shopping-cart" size={18} color={THEME.white} />
+              <Text style={styles.compactAddBtnText}>ADD TO CART</Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
+        )}
 
-        {/* Cart Modal */}
-        <Modal
-          visible={modalVisible === 'Cart'}
-          animationType="slide"
-          transparent={false}>
-          <SafeAreaView style={styles.cartModalContainer}>
-            <View style={styles.cartModalHeader}>
-              <TouchableOpacity
-                onPress={() => setModalVisible('')}
-                style={styles.cartModalCloseBtn}>
-                <Icon name="arrow-back" size={24} color="#144272" />
-              </TouchableOpacity>
-              <Text style={styles.cartModalTitle}>Shopping Cart</Text>
-              <Text style={styles.cartItemCount}>{cartItems.length} items</Text>
+        {/* Cart Items List (Inline) */}
+        {cartItems.length > 0 ? (
+          <View style={styles.cartPreviewCard}>
+            <View style={styles.cartPreviewHeader}>
+              <Text style={styles.cartPreviewTitle}>
+                Cart Items ({cartItems.length})
+              </Text>
             </View>
+            {cartItems.map((item, index) => (
+              <View key={index} style={styles.itemCard}>
+                {/* Top: Name & Delete */}
+                <View style={styles.itemCardHeader}>
+                  <View style={{flex: 1, marginRight: 12}}>
+                    <Text style={styles.itemName} numberOfLines={2}>
+                      {item.product_name}
+                    </Text>
+                    <View
+                      style={[styles.itemBadge, {backgroundColor: '#f3f4f6'}]}>
+                      <Text
+                        style={[styles.itemBadgeText, {color: THEME.textGray}]}>
+                        Qty: {item.qty}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={{flexDirection: 'row', gap: 5}}>
+                    <TouchableOpacity
+                      onPress={() => minusCart(item.prod_id)}
+                      style={[
+                        styles.itemDeleteBtn,
+                        {backgroundColor: '#E0F2F1'},
+                      ]}>
+                      <Icon name="remove" size={18} color={THEME.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => plusCart(item.prod_id)}
+                      style={[
+                        styles.itemDeleteBtn,
+                        {backgroundColor: '#E0F2F1'},
+                      ]}>
+                      <Icon name="add" size={18} color={THEME.primary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => removeFromCart(item.prod_id)}
+                      style={styles.itemDeleteBtn}>
+                      <Icon name="delete" size={18} color={THEME.danger} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
-            {cartItems.length === 0 ? (
-              <View style={styles.emptyCartContainer}>
-                <Icon name="shopping-cart" size={80} color="#ccc" />
-                <Text style={styles.emptyCartText}>Your cart is empty</Text>
-                <Text style={styles.emptyCartSubtext}>
-                  Add some products to get started
-                </Text>
-              </View>
-            ) : (
-              <>
-                <FlatList
-                  data={cartItems}
-                  keyExtractor={item => item.prod_id.toString()}
-                  renderItem={({item}) => <CartItemComponent item={item} />}
-                  style={styles.cartList}
-                  contentContainerStyle={styles.cartListContent}
-                />
+                {/* Divider */}
+                <View style={styles.itemDivider} />
 
-                <View style={styles.cartSummaryContainer}>
-                  <View style={styles.cartTotalRow}>
-                    <Text style={styles.cartTotalLabel}>Total Amount:</Text>
-                    <Text style={styles.cartTotalValue}>
-                      {Number(orderTotal || 0).toFixed(2)}
+                {/* Bottom: Totals */}
+                <View style={styles.itemCardFooter}>
+                  <View>
+                    <Text style={styles.itemLabel}>Unit Price</Text>
+                    <Text style={styles.itemValue}>{item.fretail_price}</Text>
+                  </View>
+
+                  <View style={styles.totalContainer}>
+                    <Text style={[styles.itemLabel, {textAlign: 'right'}]}>
+                      Subtotal
+                    </Text>
+                    <Text style={styles.itemTotalValue}>
+                      {(Number(item.qty) * Number(item.fretail_price)).toFixed(
+                        2,
+                      )}
                     </Text>
                   </View>
-                  <TouchableOpacity
-                    style={styles.proceedBtn}
-                    onPress={() => setModalVisible('Checkout')}>
-                    <Text style={styles.proceedBtnText}>
-                      Proceed to Checkout
-                    </Text>
-                  </TouchableOpacity>
                 </View>
-              </>
-            )}
-          </SafeAreaView>
-        </Modal>
+              </View>
+            ))}
 
-        {/* Checkout Modal */}
-        <Modal
-          visible={modalVisible === 'Checkout'}
-          animationType="fade"
-          transparent={false}>
-          <SafeAreaView style={styles.container}>
+            <View style={[styles.summaryRow, {padding: 12}]}>
+              <Text style={styles.summaryLabel}>Total Payable:</Text>
+              <Text style={styles.summaryValue}>
+                {Number(orderTotal).toFixed(2)}
+              </Text>
+            </View>
+          </View>
+        ) : (
+          !selectedProduct && (
+            <View style={styles.emptyCartContainer}>
+              <Icon name="shopping-cart" size={48} color={THEME.textGray} />
+              <Text style={styles.emptyCartText}>
+                Search product to add to cart
+              </Text>
+            </View>
+          )
+        )}
+      </ScrollView>
+
+      {/* Search Results Overlay */}
+      {searchTerm.length > 0 && showResults && searchResults.length > 0 && (
+        <View style={styles.searchResultsOverlay}>
+          <FlatList
+            data={searchResults}
+            keyExtractor={item => item.prod_id.toString()}
+            renderItem={({item}) => (
+              <TouchableOpacity
+                style={styles.searchResultItem}
+                onPress={() => {
+                  setSearchTerm(item.value);
+                  setProdName(item.prod_name);
+                  setSelectedProduct(item);
+
+                  const uomOptions = [
+                    {label: item.ums_name, value: item.prod_ums_id},
+                  ];
+
+                  if (item.prod_have_sub_uom === 'Y' && item.prod_sub_uom) {
+                    uomOptions.push({
+                      label: item.prod_sub_uom,
+                      value: item.prod_ums_id,
+                    });
+                  }
+
+                  setProdStock(item.prod_qty);
+                  setUomItems(uomOptions);
+                  setCurrentValue(item.ums_name);
+                  setQuantity('1');
+                  setPrice(item.prod_price);
+                  setShowResults(false);
+                }}>
+                <Text style={styles.searchResultText} numberOfLines={1}>
+                  {item.label.replace(/\n/g, ' ')}
+                </Text>
+                <Text style={styles.searchResultSubtext}>
+                  Stock: {item.prod_qty} • {item.prod_price}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
+
+      {/* Floating Billing Button */}
+      {cartItems.length > 0 && (
+        <TouchableOpacity
+          style={styles.floatingBillingBtn}
+          onPress={() => setModalVisible('CustomerDetails')}>
+          <LinearGradient
+            colors={[THEME.gradientStart, THEME.gradientEnd]}
+            style={styles.floatingBtnGradient}
+            start={{x: 0, y: 0}}
+            end={{x: 1, y: 0}}>
+            <View style={styles.floatingBtnContent}>
+              <Icon name="receipt" size={24} color={THEME.white} />
+              <View style={styles.floatingBtnTextContainer}>
+                <Text style={styles.floatingBtnTitle}>Proceed to Bill</Text>
+                <Text style={styles.floatingBtnSubtitle}>
+                  {Number(orderTotal || 0).toFixed(2)}
+                </Text>
+              </View>
+              <Icon name="arrow-forward" size={24} color={THEME.white} />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
+
+      {/* Customer Details Modal */}
+      <Modal
+        visible={modalVisible === 'CustomerDetails'}
+        animationType="slide"
+        transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.checkoutModalContainer}>
+            {/* Header */}
             <View style={styles.checkoutModalHeader}>
               <TouchableOpacity
-                onPress={() => setModalVisible('Cart')}
+                onPress={() => setModalVisible('')}
                 style={styles.headerBtn}>
-                <Icon
-                  name="arrow-back"
-                  size={24}
-                  color={backgroundColors.dark}
-                />
+                <Icon name="arrow-back" size={24} color={THEME.textDark} />
               </TouchableOpacity>
-              <Text style={styles.checkoutModalTitle}>Checkout</Text>
+              <View style={styles.checkoutHeaderCenter}>
+                <Text style={styles.checkoutModalTitle}>Customer Details</Text>
+                <Text style={styles.checkoutModalSubtitle}>Step 1 of 2</Text>
+              </View>
             </View>
 
             <ScrollView
               style={styles.checkoutScrollView}
-              contentContainerStyle={{paddingBottom: 100}}>
+              showsVerticalScrollIndicator={false}>
+              {/* Customer Selection */}
               <View style={styles.checkoutSection}>
-                <Text style={styles.checkoutSectionTitle}>Customer *</Text>
-                <View>
-                  <Icon
-                    name="person"
-                    size={28}
-                    color={backgroundColors.dark}
-                    style={styles.personIcon}
-                  />
+                <View style={[styles.sectionHeader, {marginTop: 10}]}>
+                  <Icon name="person" size={20} color={THEME.primary} />
+                  <Text style={styles.sectionTitle}>Select Customer</Text>
+                </View>
+                <View style={styles.customerSelectContainer}>
                   <DropDownPicker
                     items={transformedCust}
                     open={Open}
                     setOpen={setOpen}
                     value={currentVal}
                     setValue={setCurrentVal}
-                    placeholderStyle={{
-                      color: 'rgba(0,0,0,0.7)',
-                      marginLeft: 30,
-                      fontSize: 16,
-                    }}
-                    textStyle={{color: 'white'}}
+                    placeholder="Select Customer"
+                    placeholderStyle={styles.dropdownPlaceholder}
+                    style={styles.checkoutDropdown}
+                    dropDownContainerStyle={styles.checkoutDropdownContainer}
+                    textStyle={styles.dropdownText}
                     ArrowUpIconComponent={() => (
                       <Icon
                         name="keyboard-arrow-up"
                         size={18}
-                        color={backgroundColors.dark}
+                        color={THEME.primary}
                       />
                     )}
                     ArrowDownIconComponent={() => (
                       <Icon
                         name="keyboard-arrow-down"
                         size={18}
-                        color={backgroundColors.dark}
+                        color={THEME.primary}
                       />
                     )}
-                    style={styles.dropdown}
-                    dropDownContainerStyle={styles.dropdownContainer}
-                    labelStyle={{
-                      color: backgroundColors.dark,
-                      marginLeft: 30,
-                      fontSize: 16,
-                    }}
-                    listItemLabelStyle={{color: '#144272'}}
-                    listMode="MODAL"
+                    listMode="SCROLLVIEW"
                     searchable
-                    searchTextInputStyle={{
-                      borderWidth: 0,
-                      width: '100%',
-                    }}
-                    searchContainerStyle={{
-                      borderColor: backgroundColors.gray,
-                    }}
                   />
+                </View>
+
+                {currentVal === '1' ? (
+                  <View style={styles.guestCustomerForm}>
+                    <View style={styles.formRow}>
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Name *</Text>
+                        <TextInput
+                          style={styles.formInput}
+                          placeholder="Enter name"
+                          placeholderTextColor={THEME.textGray}
+                          value={custDetails.name}
+                          onChangeText={t => custOnChange('name', t)}
+                        />
+                      </View>
+                      <View style={styles.formGroup}>
+                        <Text style={styles.formLabel}>Contact *</Text>
+                        <TextInput
+                          style={styles.formInput}
+                          placeholder="Phone number"
+                          placeholderTextColor={THEME.textGray}
+                          keyboardType="phone-pad"
+                          value={custDetails.contact}
+                          onChangeText={t => custOnChange('contact', t)}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.formGroup}>
+                      <Text style={styles.formLabel}>Address</Text>
+                      <TextInput
+                        style={[styles.formInput, styles.textArea]}
+                        placeholder="Enter address"
+                        placeholderTextColor={THEME.textGray}
+                        value={custDetails.address}
+                        onChangeText={t => custOnChange('address', t)}
+                        multiline
+                        numberOfLines={2}
+                      />
+                    </View>
+                  </View>
+                ) : (
+                  selectedCust && (
+                    <View style={styles.customerInfoCard}>
+                      <View style={styles.customerAvatar}>
+                        <Icon name="person" size={24} color={THEME.white} />
+                      </View>
+                      <View style={styles.customerDetails}>
+                        <Text style={styles.customerName}>
+                          {selectedCust.cust_name}
+                        </Text>
+                        <Text style={styles.customerContact}>
+                          {selectedCust.cust_contact ?? 'N/A'}
+                        </Text>
+                      </View>
+                      <View style={styles.prevBalanceBadge}>
+                        <Text style={styles.prevBalanceText}>
+                          Prev. Bal: {prevBalance}
+                        </Text>
+                      </View>
+                    </View>
+                  )
+                )}
+              </View>
+            </ScrollView>
+
+            {/* Footer Actions */}
+            <View style={styles.checkoutFooter}>
+              <TouchableOpacity
+                style={styles.completePurchaseBtn}
+                onPress={() => {
+                  if (!currentVal) {
+                    ToastAndroid.show('Please select a customer', 3000);
+                    return;
+                  }
+                  if (
+                    currentVal === '1' &&
+                    (!custDetails.name || !custDetails.contact)
+                  ) {
+                    ToastAndroid.show(
+                      'Please fill required customer details',
+                      3000,
+                    );
+                    return;
+                  }
+                  setModalVisible('Billing');
+                }}>
+                <LinearGradient
+                  colors={[THEME.gradientStart, THEME.gradientEnd]}
+                  style={styles.completeBtnGradient}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 0}}>
+                  <Text style={styles.completePurchaseBtnText}>
+                    Proceed to Billing
+                  </Text>
+                  <Icon
+                    name="arrow-forward"
+                    size={24}
+                    color={THEME.white}
+                    style={{marginLeft: 8}}
+                  />
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Billing confirmation Modal */}
+      <Modal
+        visible={modalVisible === 'Billing'}
+        animationType="slide"
+        transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.checkoutModalContainer}>
+            {/* Header */}
+            <View style={styles.checkoutModalHeader}>
+              <TouchableOpacity
+                onPress={() => setModalVisible('CustomerDetails')}
+                style={styles.headerBtn}>
+                <Icon name="arrow-back" size={24} color={THEME.textDark} />
+              </TouchableOpacity>
+              <View style={styles.checkoutHeaderCenter}>
+                <Text style={styles.checkoutModalTitle}>Billing</Text>
+                <Text style={styles.checkoutModalSubtitle}>Step 2 of 2</Text>
+              </View>
+            </View>
+
+            <ScrollView
+              style={styles.checkoutScrollView}
+              showsVerticalScrollIndicator={false}>
+              {/* Order Summary */}
+              <View style={styles.checkoutSection}>
+                <View style={styles.sectionHeader}>
+                  <Icon name="receipt" size={20} color={THEME.primary} />
+                  <Text style={styles.sectionTitle}>Order Summary</Text>
+                </View>
+                <View style={styles.orderSummaryCard}>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryItemLabel}>Subtotal</Text>
+                    <Text style={styles.summaryItemValue}>
+                      {Number(orderTotal || 0).toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryItemLabel}>
+                      Previous Balance
+                    </Text>
+                    <Text style={styles.summaryItemValue}>
+                      {Number(prevBalance || 0).toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryDivider} />
+                  <View style={styles.summaryItem}>
+                    <Text style={styles.summaryItemLabel}>Total Payable</Text>
+                    <Text style={styles.summaryItemValue}>
+                      {netPayable.toFixed(2)}
+                    </Text>
+                  </View>
                 </View>
               </View>
 
-              {/* Supplier Details */}
-              {currentVal === '1' ? (
-                <View>
-                  <View style={[styles.inputContainer, {marginTop: 0}]}>
-                    <TextInput
-                      style={styles.infoInput}
-                      placeholder="Name"
-                      placeholderTextColor="rgba(0,0,0,0.7)"
-                      value={custDetails.name}
-                      onChangeText={t => custOnChange('name', t)}
-                    />
-                  </View>
-                  <View style={[styles.inputContainer, {marginTop: 10}]}>
-                    <TextInput
-                      style={styles.infoInput}
-                      placeholder="Contact"
-                      keyboardType="phone-pad"
-                      maxLength={12}
-                      placeholderTextColor="rgba(0,0,0,0.7)"
-                      value={custDetails.contact}
-                      onChangeText={t => {
-                        let cleaned = t.replace(/[^0-9-]/g, '');
-                        cleaned = cleaned.replace(/-/g, '');
-                        if (cleaned.length > 4)
-                          cleaned =
-                            cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                        if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                        custOnChange('contact', cleaned);
-                      }}
-                    />
-                  </View>
-                  <View style={[styles.inputContainer, {marginVertical: 10}]}>
-                    <TextInput
-                      style={styles.infoInput}
-                      placeholder="Address"
-                      placeholderTextColor="rgba(0,0,0,0.7)"
-                      value={custDetails.address}
-                      onChangeText={t => custOnChange('address', t)}
-                    />
-                  </View>
-                </View>
-              ) : (
-                <View style={styles.checkoutSection}>
-                  <View style={styles.checkoutCard}>
-                    <Image
-                      source={require('../../assets/man.png')}
-                      style={styles.avatar}
-                    />
-                    <View style={{flex: 1}}>
-                      <Text style={styles.supplierName}>
-                        {custData.name ?? 'N/A'}
-                      </Text>
-                      <Text style={styles.supplierPhone}>
-                        {custData.contact ?? 'N/A'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-
+              {/* Discount Section */}
               <View style={styles.checkoutSection}>
-                <Text style={styles.checkoutSectionTitle}>Billing Details</Text>
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Order Total:</Text>
-                  <Text style={styles.summaryValue}>
-                    {Number(orderTotal || 0).toFixed(2)}
-                  </Text>
+                <View style={styles.sectionHeader}>
+                  <Icon name="discount" size={20} color={THEME.primary} />
+                  <Text style={styles.sectionTitle}>Discount</Text>
                 </View>
-
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                  }}>
-                  <View
-                    style={[
-                      styles.inputContainer,
-                      {marginTop: 0, width: '75%'},
-                    ]}>
+                <View style={styles.discountContainer}>
+                  <View style={styles.discountInputRow}>
                     <TextInput
                       style={styles.discountInput}
-                      placeholderTextColor="rgba(0,0,0,0.7)"
-                      placeholder="Discount"
+                      placeholder="Enter discount"
+                      placeholderTextColor={THEME.textGray}
                       keyboardType="numeric"
                       value={discount}
                       onChangeText={setDiscount}
-                      maxLength={9}
                     />
-                  </View>
-                  <View style={styles.discountTypeContainer}>
-                    <TouchableOpacity
-                      style={[
-                        styles.discountTypeBtn,
-                        discountType === 'cash' && styles.discountTypeBtnActive,
-                      ]}
-                      onPress={() => setDiscountType('cash')}>
-                      <Text
+                    <View style={styles.discountTypeToggle}>
+                      <TouchableOpacity
                         style={[
-                          styles.discountTypeText,
+                          styles.discountTypeBtn,
                           discountType === 'cash' &&
-                            styles.discountTypeTextActive,
-                        ]}>
-                        Rs
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.discountTypeBtn,
-                        discountType === 'percent' &&
-                          styles.discountTypeBtnActive,
-                      ]}
-                      onPress={() => setDiscountType('percent')}>
-                      <Text
+                            styles.activeDiscountTypeBtn,
+                        ]}
+                        onPress={() => setDiscountType('cash')}>
+                        <Text
+                          style={[
+                            styles.discountTypeText,
+                            discountType === 'cash' &&
+                              styles.activeDiscountTypeText,
+                          ]}>
+                          Rs
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
                         style={[
-                          styles.discountTypeText,
+                          styles.discountTypeBtn,
                           discountType === 'percent' &&
-                            styles.discountTypeTextActive,
-                        ]}>
-                        %
-                      </Text>
-                    </TouchableOpacity>
+                            styles.activeDiscountTypeBtn,
+                        ]}
+                        onPress={() => setDiscountType('percent')}>
+                        <Text
+                          style={[
+                            styles.discountTypeText,
+                            discountType === 'percent' &&
+                              styles.activeDiscountTypeText,
+                          ]}>
+                          %
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-                <Text style={styles.discountAmount}>
-                  {discountAmount.toFixed(2)}
-                </Text>
-
-                <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Previous Balance:</Text>
-                  <Text style={styles.summaryValue}>
-                    {Number(prevBalance || 0).toFixed(2)}
-                  </Text>
-                </View>
-
-                <View style={[styles.summaryRow, styles.netPayableRow]}>
-                  <Text style={styles.netPayableLabel}>Net Payable:</Text>
-                  <Text style={styles.netPayableValue}>
-                    {netPayable.toFixed(2)}
-                  </Text>
-                </View>
-
-                <View style={[styles.inputContainer, {marginTop: 0}]}>
-                  <TextInput
-                    ref={paidInputRef}
-                    style={styles.paidInput}
-                    placeholder="Enter paid amount"
-                    keyboardType="numeric"
-                    placeholderTextColor="rgba(0,0,0,0.7)"
-                    value={paid}
-                    maxLength={9}
-                    onChangeText={setPaid}
-                  />
-                </View>
-
-                <View style={styles.noteSection}>
-                  <TextInput
-                    style={styles.noteInput}
-                    placeholder="Add note (Optional)"
-                    placeholderTextColor="rgba(0,0,0,0.7)"
-                    value={note}
-                    onChangeText={setNote}
-                    multiline
-                    numberOfLines={3}
-                    textAlignVertical="top"
-                  />
+                  {discountAmount > 0 && (
+                    <Text style={styles.discountAppliedText}>
+                      Discount Applied: {discountAmount.toFixed(2)}
+                    </Text>
+                  )}
                 </View>
               </View>
 
+              {/* Payment Section */}
               <View style={styles.checkoutSection}>
-                <Text style={styles.checkoutSectionTitle}>Balance</Text>
-                <View style={styles.amountContainer}>
-                  <Text
-                    style={[
-                      styles.balanceValue,
-                      balance < 0
-                        ? styles.negativeBalance
-                        : styles.positiveBalance,
-                    ]}>
-                    {balance.toFixed(2)}
+                <View style={styles.sectionHeader}>
+                  <Icon name="payments" size={20} color={THEME.primary} />
+                  <Text style={styles.sectionTitle}>Payment</Text>
+                </View>
+                <View style={styles.paymentContainer}>
+                  <View style={styles.paidInputContainer}>
+                    <Text style={styles.paidInputLabel}>Amount Paid</Text>
+                    <View style={styles.paidInputWrapper}>
+                      <TextInput
+                        ref={paidInputRef}
+                        style={styles.paidInput}
+                        placeholder="Enter amount"
+                        placeholderTextColor={THEME.textGray}
+                        keyboardType="numeric"
+                        value={paid}
+                        onChangeText={setPaid}
+                      />
+                    </View>
+                  </View>
+                  <View style={styles.balanceDisplay}>
+                    <Text style={styles.balanceLabel}>Balance</Text>
+                    <Text
+                      style={[
+                        styles.balanceValue,
+                        balance > 0
+                          ? styles.positiveBalance
+                          : styles.negativeBalance,
+                      ]}>
+                      {balance.toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Note Section */}
+              <View style={styles.checkoutSection}>
+                <View style={styles.sectionHeader}>
+                  <Icon name="notes" size={20} color={THEME.primary} />
+                  <Text style={styles.sectionTitle}>Additional Notes</Text>
+                </View>
+                <TextInput
+                  style={styles.noteInput}
+                  placeholder="Add any notes (optional)"
+                  placeholderTextColor={THEME.textGray}
+                  value={note}
+                  onChangeText={setNote}
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                />
+              </View>
+
+              {/* Items Preview */}
+              <View style={[styles.checkoutSection, {marginBottom: 180}]}>
+                <View style={styles.sectionHeader}>
+                  <Icon name="list" size={20} color={THEME.primary} />
+                  <Text style={styles.sectionTitle}>
+                    Items ({cartItems.length})
                   </Text>
+                </View>
+                <View style={styles.itemsPreview}>
+                  {cartItems.slice(0, 3).map((item, index) => (
+                    <View key={index} style={styles.previewItem}>
+                      <Text style={styles.previewItemName} numberOfLines={1}>
+                        {item.product_name}
+                      </Text>
+                      <Text style={styles.previewItemDetails}>
+                        {item.qty} × {item.fretail_price}
+                      </Text>
+                    </View>
+                  ))}
+                  {cartItems.length > 3 && (
+                    <Text style={styles.moreItemsPreviewText}>
+                      +{cartItems.length - 3} more items
+                    </Text>
+                  )}
                 </View>
               </View>
             </ScrollView>
 
+            {/* Footer Actions */}
             <View style={styles.checkoutFooter}>
+              <View style={styles.footerSummary}>
+                <Text style={styles.footerTotalLabel}>Total Payable</Text>
+                <Text style={styles.footerTotalValue}>
+                  {netPayable.toFixed(2)}
+                </Text>
+              </View>
               <TouchableOpacity
                 style={styles.completePurchaseBtn}
                 onPress={saleCheckout}>
-                <Text style={styles.completePurchaseBtnText}>
-                  Order Complete
-                </Text>
+                <LinearGradient
+                  colors={[THEME.gradientStart, THEME.gradientEnd]}
+                  style={styles.completeBtnGradient}
+                  start={{x: 0, y: 0}}
+                  end={{x: 1, y: 0}}>
+                  <Icon name="check-circle" size={24} color={THEME.white} />
+                  <Text style={styles.completePurchaseBtnText}>
+                    Complete Purchase
+                  </Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
-          </SafeAreaView>
-        </Modal>
+          </View>
+        </View>
+      </Modal>
 
-        {/* Invoice Modal */}
-        <Modal
-          visible={modalVisible === 'View'}
-          animationType="slide"
-          transparent={true}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              {/* Modal Handle */}
-              <View style={styles.modalHandle} />
+      {/* Invoice Modal - Keep existing */}
+      <Modal
+        visible={modalVisible === 'View'}
+        animationType="slide"
+        transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            {/* Modal Handle */}
+            <View style={styles.modalHandle} />
 
-              {/* Header */}
-              <View style={styles.modalHeader}>
-                <View style={styles.headerLeft}>
-                  <View style={styles.invoiceIconContainer}>
-                    <Icon name="receipt" size={24} color="#144272" />
-                  </View>
-                  <View>
-                    <Text style={styles.modalTitle}>Sale Invoice</Text>
-                    <Text style={styles.modalSubtitle}>Invoice Details</Text>
-                  </View>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <View style={styles.headerLeft}>
+                <View style={styles.invoiceIconContainer}>
+                  <Icon name="receipt" size={24} color={THEME.primary} />
                 </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setInvoiceData(null);
-                    setInvcSaleDetails([]);
-                    setSelectedInvc('');
-                  }}
-                  style={styles.closeButton}>
-                  <Icon name="close" size={24} color="#666" />
-                </TouchableOpacity>
+                <View>
+                  <Text style={styles.modalTitle}>Sale Invoice</Text>
+                  <Text style={styles.modalSubtitle}>Invoice Details</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setInvoiceData(null);
+                  setInvcSaleDetails([]);
+                  setSelectedInvc('');
+                }}
+                style={styles.closeButton}>
+                <Icon name="close" size={24} color="#666" />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}>
+              {/* Company Info Card */}
+              <View style={styles.companyCard}>
+                <View style={styles.companyHeader}>
+                  <Text style={styles.companyName}>{bussName || 'N/A'}</Text>
+                </View>
+                <Text style={styles.companyAddress}>
+                  {bussAddress || 'N/A'}
+                </Text>
+                <Text style={styles.companyContact}>
+                  {bussContact || 'Contact: N/A'}
+                </Text>
               </View>
 
-              <ScrollView
-                style={styles.modalContent}
-                showsVerticalScrollIndicator={false}>
-                {/* Company Info Card */}
-                <View style={styles.companyCard}>
-                  <View style={styles.companyHeader}>
-                    <Text style={styles.companyName}>{bussName || 'N/A'}</Text>
-                  </View>
-                  <Text style={styles.companyAddress}>
-                    {bussAddress || 'N/A'}
+              {/* Order Info Grid */}
+              <View style={styles.orderInfoGrid}>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Receipt#:</Text>
+                  <Text style={styles.infoValue}>{selectedInvc ?? 'N/A'}</Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Date:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale.created_at
+                      ? new Date(invoiceData?.sale.created_at)
+                          .toLocaleDateString('en-GB', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric',
+                          })
+                          .replace(/ /g, '-')
+                      : 'N/A'}
                   </Text>
-                  <Text style={styles.companyContact}>
-                    {bussContact || 'Contact: N/A'}
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Maker:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.name ?? 'N/A'}
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.orderInfoGrid}>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Customer:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.cust_name ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Contact:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale.contact ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Address:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale.slcust_address ?? 'N/A'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Order Table Section */}
+              <View style={styles.tableContainer}>
+                {/* Table Header */}
+                <View style={styles.tableHeader}>
+                  <Text style={[styles.tableHeaderText, styles.col1]}>
+                    Item
+                  </Text>
+                  <Text style={[styles.tableHeaderText, styles.col2]}>Qty</Text>
+                  <Text style={[styles.tableHeaderText, styles.col3]}>UOM</Text>
+                  <Text style={[styles.tableHeaderText, styles.col4]}>
+                    Price
+                  </Text>
+                  <Text style={[styles.tableHeaderText, styles.col5]}>
+                    Total
                   </Text>
                 </View>
 
-                {/* Order Info Grid */}
-                <View style={styles.orderInfoGrid}>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Receipt#:</Text>
-                    <Text style={styles.infoValue}>
-                      {selectedInvc ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Date:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.sale.created_at
-                        ? new Date(invoiceData?.sale.created_at)
-                            .toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                            .replace(/ /g, '-')
-                        : 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Maker:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.sale?.name ?? 'N/A'}
-                    </Text>
-                  </View>
-                </View>
-                <View style={styles.orderInfoGrid}>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Customer:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.sale?.cust_name ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Contact:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.sale.contact ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Address:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.sale.slcust_address ?? 'N/A'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Order Table Section */}
-                <View style={styles.tableSection}>
-                  <View style={styles.tableContainer}>
-                    {/* Table Header */}
-                    <View style={styles.tableHeader}>
-                      <Text style={[styles.tableHeaderText, styles.col1]}>
-                        Item
+                {/* Table Rows */}
+                <FlatList
+                  data={invcSaleDetails}
+                  keyExtractor={(_, index) => index.toString()}
+                  renderItem={({item, index}) => (
+                    <View style={[styles.tableRow]}>
+                      <Text style={[styles.tableCell, styles.col1]}>
+                        {item.prod_name}
                       </Text>
-                      <Text style={[styles.tableHeaderText, styles.col2]}>
-                        Qty
+                      <Text style={[styles.tableCell, styles.col2]}>
+                        {item.sald_qty}
                       </Text>
-                      <Text style={[styles.tableHeaderText, styles.col3]}>
-                        UOM
+                      <Text style={[styles.tableCell, styles.col3]}>
+                        {item.ums_name}
                       </Text>
-                      <Text style={[styles.tableHeaderText, styles.col4]}>
-                        Price
+                      <Text style={[styles.tableCell, styles.col4]}>
+                        {Number(item.sald_fretail_price).toLocaleString()}
                       </Text>
-                      <Text style={[styles.tableHeaderText, styles.col5]}>
-                        Total
+                      <Text style={[styles.tableCell, styles.col5]}>
+                        {Number(item.sald_total_fretailprice).toLocaleString()}
                       </Text>
                     </View>
-
-                    {/* Table Rows */}
-                    <FlatList
-                      data={invcSaleDetails}
-                      keyExtractor={(_, index) => index.toString()}
-                      renderItem={({item, index}) => (
-                        <View style={[styles.tableRow]}>
-                          <Text style={[styles.tableCell, styles.col1]}>
-                            {item.prod_name}
-                          </Text>
-                          <Text style={[styles.tableCell, styles.col2]}>
-                            {item.sald_qty}
-                          </Text>
-                          <Text style={[styles.tableCell, styles.col3]}>
-                            {item.ums_name}
-                          </Text>
-                          <Text style={[styles.tableCell, styles.col4]}>
-                            {Number(item.sald_fretail_price).toLocaleString()}
-                          </Text>
-                          <Text style={[styles.tableCell, styles.col5]}>
-                            {Number(
-                              item.sald_total_fretailprice,
-                            ).toLocaleString()}
-                          </Text>
-                        </View>
-                      )}
-                      scrollEnabled={false}
-                      ListFooterComponent={
-                        <View
-                          style={{
-                            borderTopWidth: 1.5,
-                            borderTopColor: backgroundColors.dark,
-                            flexDirection: 'row',
-                            paddingVertical: 2.5,
-                          }}>
-                          <Text
-                            style={[
-                              styles.tableHeaderText,
-                              {flex: 0.2, textAlign: 'left'},
-                            ]}>
-                            Total Items
-                          </Text>
-                          <Text style={[styles.tableCell, {flex: 0.15}]}>
-                            {invcSaleDetails.length}
-                          </Text>
-                          <Text style={[styles.tableHeaderText, {flex: 0.2}]}>
-                            Subtotals
-                          </Text>
-                          <View style={{flex: 0.2}} />
-                          <Text style={[styles.tableCell, {flex: 0.2}]}>
-                            {invoiceData?.sale?.sal_order_total}
-                          </Text>
-                        </View>
-                      }
-                    />
-                  </View>
-                </View>
-
-                <View style={styles.orderInfoGrid}>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Total Order:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.sale?.sal_order_total ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Discount:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.sale?.sal_discount ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Previous Bal.:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.prev_balance ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Payable:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.sale?.sal_total_amount ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Paid:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.sale?.sal_payment_amount ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Balance:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.sale?.sal_change_amount ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Note:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.sale?.note ?? 'N/A'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Footer */}
-                <View style={styles.modalFooter}>
-                  <Text style={styles.thankYou}>Thank you for your visit</Text>
-                  <View style={styles.developerInfo}>
-                    <Text style={styles.developerText}>
-                      Software Developed with ❤️ by
-                    </Text>
-                    <Text style={styles.companyContact}>
-                      Technic Mentors | +923111122144
-                    </Text>
-                  </View>
-
-                  <TouchableOpacity
-                    style={styles.printBtn}
-                    onPress={printReceipt}>
-                    <Icon
-                      name="print"
-                      size={20}
-                      color={backgroundColors.light}
-                    />
-                    <Text style={styles.printBtnText}>Print</Text>
-                  </TouchableOpacity>
-                </View>
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Cash Register */}
-        <Modal
-          visible={showCashRegister}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={handleWarningOk}>
-          <View style={styles.cashModalOverlay}>
-            <View style={styles.cashModalContainer}>
-              <View style={styles.cashModalHeader}>
-                <Text style={styles.modalHeaderTitle}>Cash Register</Text>
+                  )}
+                  scrollEnabled={false}
+                  ListFooterComponent={
+                    <View
+                      style={{
+                        borderTopWidth: 1.5,
+                        borderTopColor: backgroundColors.dark,
+                        flexDirection: 'row',
+                        paddingVertical: 5,
+                        paddingHorizontal: 8,
+                      }}>
+                      <Text
+                        style={[
+                          styles.tableHeaderText,
+                          {flex: 0.2, textAlign: 'left'},
+                        ]}>
+                        Total Items
+                      </Text>
+                      <Text style={[styles.tableCell, {flex: 0.15}]}>
+                        {invcSaleDetails.length}
+                      </Text>
+                      <Text style={[styles.tableHeaderText, {flex: 0.2}]}>
+                        Subtotals
+                      </Text>
+                      <View style={{flex: 0.2}} />
+                      <Text
+                        style={[
+                          styles.tableCell,
+                          {flex: 0.15, textAlign: 'right'},
+                        ]}>
+                        {invoiceData?.sale?.sal_order_total}
+                      </Text>
+                    </View>
+                  }
+                />
               </View>
 
-              <View style={{padding: 20}}>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    color: backgroundColors.dark,
-                    marginBottom: 8,
-                    fontWeight: '500',
-                  }}>
-                  Cash In Hand *
-                </Text>
+              <View style={[styles.orderInfoGrid, {marginBottom: 160}]}>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Total Order:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.sal_order_total ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Discount:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.sal_discount ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Previous Bal.:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.prev_balance ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Payable:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.sal_total_amount ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Paid:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.sal_payment_amount ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Balance:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.sal_change_amount ?? 'N/A'}
+                  </Text>
+                </View>
+                <View style={styles.infoCard}>
+                  <Text style={styles.infoLabel}>Note:</Text>
+                  <Text style={styles.infoValue}>
+                    {invoiceData?.sale?.note ?? 'N/A'}
+                  </Text>
+                </View>
+              </View>
 
-                <View style={[styles.inputContainer, {marginTop: 0}]}>
-                  <TextInput
-                    style={styles.infoInput}
-                    placeholder="Enter cash in hand"
-                    placeholderTextColor="rgba(0,0,0,0.7)"
-                    keyboardType="numeric"
-                    maxLength={11}
-                    value={cashReg}
-                    onChangeText={t => setCashReg(t)}
-                  />
+              {/* Footer */}
+              <View style={styles.modalFooter}>
+                <Text style={styles.thankYou}>Thank you for your visit</Text>
+                <View style={styles.developerInfo}>
+                  <Text style={styles.developerText}>
+                    Software Developed with ❤️ by
+                  </Text>
+                  <Text style={styles.companyContact}>
+                    Technic Mentors | +923111122144
+                  </Text>
                 </View>
 
                 <TouchableOpacity
-                  style={[styles.completePurchaseBtn, {marginTop: 20}]}
-                  onPress={openRegister}>
-                  <Text style={styles.completePurchaseBtnText}>Confirm</Text>
+                  style={styles.printBtn}
+                  onPress={printReceipt}>
+                  <Icon name="print" size={20} color={backgroundColors.light} />
+                  <Text style={styles.printBtnText}>Print</Text>
                 </TouchableOpacity>
               </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Warning Modal */}
+      <Modal
+        visible={showWarningModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowWarningModal(false)}>
+        <View style={styles.warningModalOverlay}>
+          <View style={styles.warningModalContainer}>
+            <View style={styles.animationContainer}>
+              <LottieView
+                source={require('../../assets/Alert.json')}
+                autoPlay
+                loop={false}
+                style={styles.lottieAnimation}
+                resizeMode="contain"
+              />
+            </View>
+            <Text style={styles.warningTitle}>{warningTitle}</Text>
+            <Text style={styles.warningMessage}>{warningMessage}</Text>
+            <TouchableOpacity
+              style={styles.warningBtn}
+              onPress={() => setShowWarningModal(false)}>
+              <Text style={styles.warningBtnText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cash Register Modal - Keep existing */}
+      <Modal
+        visible={showCashRegister}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleWarningOk}>
+        <View style={styles.cashModalOverlay}>
+          <View style={styles.cashModalContainer}>
+            <View style={styles.cashModalHeader}>
+              <Text style={styles.modalHeaderTitle}>Cash Register</Text>
+            </View>
+
+            <View style={{padding: 20}}>
+              <Text
+                style={{
+                  fontSize: 14,
+                  color: backgroundColors.dark,
+                  marginBottom: 8,
+                  fontWeight: '500',
+                }}>
+                Cash In Hand *
+              </Text>
+
+              <View style={[styles.inputContainer, {marginTop: 0}]}>
+                <TextInput
+                  style={styles.infoInput}
+                  placeholder="Enter cash in hand"
+                  placeholderTextColor="rgba(0,0,0,0.7)"
+                  keyboardType="numeric"
+                  maxLength={11}
+                  value={cashReg}
+                  onChangeText={t => setCashReg(t)}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={[styles.completePurchaseBtn, {marginTop: 20}]}
+                onPress={openRegister}>
+                <Text style={styles.completePurchaseBtnText}>Confirm</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </Modal>
+        </View>
+      </Modal>
 
-        <Toast />
-      </View>
+      <Toast />
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -1898,1013 +2073,673 @@ export default function POS({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
+    backgroundColor: THEME.background,
   },
   gradientBackground: {
     flex: 1,
   },
 
-  // Main Content
-  mainContent: {
-    flex: 1,
-    paddingHorizontal: 12,
-    marginTop: 10,
+  iconBtn: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
 
-  // Card Styles
+  productInfoCard: {
+    backgroundColor: THEME.lightGreen,
+    borderRadius: 12,
+    padding: 10,
+  },
+  productInfoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  selectedProductName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.textDark,
+    flex: 1,
+    marginRight: 12,
+  },
+  stockBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+    borderRadius: 20,
+  },
+  stockText: {
+    color: THEME.white,
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
+  },
+  controlsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  controlGroup: {
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  controlLabel: {
+    fontSize: 12,
+    color: THEME.textGray,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  modernDropdown: {
+    backgroundColor: THEME.white,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 8,
+    minHeight: 44,
+  },
+  modernDropdownContainer: {
+    backgroundColor: THEME.white,
+    borderColor: THEME.border,
+    borderRadius: 8,
+  },
+  dropdownPlaceholder: {
+    color: THEME.textGray,
+    fontSize: 14,
+  },
+  dropdownText: {
+    color: THEME.textDark,
+    fontSize: 14,
+  },
+  quantityInputWrapper: {
+    backgroundColor: THEME.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  quantityInput: {
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    color: THEME.textDark,
+    fontSize: 14,
+  },
+  priceInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.white,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  currencySymbol: {
+    paddingHorizontal: 12,
+    color: THEME.textGray,
+    fontSize: 14,
+  },
+  priceInput: {
+    flex: 1,
+    paddingVertical: 12,
+    color: THEME.textDark,
+    fontSize: 14,
+  },
+  addToCartBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 12,
+    paddingVertical: 16,
+  },
   card: {
-    backgroundColor: backgroundColors.light,
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    marginVertical: 8,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
+    padding: 16,
+    marginBottom: 8,
+    shadowColor: THEME.shadow,
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+    shadowRadius: 12,
+    elevation: 5,
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   cardTitle: {
-    color: backgroundColors.primary,
+    color: THEME.textDark,
     fontSize: 18,
     fontWeight: 'bold',
-    marginLeft: 10,
   },
-
-  // Search Styles
   searchContainer: {
     marginBottom: 10,
-    position: 'relative',
   },
   searchInputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: backgroundColors.light,
+    backgroundColor: THEME.background,
     borderRadius: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-    height: 48,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: THEME.border,
   },
   searchIcon: {
     marginRight: 8,
   },
   searchInput: {
     flex: 1,
-    color: backgroundColors.dark,
+    color: THEME.textDark,
     fontSize: 16,
-    paddingVertical: 12,
+    paddingVertical: 14,
   },
-  addProductBtn: {
-    marginLeft: 10,
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+  cartFullView: {
+    marginBottom: 100,
   },
-
-  // Search Results
-  searchResultsOverlay: {
-    position: 'absolute',
-    top: 190,
-    left: 15,
-    right: 15,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    zIndex: 1000,
-    elevation: 10,
-    maxHeight: 200,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-  },
-  searchResultItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  searchResultText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-  // Product Information
-  productInfoRow: {
-    marginBottom: 15,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 8,
-  },
-  productInfoItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
+  cartHeaderCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 8,
-  },
-  label: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  value: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '400',
-  },
-  inputContainer: {
-    width: '100%',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-    height: 48,
-    marginTop: 12,
-  },
-  infoInput: {
-    flex: 1,
-    color: backgroundColors.dark,
-    fontSize: 14,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-
-  // Product Controls
-  productControlItem: {
-    flex: 1,
-  },
-  quantityInput: {
-    flex: 1,
-    color: backgroundColors.dark,
-    fontSize: 14,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  priceInput: {
-    flex: 1,
-    color: backgroundColors.dark,
-    fontSize: 14,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-
-  // Modern Dropdown
-  modernDropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-    marginBottom: 4,
-  },
-  modernDropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
-  },
-  dropdownText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-  },
-  dropdownPlaceholder: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-  },
-
-  // Add to Cart Button
-  addToCartBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    marginTop: 10,
-  },
-  addToCartText: {
-    color: backgroundColors.light,
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-
-  // Customer Selection
-  customerSelectRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    marginBottom: 15,
-  },
-  customerDropdownContainer: {
-    flex: 1,
-  },
-  addCustomerBtn: {
-    marginLeft: 10,
-    padding: 10,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-
-  // Customer Info Grid
-  customerInfoGrid: {
-    marginBottom: 15,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 8,
-  },
-  customerInfoItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 8,
-  },
-  fullWidthItem: {
-    marginBottom: 15,
-  },
-
-  // Order Summary
-  summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
   },
-  summaryLabel: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  summaryValue: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  // Discount Section
-  discountSection: {
-    marginBottom: 15,
-  },
-  discountInputContainer: {
+  cartHeaderContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
   },
-  discountInput: {
-    flex: 1,
-    color: backgroundColors.dark,
-    fontSize: 14,
+  cartHeaderText: {
+    marginLeft: 12,
   },
-  discountTypeContainer: {
-    flexDirection: 'row',
-    backgroundColor: backgroundColors.gray,
-    borderRadius: 8,
-    padding: 2,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-    height: 48,
-  },
-  discountTypeBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-    marginHorizontal: 2,
-  },
-  discountTypeBtnActive: {
-    backgroundColor: backgroundColors.primary,
-  },
-  discountTypeText: {
-    color: 'rgba(0,0,0,0.8)',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  discountTypeTextActive: {
-    color: backgroundColors.light,
-  },
-  discountAmount: {
-    color: '#FF5252',
-    fontSize: 15,
-    fontWeight: 'bold',
-    textAlign: 'right',
-    marginRight: 5,
-  },
-
-  // Net Payable
-  netPayableRow: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.3)',
-    paddingTop: 10,
-    marginTop: 10,
-  },
-  netPayableLabel: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  netPayableValue: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  // Payment Section
-  paymentSection: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-    marginTop: 10,
-  },
-  paidInputContainer: {
-    width: '60%',
-  },
-  paidInput: {
-    flex: 1,
-    color: backgroundColors.dark,
-    fontSize: 16,
-  },
-  balanceContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 10,
-  },
-  balanceLabel: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  balanceValue: {
-    fontSize: 28,
-    fontWeight: 'bold',
-  },
-  positiveBalance: {
-    color: backgroundColors.success,
-  },
-  negativeBalance: {
-    color: backgroundColors.danger,
-  },
-
-  // Note Section
-  noteSection: {
-    marginVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  noteInput: {
-    borderRadius: 10,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    color: backgroundColors.dark,
-    fontSize: 14,
-    backgroundColor: backgroundColors.light,
-    height: 80,
-  },
-
-  // Checkout Button
-  checkoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#4CAF50',
-    borderRadius: 12,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    shadowColor: '#4CAF50',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  checkoutBtnText: {
-    color: 'white',
+  cartTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginLeft: 8,
+    color: THEME.textDark,
   },
-
-  // Floating Cart
-  cartBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#FF5252',
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
+  cartSubtitle: {
+    fontSize: 14,
+    color: THEME.textGray,
+    marginTop: 2,
   },
-  cartBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-
-  // Cart Modal
-  cartModalContainer: {
-    flex: 1,
-    backgroundColor: backgroundColors.gray,
-  },
-  cartModalHeader: {
+  clearCartBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    backgroundColor: '#FEE2E2',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
   },
-  cartModalCloseBtn: {
-    padding: 5,
+  clearCartText: {
+    color: THEME.danger,
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 4,
   },
-  cartModalTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    textAlign: 'center',
-  },
-  cartItemCount: {
-    fontSize: 14,
-    color: '#666',
-  },
-
-  // Empty Cart
   emptyCartContainer: {
-    flex: 1,
+    borderRadius: 16,
+    padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 40,
   },
   emptyCartText: {
-    fontSize: 20,
-    color: '#666',
+    fontSize: 18,
     fontWeight: 'bold',
+    color: THEME.textGray,
     marginTop: 20,
   },
   emptyCartSubtext: {
-    fontSize: 16,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 10,
-  },
-
-  // Cart List
-  cartList: {
-    flex: 1,
-  },
-  cartListContent: {
-    paddingVertical: 5,
-  },
-
-  // Cart Item Component
-  cartItemContainer: {
-    flexDirection: 'row',
-    backgroundColor: 'white',
-    marginHorizontal: 10,
-    marginVertical: 5,
-    borderRadius: 12,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  cartItemLeft: {
-    flex: 1,
-  },
-  productInfo: {
-    flex: 1,
-  },
-  productName: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: backgroundColors.primary,
-    marginBottom: 5,
-  },
-  priceRow: {
-    gap: 5,
-  },
-  unitPrice: {
     fontSize: 14,
-    color: backgroundColors.dark,
+    color: THEME.textGray,
+    textAlign: 'center',
+    marginTop: 8,
+    marginBottom: 24,
   },
-  cartItemRight: {
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-  },
-  quantityControls: {
+  backToProductsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 10,
+    backgroundColor: THEME.primary,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
   },
-  quantityBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 6,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  quantityValue: {
-    marginHorizontal: 15,
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    minWidth: 30,
-    textAlign: 'center',
-  },
-  itemTotal: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: backgroundColors.success,
-    marginBottom: 5,
-  },
-  deleteBtn: {
-    padding: 5,
-    backgroundColor: '#ff00002b',
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-    borderRadius: 6,
+  backToProductsText: {
+    color: THEME.white,
+    fontSize: 14,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 
-  // Cart Summary
-  cartSummaryContainer: {
-    backgroundColor: 'white',
+  floatingBillingBtn: {
+    position: 'absolute',
+    bottom: 90,
+    right: 20,
+    left: 20,
+    borderRadius: 16,
+    shadowColor: THEME.shadow,
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  floatingBtnGradient: {
+    borderRadius: 16,
+    paddingVertical: 12,
     paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    borderTopLeftRadius: 15,
-    borderTopRightRadius: 15,
   },
-  cartTotalRow: {
+  floatingBtnContent: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    justifyContent: 'space-between',
   },
-  cartTotalLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
+  floatingBtnTextContainer: {
+    flex: 1,
+    marginHorizontal: 16,
   },
-  cartTotalValue: {
+  floatingBtnTitle: {
+    color: THEME.white,
     fontSize: 18,
     fontWeight: 'bold',
-    color: backgroundColors.success,
   },
-  proceedBtn: {
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
-    paddingVertical: 15,
-    alignItems: 'center',
+  floatingBtnSubtitle: {
+    color: THEME.white,
+    fontSize: 14,
+    opacity: 0.9,
+    marginTop: 2,
   },
-  proceedBtnText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-
-  // Modal stying
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
-  modalContainer: {
-    backgroundColor: '#FAFBFC',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: '80%',
-    paddingBottom: 20,
+  checkoutModalContainer: {
+    backgroundColor: THEME.background,
+    height: '100%',
   },
   modalHandle: {
     width: 40,
     height: 4,
-    backgroundColor: '#DDD',
+    backgroundColor: THEME.border,
     borderRadius: 2,
     alignSelf: 'center',
     marginTop: 12,
     marginBottom: 8,
   },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  modalHeaderTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  invoiceIconContainer: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#2a652b24',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 2,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 20,
-    backgroundColor: backgroundColors.gray,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Company Card
-  companyCard: {
-    marginHorizontal: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-    paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: backgroundColors.dark,
-    borderStyle: 'dotted',
-  },
-  companyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  companyName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#144272',
-  },
-  companyAddress: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '400',
-  },
-
-  // Info Grid
-  orderInfoGrid: {
-    marginTop: 10,
-    borderBottomColor: backgroundColors.dark,
-    borderBottomWidth: 2,
-    borderStyle: 'dotted',
-    marginHorizontal: 20,
-  },
-  infoCard: {
-    width: '60%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    borderRadius: 8,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: backgroundColors.dark,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  infoValue: {
-    fontSize: 14,
-    color: backgroundColors.dark,
-    fontWeight: '400',
-  },
-
-  // Items Section
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 12,
-  },
-
-  // Totals Section
-  totalsSection: {
-    marginHorizontal: 20,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  totalLabel: {
-    fontSize: 14,
-    color: backgroundColors.dark,
-    fontWeight: '600',
-  },
-  totalValue: {
-    fontSize: 14,
-    color: backgroundColors.dark,
-    fontWeight: '400',
-  },
-
-  // Footer
-  modalFooter: {
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-  },
-  thankYou: {
-    fontSize: 16,
-    color: backgroundColors.primary,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  developerInfo: {
-    alignItems: 'center',
-  },
-  developerText: {
-    fontSize: 12,
-    color: '#888',
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  companyContact: {
-    fontSize: 12,
-    color: backgroundColors.dark,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  modalContent: {
-    flex: 1,
-  },
-  printBtn: {
-    backgroundColor: backgroundColors.primary,
-    flexDirection: 'row',
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    alignSelf: 'center',
-    gap: 5,
-    marginVertical: 5,
-    borderRadius: 10,
-  },
-  printBtnText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-
-  // Table Section
-  tableSection: {
-    marginTop: 20,
-    marginHorizontal: 20,
-    borderBottomWidth: 2,
-    borderColor: backgroundColors.dark,
-    borderStyle: 'dotted',
-  },
-  tableContainer: {
-    overflow: 'hidden',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    borderBottomColor: backgroundColors.dark,
-    borderBottomWidth: 1.5,
-    paddingBottom: 5,
-  },
-  tableHeaderText: {
-    color: backgroundColors.dark,
-    fontWeight: '600',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 6,
-    alignItems: 'center',
-  },
-  tableCell: {
-    fontSize: 12,
-    color: backgroundColors.dark,
-    textAlign: 'center',
-  },
-
-  // Column widths
-  col1: {
-    flex: 0.2,
-    textAlign: 'left',
-  },
-  col2: {
-    flex: 0.15, // Product
-  },
-  col3: {
-    flex: 0.22, // Qty
-  },
-  col4: {
-    flex: 0.18, // Price
-  },
-  col5: {
-    flex: 0.2, // Total
-  },
-
-  // ================= NEW CHECKOUT MODAL STYLES =================
   checkoutModalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 5,
     paddingVertical: 8,
-    backgroundColor: backgroundColors.light,
+    backgroundColor: THEME.white,
+  },
+  checkoutCloseBtn: {
+    padding: 8,
+  },
+  checkoutHeaderCenter: {
+    flex: 1,
+    marginLeft: 16,
   },
   checkoutModalTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: backgroundColors.dark,
-    textAlign: 'center',
-    flex: 1,
-    marginRight: 24, // Adjust for the back button
+    color: THEME.textDark,
+  },
+  checkoutModalSubtitle: {
+    fontSize: 14,
+    color: THEME.textGray,
+    marginTop: 2,
   },
   checkoutScrollView: {
-    flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     paddingTop: 10,
   },
   checkoutSection: {
-    marginBottom: 5,
+    marginBottom: 10,
   },
-  checkoutSectionTitle: {
-    fontSize: 14,
-    color: backgroundColors.dark,
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.textDark,
+    marginLeft: 8,
+  },
+  customerSelectContainer: {
+    marginBottom: 8,
+  },
+  checkoutDropdown: {
+    backgroundColor: THEME.white,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 12,
+    minHeight: 52,
+  },
+  checkoutDropdownContainer: {
+    backgroundColor: THEME.white,
+    borderColor: THEME.border,
+    borderRadius: 12,
+  },
+  guestCustomerForm: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    padding: 16,
+  },
+  formRow: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  formGroup: {
+    flex: 1,
+    marginHorizontal: 4,
+  },
+  formLabel: {
+    fontSize: 12,
+    color: THEME.textGray,
     marginBottom: 8,
     fontWeight: '500',
   },
-  checkoutCard: {
-    backgroundColor: backgroundColors.light,
+  formInput: {
+    backgroundColor: THEME.background,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: THEME.textDark,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  textArea: {
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  customerInfoCard: {
+    backgroundColor: THEME.white,
     borderRadius: 12,
-    padding: 15,
+    padding: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 15,
+  customerAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: THEME.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  supplierName: {
+  customerDetails: {
+    flex: 1,
+    marginLeft: 16,
+  },
+  customerName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: backgroundColors.dark,
+    color: THEME.textDark,
   },
-  supplierPhone: {
+  customerContact: {
     fontSize: 14,
-    color: 'gray',
+    color: THEME.textGray,
+    marginTop: 2,
   },
-  amountContainer: {
-    backgroundColor: backgroundColors.light,
+  customerAddress: {
+    fontSize: 12,
+    color: THEME.textGray,
+    marginTop: 2,
+  },
+  prevBalanceBadge: {
+    backgroundColor: THEME.lightGreen,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+  },
+  prevBalanceText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.primary,
+  },
+  orderSummaryCard: {
+    backgroundColor: THEME.white,
     borderRadius: 12,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    alignItems: 'center',
+    padding: 16,
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 10,
   },
-  amountValue: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#4CAF50',
+  summaryItemLabel: {
+    fontSize: 14,
+    color: THEME.textGray,
   },
-  checkoutFooter: {
-    padding: 20,
-    backgroundColor: backgroundColors.light,
-    borderTopWidth: 1,
-    borderColor: '#eee',
+  summaryItemValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textDark,
   },
-  completePurchaseBtn: {
-    backgroundColor: backgroundColors.primary,
-    paddingVertical: 15,
+  discountContainer: {
+    backgroundColor: THEME.white,
     borderRadius: 12,
+    padding: 16,
+  },
+  discountInputRow: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  completePurchaseBtnText: {
-    color: backgroundColors.light,
-    fontSize: 18,
+  discountInput: {
+    flex: 1,
+    backgroundColor: THEME.background,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: THEME.textDark,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  discountTypeToggle: {
+    flexDirection: 'row',
+    backgroundColor: THEME.background,
+    borderRadius: 8,
+    marginLeft: 12,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  discountTypeBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  activeDiscountTypeBtn: {
+    backgroundColor: THEME.primary,
+    borderRadius: 8,
+  },
+  discountTypeText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textGray,
+  },
+  activeDiscountTypeText: {
+    color: THEME.white,
+  },
+  discountAppliedText: {
+    fontSize: 12,
+    color: THEME.success,
+    marginTop: 8,
+    fontWeight: '600',
+  },
+  paymentContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    padding: 16,
+  },
+  paidInputContainer: {
+    marginBottom: 16,
+  },
+  paidInputLabel: {
+    fontSize: 12,
+    color: THEME.textGray,
+    marginBottom: 8,
+    fontWeight: '500',
+  },
+  paidInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  paidInput: {
+    flex: 1,
+    paddingVertical: 12,
+    fontSize: 16,
+    fontWeight: '600',
+    color: THEME.textDark,
+  },
+  balanceDisplay: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: THEME.border,
+  },
+  balanceLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.textDark,
+  },
+  balanceValue: {
+    fontSize: 20,
     fontWeight: 'bold',
   },
-  personIcon: {
-    position: 'absolute',
-    zIndex: 10000,
-    top: 7,
-    left: 6,
+  positiveBalance: {
+    color: THEME.success,
   },
-  dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
+  negativeBalance: {
+    color: THEME.danger,
+  },
+  noteInput: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 14,
+    color: THEME.textDark,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    minHeight: 80,
+  },
+  itemsPreview: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    padding: 16,
+  },
+  previewItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  previewItemName: {
+    fontSize: 14,
+    color: THEME.textDark,
+    flex: 1,
+    marginRight: 12,
+  },
+  previewItemDetails: {
+    fontSize: 14,
+    color: THEME.textGray,
+    fontWeight: '500',
+  },
+  moreItemsPreviewText: {
+    textAlign: 'center',
+    color: THEME.primary,
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 8,
+  },
+  checkoutFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: THEME.white,
+    borderTopWidth: 1,
+    borderTopColor: THEME.border,
+    padding: 12,
+  },
+  footerSummary: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  footerTotalLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.textDark,
+  },
+  footerTotalValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: THEME.primary,
+  },
+  completePurchaseBtn: {
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  completeBtnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 18,
+  },
+  completePurchaseBtnText: {
+    color: THEME.white,
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginLeft: 12,
+  },
+  searchResultsOverlay: {
+    position: 'absolute',
+    top: 170,
+    left: 16,
+    right: 16,
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    zIndex: 1000,
+    maxHeight: 300,
+    shadowColor: THEME.shadow,
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
     elevation: 10,
-    height: 48,
+    padding: 12, // Reduced padding
+  },
+  searchResultItem: {
+    padding: 12, // Reduced padding
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.border,
+  },
+  searchResultText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textDark,
     marginBottom: 4,
   },
-  dropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
+  searchResultSubtext: {
+    fontSize: 12,
+    color: THEME.textGray,
   },
-
-  // Cash Register Modal
+  // Keep existing styles for other modals
+  modalContainer: {
+    backgroundColor: '#FAFBFC',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '80%',
+  },
   cashModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -2912,11 +2747,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   cashModalContainer: {
-    backgroundColor: backgroundColors.light,
+    backgroundColor: THEME.white,
     borderRadius: 15,
     width: '95%',
     maxWidth: 400,
-    shadowColor: '#000',
+    shadowColor: THEME.shadow,
     shadowOffset: {
       width: 0,
       height: 10,
@@ -2927,11 +2762,488 @@ const styles = StyleSheet.create({
   },
   cashModalHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingVertical: 15,
     borderBottomWidth: 1,
-    borderBottomColor: backgroundColors.gray,
+    borderBottomColor: THEME.border,
+    justifyContent: 'space-between',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.border,
+    justifyContent: 'space-between',
+  },
+  // Invoice Modal Styles
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  invoiceIconContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 8,
+    borderRadius: 8,
+    marginRight: 12,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: THEME.textDark,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: THEME.textGray,
+  },
+  closeButton: {
+    padding: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    borderRadius: 8,
+  },
+  modalContent: {
+    padding: 20,
+    paddingBottom: 100,
+  },
+  companyCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 10,
+    alignItems: 'center',
+    shadowColor: THEME.shadow,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  companyHeader: {
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  companyName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.primary,
+    marginBottom: 4,
+  },
+  companyAddress: {
+    fontSize: 12,
+    color: THEME.textGray,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  companyContact: {
+    fontSize: 12,
+    color: THEME.textGray,
+    textAlign: 'center',
+  },
+  orderInfoGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 10,
+  },
+  infoCard: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: THEME.background,
+    padding: 12,
+    borderRadius: 8,
+  },
+  infoLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    marginBottom: 4,
+  },
+  infoValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textDark,
+  },
+  tableContainer: {
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    backgroundColor: THEME.background,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.border,
+  },
+  tableHeaderText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: THEME.textGray,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.border,
+  },
+  tableCell: {
+    fontSize: 11,
+    color: THEME.textDark,
+  },
+  col1: {flex: 0.3},
+  col2: {flex: 0.1},
+  col3: {flex: 0.2},
+  col4: {flex: 0.2},
+  col5: {flex: 0.2},
+  modalFooter: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: THEME.white,
+    padding: 16,
+    paddingBottom: 30,
+    borderTopWidth: 1,
+    borderTopColor: THEME.border,
+    alignItems: 'center',
+  },
+  thankYou: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: THEME.primary,
+    marginBottom: 4,
+  },
+  developerInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  developerText: {
+    fontSize: 10,
+    color: THEME.textGray,
+  },
+  printBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: THEME.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 32,
+    borderRadius: 24,
+    width: '100%',
+  },
+  printBtnText: {
+    color: THEME.white,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginLeft: 8,
+  },
+  modalHeaderTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.textDark,
+  },
+  inputContainer: {
+    marginBottom: 16,
+    paddingHorizontal: 20,
+  },
+  infoInput: {
+    backgroundColor: THEME.background,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    color: THEME.textDark,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+
+  // --- NEW COMPACT INPUT STYLES ---
+  qtyPriceRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+    zIndex: 1000,
+  },
+  compactInputWrapper: {
+    flex: 1,
+  },
+  compactInput: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8, // reduced vertical padding
+    fontSize: 14,
+    color: THEME.textDark,
+  },
+  compactAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignSelf: 'stretch',
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  compactAddBtnText: {
+    color: THEME.white,
+    fontWeight: '700',
+    fontSize: 14,
+    marginLeft: 6,
+  },
+
+  // --- New Styles from SaleOrder.tsx ---
+  headerContainer: {
+    zIndex: 100,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 30,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+  },
+  headerTitle: {
+    color: THEME.white,
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  headerBtn: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+  },
+  floatingSearchContainer: {
+    position: 'absolute',
+    bottom: -24,
+    left: 20,
+    right: 20,
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    height: 52,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    zIndex: 200,
+  },
+  floatingSearchInput: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 16,
+    color: THEME.textDark,
+  },
+  mainContent: {
+    paddingTop: 40, // Space for floating search
+    paddingHorizontal: 16,
+  },
+
+  // Cart Preview Card (Unified)
+  cartPreviewCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  cartPreviewHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  cartPreviewTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  itemCard: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  itemCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textDark,
+    marginBottom: 6,
+    lineHeight: 20,
+  },
+  itemBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  itemBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  itemDeleteBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FEE2E2',
+  },
+  itemDivider: {
+    height: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 10,
+    borderStyle: 'dashed',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  itemCardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  itemLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    marginBottom: 2,
+  },
+  itemValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textDark,
+  },
+  totalContainer: {
+    alignItems: 'flex-end',
+  },
+  itemTotalValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  summaryLabel: {
+    fontSize: 14,
+  },
+
+  // Warning Modal Styles
+  warningModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  warningModalContainer: {
+    width: '90%',
+    backgroundColor: THEME.white,
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  animationContainer: {
+    width: 120,
+    height: 120,
+    marginBottom: 6,
+  },
+  lottieAnimation: {
+    width: '100%',
+    height: '100%',
+  },
+  warningTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: THEME.textDark,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  warningMessage: {
+    fontSize: 16,
+    color: THEME.textGray,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  warningBtn: {
+    backgroundColor: THEME.primary,
+    paddingHorizontal: 32,
+    paddingVertical: 12,
+    borderRadius: 12,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  warningBtnText: {
+    color: THEME.white,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  summaryDivider: {
+    height: 1,
+    backgroundColor: THEME.border,
+    marginVertical: 6,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.textDark,
+  },
+  totalValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.primary,
   },
 });

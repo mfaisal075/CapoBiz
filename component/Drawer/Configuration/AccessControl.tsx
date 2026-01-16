@@ -14,6 +14,7 @@ import {useDrawer} from '../../DrawerContext';
 import Modal from 'react-native-modal';
 import {RadioButton} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
+import BottomBar from '../../BottomBar';
 
 export default function AccessControl() {
   const {openDrawer} = useDrawer();
@@ -186,7 +187,7 @@ export default function AccessControl() {
           </TouchableOpacity>
         </View>
 
-        <ScrollView>
+        <ScrollView contentContainerStyle={{paddingBottom: 100}}>
           <View>
             <FlatList
               data={Info}
@@ -276,7 +277,7 @@ export default function AccessControl() {
               placeholder="Select Role"
               placeholderStyle={{color: '#144272'}}
               textStyle={{color: '#144272'}}
-              arrowIconStyle={{tintColor: '#144272'}}
+              arrowIconStyle={{tintColor: '#144272'} as any}
               style={[
                 styles.dropdown,
                 {
@@ -425,128 +426,127 @@ export default function AccessControl() {
 
         {/*edit*/}
         {/*edit*/}
-<Modal isVisible={edit}>
-  <ScrollView
-    style={{
-      flex: 1,
-      backgroundColor: 'white',
-      width: '98%',
-      maxHeight: 450,
-      borderRadius: 10,
-      borderWidth: 1,
-      borderColor: '#144272',
-      overflow: 'hidden',
-      alignSelf: 'center',
-    }}>
-    <View
-      style={{
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        margin: 10,
-      }}>
-      <Text
-        style={{
-          color: '#144272',
-          fontWeight: 'bold',
-          fontSize: 16,
-        }}>
-        Edit Access Control
-      </Text>
-      <TouchableOpacity onPress={() => setedit(!edit)}>
-        <Image
-          style={{
-            width: 15,
-            height: 15,
-          }}
-          source={require('../../../assets/cross.png')}
-        />
-      </TouchableOpacity>
-    </View>
-    <DropDownPicker
-      items={customerItem}
-      open={customerType}
-      setOpen={setcustomerType}
-      value={currentcustomer}
-      setValue={setCurrentcustomer}
-      placeholder="Select Role"
-      placeholderStyle={{color: '#144272'}}
-      textStyle={{color: '#144272'}}
-      arrowIconStyle={{tintColor: '#144272'}}
-      style={[
-        styles.dropdown,
-        {
-          borderColor: '#144272',
-          width: 265,
-          alignSelf: 'center',
-        },
-      ]}
-      dropDownContainerStyle={{
-        backgroundColor: 'white',
-        borderColor: '#144272',
-        width: 265,
-        alignSelf: 'center',
-      }}
-      labelStyle={{color: '#144272'}}
-      listItemLabelStyle={{color: '#144272'}}
-    />
+        <Modal isVisible={edit}>
+          <ScrollView
+            style={{
+              flex: 1,
+              backgroundColor: 'white',
+              width: '98%',
+              maxHeight: 450,
+              borderRadius: 10,
+              borderWidth: 1,
+              borderColor: '#144272',
+              overflow: 'hidden',
+              alignSelf: 'center',
+            }}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                margin: 10,
+              }}>
+              <Text
+                style={{
+                  color: '#144272',
+                  fontWeight: 'bold',
+                  fontSize: 16,
+                }}>
+                Edit Access Control
+              </Text>
+              <TouchableOpacity onPress={() => setedit(!edit)}>
+                <Image
+                  style={{
+                    width: 15,
+                    height: 15,
+                  }}
+                  source={require('../../../assets/cross.png')}
+                />
+              </TouchableOpacity>
+            </View>
+            <DropDownPicker
+              items={customerItem}
+              open={customerType}
+              setOpen={setcustomerType}
+              value={currentcustomer}
+              setValue={setCurrentcustomer}
+              placeholder="Select Role"
+              placeholderStyle={{color: '#144272'}}
+              textStyle={{color: '#144272'}}
+              arrowIconStyle={{tintColor: '#144272'} as any}
+              style={[
+                styles.dropdown,
+                {
+                  borderColor: '#144272',
+                  width: 265,
+                  alignSelf: 'center',
+                },
+              ]}
+              dropDownContainerStyle={{
+                backgroundColor: 'white',
+                borderColor: '#144272',
+                width: 265,
+                alignSelf: 'center',
+              }}
+              labelStyle={{color: '#144272'}}
+              listItemLabelStyle={{color: '#144272'}}
+            />
 
-    <Text
-      style={{
-        color: '#144272',
-        fontWeight: 'bold',
-        fontSize: 16,
-        marginLeft: 15,
-        marginBottom: 10,
-        marginTop: 10,
-      }}>
-      Select Module
-    </Text>
+            <Text
+              style={{
+                color: '#144272',
+                fontWeight: 'bold',
+                fontSize: 16,
+                marginLeft: 15,
+                marginBottom: 10,
+                marginTop: 10,
+              }}>
+              Select Module
+            </Text>
 
-    <ScrollView style={{maxHeight: 250, marginHorizontal: 10}}>
-      {modules.map(module => (
-        <TouchableOpacity
-          key={module}
-          style={{
-            flexDirection: 'row',
-            alignItems: 'center',
-            marginBottom: 10,
-          }}
-          onPress={() => setSelectedModule(module)}>
-          <RadioButton
-            value={module}
-            status={selectedModule === module ? 'checked' : 'unchecked'}
-            color="#144272"
-            uncheckedColor="#144272"
-            onPress={() => setSelectedModule(module)}
-          />
-          <Text style={{fontSize: 16, color: '#144272'}}>{module}</Text>
-        </TouchableOpacity>
-      ))}
-    </ScrollView>
+            <ScrollView style={{maxHeight: 250, marginHorizontal: 10}}>
+              {modules.map(module => (
+                <TouchableOpacity
+                  key={module}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    marginBottom: 10,
+                  }}
+                  onPress={() => setSelectedModule(module)}>
+                  <RadioButton
+                    value={module}
+                    status={selectedModule === module ? 'checked' : 'unchecked'}
+                    color="#144272"
+                    uncheckedColor="#144272"
+                    onPress={() => setSelectedModule(module)}
+                  />
+                  <Text style={{fontSize: 16, color: '#144272'}}>{module}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
-    <TouchableOpacity onPress={togglebtn}>
-      <View
-        style={{
-          backgroundColor: '#144272',
-          height: 30,
-          width: 80,
-          margin: 10,
-          borderRadius: 10,
-          justifyContent: 'center',
-          alignSelf: 'center',
-        }}>
-        <Text
-          style={{
-            color: 'white',
-            textAlign: 'center',
-          }}>
-          Update
-        </Text>
-      </View>
-    </TouchableOpacity>
-  </ScrollView>
-</Modal>
-
+            <TouchableOpacity onPress={togglebtn}>
+              <View
+                style={{
+                  backgroundColor: '#144272',
+                  height: 30,
+                  width: 80,
+                  margin: 10,
+                  borderRadius: 10,
+                  justifyContent: 'center',
+                  alignSelf: 'center',
+                }}>
+                <Text
+                  style={{
+                    color: 'white',
+                    textAlign: 'center',
+                  }}>
+                  Update
+                </Text>
+              </View>
+            </TouchableOpacity>
+          </ScrollView>
+        </Modal>
 
         {/*btn customer*/}
         <Modal isVisible={btncustomeraditarea}>
@@ -619,6 +619,7 @@ export default function AccessControl() {
           </View>
         </Modal>
       </ImageBackground>
+      <BottomBar />
     </SafeAreaView>
   );
 }

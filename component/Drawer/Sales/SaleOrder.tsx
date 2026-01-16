@@ -9,19 +9,42 @@ import {
   FlatList,
   Modal,
   Image,
+  StatusBar,
+  BackHandler,
 } from 'react-native';
+import BottomBar from '../../BottomBar';
 import {useDrawer} from '../../DrawerContext';
 import React, {useEffect, useState} from 'react';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import {DateTimePickerEvent} from '@react-native-community/datetimepicker';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
-import backgroundColors from '../../Colors';
-import {BackHandler} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import RNPrint from 'react-native-print';
+
+// THEME
+const THEME = {
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  white: '#FFFFFF',
+  background: '#F8F9FA',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  success: '#10B981',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  shadow: 'rgba(0, 0, 0, 0.1)',
+  primaryDark: '#143D15',
+  rowHover: '#F9FAFB',
+};
 
 interface Customers {
   id: number;
@@ -180,6 +203,20 @@ export default function SaleOrder({navigation}: any) {
       );
 
       const data = res.data;
+
+      if (
+        res.status === 200 &&
+        data.status === 201 &&
+        data.message === 'Product expired'
+      ) {
+        Toast.show({
+          type: 'error',
+          text1: 'Warning',
+          text2: 'Product expired',
+        });
+        return;
+      }
+
       if (res.status === 200 && data.status) {
         Toast.show({
           type: 'success',
@@ -441,95 +478,233 @@ export default function SaleOrder({navigation}: any) {
     return () => backHandler.remove();
   }, []);
 
+  const printReceipt = async () => {
+    if (!invoiceData || !orderDetails.length) return;
+
+    const totalQty = orderDetails.reduce(
+      (sum, item) => sum + parseFloat(item.salordd_partial_qty || '0'),
+      0,
+    );
+    const totalAmount = orderDetails.reduce(
+      (sum, item) => sum + parseFloat(item.salordd_sub_total || '0'),
+      0,
+    );
+
+    const currentDate = new Date();
+    const formattedDate = currentDate.toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+    });
+    const formattedTime = currentDate.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const html = `
+      <html>
+      <head>
+        <style>
+          body { font-family: 'Helvetica', sans-serif; padding: 20px; font-size: 12px; }
+          .top-header { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 10px; }
+          .business-header { text-align: center; margin-bottom: 30px; }
+          .bus-name { font-size: 18px; font-weight: bold; margin-bottom: 5px; text-transform: uppercase; }
+          .bus-address { font-size: 12px; margin-bottom: 3px; }
+          .bus-contact { font-size: 12px; }
+          
+          .info-section { display: flex; justify-content: space-between; margin-bottom: 20px; }
+          .info-left { flex: 1; }
+          .info-right { text-align: right; }
+          .info-row { margin-bottom: 3px; font-size: 12px; font-weight: 600; color: #000; }
+          
+          table { width: 100%; border-collapse: collapse; margin-bottom: 40px; border: 2px solid #000; }
+          th, td { border: 1px solid #000; padding: 5px 8px; text-align: left; font-size: 11px; }
+          th { font-weight: bold; border-bottom: 2px solid #000; }
+          
+          .footer { text-align: center; margin-top: 50px; font-size: 10px; font-weight: bold; }
+          .tech-mentors { text-decoration: underline; margin-top: 2px; }
+          
+          .bottom-bar { display: flex; justify-content: space-between; margin-top: 100px; font-size: 10px; }
+        </style>
+      </head>
+      <body>
+        <div class="top-header">
+          <div>${formattedDate
+            .replace(/ /g, '/')
+            .replace(/-/g, '/')}, ${formattedTime}</div>
+          <div>Point of Sale System</div>
+        </div>
+        
+        <div class="business-header">
+          <div class="bus-name">${invoiceData?.config?.bus_name || ''}</div>
+          <div class="bus-address">${
+            invoiceData?.config?.bus_address || ''
+          }</div>
+          <div class="bus-contact">${
+            invoiceData?.config?.bus_contact1 || ''
+          }</div>
+        </div>
+
+        <div class="info-section">
+          <div class="info-left">
+            <div class="info-row">Receipt#: ${
+              invoiceData?.order?.salordd_invoice_no || ''
+            }</div>
+            <div class="info-row">Customer: ${
+              invoiceData?.order?.cust_name || ''
+            }</div>
+            <div class="info-row">Contact#: ${
+              invoiceData?.order?.cust_contact || ''
+            }</div>
+            <div class="info-row">Address: ${
+              invoiceData?.order?.cust_address || ''
+            }</div>
+          </div>
+          <div class="info-right">
+             <div class="info-row">${formattedDate}</div>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 10%;">sr#</th>
+              <th>Product</th>
+              <th style="width: 10%;">Qty</th>
+              <th style="width: 20%;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${orderDetails
+              .map(
+                (item, index) => `
+              <tr>
+                <td>${index + 1}</td>
+                <td>${item.prod_name}</td>
+                <td>${item.salordd_partial_qty}</td>
+                <td>${parseFloat(item.salordd_sub_total).toFixed(2)}</td>
+              </tr>
+            `,
+              )
+              .join('')}
+            <tr style="font-weight: bold;">
+              <td colspan="2">Total Items</td>
+              <td>${totalQty}</td>
+              <td>${totalAmount.toFixed(2)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="footer">
+          <div>Software Developed with love by</div>
+          <div class="tech-mentors">Technic Mentors</div>
+        </div>
+
+        <div class="bottom-bar">
+          <div>https://pos.technicmentors.com/orderlist</div>
+          <div>1/1</div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    try {
+      await RNPrint.print({html});
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Purchase Return</Text>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
+
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Sale Order</Text>
+            <View style={{width: 24}} />
           </View>
+        </LinearGradient>
 
-          <TouchableOpacity
-            onPress={() => setModalVisible('Cart')}
-            style={[styles.headerBtn]}>
-            <Icon name="add-shopping-cart" size={26} color="#fff" />
-            {addToCartOrders.length > 0 && (
-              <View style={styles.cartBadge}>
-                <Text style={styles.cartBadgeText}>
-                  {addToCartOrders.length}
-                </Text>
-              </View>
-            )}
-          </TouchableOpacity>
+        {/* Floating Search */}
+        <View style={styles.floatingSearchContainer}>
+          <Icon name="magnify" size={22} color={THEME.primary} />
+          <TextInput
+            style={styles.floatingSearchInput}
+            placeholderTextColor={THEME.textLight}
+            placeholder="Search by name or barcode..."
+            value={searchTerm}
+            onChangeText={handleSearch}
+          />
+          {searchTerm.length > 0 && (
+            <TouchableOpacity
+              onPress={() => {
+                setSearchTerm('');
+                setShowResults(false);
+              }}>
+              <Icon name="close-circle" size={18} color={THEME.textLight} />
+            </TouchableOpacity>
+          )}
         </View>
+      </View>
 
-        <ScrollView style={styles.scrollContainer}>
-          {/* Product Search Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Search Product</Text>
+      <ScrollView
+        style={styles.mainContent}
+        contentContainerStyle={{paddingBottom: 100}}
+        showsVerticalScrollIndicator={false}>
+        {/* Product Search Section Removed (Moved to Header) */}
 
-            <View style={styles.searchContainer}>
-              <View style={styles.searchInputWrapper}>
-                <Icon
-                  name="search"
-                  size={20}
-                  color={backgroundColors.dark}
-                  style={styles.searchIcon}
-                />
-                <TextInput
-                  style={styles.searchInput}
-                  placeholderTextColor="rgba(0,0,0,0.7)"
-                  placeholder="Search by name or barcode..."
-                  value={searchTerm}
-                  onChangeText={handleSearch}
-                />
-              </View>
+        {/* Product Info Display */}
+        {/* Product Form Card (Only when product selected) */}
+        {selectedProduct && (
+          <View style={styles.formCard}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+              }}>
+              <Text style={styles.cardTitle}>Selected Product</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedProduct(null);
+                  setProdName('');
+                  setProdStock('');
+                  setProdBarCode('');
+                  setProdPrice('');
+                  setProdQty('');
+                }}>
+                <Icon name="close" size={20} color={THEME.textGray} />
+              </TouchableOpacity>
             </View>
 
-            {/* Product Info Display */}
-            {selectedProduct && (
-              <View style={styles.productInfoContainer}>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Product Name: </Text>
-                  <Text style={styles.infoValue}>{prodName || 'N/A'}</Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Stock: </Text>
-                  <Text style={styles.infoValue}>{prodStock || '0'}</Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Barcode: </Text>
-                  <Text style={styles.infoValue}>{prodBarCode || 'N/A'}</Text>
-                </View>
-              </View>
-            )}
-
-            {/* Form Fields */}
-            <View style={styles.inputGroup}>
-              <TextInput
-                style={styles.input}
-                placeholderTextColor="rgba(0,0,0,0.7)"
-                placeholder="Quantity *"
-                value={prodQty}
-                onChangeText={setProdQty}
-                keyboardType="numeric"
-                maxLength={6}
-              />
+            <Text style={styles.selectedProdName}>{prodName || 'N/A'}</Text>
+            <View style={{flexDirection: 'row', marginBottom: 5, gap: 10}}>
+              <Text style={styles.selectedProdPrice}>Stock: {prodStock}</Text>
+              <Text style={styles.selectedProdPrice}>
+                Barcode: {prodBarCode}
+              </Text>
             </View>
 
             <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Price <Text style={{color: THEME.danger}}>*</Text>
+              </Text>
               <TextInput
                 style={styles.input}
-                placeholderTextColor="rgba(0,0,0,0.7)"
-                placeholder="Unit Price"
+                placeholderTextColor={THEME.textLight}
+                placeholder="0.00"
                 value={prodPrice}
                 onChangeText={setProdPrice}
                 keyboardType="decimal-pad"
@@ -537,552 +712,518 @@ export default function SaleOrder({navigation}: any) {
               />
             </View>
 
-            <TouchableOpacity
-              style={styles.addToCartButton}
-              onPress={saleOrderAddToCart}>
-              <Icon
-                name="add-shopping-cart"
-                size={20}
-                color={backgroundColors.light}
-                style={{marginRight: 8}}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>
+                Quantity <Text style={{color: THEME.danger}}>*</Text>
+              </Text>
+              <TextInput
+                style={styles.input}
+                placeholderTextColor={THEME.textLight}
+                placeholder="0"
+                value={prodQty}
+                onChangeText={setProdQty}
+                keyboardType="numeric"
+                maxLength={6}
               />
-              <Text style={styles.addToCartText}>Add to Cart</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
+            </View>
 
-        {/* Search Results Overlay */}
-        {searchTerm.length > 0 && showResults && searchResults.length > 0 && (
-          <View style={styles.searchResultsOverlay}>
-            <FlatList
-              data={searchResults}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <TouchableOpacity
-                  style={styles.resultItem}
-                  onPress={() => {
-                    setSearchTerm(item.value);
-                    setProdName(item.prod_name);
-                    setSelectedProduct(item);
-                    setProdBarCode(item.value);
-                    setProdStock(item.prod_qty);
-                    setProdQty('');
-                    setProdPrice(item.prod_price);
-                    setShowResults(false);
-                  }}>
-                  <Text style={styles.resultText}>
-                    {item.label.replace(/\n/g, ' ')}
-                  </Text>
-                </TouchableOpacity>
-              )}
-            />
+            <TouchableOpacity
+              style={styles.addToCartBtn}
+              activeOpacity={0.8}
+              onPress={saleOrderAddToCart}>
+              <LinearGradient
+                colors={[THEME.primary, '#1e4620']}
+                start={{x: 0, y: 0}}
+                end={{x: 1, y: 0}}
+                style={styles.gradientBtn}>
+                <Icon
+                  name="cart-plus"
+                  size={22}
+                  color={THEME.white}
+                  style={{marginRight: 8}}
+                />
+                <Text style={styles.btnText}>ADD TO CART</Text>
+              </LinearGradient>
+            </TouchableOpacity>
           </View>
         )}
 
-        {/* Cart Modal */}
-        <Modal
-          visible={modalVisible === 'Cart'}
-          animationType="fade"
-          transparent={false}>
-          <SafeAreaView style={styles.cartModalContainer}>
-            {/* Header */}
-            <View style={styles.cartModalHeader}>
-              <TouchableOpacity
-                onPress={() => setModalVisible('')}
-                style={styles.cartModalCloseBtn}>
-                <Icon name="arrow-back" size={24} color="#144272" />
-              </TouchableOpacity>
-              <Text style={styles.cartModalTitle}>Shopping Cart</Text>
-              <Text style={styles.cartItemCount}>
-                {addToCartOrders.length} items
+        {/* Added Items List (Inline) */}
+        {addToCartOrders.length > 0 ? (
+          <View style={styles.cartPreviewCard}>
+            <View style={styles.cartPreviewHeader}>
+              <Text style={styles.cartPreviewTitle}>
+                Cart Items ({addToCartOrders.length})
               </Text>
             </View>
+            {addToCartOrders.map((item, index) => (
+              <View key={index} style={styles.itemCard}>
+                {/* Top: Name & Delete */}
+                <View style={styles.itemCardHeader}>
+                  <View style={{flex: 1, marginRight: 12}}>
+                    <Text style={styles.itemName} numberOfLines={2}>
+                      {item.prod_name}
+                    </Text>
+                    <View
+                      style={[styles.itemBadge, {backgroundColor: '#f3f4f6'}]}>
+                      <Text
+                        style={[styles.itemBadgeText, {color: THEME.textGray}]}>
+                        Qty: {item.prod_qty}
+                      </Text>
+                    </View>
+                  </View>
+                  <View style={{flexDirection: 'row', gap: 5}}>
+                    <TouchableOpacity
+                      onPress={() => {
+                        getEditOrder(item.prod_id.toString());
+                        setModalVisible('EditOrder');
+                      }}
+                      style={[
+                        styles.itemDeleteBtn,
+                        {backgroundColor: '#e3f2fd'},
+                      ]}>
+                      <Icon name="pencil" size={20} color="#2196F3" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => removeAddToCart(item.prod_id)}
+                      style={styles.itemDeleteBtn}>
+                      <Icon
+                        name="delete-outline"
+                        size={20}
+                        color={THEME.danger}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                </View>
 
-            {/* Empty Cart */}
-            {addToCartOrders.length === 0 ? (
-              <View style={styles.emptyCartContainer}>
-                <Icon name="shopping-cart" size={80} color="#ccc" />
-                <Text style={styles.emptyCartText}>Your cart is empty</Text>
-                <Text style={styles.emptyCartSubtext}>
-                  Add some products to get started
+                {/* Divider */}
+                <View style={styles.itemDivider} />
+
+                {/* Bottom: Totals */}
+                <View style={styles.itemCardFooter}>
+                  <View>
+                    <Text style={styles.itemLabel}>Unit Price</Text>
+                    <Text style={styles.itemValue}>{item.prod_unit_price}</Text>
+                  </View>
+
+                  <View style={styles.totalContainer}>
+                    <Text style={[styles.itemLabel, {textAlign: 'right'}]}>
+                      Subtotal
+                    </Text>
+                    <Text style={styles.itemTotalValue}>
+                      {(
+                        parseFloat(item.prod_qty) *
+                        parseFloat(item.prod_retail_price)
+                      ).toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+            <View style={[styles.summaryRow, {padding: 12}]}>
+              <Text style={styles.summaryLabel}>Total Payable:</Text>
+              <Text style={styles.summaryValue}>{orderTotal.toFixed(2)}</Text>
+            </View>
+          </View>
+        ) : (
+          !selectedProduct && (
+            <View style={styles.emptyState}>
+              <Icon name="cart-outline" size={48} color={THEME.textLight} />
+              <Text style={styles.emptyText}>
+                Search product to add to cart
+              </Text>
+            </View>
+          )
+        )}
+
+        <View style={{height: 100}} />
+      </ScrollView>
+
+      {/* --- SEARCH RESULTS OVERLAY --- */}
+      {searchTerm.length > 0 && showResults && searchResults.length > 0 && (
+        <View style={styles.searchResultsOverlay}>
+          <FlatList
+            data={searchResults}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({item}) => (
+              <TouchableOpacity
+                style={styles.resultItem}
+                onPress={() => {
+                  setSearchTerm(item.value);
+                  setProdName(item.prod_name);
+                  setSelectedProduct(item);
+                  setProdBarCode(item.value);
+                  setProdStock(item.prod_qty);
+                  setProdQty('');
+                  setProdPrice(item.prod_price);
+                  setShowResults(false);
+                }}>
+                <Text style={styles.resultText}>
+                  {item.label.replace(/\n/g, ' ')}
+                </Text>
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      )}
+
+      {/* --- PROCEED BUTTON --- */}
+      {addToCartOrders.length > 0 && (
+        <TouchableOpacity
+          style={styles.floatingBillingBtn}
+          onPress={() => setModalVisible('Checkout')}>
+          <LinearGradient
+            colors={[THEME.gradientStart, THEME.gradientEnd]}
+            style={styles.floatingBtnGradient}
+            start={{x: 0, y: 0}}
+            end={{x: 1, y: 0}}>
+            <View style={styles.floatingBtnContent}>
+              <Icon name="arrow-right-circle" size={24} color={THEME.white} />
+              <View style={styles.floatingBtnTextContainer}>
+                <Text style={styles.floatingBtnTitle}>Proceed to Checkout</Text>
+                <Text style={styles.floatingBtnSubtitle}>
+                  Total: {orderTotal.toFixed(2)}
                 </Text>
               </View>
-            ) : (
-              <>
-                {/* List */}
-                <FlatList
-                  data={addToCartOrders}
-                  keyExtractor={item => item.prod_id.toString()}
-                  style={styles.cartList}
-                  contentContainerStyle={styles.cartListContent}
-                  renderItem={({item}) => (
-                    <View style={styles.cartItemContainer}>
-                      <View style={styles.cartItemHeader}>
-                        <Text style={styles.cartProductName} numberOfLines={2}>
-                          {item.prod_name}
-                        </Text>
-                        <Text style={styles.quantityValue}>
-                          {item.prod_qty}
-                        </Text>
-                      </View>
-
-                      <View style={styles.cartItemDetails}>
-                        <Text style={styles.detailText}>
-                          Unit Price: {item.prod_unit_price}
-                        </Text>
-                        <Text style={styles.detailTextPrice}>
-                          {(
-                            parseFloat(item.prod_qty) *
-                            parseFloat(item.prod_retail_price)
-                          ).toFixed(2)}
-                        </Text>
-                      </View>
-
-                      <View style={styles.cartItemActions}>
-                        <TouchableOpacity
-                          onPress={() => {
-                            getEditOrder(item.prod_id.toString());
-                            setModalVisible('EditOrder');
-                          }}
-                          style={styles.editBtn}>
-                          <Icon name="edit" size={18} color="#2196F3" />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          onPress={() => removeAddToCart(item.prod_id)}
-                          style={styles.deleteBtn}>
-                          <Icon name="delete" size={18} color="#FF5252" />
-                        </TouchableOpacity>
-                      </View>
-                    </View>
-                  )}
-                />
-
-                {/* Summary Footer */}
-                <View style={styles.cartSummaryContainer}>
-                  <View style={styles.cartTotalRow}>
-                    <Text style={styles.cartTotalLabel}>Total Amount:</Text>
-                    <Text style={styles.cartTotalValue}>
-                      {orderTotal.toFixed(2)}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.proceedBtn}
-                    onPress={() => {
-                      setModalVisible('Checkout');
-                    }}>
-                    <Text style={styles.proceedBtnText}>
-                      Proceed to Checkout
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-          </SafeAreaView>
-        </Modal>
-
-        {/* Invoice Modal */}
-        <Modal
-          visible={modalVisible === 'ordComplete'}
-          animationType="slide"
-          transparent
-          presentationStyle="overFullScreen">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              {/* Modal Handle */}
-              <View style={styles.modalHandle} />
-
-              {/* Header */}
-              <View style={styles.modalHeader}>
-                <View style={styles.headerLeft}>
-                  <View style={styles.invoiceIconContainer}>
-                    <Icon name="receipt" size={24} color="#144272" />
-                  </View>
-                  <View>
-                    <Text style={styles.modalTitle}>Sale Invoice</Text>
-                    <Text style={styles.modalSubtitle}>Invoice Details</Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setInvoiceData(null);
-                    setOrderDetails([]);
-                  }}
-                  style={styles.closeButton}>
-                  <Icon name="close" size={24} color="#666" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView
-                style={styles.modalContent}
-                showsVerticalScrollIndicator={false}>
-                {/* Company Info Card */}
-                <View style={styles.companyCard}>
-                  <View style={styles.companyHeader}>
-                    <Text style={styles.companyName}>
-                      {invoiceData?.config?.bus_name || 'N/A'}
-                    </Text>
-                  </View>
-                  <Text style={styles.companyAddress}>
-                    {invoiceData?.config?.bus_address || 'N/A'}
-                  </Text>
-                  <Text style={styles.companyContact}>
-                    {invoiceData?.config?.bus_contact1 || 'Contact: N/A'}
-                  </Text>
-                </View>
-
-                {/* Order Info Grid */}
-                <View style={styles.orderInfoGrid}>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Invoice #</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.order?.salordd_invoice_no ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Invoice Date</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.order?.created_at
-                        ? new Date(invoiceData.order.created_at)
-                            .toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                            .replace(/ /g, '-')
-                        : 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Customer</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.order?.cust_name ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Contact:</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.order?.cust_contact ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Address</Text>
-                    <Text style={styles.infoValue}>
-                      {invoiceData?.order?.cust_address ?? 'N/A'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Order Table Section */}
-                <View style={styles.tableSection}>
-                  <Text style={styles.sectionTitle}>Invoice Items</Text>
-
-                  {/* Table Container */}
-                  <View style={styles.tableContainer}>
-                    {/* Table Header */}
-                    <View style={styles.tableHeader}>
-                      <Text style={[styles.tableHeaderText, styles.col1]}>
-                        Sr.#
-                      </Text>
-                      <Text style={[styles.tableHeaderText, styles.col2]}>
-                        Product
-                      </Text>
-                      <Text style={[styles.tableHeaderText, styles.col3]}>
-                        QTY
-                      </Text>
-                      <Text style={[styles.tableHeaderText, styles.col4]}>
-                        Price
-                      </Text>
-                    </View>
-
-                    {/* Table Rows */}
-                    <FlatList
-                      data={orderDetails}
-                      keyExtractor={(item, index) =>
-                        item?.id ? item.id.toString() : index.toString()
-                      }
-                      renderItem={({item, index}) => (
-                        <View style={[styles.tableRow]}>
-                          <Text
-                            style={[styles.tableCell, styles.col1]}
-                            numberOfLines={2}>
-                            {index + 1}
-                          </Text>
-                          <Text style={[styles.tableCell, styles.col2]}>
-                            {item.prod_name}
-                          </Text>
-                          <Text style={[styles.tableCell, styles.col3]}>
-                            {item.salordd_partial_qty}
-                          </Text>
-                          <Text style={[styles.tableCell, styles.col4]}>
-                            {Number(item.salordd_sub_total).toLocaleString()}
-                          </Text>
-                        </View>
-                      )}
-                      scrollEnabled={false}
-                      ListFooterComponent={
-                        <View
-                          style={{
-                            borderTopWidth: 1.5,
-                            borderTopColor: backgroundColors.dark,
-                            flexDirection: 'row',
-                            paddingVertical: 2.5,
-                          }}>
-                          <Text
-                            style={[
-                              styles.tableHeaderText,
-                              {flex: 0.4, textAlign: 'left'},
-                            ]}>
-                            Totals
-                          </Text>
-                          <Text style={[styles.tableCell, {flex: 0.2}]}>
-                            {orderDetails.reduce(
-                              (sum, item) =>
-                                sum +
-                                parseFloat(item.salordd_partial_qty || '0'),
-                              0,
-                            )}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.tableCell,
-                              {flex: 0.4, textAlign: 'center'},
-                            ]}>
-                            {orderDetails
-                              .reduce(
-                                (sum, item) =>
-                                  sum +
-                                  parseFloat(item.salordd_sub_total || '0'),
-                                0,
-                              )
-                              .toFixed(2)}
-                          </Text>
-                        </View>
-                      }
-                    />
-                  </View>
-                </View>
-
-                {/* Footer */}
-                <View style={styles.modalFooter}>
-                  <Text style={styles.thankYou}>Thank you for your visit</Text>
-                  <View style={styles.developerInfo}>
-                    <Text style={styles.developerText}>
-                      Software Developed with ❤️ by
-                    </Text>
-                    <Text style={styles.companyContact}>
-                      Technic Mentors | +923111122144
-                    </Text>
-                  </View>
-                </View>
-              </ScrollView>
+              <Icon name="chevron-right" size={24} color={THEME.white} />
             </View>
-          </View>
-        </Modal>
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
 
-        {/* Edit Modal */}
-        <Modal
-          visible={modalVisible === 'EditOrder'}
-          transparent={true}
-          animationType="fade">
-          <View style={styles.overlay}>
-            <View style={styles.editModalView}>
-              <View style={styles.editHeader}>
-                <Text style={styles.editHeaderText}>Update Order</Text>
-                <TouchableOpacity onPress={() => setModalVisible('')}>
-                  <Icon name="close" size={24} color="#666" />
-                </TouchableOpacity>
+      {/* Invoice Modal */}
+      <Modal
+        visible={modalVisible === 'ordComplete'}
+        animationType="slide"
+        transparent
+        presentationStyle="overFullScreen">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHandle} />
+
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderLeft}>
+                <View style={styles.modalIconContainer}>
+                  <Icon name="receipt" size={24} color={THEME.primary} />
+                </View>
+                <View>
+                  <Text style={styles.modalTitle}>Sale Invoice</Text>
+                  <Text style={styles.modalSubtitle}>Transaction Details</Text>
+                </View>
               </View>
-
-              <Text style={styles.editLabel}>Item name</Text>
-              <TextInput
-                style={[styles.editInput, styles.disabledInput]}
-                value={editForm.editProdName}
-                editable={false}
-              />
-
-              <Text style={styles.editLabel}>
-                Quantity <Text style={styles.required}>*</Text>
-              </Text>
-              <TextInput
-                style={styles.editInput}
-                keyboardType="numeric"
-                value={editForm.editProdQty}
-                onChangeText={t => editOnChange('editProdQty', t)}
-                maxLength={6}
-              />
-
-              <Text style={styles.editLabel}>Unit Price</Text>
-              <TextInput
-                style={styles.editInput}
-                keyboardType="numeric"
-                value={editForm.editProdPrice}
-                onChangeText={t => editOnChange('editProdPrice', t)}
-                maxLength={9}
-              />
-
               <TouchableOpacity
-                style={styles.updateButton}
-                onPress={updateOrder}>
-                <Text style={styles.updateButtonText}>Update Cart</Text>
+                onPress={() => {
+                  setModalVisible('');
+                  setInvoiceData(null);
+                  setOrderDetails([]);
+                }}
+                style={styles.closeButton}>
+                <Icon name="close" size={20} color={THEME.textGray} />
               </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Checkout Modal */}
-        <Modal
-          visible={modalVisible === 'Checkout'}
-          animationType="fade"
-          transparent={false}>
-          <SafeAreaView style={styles.container}>
-            <View style={styles.checkoutModalHeader}>
-              <TouchableOpacity
-                onPress={() => setModalVisible('Cart')}
-                style={styles.headerBtn}>
-                <Icon
-                  name="arrow-back"
-                  size={24}
-                  color={backgroundColors.dark}
-                />
-              </TouchableOpacity>
-              <Text style={styles.checkoutModalTitle}>Checkout</Text>
             </View>
 
             <ScrollView
-              style={styles.checkoutScrollView}
-              contentContainerStyle={{paddingBottom: 100}}>
-              {/* Return Date */}
-              <View style={styles.checkoutSection}>
-                <Text style={styles.checkoutSectionTitle}>Order Date</Text>
-                <TouchableOpacity
-                  onPress={() => setShoworderDatePicker(true)}
-                  style={styles.dateInput}>
-                  <Icon name="event" size={20} color={backgroundColors.dark} />
-                  <Text style={styles.dateText}>
-                    {orderDate.toLocaleDateString()}
+              style={styles.modalContent}
+              showsVerticalScrollIndicator={false}>
+              {/* Company Info */}
+              <View style={styles.invoiceSection}>
+                <Text style={styles.companyName}>
+                  {invoiceData?.config?.bus_name || 'N/A'}
+                </Text>
+                <Text style={styles.companyDetails}>
+                  {invoiceData?.config?.bus_address || 'N/A'}
+                </Text>
+                <Text style={styles.companyDetails}>
+                  {invoiceData?.config?.bus_contact1 || 'Contact: N/A'}
+                </Text>
+              </View>
+
+              {/* Details Grid */}
+              <View style={styles.detailsGrid}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Invoice #</Text>
+                  <Text style={styles.detailValue}>
+                    {invoiceData?.order?.salordd_invoice_no || 'N/A'}
                   </Text>
-                  <Icon
-                    name="keyboard-arrow-down"
-                    size={20}
-                    color={backgroundColors.dark}
-                  />
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Date</Text>
+                  <Text style={styles.detailValue}>
+                    {new Date().toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Customer</Text>
+                  <Text style={styles.detailValue}>
+                    {invoiceData?.order?.cust_name || 'N/A'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Items Table */}
+              <View style={styles.itemsTableContainer}>
+                <Text style={styles.sectionHeader}>Items</Text>
+                <View style={styles.itemsHeader}>
+                  <Text style={[styles.itemsHeaderText, {flex: 2}]}>
+                    Product
+                  </Text>
+                  <Text
+                    style={[
+                      styles.itemsHeaderText,
+                      {flex: 1, textAlign: 'center'},
+                    ]}>
+                    Qty
+                  </Text>
+                  <Text
+                    style={[
+                      styles.itemsHeaderText,
+                      {flex: 1, textAlign: 'right'},
+                    ]}>
+                    Total
+                  </Text>
+                </View>
+
+                {orderDetails.map((item, index) => (
+                  <View key={index} style={styles.itemRow}>
+                    <Text
+                      style={[styles.itemText, {flex: 2}]}
+                      numberOfLines={2}>
+                      {item.prod_name}
+                    </Text>
+                    <Text
+                      style={[styles.itemText, {flex: 1, textAlign: 'center'}]}>
+                      {item.salordd_partial_qty}
+                    </Text>
+                    <Text
+                      style={[styles.itemText, {flex: 1, textAlign: 'right'}]}>
+                      {parseFloat(item.salordd_sub_total).toLocaleString()}
+                    </Text>
+                  </View>
+                ))}
+
+                <View style={styles.itemsFooter}>
+                  <Text style={styles.itemsFooterLabel}>Total Amount</Text>
+                  <Text style={styles.itemsFooterValue}>
+                    {orderDetails
+                      .reduce(
+                        (sum, item) =>
+                          sum + parseFloat(item.salordd_sub_total || '0'),
+                        0,
+                      )
+                      .toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  onPress={printReceipt}
+                  style={styles.printButton}>
+                  <Icon name="printer" size={16} color={THEME.white} />
+                  <Text style={styles.printButtonText}>Print Receipt</Text>
                 </TouchableOpacity>
 
-                {showorderDatePicker && (
-                  <DateTimePicker
-                    testID="orderDatePicker"
-                    value={orderDate}
-                    mode="date"
-                    is24Hour={true}
-                    display="default"
-                    onChange={onorderDateChange}
-                  />
-                )}
-              </View>
-              <View style={styles.checkoutSection}>
-                <Text style={styles.checkoutSectionTitle}>Customer *</Text>
-                <View>
-                  <Icon
-                    name="person"
-                    size={28}
-                    color={backgroundColors.dark}
-                    style={styles.personIcon}
-                  />
-                  <DropDownPicker
-                    items={transformedCust}
-                    open={Open}
-                    setOpen={setOpen}
-                    value={currentVal}
-                    setValue={setCurrentVal}
-                    placeholder="Select Supplier"
-                    placeholderStyle={{
-                      color: 'rgba(0,0,0,0.7)',
-                      marginLeft: 30,
-                      fontSize: 16,
-                    }}
-                    textStyle={{color: 'white'}}
-                    ArrowUpIconComponent={() => (
-                      <Icon
-                        name="keyboard-arrow-up"
-                        size={18}
-                        color={backgroundColors.dark}
-                      />
-                    )}
-                    ArrowDownIconComponent={() => (
-                      <Icon
-                        name="keyboard-arrow-down"
-                        size={18}
-                        color={backgroundColors.dark}
-                      />
-                    )}
-                    style={styles.dropdown}
-                    dropDownContainerStyle={styles.dropdownContainer}
-                    labelStyle={{
-                      color: backgroundColors.dark,
-                      marginLeft: 30,
-                      fontSize: 16,
-                    }}
-                    listItemLabelStyle={{color: '#144272'}}
-                    listMode="MODAL"
-                    searchable
-                    searchTextInputStyle={{
-                      borderWidth: 0,
-                      width: '100%',
-                    }}
-                    searchContainerStyle={{
-                      borderColor: backgroundColors.gray,
-                    }}
-                  />
-                </View>
-              </View>
-
-              {/* Supplier Details */}
-              {currentVal && (
-                <View style={styles.checkoutSection}>
-                  <View style={styles.checkoutCard}>
-                    <Image
-                      source={require('../../../assets/man.png')}
-                      style={styles.avatar}
-                    />
-                    <View style={{flex: 1}}>
-                      <Text style={styles.supplierName}>
-                        {transformedCust.find(c => c.value === currentVal)
-                          ?.label || 'N/A'}
-                      </Text>
-                      <Text style={styles.supplierPhone}>
-                        {custData.find(c => c.id.toString() === currentVal)
-                          ?.cust_contact || 'N/A'}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              <View style={styles.checkoutSection}>
-                <Text style={styles.checkoutSectionTitle}>Total Amount</Text>
-                <View style={styles.amountContainer}>
-                  <Text style={styles.amountValue}>
-                    {orderTotal.toFixed(2)}
-                  </Text>
-                </View>
+                <Text style={styles.footerText}>
+                  Thank you for your business
+                </Text>
+                <Text style={styles.developerText}>
+                  Powered by Technic Mentors
+                </Text>
               </View>
             </ScrollView>
+          </View>
+        </View>
+      </Modal>
 
-            <View style={styles.checkoutFooter}>
-              <TouchableOpacity
-                style={styles.completePurchaseBtn}
-                onPress={completeOrder}>
-                <Text style={styles.completePurchaseBtnText}>
-                  Order Complete
-                </Text>
+      {/* Edit Modal */}
+      <Modal
+        visible={modalVisible === 'EditOrder'}
+        transparent={true}
+        animationType="fade">
+        <View style={styles.overlay}>
+          <View style={styles.editModalView}>
+            <View style={styles.editHeader}>
+              <Text style={styles.editHeaderText}>Update Order</Text>
+              <TouchableOpacity onPress={() => setModalVisible('')}>
+                <Icon name="close" size={24} color="#666" />
               </TouchableOpacity>
             </View>
-          </SafeAreaView>
-        </Modal>
 
-        <Toast />
-      </View>
+            <Text style={styles.editLabel}>Item name</Text>
+            <TextInput
+              style={[styles.editInput, styles.disabledInput]}
+              value={editForm.editProdName}
+              editable={false}
+            />
+
+            <Text style={styles.editLabel}>
+              Quantity <Text style={styles.required}>*</Text>
+            </Text>
+            <TextInput
+              style={styles.editInput}
+              keyboardType="numeric"
+              value={editForm.editProdQty}
+              onChangeText={t => editOnChange('editProdQty', t)}
+              maxLength={6}
+            />
+
+            <Text style={styles.editLabel}>Unit Price</Text>
+            <TextInput
+              style={styles.editInput}
+              keyboardType="numeric"
+              value={editForm.editProdPrice}
+              onChangeText={t => editOnChange('editProdPrice', t)}
+              maxLength={9}
+            />
+
+            <TouchableOpacity style={styles.updateButton} onPress={updateOrder}>
+              <Text style={styles.updateButtonText}>Update Cart</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Checkout Modal */}
+      <Modal
+        visible={modalVisible === 'Checkout'}
+        animationType="fade"
+        transparent={false}>
+        <SafeAreaView style={styles.container}>
+          <View style={styles.checkoutModalHeader}>
+            <TouchableOpacity
+              onPress={() => setModalVisible('Cart')}
+              style={styles.headerBtn}>
+              <Icon name="arrow-left" size={24} color={THEME.textDark} />
+            </TouchableOpacity>
+            <Text style={styles.checkoutModalTitle}>Checkout</Text>
+          </View>
+
+          <ScrollView
+            style={styles.checkoutScrollView}
+            contentContainerStyle={{paddingBottom: 100}}>
+            {/* Return Date */}
+            <View style={styles.checkoutSection}>
+              <Text style={styles.checkoutSectionTitle}>Order Date</Text>
+              <TouchableOpacity
+                onPress={() => setShoworderDatePicker(true)}
+                style={styles.dateInput}>
+                <Icon name="calendar" size={20} color={THEME.textDark} />
+                <Text style={styles.dateText}>
+                  {orderDate.toLocaleDateString()}
+                </Text>
+                <Icon name="chevron-down" size={20} color={THEME.textDark} />
+              </TouchableOpacity>
+
+              {showorderDatePicker && (
+                <DateTimePicker
+                  testID="orderDatePicker"
+                  value={orderDate}
+                  mode="date"
+                  is24Hour={true}
+                  display="default"
+                  onChange={onorderDateChange}
+                />
+              )}
+            </View>
+            <View style={styles.checkoutSection}>
+              <Text style={styles.checkoutSectionTitle}>Customer *</Text>
+              <View>
+                <Icon
+                  name="account"
+                  size={20}
+                  color={THEME.textGray}
+                  style={styles.personIcon}
+                />
+                <DropDownPicker
+                  items={transformedCust}
+                  open={Open}
+                  setOpen={setOpen}
+                  value={currentVal}
+                  setValue={setCurrentVal}
+                  placeholder="Select Supplier"
+                  placeholderStyle={{
+                    color: 'rgba(0,0,0,0.7)',
+                    marginLeft: 30,
+                    fontSize: 16,
+                  }}
+                  textStyle={{color: 'white'}}
+                  ArrowUpIconComponent={() => (
+                    <Icon name="chevron-up" size={18} color={THEME.textDark} />
+                  )}
+                  ArrowDownIconComponent={() => (
+                    <Icon
+                      name="chevron-down"
+                      size={18}
+                      color={THEME.textDark}
+                    />
+                  )}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  labelStyle={{
+                    color: THEME.textDark,
+                    marginLeft: 30,
+                    fontSize: 16,
+                  }}
+                  listItemLabelStyle={{color: '#144272'}}
+                  listMode="SCROLLVIEW"
+                  searchable
+                  searchTextInputStyle={{
+                    borderWidth: 0,
+                    width: '100%',
+                  }}
+                  searchContainerStyle={{
+                    borderColor: THEME.border,
+                  }}
+                />
+              </View>
+            </View>
+
+            {/* Supplier Details */}
+            {currentVal && (
+              <View style={styles.checkoutSection}>
+                <View style={styles.checkoutCard}>
+                  <Image
+                    source={require('../../../assets/man.png')}
+                    style={styles.avatar}
+                  />
+                  <View style={{flex: 1}}>
+                    <Text style={styles.supplierName}>
+                      {transformedCust.find(c => c.value === currentVal)
+                        ?.label || 'N/A'}
+                    </Text>
+                    <Text style={styles.supplierPhone}>
+                      {custData.find(c => c.id.toString() === currentVal)
+                        ?.cust_contact || 'N/A'}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            <View style={styles.checkoutSection}>
+              <Text style={styles.checkoutSectionTitle}>Total Amount</Text>
+              <View style={styles.amountContainer}>
+                <Text style={styles.amountValue}>{orderTotal.toFixed(2)}</Text>
+              </View>
+            </View>
+          </ScrollView>
+
+          <View style={styles.checkoutFooter}>
+            <TouchableOpacity
+              style={styles.completePurchaseBtn}
+              onPress={completeOrder}>
+              <Text style={styles.completePurchaseBtnText}>Order Complete</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </Modal>
+
+      <Toast />
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -1090,370 +1231,550 @@ export default function SaleOrder({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  headerWrapper: {
+    marginBottom: 20,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+    justifyContent: 'space-between',
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
+  iconBtn: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
-  },
-
-  scrollContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  section: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    marginVertical: 8,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  searchContainer: {
-    marginBottom: 10,
-    position: 'relative',
-  },
-  searchInputWrapper: {
+  floatingSearchContainer: {
+    position: 'absolute',
+    bottom: -25,
+    left: 20,
+    right: 20,
+    backgroundColor: THEME.white,
+    borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-    height: 48,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: backgroundColors.dark,
-    fontSize: 16,
-    paddingVertical: 12,
-  },
-  productInfoContainer: {
-    marginVertical: 10,
-    backgroundColor: 'rgba(0,0,0,0.1)',
     paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 8,
-  },
-  inputGroup: {
-    width: '100%',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.05)',
+    height: 50,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-    height: 48,
-    marginBottom: 10,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  floatingSearchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    color: THEME.textDark,
+  },
+  mainContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20,
+  },
+  // Card Styles
+  formCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: THEME.shadow,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  selectedProdName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: THEME.primary,
+    marginBottom: 5,
+  },
+  selectedProdPrice: {
+    fontSize: 13,
+    color: THEME.textGray,
+    marginBottom: 15,
+  },
+  // Input Styles
+  inputGroup: {
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textDark,
+    marginBottom: 6,
   },
   input: {
-    flex: 1,
-    color: backgroundColors.dark,
-    fontSize: 16,
+    backgroundColor: THEME.background,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 48,
+    color: THEME.textDark,
+    fontSize: 14,
   },
-  addToCartButton: {
+  // Button Styles
+  addToCartBtn: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  gradientBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
+    paddingVertical: 14,
   },
-  addToCartText: {
-    color: backgroundColors.light,
+  btnText: {
+    color: THEME.white,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  // Cart List Styles
+  cartPreviewCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    marginBottom: 16,
+  },
+  cartPreviewHeader: {
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.border,
+  },
+  cartPreviewTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  itemCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 10,
+    elevation: 3,
+    shadowColor: THEME.shadow,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  itemCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  itemName: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 6,
+    lineHeight: 22,
   },
-  dateInput: {
+  itemBadge: {
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  itemBadgeText: {
+    fontSize: 12,
+    color: THEME.primary,
+    fontWeight: '600',
+  },
+  itemDeleteBtn: {
+    padding: 10,
+    backgroundColor: '#FFF1F2',
+    borderRadius: 10,
+  },
+  itemDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 12,
+  },
+  itemCardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
+    justifyContent: 'space-between',
   },
-  dateText: {
-    flex: 1,
-    color: backgroundColors.dark,
+  itemLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  itemValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: THEME.textDark,
+  },
+  totalContainer: {
+    minWidth: 80,
+    alignItems: 'flex-end',
+  },
+  itemTotalValue: {
     fontSize: 16,
-    marginLeft: 8,
+    fontWeight: '800',
+    color: THEME.primary,
   },
-  dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: THEME.border,
+    marginTop: 10,
+    paddingTop: 10,
+  },
+  summaryLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    color: THEME.textGray,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  // Floating Button
+  floatingBillingBtn: {
+    position: 'absolute',
+    bottom: 90,
+    left: 20,
+    right: 20,
+    elevation: 5,
+    shadowColor: THEME.primary,
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-    marginBottom: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
-  dropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
+  floatingBtnGradient: {
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
   },
-
-  // Search Results Overlay
+  floatingBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  floatingBtnTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  floatingBtnTitle: {
+    color: THEME.white,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  floatingBtnSubtitle: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
+  },
+  // Search Overlay
   searchResultsOverlay: {
     position: 'absolute',
-    top: 190,
+    top: 130, // Adjusted based on header height
     left: 20,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    zIndex: 1000,
-    elevation: 10,
-    maxHeight: 200,
+    right: 20,
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    elevation: 8,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    width: '90%',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    maxHeight: 250,
+    zIndex: 9999,
   },
   resultItem: {
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
+    borderBottomColor: THEME.border,
   },
   resultText: {
-    color: backgroundColors.dark,
     fontSize: 14,
-    fontWeight: '600',
+    color: THEME.textDark,
   },
+  // Checkout Modal & Others (Keeping existing but updated if needed)
 
-  // Floating Cart
-  cartBadge: {
-    position: 'absolute',
-    top: -5,
-    right: -5,
-    backgroundColor: '#FF5252',
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
-  },
-  cartBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
-
-  // Cart Modal
-  cartModalContainer: {
-    flex: 1,
-    backgroundColor: backgroundColors.gray,
-  },
-  cartModalHeader: {
+  dateInput: {
     flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.white,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    height: 48,
+  },
+  dateText: {
+    flex: 1,
+    color: THEME.textDark,
+    fontSize: 16,
+    marginLeft: 8,
+  },
+
+  // Invoice Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: '#F9FAFB',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '90%',
+    width: '100%',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -2},
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 15,
-    backgroundColor: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#F3F4F6',
+    backgroundColor: THEME.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
   },
-  cartModalCloseBtn: {
-    padding: 5,
-  },
-  cartModalTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    textAlign: 'center',
-  },
-  cartItemCount: {
-    fontSize: 14,
-    color: '#666',
-  },
-  cartList: {
-    flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  cartListContent: {},
-  cartItemContainer: {
-    backgroundColor: '#fff',
-    marginHorizontal: 0,
-    marginVertical: 6,
-    borderRadius: 10,
-    padding: 15,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  cartItemHeader: {
+  modalHeaderLeft: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
   },
-  cartProductName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
-    flex: 1,
-    marginRight: 10,
-  },
-  quantityValue: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#144272',
-    backgroundColor: '#f0f8ff',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 15,
-    minWidth: 50,
-    textAlign: 'center',
-  },
-  cartItemDetails: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  detailText: {
-    fontSize: 14,
-    color: '#666',
-  },
-  detailTextPrice: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  cartItemActions: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    gap: 15,
-  },
-  editBtn: {
-    padding: 8,
-    backgroundColor: '#e3f2fd',
+  modalIconContainer: {
+    width: 40,
+    height: 40,
     borderRadius: 20,
-  },
-  deleteBtn: {
-    padding: 8,
-    backgroundColor: '#ffebee',
-    borderRadius: 20,
-  },
-  emptyCartContainer: {
-    flex: 1,
-    alignItems: 'center',
+    backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  emptyCartText: {
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: THEME.textGray,
+  },
+  closeButton: {
+    padding: 8,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
+  },
+  modalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  invoiceSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+    backgroundColor: THEME.white,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  companyName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: '800',
+    color: THEME.textDark,
+    marginBottom: 6,
+    textAlign: 'center',
+  },
+  companyDetails: {
+    fontSize: 13,
+    color: THEME.textGray,
+    marginBottom: 2,
+    textAlign: 'center',
+    lineHeight: 18,
+  },
+  detailsGrid: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    gap: 12,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+  },
+  detailLabel: {
+    fontSize: 13,
+    color: THEME.textGray,
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: 13,
+    color: THEME.textDark,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+  },
+  itemsTableContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 24,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+    overflow: 'hidden',
+  },
+  sectionHeader: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.textGray,
+    padding: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  itemsHeader: {
+    flexDirection: 'row',
+    backgroundColor: '#F9FAFB',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  itemsHeaderText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textGray,
+  },
+  itemRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+  },
+  itemText: {
+    fontSize: 13,
+    color: THEME.textDark,
+  },
+  itemsFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: '#F9FAFB',
+  },
+  itemsFooterLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  itemsFooterValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  modalFooter: {
+    alignItems: 'center',
+    paddingTop: 20,
+    paddingBottom: 40,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
     marginTop: 10,
   },
-  emptyCartSubtext: {
-    fontSize: 14,
-    color: '#777',
-    marginTop: 4,
-  },
-  cartSummaryContainer: {
-    padding: 20,
-    backgroundColor: backgroundColors.light,
-    borderTopWidth: 1,
-    borderTopRightRadius: 15,
-    borderTopLeftRadius: 15,
-    borderTopColor: '#e0e0e0',
-  },
-  cartTotalRow: {
+  printButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  cartTotalLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#144272',
-  },
-  cartTotalValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  proceedBtn: {
-    backgroundColor: backgroundColors.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
     alignItems: 'center',
+    backgroundColor: THEME.primary,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 25,
+    marginBottom: 16,
+    gap: 8,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  proceedBtnText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+  printButtonText: {
+    color: THEME.white,
+    fontSize: 13,
+    fontWeight: '600',
+    letterSpacing: 0.5,
   },
-
+  footerText: {
+    fontSize: 12,
+    color: THEME.textDark,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  developerText: {
+    fontSize: 11,
+    color: THEME.textGray,
+  },
   // Edit Modal
   overlay: {
     flex: 1,
@@ -1526,216 +1847,36 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-
-  // Modal Styling
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    backgroundColor: '#FAFBFC',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: '80%',
-    paddingBottom: 20,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#DDD',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  invoiceIconContainer: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#2a652b24',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 2,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 20,
-    backgroundColor: backgroundColors.gray,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Company Card
-  companyCard: {
-    marginHorizontal: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
+  headerBtn: {
+    paddingHorizontal: 8,
     paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: backgroundColors.dark,
-    borderStyle: 'dotted',
   },
-  companyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  personIcon: {
+    position: 'absolute',
+    zIndex: 1000,
+    top: 14,
+    left: 10,
+  },
+  dropdown: {
+    backgroundColor: THEME.white,
+    borderWidth: 1.5,
+    borderColor: THEME.border,
+    borderRadius: 10,
+    minHeight: 48,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+    height: 48,
     marginBottom: 4,
+    paddingLeft: 30,
   },
-  companyName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#144272',
-  },
-  companyAddress: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '400',
-  },
-
-  // Info Grid
-  orderInfoGrid: {
-    marginTop: 10,
-    borderBottomColor: backgroundColors.dark,
-    borderBottomWidth: 2,
-    borderStyle: 'dotted',
-    marginHorizontal: 20,
-  },
-  infoCard: {
-    width: '60%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    borderRadius: 8,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: backgroundColors.dark,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  infoValue: {
-    fontSize: 14,
-    color: backgroundColors.dark,
-    fontWeight: '400',
-  },
-
-  // Items Section
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 12,
-  },
-
-  // Footer
-  modalFooter: {
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-  },
-  thankYou: {
-    fontSize: 16,
-    color: '#144272',
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  developerInfo: {
-    alignItems: 'center',
-  },
-  developerText: {
-    fontSize: 12,
-    color: '#888',
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  companyContact: {
-    fontSize: 12,
-    color: '#144272',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  modalContent: {
-    flex: 1,
-  },
-
-  // Table Section
-  tableSection: {
-    marginTop: 20,
-    marginHorizontal: 20,
-    borderBottomWidth: 2,
-    borderColor: backgroundColors.dark,
-    borderStyle: 'dotted',
-  },
-  tableContainer: {
-    overflow: 'hidden',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    borderBottomColor: backgroundColors.dark,
-    borderBottomWidth: 1.5,
-    paddingBottom: 5,
-  },
-  tableHeaderText: {
-    color: backgroundColors.dark,
-    fontWeight: '600',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 6,
-    alignItems: 'center',
-  },
-  tableCell: {
-    fontSize: 12,
-    color: backgroundColors.dark,
-    textAlign: 'center',
-  },
-
-  // Column widths
-  col1: {
-    flex: 0.1,
-  },
-  col2: {
-    flex: 0.3, // Product
-  },
-  col3: {
-    flex: 0.2, // Qty
-  },
-  col4: {
-    flex: 0.4, // Price
+  dropdownContainer: {
+    backgroundColor: 'white',
+    borderColor: THEME.border,
+    borderRadius: 10,
+    maxHeight: 200,
   },
 
   // ================= NEW CHECKOUT MODAL STYLES =================
@@ -1744,15 +1885,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 5,
     paddingVertical: 8,
-    backgroundColor: backgroundColors.light,
+    backgroundColor: THEME.white,
   },
   checkoutModalTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: backgroundColors.dark,
+    color: THEME.textDark,
     textAlign: 'center',
     flex: 1,
-    marginRight: 24, // Adjust for the back button
+    marginRight: 24,
   },
   checkoutScrollView: {
     flex: 1,
@@ -1760,18 +1901,18 @@ const styles = StyleSheet.create({
     paddingTop: 10,
   },
   checkoutSection: {
-    marginBottom: 5,
+    marginBottom: 5, // Reduced from 8 or larger
   },
   checkoutSectionTitle: {
     fontSize: 14,
-    color: backgroundColors.dark,
-    marginBottom: 8,
+    color: THEME.textDark,
+    marginBottom: 4, // Reduced
     fontWeight: '500',
   },
   checkoutCard: {
-    backgroundColor: backgroundColors.light,
+    backgroundColor: THEME.white,
     borderRadius: 12,
-    padding: 15,
+    padding: 10, // Reduced padding
     flexDirection: 'row',
     alignItems: 'center',
     shadowColor: '#000',
@@ -1784,51 +1925,45 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    marginRight: 15,
+    marginRight: 10, // Reduced
   },
   supplierName: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: backgroundColors.dark,
+    color: THEME.textDark,
   },
   supplierPhone: {
     fontSize: 14,
     color: 'gray',
   },
   amountContainer: {
-    backgroundColor: backgroundColors.light,
+    backgroundColor: THEME.white,
     borderRadius: 12,
-    paddingVertical: 15,
+    paddingVertical: 10, // Reduced
     paddingHorizontal: 20,
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 5, // Reduced
   },
   amountValue: {
-    fontSize: 36,
+    fontSize: 32, // Slightly smaller
     fontWeight: 'bold',
     color: '#4CAF50',
   },
   checkoutFooter: {
-    padding: 20,
-    backgroundColor: backgroundColors.light,
+    padding: 15, // Reduced
+    backgroundColor: THEME.white,
     borderTopWidth: 1,
     borderColor: '#eee',
   },
   completePurchaseBtn: {
-    backgroundColor: backgroundColors.primary,
-    paddingVertical: 15,
+    backgroundColor: THEME.primary,
+    paddingVertical: 12, // Reduced
     borderRadius: 12,
     alignItems: 'center',
   },
   completePurchaseBtnText: {
-    color: backgroundColors.light,
+    color: THEME.white,
     fontSize: 18,
     fontWeight: 'bold',
-  },
-  personIcon: {
-    position: 'absolute',
-    zIndex: 10000,
-    top: 7,
-    left: 6,
   },
 });

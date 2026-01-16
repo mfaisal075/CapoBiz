@@ -10,6 +10,7 @@ import {
   TextInput,
   Modal,
   BackHandler,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
@@ -19,8 +20,34 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import Toast from 'react-native-toast-message';
-import backgroundColors from '../Colors';
 import {Checkbox} from 'react-native-paper';
+import LinearGradient from 'react-native-linear-gradient';
+import LottieView from 'lottie-react-native';
+import BottomBar from '../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  danger: '#EF4444',
+};
+
+// --- HELPER: Get Initials ---
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  const parts = name.split(' ');
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 interface SupplierData {
   id: number;
@@ -86,6 +113,7 @@ export default function SupplierPeople({navigation}: any) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredData, setFilteredData] = useState<SupplierData[]>([]);
   const [masterData, setMasterData] = useState<SupplierData[]>([]);
+  const [loading, setLoading] = useState(false); // Loading State
   const [modalVisible, setModalVisible] = useState('');
 
   // Pagination
@@ -247,6 +275,7 @@ export default function SupplierPeople({navigation}: any) {
 
   // Fetch User Data
   const handleFetchData = async () => {
+    setLoading(true);
     try {
       const res = await axios.get(`${BASE_URL}/fetchsuppliersdata`, {
         headers: {
@@ -260,6 +289,8 @@ export default function SupplierPeople({navigation}: any) {
       setMasterData(supplierData);
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -298,441 +329,447 @@ export default function SupplierPeople({navigation}: any) {
     return () => backHandler.remove();
   }, []);
 
+  // --- RENDER ITEM ---
+  const renderItem = ({item, index}: {item: SupplierData; index: number}) => {
+    return (
+      <TouchableOpacity
+        activeOpacity={0.75}
+        style={styles.cardRow}
+        onPress={() => navigation.navigate('SupplierDetails', {id: item.id})}>
+        {/* Avatar Section */}
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatarText}>{getInitials(item.sup_name)}</Text>
+        </View>
+
+        {/* Info Section */}
+        <View style={styles.infoContainer}>
+          <View
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginBottom: 2,
+            }}>
+            <Text style={styles.nameText} numberOfLines={1}>
+              {item.sup_name}
+            </Text>
+            <View style={styles.badgeContainer}>
+              <View style={styles.areaBadge}>
+                <Text style={styles.areaBadgeText} numberOfLines={1}>
+                  {item.area_name || 'General'}
+                </Text>
+              </View>
+            </View>
+          </View>
+          <View style={styles.iconTextRow}>
+            <Icon name="phone-outline" size={14} color={THEME.textGray} />
+            <Text style={styles.subText}>
+              {item.sup_contact || 'No Contact'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Arrow */}
+        <Icon
+          name="chevron-right"
+          size={22}
+          color={THEME.primary}
+          style={{marginLeft: 6}}
+        />
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Suppliers</Text>
-          </View>
-
-          <TouchableOpacity
-            onPress={() => setModalVisible('Add')}
-            style={[styles.headerBtn]}>
-            <Text style={styles.addBtnText}>Add</Text>
-            <Icon name="plus" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Filter */}
-        <View style={styles.searchFilter}>
-          <Icon name="magnify" size={36} color={backgroundColors.dark} />
-          <TextInput
-            placeholder="Search by supplier name"
-            style={styles.search}
-            value={searchQuery}
-            onChangeText={text => searchFilter(text)}
-          />
-        </View>
-
-        <View style={styles.listContainer}>
-          <FlatList
-            data={currentData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => {
-                  navigation.navigate('SupplierDetails', {
-                    id: item.id,
-                  });
-                }}>
-                {/* Avatar + Name + Actions */}
-                <View style={styles.row}>
-                  <View style={styles.avatarBox}>
-                    <Image
-                      source={require('../../assets/man.png')}
-                      style={styles.avatar}
-                    />
-                  </View>
-
-                  <View style={{flex: 1}}>
-                    <Text style={styles.name}>{item.sup_name}</Text>
-                    {/* small details inline */}
-                    <Text style={styles.subText}>
-                      <Icon name="phone" size={12} color="#666" />{' '}
-                      {item.sup_contact || 'No contact'}
-                    </Text>
-                  </View>
-
-                  {/* Actions on right */}
-                  <View style={styles.actionRow}>
-                    <Icon
-                      name="chevron-right"
-                      size={28}
-                      color={backgroundColors.dark}
-                    />
-                  </View>
-                </View>
-              </TouchableOpacity>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-group" size={48} color="#666" />
-                <Text style={styles.emptyText}>No record found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-
-        {/* Add Supplier Modal */}
-        <Modal
-          visible={modalVisible === 'Add'}
-          transparent
-          animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              {/* Header */}
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Add New Supplier</Text>
-                <TouchableOpacity
-                  onPress={() => setModalVisible('')}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon
-                    name="close"
-                    size={20}
-                    color={backgroundColors.primary}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.addCustomerForm}>
-                {/* Also a Customer Checkbox */}
-                <View style={{marginBottom: 15}}>
-                  <TouchableOpacity
-                    style={{flexDirection: 'row', alignItems: 'center'}}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      const newOptions = selectedOptions.includes('on')
-                        ? selectedOptions.filter(opt => opt !== 'on')
-                        : [...selectedOptions, 'on'];
-                      setSelectedOptions(newOptions);
-                    }}>
-                    <Checkbox.Android
-                      status={
-                        selectedOptions.includes('on') ? 'checked' : 'unchecked'
-                      }
-                      color={backgroundColors.primary}
-                      uncheckedColor={backgroundColors.dark}
-                    />
-                    <Text
-                      style={[
-                        styles.addCustomerLabel,
-                        {marginLeft: 8, marginBottom: 0},
-                      ]}>
-                      Also a Customer
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* Company + Agency */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Company Name *</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter company name"
-                    value={addForm.comp_name}
-                    onChangeText={text =>
-                      handleAddInputChange('comp_name', text)
-                    }
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Agency Name</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter agency name"
-                    value={addForm.agencyname}
-                    onChangeText={text =>
-                      handleAddInputChange('agencyname', text)
-                    }
-                  />
-                </View>
-
-                {/* Supplier Name + Contact 1 */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Supplier Name *</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter supplier name"
-                    value={addForm.supp_name}
-                    onChangeText={text =>
-                      handleAddInputChange('supp_name', text)
-                    }
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Email</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="example@gmail.com"
-                    value={addForm.email}
-                    onChangeText={text => handleAddInputChange('email', text)}
-                  />
-                </View>
-
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact 1 *</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter contact"
-                    keyboardType="phone-pad"
-                    value={addForm.contact}
-                    maxLength={12}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '');
-                      cleaned = cleaned.replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleAddInputChange('contact', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact 2</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter contact"
-                    keyboardType="phone-pad"
-                    value={addForm.sec_contact}
-                    maxLength={12}
-                    onChangeText={t => {
-                      let cleaned = t.replace(/[^0-9-]/g, '');
-                      cleaned = cleaned.replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleAddInputChange('sec_contact', cleaned);
-                    }}
-                  />
-                </View>
-
-                {/* Contact 2 + Contact 3 */}
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Contact 3</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter contact"
-                    keyboardType="phone-pad"
-                    value={addForm.third_contact}
-                    maxLength={12}
-                    onChangeText={text => {
-                      let cleaned = text.replace(/[^0-9-]/g, '');
-                      cleaned = cleaned.replace(/-/g, '');
-                      if (cleaned.length > 4)
-                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                      handleAddInputChange('third_contact', cleaned);
-                    }}
-                  />
-                </View>
-                <View style={styles.addCustomerField}>
-                  <Text style={styles.addCustomerLabel}>Address</Text>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter address"
-                    value={addForm.address}
-                    onChangeText={text => handleAddInputChange('address', text)}
-                  />
-                </View>
-
-                {/* Supplier Area */}
-                <View style={styles.addCustomerDropdownRow}>
-                  <View style={styles.addCustomerDropdownField}>
-                    <Text style={styles.addCustomerLabel}>Supplier Area</Text>
-                    <DropDownPicker
-                      items={transformedAreas}
-                      open={areaOpen}
-                      setOpen={setAreaOpen}
-                      value={areaValue}
-                      setValue={setAreaValue}
-                      placeholder="Select supplier area"
-                      style={styles.addCustomerDropdown}
-                      dropDownContainerStyle={
-                        styles.addCustomerDropdownContainer
-                      }
-                      textStyle={styles.addCustomerDropdownText}
-                      placeholderStyle={styles.addCustomerDropdownPlaceholder}
-                      listMode="SCROLLVIEW"
-                      searchable
-                      searchTextInputStyle={{
-                        borderWidth: 0,
-                        width: '100%',
-                      }}
-                      searchContainerStyle={{
-                        borderColor: backgroundColors.gray,
-                      }}
-                    />
-                  </View>
-                </View>
-
-                {/* Opening Balance Checkbox */}
-                <View style={{marginBottom: 15}}>
-                  <TouchableOpacity
-                    style={{flexDirection: 'row', alignItems: 'center'}}
-                    activeOpacity={0.7}
-                    onPress={() => {
-                      const newOptions = enableBal.includes('on')
-                        ? enableBal.filter(opt => opt !== 'on')
-                        : [...enableBal, 'on'];
-                      setEnableBal(newOptions);
-                    }}>
-                    <Checkbox.Android
-                      status={
-                        enableBal.includes('on') ? 'checked' : 'unchecked'
-                      }
-                      color={backgroundColors.primary}
-                      uncheckedColor={backgroundColors.dark}
-                    />
-                    <Text
-                      style={[
-                        styles.addCustomerLabel,
-                        {marginLeft: 8, marginBottom: 0},
-                      ]}>
-                      Enable Opening Balance
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {enableBal.includes('on') && (
-                  <>
-                    <View style={styles.addCustomerFullRow}>
-                      <Text style={styles.addCustomerLabel}>
-                        Opening Balance
-                      </Text>
-                      <TextInput
-                        style={styles.addCustomerInput}
-                        placeholderTextColor="#999"
-                        placeholder="Enter opening balance"
-                        keyboardType="numeric"
-                        value={addForm.opening_balance}
-                        onChangeText={text =>
-                          handleAddInputChange('opening_balance', text)
-                        }
-                      />
-                    </View>
-
-                    <View style={styles.addCustomerDropdownRow}>
-                      <View style={styles.addCustomerDropdownField}>
-                        <Text style={styles.addCustomerLabel}>
-                          Payment Type
-                        </Text>
-                        <DropDownPicker
-                          items={paymentTypeItem}
-                          open={paymentType}
-                          setOpen={setpaymentType}
-                          value={current}
-                          setValue={setcurrentpaymentType}
-                          placeholder="Select payment type"
-                          style={styles.addCustomerDropdown}
-                          dropDownContainerStyle={
-                            styles.addCustomerDropdownContainer
-                          }
-                          textStyle={styles.addCustomerDropdownText}
-                          placeholderStyle={
-                            styles.addCustomerDropdownPlaceholder
-                          }
-                          listMode="SCROLLVIEW"
-                        />
-                      </View>
-                    </View>
-
-                    <View style={styles.addCustomerFullRow}>
-                      <TextInput
-                        style={styles.addCustomerInput}
-                        placeholderTextColor="#999"
-                        placeholder="Balance"
-                        editable={enableBal.includes('on')}
-                        value={addForm.opening_balance}
-                        onChangeText={text =>
-                          handleAddInputChange('opening_balance', text)
-                        }
-                      />
-                    </View>
-                  </>
-                )}
-
-                {/* Submit */}
-                <TouchableOpacity
-                  style={styles.addCustomerSubmitBtn}
-                  onPress={handleAddSupplier}>
-                  <Icon name="account-plus-outline" size={20} color="white" />
-                  <Text style={styles.addCustomerSubmitText}>Add Supplier</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/* Pagination Controls */}
-        {totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => prev - 1)}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
+      {/* --- MODERN HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
             </TouchableOpacity>
+            <Text style={styles.headerTitle}>Suppliers</Text>
+            <TouchableOpacity
+              onPress={() => setModalVisible('Add')}
+              style={styles.iconBtn}>
+              <Icon name="plus" size={24} color={THEME.white} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
 
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
+        {/* Floating Search Bar */}
+        <View style={styles.floatingSearchContainer}>
+          <Icon name="magnify" size={22} color={THEME.primary} />
+          <TextInput
+            placeholder="Search by name..."
+            placeholderTextColor={THEME.textLight}
+            style={styles.floatingSearchInput}
+            value={searchQuery}
+            onChangeText={searchFilter}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => searchFilter('')}>
+              <Icon name="close-circle" size={18} color={THEME.textLight} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* --- CONTENT LIST --- */}
+      <View style={styles.listContainer}>
+        {loading ? (
+          <View style={styles.centerContent}>
+            <LottieView
+              source={require('../../assets/Loading-Dots.json')}
+              autoPlay
+              loop
+              style={styles.lottie}
+            />
+          </View>
+        ) : (
+          <>
+            <View style={styles.tableHeaderRow}>
+              <Text style={styles.tableHeaderLabel}>SUPPLIER LIST</Text>
+              <Text style={styles.tableHeaderCount}>{totalRecords} Found</Text>
             </View>
 
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() => setCurrentPage(prev => prev + 1)}
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
-          </View>
+            <FlatList
+              data={currentData}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={renderItem}
+              contentContainerStyle={{paddingBottom: 160}}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.centerContent}>
+                  <Icon name="account-search" size={60} color="#D1D5DB" />
+                  <Text style={styles.emptyText}>No suppliers found</Text>
+                </View>
+              }
+            />
+          </>
         )}
-
-        <Toast />
       </View>
+
+      {/* --- PAGINATION (Bottom Floating) --- */}
+      {!loading && totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => prev - 1)}
+            style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+            <Icon name="chevron-left" size={24} color={THEME.white} />
+          </TouchableOpacity>
+
+          <Text style={styles.pageText}>
+            Page {currentPage} of {totalPages}
+          </Text>
+
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() => setCurrentPage(prev => prev + 1)}
+            style={[
+              styles.pageBtn,
+              currentPage === totalPages && styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-right" size={24} color={THEME.white} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Add Supplier Modal */}
+      <Modal visible={modalVisible === 'Add'} transparent animationType="slide">
+        <View style={styles.addCustomerModalOverlay}>
+          <ScrollView style={styles.addCustomerModalContainer}>
+            <View style={styles.addCustomerHeader}>
+              <Text style={styles.addCustomerTitle}>Add New Supplier</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setAddForm(initialAddSupplier);
+                }}
+                style={styles.addCustomerCloseBtn}>
+                <Icon name="close" size={20} color={THEME.textDark} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.addCustomerForm}>
+              {/* Also a Customer Checkbox */}
+              <View style={{marginBottom: 15}}>
+                <TouchableOpacity
+                  style={{flexDirection: 'row', alignItems: 'center'}}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    const newOptions = selectedOptions.includes('on')
+                      ? selectedOptions.filter(opt => opt !== 'on')
+                      : [...selectedOptions, 'on'];
+                    setSelectedOptions(newOptions);
+                  }}>
+                  <Checkbox.Android
+                    status={
+                      selectedOptions.includes('on') ? 'checked' : 'unchecked'
+                    }
+                    color={THEME.primary}
+                    uncheckedColor={THEME.textDark}
+                  />
+                  <Text
+                    style={[
+                      styles.addCustomerLabel,
+                      {marginLeft: 8, marginBottom: 0},
+                    ]}>
+                    Also a Customer
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Company + Agency */}
+              <View style={styles.addCustomerField}>
+                <Text style={styles.addCustomerLabel}>Company Name *</Text>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  value={addForm.comp_name}
+                  onChangeText={text => handleAddInputChange('comp_name', text)}
+                />
+              </View>
+              <View style={styles.addCustomerField}>
+                <Text style={styles.addCustomerLabel}>Agency Name</Text>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  value={addForm.agencyname}
+                  onChangeText={text =>
+                    handleAddInputChange('agencyname', text)
+                  }
+                />
+              </View>
+
+              {/* Supplier Name + Contact 1 */}
+              <View style={styles.addCustomerField}>
+                <Text style={styles.addCustomerLabel}>Supplier Name *</Text>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  value={addForm.supp_name}
+                  onChangeText={text => handleAddInputChange('supp_name', text)}
+                />
+              </View>
+              <View style={styles.addCustomerField}>
+                <Text style={styles.addCustomerLabel}>Email</Text>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  value={addForm.email}
+                  onChangeText={text => handleAddInputChange('email', text)}
+                />
+              </View>
+
+              <View style={styles.addCustomerField}>
+                <Text style={styles.addCustomerLabel}>Contact 1 *</Text>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  keyboardType="phone-pad"
+                  value={addForm.contact}
+                  maxLength={12}
+                  onChangeText={t => {
+                    let cleaned = t.replace(/[^0-9-]/g, '');
+                    cleaned = cleaned.replace(/-/g, '');
+                    if (cleaned.length > 4)
+                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                    handleAddInputChange('contact', cleaned);
+                  }}
+                />
+              </View>
+              <View style={styles.addCustomerField}>
+                <Text style={styles.addCustomerLabel}>Contact 2</Text>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  keyboardType="phone-pad"
+                  value={addForm.sec_contact}
+                  maxLength={12}
+                  onChangeText={t => {
+                    let cleaned = t.replace(/[^0-9-]/g, '');
+                    cleaned = cleaned.replace(/-/g, '');
+                    if (cleaned.length > 4)
+                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                    handleAddInputChange('sec_contact', cleaned);
+                  }}
+                />
+              </View>
+
+              {/* Contact 3 */}
+              <View style={styles.addCustomerField}>
+                <Text style={styles.addCustomerLabel}>Contact 3</Text>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  keyboardType="phone-pad"
+                  value={addForm.third_contact}
+                  maxLength={12}
+                  onChangeText={text => {
+                    let cleaned = text.replace(/[^0-9-]/g, '');
+                    cleaned = cleaned.replace(/-/g, '');
+                    if (cleaned.length > 4)
+                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                    handleAddInputChange('third_contact', cleaned);
+                  }}
+                />
+              </View>
+              <View style={styles.addCustomerField}>
+                <Text style={styles.addCustomerLabel}>Address</Text>
+                <TextInput
+                  style={styles.addCustomerInput}
+                  placeholderTextColor="#999"
+                  value={addForm.address}
+                  onChangeText={text => handleAddInputChange('address', text)}
+                />
+              </View>
+
+              {/* Supplier Area */}
+              <View style={styles.addCustomerDropdownRow}>
+                <View style={styles.addCustomerDropdownField}>
+                  <Text style={styles.addCustomerLabel}>Supplier Area</Text>
+                  <DropDownPicker
+                    items={transformedAreas}
+                    open={areaOpen}
+                    setOpen={setAreaOpen}
+                    value={areaValue}
+                    setValue={setAreaValue}
+                    placeholder="Select supplier area"
+                    style={styles.addCustomerDropdown}
+                    dropDownContainerStyle={styles.addCustomerDropdownContainer}
+                    textStyle={styles.addCustomerDropdownText}
+                    placeholderStyle={styles.addCustomerDropdownPlaceholder}
+                    listMode="SCROLLVIEW"
+                    searchable
+                    searchTextInputStyle={{
+                      borderWidth: 0,
+                      width: '100%',
+                    }}
+                    searchContainerStyle={{
+                      borderColor: THEME.textGray,
+                    }}
+                  />
+                </View>
+              </View>
+
+              {/* Opening Balance Checkbox */}
+              <View style={{marginBottom: 15}}>
+                <TouchableOpacity
+                  style={{flexDirection: 'row', alignItems: 'center'}}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    const newOptions = enableBal.includes('on')
+                      ? enableBal.filter(opt => opt !== 'on')
+                      : [...enableBal, 'on'];
+                    setEnableBal(newOptions);
+                  }}>
+                  <Checkbox.Android
+                    status={enableBal.includes('on') ? 'checked' : 'unchecked'}
+                    color={THEME.primary}
+                    uncheckedColor={THEME.textDark}
+                  />
+                  <Text
+                    style={[
+                      styles.addCustomerLabel,
+                      {marginLeft: 8, marginBottom: 0},
+                    ]}>
+                    Enable Opening Balance
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {enableBal.includes('on') && (
+                <>
+                  <View style={styles.addCustomerFullRow}>
+                    <Text style={styles.addCustomerLabel}>Opening Balance</Text>
+                    <TextInput
+                      style={styles.addCustomerInput}
+                      placeholderTextColor="#999"
+                      keyboardType="numeric"
+                      value={addForm.opening_balance}
+                      onChangeText={text =>
+                        handleAddInputChange('opening_balance', text)
+                      }
+                    />
+                  </View>
+
+                  <View style={styles.addCustomerDropdownRow}>
+                    <View style={styles.addCustomerDropdownField}>
+                      <Text style={styles.addCustomerLabel}>Payment Type</Text>
+                      <DropDownPicker
+                        items={paymentTypeItem}
+                        open={paymentType}
+                        setOpen={setpaymentType}
+                        value={current}
+                        setValue={setcurrentpaymentType}
+                        placeholder="Select payment type"
+                        style={styles.addCustomerDropdown}
+                        dropDownContainerStyle={
+                          styles.addCustomerDropdownContainer
+                        }
+                        textStyle={styles.addCustomerDropdownText}
+                        placeholderStyle={styles.addCustomerDropdownPlaceholder}
+                        listMode="SCROLLVIEW"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.addCustomerFullRow}>
+                    <TextInput
+                      style={[
+                        styles.addCustomerInput,
+                        {
+                          backgroundColor:
+                            current === 'recievable' || current === 'payable'
+                              ? '#e0e0e0'
+                              : '#f9f9f9',
+                        },
+                      ]}
+                      placeholder={
+                        current === 'recievable'
+                          ? 'Debit Amount'
+                          : current === 'payable'
+                          ? 'Credit Amount'
+                          : 'Balance'
+                      }
+                      editable={
+                        !(current === 'recievable' || current === 'payable') &&
+                        enableBal.includes('on')
+                      }
+                      value={addForm.opening_balance}
+                      onChangeText={text =>
+                        handleAddInputChange('opening_balance', text)
+                      }
+                    />
+                  </View>
+                </>
+              )}
+
+              <TouchableOpacity
+                style={styles.addCustomerSubmitBtn}
+                onPress={handleAddSupplier}>
+                <Icon name="account-plus-outline" size={20} color="white" />
+                <Text style={styles.addCustomerSubmitText}>Add Supplier</Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+          <Toast />
+        </View>
+      </Modal>
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -740,290 +777,285 @@ export default function SupplierPeople({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: THEME.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 20,
+    zIndex: 1,
   },
-  menuIcon: {
-    width: 28,
-    height: 28,
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 40, // Extra space for floating search
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.light,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
-    backgroundColor: backgroundColors.gray,
-  },
-
-  // Search Filter
-  searchFilter: {
-    width: '94%',
-    alignSelf: 'center',
-    height: 48,
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  search: {
-    height: '100%',
-    fontSize: 14,
-    color: backgroundColors.dark,
-    width: '100%',
-  },
-
-  // FlatList Styling
-  listContainer: {
-    flex: 1,
-    paddingHorizontal: '3%',
-  },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  avatar: {
-    height: 45,
-    width: 45,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  subText: {
-    fontSize: 12,
-    color: '#555',
-    marginTop: 2,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 8,
-    marginLeft: 10,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
-  },
-  emptyText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-
-  // Pagination Component
-  paginationContainer: {
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
   },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    paddingHorizontal: 10,
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
+  headerTitle: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#FFD166',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  // --- Floating Search ---
+  floatingSearchContainer: {
+    position: 'absolute',
+    bottom: -24,
+    left: 12,
+    right: 12,
+    backgroundColor: THEME.white,
+    borderRadius: 10,
+    height: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  floatingSearchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    color: THEME.textDark,
   },
 
-  // Add Customer Modal Styles
+  // --- List ---
+  listContainer: {
+    flex: 1,
+    paddingTop: 10,
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 14,
+  },
+  tableHeaderLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textGray,
+    letterSpacing: 0.5,
+  },
+  tableHeaderCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.primary,
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+
+  // --- Card Row ---
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    width: '94%',
+    alignSelf: 'center',
+    marginBottom: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#222',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.19,
+    shadowRadius: 14,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  avatarContainer: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  avatarText: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: THEME.primary,
+    letterSpacing: 0.5,
+  },
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  nameText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 0,
+  },
+  iconTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    marginBottom: 2,
+  },
+  subText: {
+    fontSize: 12,
+    color: THEME.textGray,
+    marginLeft: 4,
+    flexShrink: 1,
+  },
+  badgeContainer: {
+    marginLeft: 12,
+    marginRight: 8,
+    alignItems: 'flex-end',
+    flex: 0,
+  },
+  areaBadge: {
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 15,
+    marginTop: 3,
+  },
+  areaBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: THEME.textDark,
+    maxWidth: 80,
+  },
+
+  // --- Pagination ---
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  pageBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  disabledBtn: {
+    opacity: 0.3,
+  },
+  pageText: {
+    color: THEME.white,
+    fontWeight: '700',
+    fontSize: 12,
+    marginHorizontal: 12,
+  },
+
+  // --- Loading / Empty ---
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  lottie: {
+    width: 100,
+    height: 100,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: THEME.textGray,
+    marginTop: 10,
+  },
+
+  // --- Modal Styles (Preserved) ---
   addCustomerModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    padding: 20,
   },
   addCustomerModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
+    backgroundColor: THEME.white,
+    borderRadius: 20,
+    flex: 1,
+    marginBottom: 20,
+    marginTop: 40,
   },
   addCustomerHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: backgroundColors.primary,
+    borderBottomColor: '#EEE',
   },
   addCustomerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.primary,
   },
   addCustomerCloseBtn: {
     padding: 5,
   },
   addCustomerForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  addCustomerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
+    padding: 20,
   },
   addCustomerField: {
-    flex: 1,
-    marginBottom: 5,
-  },
-  addCustomerFullRow: {
     marginBottom: 15,
   },
   addCustomerLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: backgroundColors.dark,
+    color: '#333',
     marginBottom: 5,
   },
   addCustomerInput: {
-    borderWidth: 0.6,
-    borderColor: '#00000047',
-    height: 45,
+    borderWidth: 1,
+    borderColor: '#DDD',
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 15,
     paddingVertical: 10,
     fontSize: 14,
     color: '#333',
-    backgroundColor: backgroundColors.light,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 6,
+    backgroundColor: '#FAFAFA',
   },
   addCustomerDropdownRow: {
+    flexDirection: 'row',
     marginBottom: 15,
+    zIndex: 2000,
   },
   addCustomerDropdownField: {
     flex: 1,
   },
   addCustomerDropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
+    borderColor: '#DDD',
     borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    minHeight: 42,
-    zIndex: 999,
+    backgroundColor: '#FAFAFA',
   },
   addCustomerDropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    zIndex: 1000,
-    maxHeight: 160,
+    borderColor: '#DDD',
   },
   addCustomerDropdownText: {
     color: '#333',
@@ -1033,19 +1065,29 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 14,
   },
+  addCustomerFullRow: {
+    marginBottom: 15,
+    zIndex: 1000,
+  },
   addCustomerSubmitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
+    backgroundColor: THEME.primary,
+    borderRadius: 12,
     paddingVertical: 15,
-    marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 30,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   addCustomerSubmitText: {
-    color: 'white',
+    color: '#FFF',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginLeft: 8,
   },
 });

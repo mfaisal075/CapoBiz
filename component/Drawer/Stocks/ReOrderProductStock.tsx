@@ -2,21 +2,49 @@ import {
   StyleSheet,
   Text,
   View,
-  SafeAreaView,
   TouchableOpacity,
   FlatList,
-  Image,
   TextInput,
+  BackHandler,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useUser} from '../../CTX/UserContext';
-import backgroundColors from '../../Colors';
-import {BackHandler} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import LottieView from 'lottie-react-native';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  danger: '#EF4444',
+  success: '#10B981',
+  warning: '#F59E0B',
+};
+
+// --- HELPER: Get Initials ---
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  const parts = name.split(' ');
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 type Product = {
   id: number;
@@ -36,21 +64,24 @@ interface Categories {
 export default function ReOrderProductStock({navigation}: any) {
   const {openDrawer} = useDrawer();
   const {token} = useUser();
-  const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState<string | null>('');
   const [categories, setCategories] = useState<Categories[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredData, setFilteredData] = useState<Product[]>([]);
+  const [masterData, setMasterData] = useState<Product[]>([]);
+
   const transformedCat = categories.map(cat => ({
     label: cat.pcat_name,
     value: cat.id.toString(),
   }));
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filteredData, setFilteredData] = useState<Product[]>([]);
-  const [masterData, setMasterData] = useState<Product[]>([]);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
+  // Filter for reorder condition
   const filteredProducts = filteredData.filter(
     item =>
       Number(item.prod_reorder_qty) >= Number(item.prod_qty) &&
@@ -77,35 +108,37 @@ export default function ReOrderProductStock({navigation}: any) {
   };
 
   const fetchProd = async () => {
+    setLoading(true);
     try {
       const res = await axios.get(
-        `${BASE_URL}/loadreorder?cat_id=${currentCategory}&_token=${token}`,
+        `${BASE_URL}/loadreorder?cat_id=${
+          currentCategory || ''
+        }&_token=${token}`,
       );
 
       const prodData = res.data.stock;
-
       setFilteredData(prodData);
       setMasterData(prodData);
+      setCurrentPage(1);
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Search Filter
   const searchFilter = (text: string) => {
+    setSearchQuery(text);
     if (text) {
       const newData = masterData.filter(item => {
-        const itemData = item.prod_name
-          ? item.prod_name.toLocaleUpperCase()
-          : ''.toLocaleLowerCase();
-        const textData = text.toLocaleUpperCase();
+        const itemData = item.prod_name ? item.prod_name.toUpperCase() : '';
+        const textData = text.toUpperCase();
         return itemData.indexOf(textData) > -1;
       });
       setFilteredData(newData);
-      setSearchQuery(text);
     } else {
       setFilteredData(masterData);
-      setSearchQuery(text);
     }
   };
 
@@ -117,164 +150,197 @@ export default function ReOrderProductStock({navigation}: any) {
       navigation.navigate('Dashboard');
       return true;
     };
-
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
       backKey,
     );
-
     return () => backHandler.remove();
   }, [currentCategory]);
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Reorder Product</Text>
-          </View>
-          <View style={[styles.headerBtn, {backgroundColor: 'transparent'}]}>
-            <Icon name="mail" size={24} color="transparent" />
-          </View>
+  const renderItem = ({item}: {item: Product}) => {
+    return (
+      <View style={styles.cardRow}>
+        {/* Avatar */}
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatarText}>{getInitials(item.prod_name)}</Text>
         </View>
 
-        <View style={{width: '94%', alignSelf: 'center'}}>
-          <DropDownPicker
-            items={transformedCat}
-            open={category}
-            setOpen={setCategory}
-            value={currentCategory}
-            setValue={setCurrentCategory}
-            placeholder="Select Category"
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
-            ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color="#144272" />
-            )}
-            ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color="#144272" />
-            )}
-            style={styles.dropdown}
-            dropDownContainerStyle={styles.dropDownContainer}
-            searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
-            searchContainerStyle={{
-              borderColor: backgroundColors.gray,
-            }}
-          />
-        </View>
+        {/* Info */}
+        <View style={styles.infoContainer}>
+          <Text style={styles.nameText} numberOfLines={1}>
+            {item.prod_name}
+          </Text>
 
-        {/* Search Filter */}
-        <View style={styles.searchFilter}>
-          <Icon name="magnify" size={36} color={backgroundColors.dark} />
-          <TextInput
-            placeholder="Search by product name"
-            style={styles.search}
-            value={searchQuery}
-            onChangeText={text => searchFilter(text)}
-          />
-        </View>
-
-        <View style={styles.listContainer}>
-          <FlatList
-            data={currentData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <View style={styles.card}>
-                {/* Avatar + Name + Actions */}
-                <View style={styles.row}>
-                  <View style={styles.avatarBox}>
-                    <Image
-                      source={require('../../../assets/reorder.png')}
-                      style={styles.avatar}
-                    />
-                  </View>
-
-                  <View style={{flex: 1}}>
-                    <Text style={styles.name}>{item.prod_name}</Text>
-                    {/* Category */}
-                    <Text style={styles.subText}>
-                      {`${item.pcat_name ?? 'No Category'} | ${
-                        item.prod_qty ?? '0'
-                      } PC`}{' '}
-                      |{' '}
-                      <Text
-                        style={[
-                          styles.subText,
-                          {fontWeight: 'bold', color: backgroundColors.danger},
-                        ]}>
-                        {item.prod_reorder_qty} PC
-                      </Text>
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-group" size={48} color="#666" />
-                <Text style={styles.emptyText}>No record found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-
-        {/* Pagination Controls */}
-        {totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => prev - 1)}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
+          {/* Row 1: Stock | Reorder Level */}
+          <View style={styles.detailRow}>
+            <View style={styles.detailItem}>
+              <Icon name="package-variant" size={14} color={THEME.danger} />
               <Text
                 style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
+                  styles.detailText,
+                  {color: THEME.danger, fontWeight: 'bold'},
                 ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
+                Quantity: {item.prod_qty}
               </Text>
             </View>
-
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() => setCurrentPage(prev => prev + 1)}
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
+            <View style={styles.detailSeparator} />
+            <View style={styles.detailItem}>
+              <Icon
+                name="alert-circle-outline"
+                size={14}
+                color={THEME.warning}
+              />
+              <Text style={[styles.detailText, {fontWeight: 'bold'}]}>
+                Reorder: {item.prod_reorder_qty}
               </Text>
-            </TouchableOpacity>
+            </View>
           </View>
+
+          {/* Row 2: Category | Cost Price */}
+          <View style={styles.detailRow}>
+            <View style={styles.detailItem}>
+              <Icon name="shape-outline" size={14} color={THEME.textLight} />
+              <Text style={styles.subText}>{item.pcat_name || 'General'}</Text>
+            </View>
+            <View style={styles.detailSeparator} />
+            <View style={styles.detailItem}>
+              <Text style={[styles.subText, {marginLeft: 0, fontSize: 11}]}>
+                Cost: {item.prod_costprice}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
+
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Reorder Products</Text>
+            <View style={{width: 40}} />
+          </View>
+        </LinearGradient>
+
+        {/* Floating Search */}
+        <View style={styles.floatingSearchContainer}>
+          <Icon name="magnify" size={22} color={THEME.primary} />
+          <TextInput
+            placeholder="Search products..."
+            placeholderTextColor={THEME.textLight}
+            style={styles.floatingSearchInput}
+            value={searchQuery}
+            onChangeText={searchFilter}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => searchFilter('')}>
+              <Icon name="close-circle" size={18} color={THEME.textLight} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Category Filter */}
+      <View
+        style={{
+          zIndex: 2000,
+          width: '94%',
+          alignSelf: 'center',
+          marginTop: 10,
+          marginBottom: 5,
+        }}>
+        <DropDownPicker
+          items={transformedCat}
+          open={categoryOpen}
+          setOpen={setCategoryOpen}
+          value={currentCategory}
+          setValue={setCurrentCategory}
+          placeholder="Filter by Category"
+          placeholderStyle={{color: THEME.textGray}}
+          style={styles.dropdown}
+          dropDownContainerStyle={styles.dropdownContainer}
+          listMode="SCROLLVIEW"
+          searchable
+          searchTextInputStyle={styles.dropdownSearchInput}
+          searchContainerStyle={styles.dropdownSearchContainer}
+        />
+      </View>
+
+      {/* --- CONTENT --- */}
+      <View style={styles.listContainer}>
+        {loading ? (
+          <View style={styles.centerContent}>
+            <LottieView
+              source={require('../../../assets/Loading-Dots.json')}
+              autoPlay
+              loop
+              style={styles.lottie}
+            />
+          </View>
+        ) : (
+          <>
+            <View style={styles.tableHeaderRow}>
+              <Text style={styles.tableHeaderLabel}>PRODUCT LIST</Text>
+              <Text style={styles.tableHeaderCount}>{totalRecords} Found</Text>
+            </View>
+
+            <FlatList
+              data={currentData}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={renderItem}
+              contentContainerStyle={{paddingBottom: 160}}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.centerContent}>
+                  <Icon name="package-variant" size={60} color="#D1D5DB" />
+                  <Text style={styles.emptyText}>
+                    No products found for reordering
+                  </Text>
+                </View>
+              }
+            />
+          </>
         )}
       </View>
+
+      {/* --- PAGINATION --- */}
+      {!loading && totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => prev - 1)}
+            style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+            <Icon name="chevron-left" size={24} color={THEME.white} />
+          </TouchableOpacity>
+          <Text style={styles.pageText}>
+            Page {currentPage} of {totalPages}
+          </Text>
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() => setCurrentPage(prev => prev + 1)}
+            style={[
+              styles.pageBtn,
+              currentPage === totalPages && styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-right" size={24} color={THEME.white} />
+          </TouchableOpacity>
+        </View>
+      )}
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -282,254 +348,216 @@ export default function ReOrderProductStock({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 20,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: 10,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
+  },
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  // --- Floating Search ---
+  floatingSearchContainer: {
+    position: 'absolute',
+    bottom: -24,
+    left: 12,
+    right: 12,
+    backgroundColor: THEME.white,
+    borderRadius: 10,
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.light,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
+  floatingSearchInput: {
     flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
+    marginLeft: 10,
+    fontSize: 15,
+    color: THEME.textDark,
   },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
-  },
-
-  // Search Filter
-  searchFilter: {
-    width: '94%',
-    alignSelf: 'center',
-    height: 48,
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  search: {
-    height: '100%',
-    fontSize: 14,
-    color: backgroundColors.dark,
-    width: '100%',
-  },
-
-  // Dropdown
-  dropdown: {
-    borderWidth: 0,
-    minHeight: 48,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-    marginTop: 10,
-  },
-  dropDownContainer: {
-    backgroundColor: backgroundColors.light,
-
-    borderColor: 'transparent',
-    borderTopWidth: 1,
-    marginTop: 5,
-  },
-
-  // FlatList Styling
+  // --- List & Cards ---
   listContainer: {
     flex: 1,
-    paddingHorizontal: '3%',
+    paddingTop: 10,
   },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 14,
   },
-  row: {
+  tableHeaderLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textGray,
+    letterSpacing: 0.5,
+  },
+  tableHeaderCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.primary,
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    width: '94%',
+    alignSelf: 'center',
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#222',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
-  avatarBox: {
+  avatarContainer: {
     width: 50,
     height: 50,
     borderRadius: 25,
+    backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
-  },
-  avatar: {
-    height: 45,
-    width: 45,
+    marginRight: 12,
   },
   avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+    fontSize: 18,
+    fontWeight: '800',
+    color: THEME.primary,
+    letterSpacing: 0.5,
   },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailText: {
+    fontSize: 13,
+    color: THEME.textDark,
+    marginLeft: 4,
   },
   subText: {
     fontSize: 12,
-    color: '#555',
-    marginTop: 2,
+    color: THEME.textGray,
+    marginLeft: 4,
   },
-  actionRow: {
+  detailSeparator: {
+    width: 1,
+    height: 12,
+    backgroundColor: THEME.border,
+    marginHorizontal: 8,
+  },
+  // --- Pagination ---
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'center',
-    gap: 8,
-    marginLeft: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
+  pageBtn: {
+    padding: 8,
   },
-  emptyText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+  disabledBtn: {
+    opacity: 0.3,
   },
-
-  headerTextContainer: {
+  pageText: {
+    color: THEME.white,
+    fontSize: 14,
+    fontWeight: '600',
+    marginHorizontal: 15,
+  },
+  // --- Dropdown ---
+  dropdown: {
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 12,
+    minHeight: 48,
+  },
+  dropdownContainer: {
+    borderColor: THEME.border,
+    borderRadius: 12,
+  },
+  dropdownSearchInput: {
+    borderWidth: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  dropdownSearchContainer: {
+    borderBottomColor: '#transparent',
+  },
+  // Common
+  centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  table: {
-    borderWidth: 1,
-    borderColor: 'white',
-    alignSelf: 'center',
-    height: 'auto',
-    width: 314,
-    borderRadius: 5,
+  lottie: {
+    width: 100,
+    height: 100,
   },
-  tablehead: {
-    height: 30,
-    overflow: 'hidden',
-    borderTopEndRadius: 5,
-    borderTopLeftRadius: 5,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    backgroundColor: 'white',
-  },
-  text: {
-    marginLeft: 5,
-    color: 'white',
-    marginRight: 5,
-  },
-  headerButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    paddingVertical: 10,
-  },
-  exportBtn: {
-    backgroundColor: '#144272',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  exportText: {
-    color: 'white',
-    fontWeight: 'bold',
-  },
-
-  // Pagination Component
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
-  },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+  emptyText: {
+    marginTop: 10,
     fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    paddingHorizontal: 10,
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
+    color: THEME.textGray,
   },
 });

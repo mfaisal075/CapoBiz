@@ -9,6 +9,8 @@ import {
   ScrollView,
   Image,
   BackHandler,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -17,7 +19,28 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+const {width} = Dimensions.get('window');
+
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+  success: '#10B981',
+  danger: '#EF4444',
+  error: '#EF4444',
+  warning: '#F59E0B',
+  shadow: '#000',
+};
 
 interface PurchaseList {
   prch_invoice_no: string;
@@ -25,6 +48,7 @@ interface PurchaseList {
   prch_order_total: string;
   prch_paid_amount: string;
   prch_balance: string;
+  sup_name: string;
 }
 
 interface InvoiceData {
@@ -163,115 +187,204 @@ export default function PurchaseList({navigation}: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- MODERN HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Purchase List</Text>
+            <View style={{width: 40}} />
           </View>
-        </View>
+        </LinearGradient>
 
-        <View style={styles.dateContainer}>
-          <View style={styles.dateInputWrapper}>
-            <Text style={styles.dateLabel}>From:</Text>
+        {/* Floating Filter Card */}
+        <View style={styles.floatingFilterContainer}>
+          {/* Row 1: Date Range */}
+          <View style={styles.filterRow}>
             <TouchableOpacity
-              style={styles.dateInputBox}
+              style={styles.dateInput}
               onPress={() => setShowStartDatePicker(true)}>
+              <Icon name="calendar" size={16} color={THEME.primary} />
               <Text style={styles.dateText}>
                 {startDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
-            {showStartDatePicker && (
-              <DateTimePicker
-                testID="startDatePicker"
-                value={startDate}
-                mode="date"
-                is24Hour={true}
-                display="default"
-                onChange={onStartDateChange}
-              />
-            )}
-          </View>
-
-          <View style={styles.dateInputWrapper}>
-            <Text style={styles.dateLabel}>To:</Text>
+            <Text style={styles.dateSeparator}>-</Text>
             <TouchableOpacity
-              style={styles.dateInputBox}
+              style={styles.dateInput}
               onPress={() => setShowEndDatePicker(true)}>
+              <Icon name="calendar" size={16} color={THEME.primary} />
               <Text style={styles.dateText}>
                 {endDate.toLocaleDateString('en-GB')}
               </Text>
-              <Icon name="calendar" size={20} color={backgroundColors.dark} />
             </TouchableOpacity>
-            {showEndDatePicker && (
-              <DateTimePicker
-                testID="endDatePicker"
-                value={endDate}
-                mode="date"
-                is24Hour={true}
-                display="default"
-                onChange={onEndDateChange}
-              />
-            )}
           </View>
         </View>
-
-        <View style={styles.listContainer}>
-          <FlatList
-            data={currentData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => {
-                  setModalVisible('View');
-                  fetchIncv(item.prch_invoice_no);
-                }}>
-                {/* Avatar + Name + Actions */}
-                <View style={styles.row}>
-                  <View>
-                    <Text style={styles.name}>{item.prch_invoice_no}</Text>
-                    <Text style={styles.subText}>
-                      <Icon name="cash-multiple" size={12} color="#666" />{' '}
-                      {item.prch_order_total}
-                    </Text>
-                  </View>
-
-                  <View style={{alignSelf: 'flex-start'}}>
-                    <Text style={[styles.subText, {fontWeight: '700'}]}>
-                      <Icon name="calendar" size={12} color="#666" />{' '}
-                      {new Date(item.prch_date)
-                        .toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                        .replace(/ /g, '-')}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-group" size={48} color="#666" />
-                <Text style={styles.emptyText}>No record found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
       </View>
+
+      {/* Date Pickers */}
+      {showStartDatePicker && (
+        <DateTimePicker
+          testID="startDatePicker"
+          value={startDate}
+          mode="date"
+          is24Hour={true}
+          display="default"
+          onChange={onStartDateChange}
+        />
+      )}
+      {showEndDatePicker && (
+        <DateTimePicker
+          testID="endDatePicker"
+          value={endDate}
+          mode="date"
+          is24Hour={true}
+          display="default"
+          onChange={onEndDateChange}
+        />
+      )}
+
+      {/* --- CONTENT LIST --- */}
+      <View style={styles.listContainer}>
+        <View style={styles.tableHeaderRow}>
+          <Text style={styles.tableHeaderLabel}>PURCHASE LIST</Text>
+          <Text style={styles.tableHeaderCount}>{totalRecords} Found</Text>
+        </View>
+
+        <FlatList
+          data={currentData}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <TouchableOpacity
+              activeOpacity={0.75}
+              style={styles.cardRow}
+              onPress={() => {
+                setModalVisible('View');
+                fetchIncv(item.prch_invoice_no);
+              }}>
+              {/* Icon Section */}
+              <View style={styles.avatarContainer}>
+                <Icon
+                  name="file-document-outline"
+                  size={24}
+                  color={THEME.primary}
+                />
+              </View>
+
+              {/* Info Section */}
+              <View style={styles.infoContainer}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                  }}>
+                  <Text style={styles.nameText}>{item.prch_invoice_no}</Text>
+                  <Text style={styles.amountText}>{item.prch_order_total}</Text>
+                </View>
+
+                <View style={styles.iconTextRow}>
+                  <Icon name="domain" size={14} color={THEME.textGray} />
+                  <Text style={styles.subText} numberOfLines={1}>
+                    {item.sup_name || 'N/A'}
+                  </Text>
+                </View>
+
+                <View style={styles.iconTextRow}>
+                  <Icon
+                    name="calendar-month"
+                    size={14}
+                    color={THEME.textGray}
+                  />
+                  <Text style={styles.subText}>
+                    {new Date(item.prch_date).toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    marginTop: 4,
+                  }}>
+                  <Text style={[styles.subText, {color: THEME.success}]}>
+                    Paid: {item.prch_paid_amount}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.subText,
+                      {
+                        color:
+                          parseFloat(item.prch_balance) > 0
+                            ? THEME.danger
+                            : THEME.success,
+                        fontWeight: '700',
+                        textAlign: 'right',
+                      },
+                    ]}>
+                    Bal: {item.prch_balance}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Arrow */}
+              <Icon
+                name="chevron-right"
+                size={22}
+                color={THEME.primary}
+                style={{marginLeft: 6}}
+              />
+            </TouchableOpacity>
+          )}
+          contentContainerStyle={{paddingBottom: 160}}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Icon name="clipboard-text-outline" size={60} color="#D1D5DB" />
+              <Text style={styles.emptyText}>No purchase records found</Text>
+            </View>
+          }
+        />
+      </View>
+
+      {/* --- PAGINATION (Bottom Floating) --- */}
+      {totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => prev - 1)}
+            style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+            <Icon name="chevron-left" size={24} color={THEME.white} />
+          </TouchableOpacity>
+
+          <Text style={styles.pageText}>
+            Page {currentPage} of {totalPages}
+          </Text>
+
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() => setCurrentPage(prev => prev + 1)}
+            style={[
+              styles.pageBtn,
+              currentPage === totalPages && styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-right" size={24} color={THEME.white} />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* View Modal */}
       <Modal
@@ -281,18 +394,16 @@ export default function PurchaseList({navigation}: any) {
         presentationStyle="overFullScreen">
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
-            {/* Modal Handle */}
             <View style={styles.modalHandle} />
 
-            {/* Header */}
             <View style={styles.modalHeader}>
-              <View style={styles.headerLeft}>
-                <View style={styles.invoiceIconContainer}>
-                  <Icon name="receipt" size={24} color="#144272" />
+              <View style={styles.modalHeaderLeft}>
+                <View style={styles.modalIconContainer}>
+                  <Icon name="receipt" size={24} color={THEME.primary} />
                 </View>
                 <View>
-                  <Text style={styles.modalTitle}>Purchase Return Invoice</Text>
-                  <Text style={styles.modalSubtitle}>Return Details</Text>
+                  <Text style={styles.modalTitle}>Purchase Invoice</Text>
+                  <Text style={styles.modalSubtitle}>Transaction Details</Text>
                 </View>
               </View>
               <TouchableOpacity
@@ -302,276 +413,175 @@ export default function PurchaseList({navigation}: any) {
                   setInvcDetails([]);
                 }}
                 style={styles.closeButton}>
-                <Icon name="close" size={24} color="#666" />
+                <Icon name="close" size={20} color={THEME.textGray} />
               </TouchableOpacity>
             </View>
 
             <ScrollView
               style={styles.modalContent}
               showsVerticalScrollIndicator={false}>
-              {/* Company Info Card */}
-              <View style={styles.companyCard}>
-                <View style={styles.companyHeader}>
-                  <Text style={styles.companyName}>
-                    {invcData?.config?.bus_name || 'N/A'}
-                  </Text>
-                </View>
-                <Text style={styles.companyAddress}>
+              {/* Company Info */}
+              <View style={styles.invoiceSection}>
+                <Text style={styles.companyName}>
+                  {invcData?.config?.bus_name || 'N/A'}
+                </Text>
+                <Text style={styles.companyDetails}>
                   {invcData?.config?.bus_address || 'N/A'}
                 </Text>
-                <Text style={styles.companyContact}>
+                <Text style={styles.companyDetails}>
                   {invcData?.config?.bus_contact1 || 'Contact: N/A'}
                 </Text>
               </View>
 
-              {/* Order Info Grid */}
-              <View style={styles.orderInfoGrid}>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Invoice #</Text>
-                  <Text style={styles.infoValue}>
+              {/* Details Grid */}
+              <View style={styles.detailsGrid}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Invoice #</Text>
+                  <Text style={styles.detailValue}>
                     {invcData?.purchasedata?.prch_invoice_no ?? 'N/A'}
                   </Text>
                 </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Invoice Date</Text>
-                  <Text style={styles.infoValue}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Date</Text>
+                  <Text style={styles.detailValue}>
                     {invcData?.purchasedata?.prch_date
-                      ? new Date(invcData.purchasedata.prch_date)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-')
+                      ? new Date(
+                          invcData.purchasedata.prch_date,
+                        ).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: 'short',
+                          year: 'numeric',
+                        })
                       : 'N/A'}
                   </Text>
                 </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>PO Reference</Text>
-                  <Text style={styles.infoValue}>
-                    {invcData?.purchasedata?.prch_po_number ?? '--'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Supplier Name:</Text>
-                  <Text style={styles.infoValue}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Supplier</Text>
+                  <Text style={styles.detailValue}>
                     {invcDetails[0]?.sup_name ?? 'N/A'}
                   </Text>
                 </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Company:</Text>
-                  <Text style={styles.infoValue}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Company</Text>
+                  <Text style={styles.detailValue}>
                     {invcDetails[0]?.sup_company_name ?? 'N/A'}
                   </Text>
                 </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Transporter</Text>
-                  <Text style={styles.infoValue}>
-                    {invcDetails[0]?.prch_trans_id !== null
-                      ? trans.find(
-                          tran =>
-                            tran.id.toString() ===
-                            invcDetails[0]?.prch_trans_id?.toString(),
-                        )?.trans_name ?? 'N/A'
-                      : 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Builty#: </Text>
-                  <Text style={styles.infoValue}>
-                    {invcData?.purchasedata?.prch_builty_no ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Vehicle#:</Text>
-                  <Text style={styles.infoValue}>
-                    {invcData?.purchasedata?.prch_vehicle_no ?? 'N/A'}
-                  </Text>
-                </View>
               </View>
 
-              {/* Order Table Section */}
-              <View style={styles.tableSection}>
-                <Text style={styles.sectionTitle}>Invoice Items</Text>
+              {/* Items Table */}
+              <View style={styles.itemsTableContainer}>
+                <Text style={styles.sectionHeader}>Items</Text>
+                <View style={styles.itemsHeader}>
+                  <Text style={[styles.itemsHeaderText, {flex: 2}]}>
+                    Product
+                  </Text>
+                  <Text
+                    style={[
+                      styles.itemsHeaderText,
+                      {flex: 1, textAlign: 'center'},
+                    ]}>
+                    Qty
+                  </Text>
+                  <Text
+                    style={[
+                      styles.itemsHeaderText,
+                      {flex: 1, textAlign: 'right'},
+                    ]}>
+                    Cost
+                  </Text>
+                  <Text
+                    style={[
+                      styles.itemsHeaderText,
+                      {flex: 1, textAlign: 'right'},
+                    ]}>
+                    Total
+                  </Text>
+                </View>
 
-                {/* Table Container */}
-                <View style={styles.tableContainer}>
-                  {/* Table Header */}
-                  <View style={styles.tableHeader}>
-                    <Text style={[styles.tableHeaderText, styles.col1]}>
-                      Product
+                {invcDetails.map((item, index) => (
+                  <View key={index} style={styles.itemRow}>
+                    <Text style={[styles.itemText, {flex: 2}]}>
+                      {item.prchd_prod_name}
                     </Text>
-                    <Text style={[styles.tableHeaderText, styles.col2]}>
-                      Cost Price
+                    <Text
+                      style={[styles.itemText, {flex: 1, textAlign: 'center'}]}>
+                      {item.prchd_qty}
                     </Text>
-                    <Text style={[styles.tableHeaderText, styles.col3]}>
-                      QTY
+                    <Text
+                      style={[styles.itemText, {flex: 1, textAlign: 'right'}]}>
+                      {item.prchd_cost_price}
                     </Text>
-                    <Text style={[styles.tableHeaderText, styles.col4]}>
-                      Total
+                    <Text
+                      style={[styles.itemText, {flex: 1, textAlign: 'right'}]}>
+                      {Number(item.prchd_total_cost).toLocaleString()}
                     </Text>
                   </View>
+                ))}
 
-                  {/* Table Rows */}
-                  <FlatList
-                    data={invcDetails}
-                    keyExtractor={(item, index) =>
-                      item?.id ? item.id.toString() : index.toString()
-                    }
-                    renderItem={({item, index}) => (
-                      <View style={[styles.tableRow]}>
-                        <Text
-                          style={[styles.tableCell, styles.col1]}
-                          numberOfLines={2}>
-                          {item.prchd_prod_name}
-                        </Text>
-                        <Text style={[styles.tableCell, styles.col2]}>
-                          {item.prchd_cost_price}
-                        </Text>
-                        <Text style={[styles.tableCell, styles.col3]}>
-                          {item.prchd_qty}
-                        </Text>
-                        <Text style={[styles.tableCell, styles.col4]}>
-                          {Number(item.prchd_total_cost).toLocaleString()}
-                        </Text>
-                      </View>
-                    )}
-                    scrollEnabled={false}
-                    ListFooterComponent={
-                      <View
-                        style={{
-                          borderTopWidth: 1.5,
-                          borderTopColor: backgroundColors.dark,
-                          flexDirection: 'row',
-                          paddingVertical: 2.5,
-                        }}>
-                        <Text
-                          style={[
-                            styles.tableHeaderText,
-                            {flex: 0.35, textAlign: 'left'},
-                          ]}>
-                          Totals
-                        </Text>
-                        <Text style={[styles.tableCell, {flex: 0.22}]}>
-                          {invcDetails.reduce(
-                            (sum, item) =>
-                              sum + parseFloat(item.prchd_qty || '0'),
-                            0,
-                          )}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.tableCell,
-                            {flex: 0.33, textAlign: 'right'},
-                          ]}>
-                          {invcDetails.reduce(
-                            (sum, item) =>
-                              sum + parseFloat(item.prchd_total_cost || '0'),
-                            0,
-                          )}
-                        </Text>
-                      </View>
-                    }
-                  />
+                <View style={styles.itemsFooter}>
+                  <Text style={styles.itemsFooterLabel}>Total</Text>
+                  <Text style={styles.itemsFooterValue}>
+                    {invcDetails
+                      .reduce(
+                        (sum, item) =>
+                          sum + parseFloat(item.prchd_total_cost || '0'),
+                        0,
+                      )
+                      .toLocaleString()}
+                  </Text>
                 </View>
               </View>
 
-              <View style={styles.orderInfoGrid}>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Total Order:</Text>
-                  <Text style={styles.infoValue}>
-                    {invcData?.purchasedata?.prch_order_total ?? 'N/A'}
+              {/* Summary Cards */}
+              <View style={styles.summaryContainer}>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Total Order</Text>
+                  <Text style={styles.summaryValue}>
+                    {invcData?.purchasedata?.prch_order_total ?? '0'}
                   </Text>
                 </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Freight:</Text>
-                  <Text style={styles.infoValue}>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Freight</Text>
+                  <Text style={styles.summaryValue}>
                     {parseFloat(
                       invcData?.purchasedata?.prch_freight_charges || '0',
-                    ).toFixed(2) ?? 'N/A'}
+                    ).toFixed(2)}
                   </Text>
                 </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Total Purchase:</Text>
-                  <Text style={styles.infoValue}>
-                    {invcData?.purchasedata?.prch_total_purchase ?? 'N/A'}
+                <View style={[styles.summaryRow, styles.totalRow]}>
+                  <Text style={styles.totalLabel}>Grand Total</Text>
+                  <Text style={styles.totalValue}>
+                    {invcData?.purchasedata?.prch_total_purchase ?? '0'}
                   </Text>
                 </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Total Paid:</Text>
-                  <Text style={styles.infoValue}>
-                    {invcData?.purchasedata?.prch_paid_amount ?? 'N/A'}
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Paid Amount</Text>
+                  <Text style={[styles.summaryValue, {color: THEME.primary}]}>
+                    {invcData?.purchasedata?.prch_paid_amount ?? '0'}
                   </Text>
                 </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Balance:</Text>
-                  <Text style={styles.infoValue}>
-                    {invcData?.purchasedata?.prch_balance ?? 'N/A'}
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Balance</Text>
+                  <Text style={[styles.summaryValue, {color: THEME.error}]}>
+                    {invcData?.purchasedata?.prch_balance ?? '0'}
                   </Text>
                 </View>
               </View>
 
-              {/* Footer */}
               <View style={styles.modalFooter}>
-                <Text style={styles.thankYou}>Thank you for your visit</Text>
-                <View style={styles.developerInfo}>
-                  <Text style={styles.developerText}>
-                    Software Developed with ❤️ by
-                  </Text>
-                  <Text style={styles.companyContact}>
-                    Technic Mentors | +923111122144
-                  </Text>
-                </View>
+                <Text style={styles.footerText}>
+                  Thank you for your business
+                </Text>
+                <Text style={styles.developerText}>
+                  Powered by Technic Mentors
+                </Text>
               </View>
             </ScrollView>
           </View>
         </View>
       </Modal>
-
-      {/* Pagination Controls */}
-      {totalRecords > 0 && (
-        <View style={styles.paginationContainer}>
-          <TouchableOpacity
-            disabled={currentPage === 1}
-            onPress={() => setCurrentPage(prev => prev - 1)}
-            style={[
-              styles.pageButton,
-              currentPage === 1 && styles.pageButtonDisabled,
-            ]}>
-            <Text
-              style={[
-                styles.pageButtonText,
-                currentPage === 1 && styles.pageButtonTextDisabled,
-              ]}>
-              Prev
-            </Text>
-          </TouchableOpacity>
-
-          <View style={styles.pageIndicator}>
-            <Text style={styles.pageIndicatorText}>
-              Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-              {totalPages}
-            </Text>
-            <Text style={styles.totalText}>Total: {totalRecords} records</Text>
-          </View>
-
-          <TouchableOpacity
-            disabled={currentPage === totalPages}
-            onPress={() => setCurrentPage(prev => prev + 1)}
-            style={[
-              styles.pageButton,
-              currentPage === totalPages && styles.pageButtonDisabled,
-            ]}>
-            <Text
-              style={[
-                styles.pageButtonText,
-                currentPage === totalPages && styles.pageButtonTextDisabled,
-              ]}>
-              Next
-            </Text>
-          </TouchableOpacity>
-        </View>
-      )}
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -579,215 +589,229 @@ export default function PurchaseList({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 20,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 30,
+    paddingBottom: 40, // Extra space for floating search
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.light,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
+  },
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+
+  // --- Floating Filter ---
+  floatingFilterContainer: {
+    position: 'absolute',
+    bottom: -40,
+    left: 12,
+    right: 12,
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    padding: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    gap: 10,
+  },
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    flex: 1,
+    justifyContent: 'center',
+  },
+  dateText: {
+    fontSize: 13,
+    color: THEME.textDark,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  dateSeparator: {
+    marginHorizontal: 8,
+    color: THEME.textGray,
     fontWeight: 'bold',
   },
-  gradientBackground: {
-    flex: 1,
-  },
 
-  // Pagination Component
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
-  },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    paddingHorizontal: 10,
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
-  },
-
-  // FlatList Styling
+  // --- List & Cards ---
   listContainer: {
     flex: 1,
-    paddingHorizontal: '3%',
+    paddingTop: 35, // Space for floating filter
   },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 16,
   },
-  row: {
+  tableHeaderLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textGray,
+    letterSpacing: 0.5,
+  },
+  tableHeaderCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.primary,
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    width: '94%',
+    alignSelf: 'center',
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    shadowColor: '#222',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
+  avatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#E0F2F1', // Light shade matches primary
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 14,
+  },
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  nameText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  amountText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  iconTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
+    gap: 4,
   },
   subText: {
     fontSize: 12,
-    color: '#555',
-    marginTop: 2,
+    color: THEME.textGray,
+    flex: 1,
   },
+
+  // --- Pagination ---
+  // --- Pagination ---
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 90,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  pageBtn: {
+    padding: 5,
+  },
+  disabledBtn: {
+    opacity: 0.3,
+  },
+  pageText: {
+    color: THEME.white,
+    fontSize: 13,
+    fontWeight: '600',
+    marginHorizontal: 15,
+  },
+
+  // Empty State
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
+    paddingVertical: 60,
   },
   emptyText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    color: THEME.textGray,
+    fontWeight: '500',
   },
 
-  // Date Fields
-  dateContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    marginTop: 15,
-    marginBottom: 10,
-  },
-  dateInputWrapper: {
-    flex: 0.48,
-  },
-  dateLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 8,
-    marginLeft: 4,
-  },
-  dateInputBox: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(20, 66, 114, 0.2)',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  dateText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-  },
-
-  // Modal stying
+  // Modal
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'flex-end',
   },
   modalContainer: {
-    backgroundColor: '#FAFBFC',
+    backgroundColor: '#F9FAFB',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    height: '80%',
-    paddingBottom: 20,
+    height: '90%',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: -4},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 10,
   },
   modalHandle: {
     width: 40,
     height: 4,
-    backgroundColor: '#DDD',
+    backgroundColor: '#D1D5DB',
     borderRadius: 2,
     alignSelf: 'center',
     marginTop: 12,
@@ -798,20 +822,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    borderBottomColor: THEME.border,
   },
-  headerLeft: {
+  modalHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
-  invoiceIconContainer: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#2a652b24',
-    borderRadius: 12,
+  modalIconContainer: {
+    width: 40,
+    height: 40,
+    backgroundColor: THEME.primaryLight,
+    borderRadius: 10,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
@@ -819,187 +842,164 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 2,
+    color: THEME.textDark,
   },
   modalSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
+    fontSize: 13,
+    color: THEME.textGray,
   },
   closeButton: {
-    width: 30,
-    height: 30,
+    padding: 8,
+    backgroundColor: '#F3F4F6',
     borderRadius: 20,
-    backgroundColor: backgroundColors.gray,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Company Card
-  companyCard: {
-    marginHorizontal: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-    paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: backgroundColors.dark,
-    borderStyle: 'dotted',
-  },
-  companyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  companyName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#144272',
-  },
-  companyAddress: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '400',
-  },
-
-  // Info Grid
-  orderInfoGrid: {
-    marginTop: 10,
-    borderBottomColor: backgroundColors.dark,
-    borderBottomWidth: 2,
-    borderStyle: 'dotted',
-    marginHorizontal: 20,
-  },
-  infoCard: {
-    width: '60%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    borderRadius: 8,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: backgroundColors.dark,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  infoValue: {
-    fontSize: 14,
-    color: backgroundColors.dark,
-    fontWeight: '400',
-  },
-
-  // Items Section
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 12,
-  },
-
-  // Totals Section
-  totalsSection: {
-    marginHorizontal: 20,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-  totalLabel: {
-    fontSize: 14,
-    color: backgroundColors.dark,
-    fontWeight: '600',
-  },
-  totalValue: {
-    fontSize: 14,
-    color: backgroundColors.dark,
-    fontWeight: '400',
-  },
-
-  // Footer
-  modalFooter: {
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-  },
-  thankYou: {
-    fontSize: 16,
-    color: '#144272',
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  developerInfo: {
-    alignItems: 'center',
-  },
-  developerText: {
-    fontSize: 12,
-    color: '#888',
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  companyContact: {
-    fontSize: 12,
-    color: '#144272',
-    fontWeight: '600',
-    textAlign: 'center',
   },
   modalContent: {
     flex: 1,
   },
 
-  // Table Section
-  tableSection: {
-    marginTop: 20,
-    marginHorizontal: 20,
-    borderBottomWidth: 2,
-    borderColor: backgroundColors.dark,
-    borderStyle: 'dotted',
-  },
-  tableContainer: {
-    overflow: 'hidden',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    borderBottomColor: backgroundColors.dark,
-    borderBottomWidth: 1.5,
-    paddingBottom: 5,
-  },
-  tableHeaderText: {
-    color: backgroundColors.dark,
-    fontWeight: '600',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 6,
+  // Invoice Details
+  invoiceSection: {
     alignItems: 'center',
+    paddingVertical: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.border,
+    backgroundColor: THEME.white,
   },
-  tableCell: {
-    fontSize: 12,
-    color: backgroundColors.dark,
+  companyName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.primary,
+    marginBottom: 4,
+  },
+  companyDetails: {
+    fontSize: 13,
+    color: THEME.textGray,
     textAlign: 'center',
   },
 
-  // Column widths
-  col1: {
-    flex: 0.1,
+  detailsGrid: {
+    padding: 20,
+    backgroundColor: THEME.white,
+    marginBottom: 10,
   },
-  col2: {
-    flex: 0.25, // Product
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 8,
   },
-  col3: {
-    flex: 0.22, // Qty
+  detailLabel: {
+    fontSize: 13,
+    color: THEME.textGray,
   },
-  col4: {
-    flex: 0.18, // Price
+  detailValue: {
+    fontSize: 13,
+    color: THEME.textDark,
+    fontWeight: '600',
   },
-  col5: {
-    flex: 0.2, // Total
+
+  // Items Table
+  itemsTableContainer: {
+    backgroundColor: THEME.white,
+    padding: 20,
+    marginBottom: 10,
+  },
+  sectionHeader: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 15,
+  },
+  itemsHeader: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.border,
+    paddingBottom: 8,
+    marginBottom: 8,
+  },
+  itemsHeaderText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.textGray,
+    textTransform: 'uppercase',
+  },
+  itemRow: {
+    flexDirection: 'row',
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  itemText: {
+    fontSize: 13,
+    color: THEME.textDark,
+  },
+  itemsFooter: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 12,
+    gap: 10,
+  },
+  itemsFooterLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textDark,
+  },
+  itemsFooterValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+
+  // Summary
+  summaryContainer: {
+    backgroundColor: THEME.white,
+    padding: 20,
+    marginBottom: 20,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  summaryLabel: {
+    fontSize: 14,
+    color: THEME.textGray,
+  },
+  summaryValue: {
+    fontSize: 14,
+    color: THEME.textDark,
+    fontWeight: '600',
+  },
+  totalRow: {
+    borderTopWidth: 1,
+    borderTopColor: THEME.border,
+    paddingTop: 10,
+    marginTop: 5,
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  totalValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+
+  modalFooter: {
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#F9FAFB',
+  },
+  footerText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textDark,
+    marginBottom: 4,
+  },
+  developerText: {
+    fontSize: 12,
+    color: THEME.textGray,
   },
 });

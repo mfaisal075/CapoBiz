@@ -7,6 +7,8 @@ import {
   FlatList,
   Image,
   BackHandler,
+  Dimensions,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -20,7 +22,27 @@ import BASE_URL from '../../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../../CTX/UserContext';
 import RNPrint from 'react-native-print';
-import backgroundColors from '../../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../../BottomBar';
+
+const {width} = Dimensions.get('window');
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  danger: '#EF4444',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 interface ProductDropdown {
   id: number;
@@ -562,6 +584,13 @@ export default function AllUserSale({navigation}: any) {
     return () => backHandler.remove();
   }, [startDate, endDate, userValue, prodValue, catValue]);
 
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
   function formatNumber(num: number | string): string {
     const n = typeof num === 'string' ? parseFloat(num) : num;
     if (isNaN(n)) return '0';
@@ -581,92 +610,127 @@ export default function AllUserSale({navigation}: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={26} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>All User Sales</Text>
+            <TouchableOpacity onPress={handlePrint} style={styles.iconBtn}>
+              <Icon name="printer" size={26} color={THEME.white} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* --- FILTER SECTION --- */}
+      <View style={styles.filterSection}>
+        {/* Radio Buttons */}
+        <View style={styles.radioContainer}>
+          <TouchableOpacity
+            style={styles.radioButton}
+            onPress={() => {
+              setSelectionMode('salereport');
+              setCatValue('');
+              setUserValue('');
+              setProdValue('');
+            }}>
+            <RadioButton
+              value="salereport"
+              status={selectionMode === 'salereport' ? 'checked' : 'unchecked'}
+              color={THEME.primary}
+              uncheckedColor={THEME.textGray}
             />
+            <Text style={styles.radioText}>Sale Report</Text>
           </TouchableOpacity>
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>All User Sales</Text>
-          </View>
+          <TouchableOpacity
+            style={styles.radioButton}
+            onPress={() => {
+              setSelectionMode('detailedsalereport');
+              setCatValue('');
+              setUserValue('');
+              setProdValue('');
+            }}>
+            <RadioButton
+              value="detailedsalereport"
+              status={
+                selectionMode === 'detailedsalereport' ? 'checked' : 'unchecked'
+              }
+              color={THEME.primary}
+              uncheckedColor={THEME.textGray}
+            />
+            <Text style={styles.radioText}>Detailed Report</Text>
+          </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="#fff" />
+          <TouchableOpacity
+            style={styles.radioButton}
+            onPress={() => {
+              setSelectionMode('saleSummary');
+              setCatValue('');
+              setUserValue('');
+              setProdValue('');
+            }}>
+            <RadioButton
+              value="saleSummary"
+              status={selectionMode === 'saleSummary' ? 'checked' : 'unchecked'}
+              color={THEME.primary}
+              uncheckedColor={THEME.textGray}
+            />
+            <Text style={styles.radioText}>Summary</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Filter Section */}
-        <View style={styles.filterContainer}>
-          {/* Radio Buttons */}
-          <View style={styles.radioContainer}>
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('salereport');
-                setCatValue('');
-                setUserValue('');
-                setProdValue('');
-              }}>
-              <RadioButton
-                value="salereport"
-                status={
-                  selectionMode === 'salereport' ? 'checked' : 'unchecked'
-                }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
-              />
-              <Text style={styles.radioText}>Sale Report</Text>
-            </TouchableOpacity>
+        {/* Date Inputs */}
+        <View style={styles.filterRow}>
+          <TouchableOpacity
+            style={styles.dateInput}
+            onPress={() => setShowStartDatePicker(true)}>
+            <Icon name="calendar" size={20} color={THEME.primary} />
+            <Text style={styles.dateText}>
+              {startDate.toLocaleDateString()}
+            </Text>
+          </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('detailedsalereport');
-                setCatValue('');
-                setUserValue('');
-                setProdValue('');
-              }}>
-              <RadioButton
-                value="detailedsalereport"
-                status={
-                  selectionMode === 'detailedsalereport'
-                    ? 'checked'
-                    : 'unchecked'
-                }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
-              />
-              <Text style={styles.radioText}>Detailed Sale Report</Text>
-            </TouchableOpacity>
-          </View>
-          <View style={[styles.radioContainer, {marginBottom: 4}]}>
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('saleSummary');
-                setCatValue('');
-                setUserValue('');
-                setProdValue('');
-              }}>
-              <RadioButton
-                value="saleSummary"
-                status={
-                  selectionMode === 'saleSummary' ? 'checked' : 'unchecked'
-                }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
-              />
-              <Text style={styles.radioText}>Sale Summary</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.dateSeparator}>to</Text>
 
-          {/* Dropdowns */}
+          <TouchableOpacity
+            style={styles.dateInput}
+            onPress={() => setShowEndDatePicker(true)}>
+            <Icon name="calendar" size={20} color={THEME.primary} />
+            <Text style={styles.dateText}>{endDate.toLocaleDateString()}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {showStartDatePicker && (
+          <DateTimePicker
+            testID="startDatePicker"
+            value={startDate}
+            mode="date"
+            is24Hour={true}
+            display="default"
+            onChange={onStartDateChange}
+          />
+        )}
+        {showEndDatePicker && (
+          <DateTimePicker
+            testID="endDatePicker"
+            value={endDate}
+            mode="date"
+            is24Hour={true}
+            display="default"
+            onChange={onEndDateChange}
+          />
+        )}
+
+        {/* Dropdowns */}
+        <View style={{zIndex: 3000, marginTop: 10}}>
           <DropDownPicker
             items={transformedCategory}
             open={catOpen}
@@ -677,17 +741,13 @@ export default function AllUserSale({navigation}: any) {
             disabled={
               selectionMode === 'salereport' || selectionMode === 'saleSummary'
             }
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
+            placeholderStyle={{color: THEME.textGray}}
+            textStyle={{color: THEME.textDark}}
             ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
+              <Icon name="chevron-up" size={20} color={THEME.textDark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon
-                name="chevron-down"
-                size={18}
-                color={backgroundColors.dark}
-              />
+              <Icon name="chevron-down" size={20} color={THEME.textDark} />
             )}
             style={[
               styles.dropdown,
@@ -696,25 +756,21 @@ export default function AllUserSale({navigation}: any) {
                 styles.dropdownDisabled,
             ]}
             dropDownContainerStyle={styles.dropDownContainer}
-            listMode="MODAL"
-            listItemLabelStyle={{
-              color: backgroundColors.dark,
-              fontWeight: '500',
-            }}
-            labelStyle={{
-              color: backgroundColors.dark,
-              fontSize: 16,
-            }}
+            listMode="SCROLLVIEW"
+            listItemLabelStyle={{color: THEME.textDark, fontWeight: '500'}}
+            labelStyle={{color: THEME.textDark, fontSize: 13}}
             searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
+            searchTextInputStyle={{borderWidth: 0}}
             searchContainerStyle={{
-              borderColor: backgroundColors.gray,
+              borderBottomColor: THEME.border,
+              borderBottomWidth: 1,
             }}
+            zIndex={3000}
+            zIndexInverse={1000}
           />
+        </View>
 
+        <View style={{zIndex: 2000, marginTop: 10}}>
           <DropDownPicker
             items={transformedProd}
             open={prodOpen}
@@ -725,17 +781,13 @@ export default function AllUserSale({navigation}: any) {
             disabled={
               selectionMode === 'salereport' || selectionMode === 'saleSummary'
             }
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
+            placeholderStyle={{color: THEME.textGray}}
+            textStyle={{color: THEME.textDark}}
             ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
+              <Icon name="chevron-up" size={20} color={THEME.textDark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon
-                name="chevron-down"
-                size={18}
-                color={backgroundColors.dark}
-              />
+              <Icon name="chevron-down" size={20} color={THEME.textDark} />
             )}
             style={[
               styles.dropdown,
@@ -744,25 +796,21 @@ export default function AllUserSale({navigation}: any) {
                 styles.dropdownDisabled,
             ]}
             dropDownContainerStyle={styles.dropDownContainer}
-            listMode="MODAL"
-            listItemLabelStyle={{
-              color: backgroundColors.dark,
-              fontWeight: '500',
-            }}
-            labelStyle={{
-              color: backgroundColors.dark,
-              fontSize: 16,
-            }}
+            listMode="SCROLLVIEW"
+            listItemLabelStyle={{color: THEME.textDark, fontWeight: '500'}}
+            labelStyle={{color: THEME.textDark, fontSize: 13}}
             searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
+            searchTextInputStyle={{borderWidth: 0}}
             searchContainerStyle={{
-              borderColor: backgroundColors.gray,
+              borderBottomColor: THEME.border,
+              borderBottomWidth: 1,
             }}
+            zIndex={2000}
+            zIndexInverse={2000}
           />
+        </View>
 
+        <View style={{zIndex: 1000, marginTop: 10}}>
           <DropDownPicker
             items={transformedUsers}
             open={userOpen}
@@ -770,495 +818,354 @@ export default function AllUserSale({navigation}: any) {
             value={userValue}
             setValue={setUserValue}
             placeholder="Select User"
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
+            placeholderStyle={{color: THEME.textGray}}
+            textStyle={{color: THEME.textDark}}
             ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
+              <Icon name="chevron-up" size={20} color={THEME.textDark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon
-                name="chevron-down"
-                size={18}
-                color={backgroundColors.dark}
-              />
+              <Icon name="chevron-down" size={20} color={THEME.textDark} />
             )}
-            style={[styles.dropdown, {zIndex: 1000}]}
+            style={styles.dropdown}
             dropDownContainerStyle={styles.dropDownContainer}
-            listMode="MODAL"
-            listItemLabelStyle={{
-              color: backgroundColors.dark,
-              fontWeight: '500',
-            }}
-            labelStyle={{
-              color: backgroundColors.dark,
-              fontSize: 16,
-            }}
-            searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
-            searchContainerStyle={{
-              borderColor: backgroundColors.gray,
-            }}
+            listMode="SCROLLVIEW"
+            listItemLabelStyle={{color: THEME.textDark, fontWeight: '500'}}
+            labelStyle={{color: THEME.textDark, fontSize: 13}}
+            zIndex={1000}
+            zIndexInverse={3000}
           />
-
-          {/* Date Pickers */}
-          <View style={styles.dateContainer}>
-            <View style={styles.datePicker}>
-              <Text style={styles.dateLabel}>From:</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowStartDatePicker(true)}>
-                <Text style={styles.dateText}>
-                  {startDate.toLocaleDateString()}
-                </Text>
-                <Icon name="calendar" size={18} color={backgroundColors.dark} />
-              </TouchableOpacity>
-              {showStartDatePicker && (
-                <DateTimePicker
-                  testID="startDatePicker"
-                  value={startDate}
-                  mode="date"
-                  is24Hour={true}
-                  display="default"
-                  onChange={onStartDateChange}
-                />
-              )}
-            </View>
-
-            <View style={styles.datePicker}>
-              <Text style={styles.dateLabel}>To:</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowEndDatePicker(true)}>
-                <Text style={styles.dateText}>
-                  {endDate.toLocaleDateString()}
-                </Text>
-                <Icon name="calendar" size={18} color={backgroundColors.dark} />
-              </TouchableOpacity>
-              {showEndDatePicker && (
-                <DateTimePicker
-                  testID="endDatePicker"
-                  value={endDate}
-                  mode="date"
-                  is24Hour={true}
-                  display="default"
-                  onChange={onEndDateChange}
-                />
-              )}
-            </View>
-          </View>
         </View>
+      </View>
 
-        {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
-          {selectionMode === 'salereport' && (
-            <>
-              {(() => {
-                const {totalProfit, totalSale} = calculateTotalSalesProfit();
-                return (
-                  <>
-                    <View style={styles.innerSummaryCtx}>
-                      <Text style={styles.summaryLabel}>Total Sales:</Text>
-                      <Text style={styles.summaryValue}>
-                        {formatNumber(totalSale)}
-                      </Text>
-                    </View>
-                    <View style={styles.innerSummaryCtx}>
-                      <Text style={styles.summaryLabel}>Total Profit:</Text>
-                      <Text style={styles.summaryValue}>
-                        {formatNumber(totalProfit)}
-                      </Text>
-                    </View>
-                  </>
-                );
-              })()}
-            </>
-          )}
-
-          {selectionMode === 'detailedsalereport' && (
-            <>
-              {(() => {
-                const {totalProfit, totalSale} = calculateDetailedSalesProfit();
-                return (
-                  <>
-                    <View style={styles.innerSummaryCtx}>
-                      <Text style={styles.summaryLabel}>Total Sales:</Text>
-                      <Text style={styles.summaryValue}>
-                        {formatNumber(totalSale)}
-                      </Text>
-                    </View>
-                    <View style={styles.innerSummaryCtx}>
-                      <Text style={styles.summaryLabel}>Total Profit:</Text>
-                      <Text style={styles.summaryValue}>
-                        {formatNumber(totalProfit)}
-                      </Text>
-                    </View>
-                  </>
-                );
-              })()}
-            </>
-          )}
-
-          {selectionMode === 'saleSummary' && (
-            <>
-              {(() => {
-                const {totalSale} = calculateTotalSales();
-                return (
-                  <View style={styles.innerSummaryCtx}>
-                    <Text style={styles.summaryLabel}>Total Sales:</Text>
-                    <Text style={styles.summaryValue}>
-                      {formatNumber(totalSale)}
-                    </Text>
-                  </View>
-                );
-              })()}
-            </>
-          )}
-        </View>
-
-        {/* Sale Report List */}
-        {selectionMode === 'salereport' && (
-          <View style={styles.listContainer}>
-            <FlatList
-              data={paginatedSalesData}
-              keyExtractor={(item, index) => `${item.id}-${index}`}
-              renderItem={({item}) => (
-                <View style={styles.card}>
-                  {/* Avatar + Name + Actions */}
-                  <View style={styles.row}>
-                    <View>
-                      <Text style={styles.name}>{item.cust_name}</Text>
-                      <Text style={styles.subText}>
-                        <Text style={{fontWeight: '600'}}>Invoice#: </Text>
-                        {item.sal_invoice_no}
-                      </Text>
-                    </View>
-
-                    <View style={[{alignSelf: 'flex-start', marginTop: 22}]}>
-                      <Text
-                        style={[
-                          styles.subText,
-                          {fontWeight: '700', verticalAlign: 'top'},
-                        ]}>
-                        <Icon name="calendar" size={12} color="#666" />{' '}
-                        {new Date(item.sal_date)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-') || 'N/A'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      marginTop: 5,
-                    }}>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Order Total: </Text>
-                      {formatNumber(item.sal_order_total) ?? '0'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Discount: </Text>
-                      {formatNumber(item.sal_discount) ?? '0'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Net Payable: </Text>
-                      {formatNumber(item.sal_total_amount) ?? '0'}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Icon name="chart-line" size={48} color="#666" />
-                  <Text style={styles.emptyText}>
-                    No detailed sale records found.
-                  </Text>
-                </View>
-              }
-              contentContainerStyle={{paddingBottom: 90}}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        )}
-
-        {/* Sale Report List */}
-        {selectionMode === 'detailedsalereport' && (
-          <View style={styles.listContainer}>
-            <FlatList
-              data={paginatedDetailedData}
-              keyExtractor={(item, index) => `${item.id}-${index}`}
-              renderItem={({item}) => (
-                <View style={styles.card}>
-                  {/* Avatar + Name + Actions */}
-                  <View style={styles.row}>
-                    <View>
-                      <Text style={styles.name}>{item.cust_name}</Text>
-                      <Text style={styles.subText}>
-                        <Text style={{fontWeight: '600'}}>Invoice#: </Text>
-                        {item.sal_invoice_no}
-                      </Text>
-                    </View>
-
-                    <View style={[{alignSelf: 'flex-start', marginTop: 22}]}>
-                      <Text
-                        style={[
-                          styles.subText,
-                          {fontWeight: '700', verticalAlign: 'top'},
-                        ]}>
-                        <Icon name="calendar" size={12} color="#666" />{' '}
-                        {new Date(item.sal_date)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-') || 'N/A'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      marginTop: 5,
-                    }}>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Order Total: </Text>
-                      {formatNumber(item.sal_order_total) ?? '0'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Discount: </Text>
-                      {formatNumber(item.sal_discount) ?? '0'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Net Payable: </Text>
-                      {formatNumber(item.sal_total_amount) ?? '0'}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Icon name="chart-line" size={48} color="#666" />
-                  <Text style={styles.emptyText}>
-                    No detailed sale records found.
-                  </Text>
-                </View>
-              }
-              contentContainerStyle={{paddingBottom: 90}}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        )}
-
-        {/* Sale Summary List */}
-        {selectionMode === 'saleSummary' && (
-          <View style={styles.listContainer}>
-            <FlatList
-              data={paginatedSummaryData}
-              keyExtractor={(item, index) =>
-                `${item.sald_prod_id}-summary-${index}`
-              }
-              renderItem={({item}) => (
-                <View style={styles.card}>
-                  {/* Avatar + Name + Actions */}
-                  <View style={styles.row}>
-                    <View>
-                      <Text style={styles.name}>{item.sald_prod_name}</Text>
-                      <Text style={styles.subText}>
-                        <Text style={{fontWeight: '600'}}>Invoice#: </Text>
-                        {item.total_qty}
-                      </Text>
-                    </View>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      marginTop: 4,
-                    }}>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Sale Value: </Text>
-                      {formatNumber(item.total_sale_value) ?? '0'}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Icon name="chart-pie" size={48} color="#666" />
-                  <Text style={styles.emptyText}>
-                    No summary records found.
-                  </Text>
-                </View>
-              }
-              contentContainerStyle={{paddingBottom: 90}}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        )}
-
-        {/* Pagination Controls for Sale Report */}
-        {selectionMode === 'salereport' && totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
+      {/* --- STATS SECTION --- */}
+      <View style={styles.statsContainer}>
+        {selectionMode === 'salereport' ||
+        selectionMode === 'detailedsalereport' ? (
+          <>
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, {color: '#1976D2'}]}>
+                {formatNumber(
+                  selectionMode === 'salereport'
+                    ? calculateTotalSalesProfit().totalSale
+                    : calculateDetailedSalesProfit().totalSale,
+                )}
               </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
+              <Text style={styles.statLabel}>Total Sales</Text>
             </View>
-
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() =>
-                setCurrentPage(prev => Math.min(prev + 1, totalPages))
-              }
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
+            <View style={styles.statDivider} />
+            <View style={styles.statItem}>
+              <Text style={[styles.statValue, {color: '#388E3C'}]}>
+                {formatNumber(
+                  selectionMode === 'salereport'
+                    ? calculateTotalSalesProfit().totalProfit
+                    : calculateDetailedSalesProfit().totalProfit,
+                )}
               </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Pagination Controls for Details Sale Report */}
-        {selectionMode === 'detailedsalereport' && totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
+              <Text style={styles.statLabel}>Total Profit</Text>
             </View>
-
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() =>
-                setCurrentPage(prev => Math.min(prev + 1, totalPages))
-              }
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Pagination Controls for Sale Summary */}
-        {selectionMode === 'saleSummary' && totalRecordsSummary > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPageSummary === 1}
-              onPress={() =>
-                setCurrentPageSummary(prev => Math.max(prev - 1, 1))
-              }
-              style={[
-                styles.pageButton,
-                currentPageSummary === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPageSummary === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page{' '}
-                <Text style={styles.pageCurrent}>{currentPageSummary}</Text> of{' '}
-                {totalPagesSummary}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecordsSummary} records
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              disabled={currentPageSummary === totalPagesSummary}
-              onPress={() =>
-                setCurrentPageSummary(prev =>
-                  Math.min(prev + 1, totalPagesSummary),
-                )
-              }
-              style={[
-                styles.pageButton,
-                currentPageSummary === totalPagesSummary &&
-                  styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPageSummary === totalPagesSummary &&
-                    styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={styles.statItem}>
+            <Text style={[styles.statValue, {color: '#1976D2'}]}>
+              {formatNumber(calculateTotalSales().totalSale)}
+            </Text>
+            <Text style={styles.statLabel}>Total Sales</Text>
           </View>
         )}
       </View>
+
+      {/* --- LIST CONTENT --- */}
+      <View style={styles.listContainer}>
+        <View style={styles.tableHeaderRow}>
+          <Text style={styles.tableHeaderLabel}>
+            {selectionMode === 'salereport'
+              ? 'SALES REPORT'
+              : selectionMode === 'detailedsalereport'
+              ? 'DETAILED REPORT'
+              : 'SALES SUMMARY'}
+          </Text>
+          <Text style={styles.tableHeaderCount}>
+            {selectionMode === 'salereport'
+              ? totalRecords
+              : selectionMode === 'detailedsalereport'
+              ? totalRecordsDetailed
+              : totalRecordsSummary}{' '}
+            Found
+          </Text>
+        </View>
+
+        {selectionMode === 'salereport' && (
+          <FlatList
+            data={paginatedSalesData}
+            keyExtractor={(item, index) => `${item.id}-${index}`}
+            renderItem={({item}) => {
+              const initials = getInitials(item.cust_name);
+              return (
+                <View style={styles.cardRow}>
+                  {/* Avatar */}
+                  <View style={styles.avatarContainer}>
+                    <Text style={styles.avatarText}>{initials}</Text>
+                  </View>
+
+                  {/* Info */}
+                  <View style={styles.infoContainer}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                      }}>
+                      <Text style={styles.nameText} numberOfLines={1}>
+                        {item.cust_name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.detailText,
+                          {color: '#1976D2', fontSize: 13},
+                        ]}>
+                        {formatNumber(item.sal_total_amount)}
+                      </Text>
+                    </View>
+
+                    <Text style={styles.dateLabelList}>
+                      {new Date(item.sal_date).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                      })}{' '}
+                      • {item.sal_invoice_no}
+                    </Text>
+
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Profit:</Text>
+                        <Text style={[styles.detailText, {color: '#388E3C'}]}>
+                          {formatNumber(item.sal_profit)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              );
+            }}
+            ListEmptyComponent={
+              <View style={styles.centerContent}>
+                <Icon name="file-document-outline" size={60} color="#E5E7EB" />
+                <Text style={styles.emptyText}>No sales found</Text>
+              </View>
+            }
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{paddingBottom: 150}}
+          />
+        )}
+
+        {selectionMode === 'detailedsalereport' && (
+          <FlatList
+            data={paginatedDetailedData}
+            keyExtractor={(item, index) => `${item.id}-${index}`}
+            renderItem={({item}) => {
+              const invoiceNo = item.sal_invoice_no;
+              const details = saleDetails[invoiceNo] || [];
+              const initials = getInitials(item.cust_name);
+
+              return (
+                <View style={styles.cardRow}>
+                  <View
+                    style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      marginBottom: 10,
+                    }}>
+                    <View style={styles.avatarContainer}>
+                      <Text style={styles.avatarText}>{initials}</Text>
+                    </View>
+                    <View style={styles.infoContainer}>
+                      <Text style={styles.nameText}>{item.cust_name}</Text>
+                      <Text style={styles.dateLabelList}>
+                        {new Date(item.sal_date).toLocaleDateString()} •{' '}
+                        {invoiceNo}
+                      </Text>
+                      <Text style={[styles.detailText, {color: '#1976D2'}]}>
+                        Total: {formatNumber(item.sal_total_amount)}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* Divider */}
+                  <View
+                    style={{
+                      height: 1,
+                      backgroundColor: '#E5E7EB',
+                      marginBottom: 10,
+                    }}
+                  />
+
+                  {/* Details */}
+                  {details.map((detail, dIndex) => (
+                    <View
+                      key={dIndex}
+                      style={{
+                        flexDirection: 'row',
+                        justifyContent: 'space-between',
+                        marginBottom: 6,
+                        backgroundColor: '#F9FAFB',
+                        padding: 8,
+                        borderRadius: 8,
+                      }}>
+                      <View style={{flex: 1}}>
+                        <Text
+                          style={[styles.detailText, {color: THEME.textDark}]}>
+                          {detail.sald_prod_name}
+                        </Text>
+                        <Text style={[styles.detailLabel, {fontSize: 11}]}>
+                          Qty: {detail.sald_qty}
+                        </Text>
+                      </View>
+                      <View style={{alignItems: 'flex-end'}}>
+                        <Text
+                          style={[styles.detailText, {color: THEME.textDark}]}>
+                          {formatNumber(detail.sald_total_fretailprice)}
+                        </Text>
+                        <Text style={[styles.detailLabel, {fontSize: 11}]}>
+                          @ {formatNumber(detail.sald_fretail_price)}
+                        </Text>
+                      </View>
+                    </View>
+                  ))}
+                </View>
+              );
+            }}
+            contentContainerStyle={{paddingBottom: 150}}
+            showsVerticalScrollIndicator={false}
+            ListEmptyComponent={
+              <View style={styles.centerContent}>
+                <Icon name="file-remove-outline" size={80} color="#E5E7EB" />
+                <Text style={styles.emptyText}>No sales found!</Text>
+              </View>
+            }
+          />
+        )}
+
+        {selectionMode === 'saleSummary' && (
+          <FlatList
+            data={paginatedSummaryData}
+            keyExtractor={(item, index) =>
+              `${item.sald_prod_id}-summary-${index}`
+            }
+            renderItem={({item}) => {
+              const initials = getInitials(item.sald_prod_name);
+              return (
+                <View style={styles.cardRow}>
+                  <View style={styles.avatarContainer}>
+                    <Text style={styles.avatarText}>{initials}</Text>
+                  </View>
+                  <View style={styles.infoContainer}>
+                    <Text style={styles.nameText}>{item.sald_prod_name}</Text>
+                    <View style={styles.detailRow}>
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Qty:</Text>
+                        <Text
+                          style={[styles.detailText, {color: THEME.textDark}]}>
+                          {item.total_qty}
+                        </Text>
+                      </View>
+                      <View style={styles.detailSeparator} />
+                      <View style={styles.detailItem}>
+                        <Text style={styles.detailLabel}>Total Value:</Text>
+                        <Text style={[styles.detailText, {color: '#1976D2'}]}>
+                          {formatNumber(item.total_sale_value)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                </View>
+              );
+            }}
+            ListEmptyComponent={
+              <View style={styles.centerContent}>
+                <Icon name="file-document-outline" size={60} color="#E5E7EB" />
+                <Text style={styles.emptyText}>No summary found</Text>
+              </View>
+            }
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{paddingBottom: 150}}
+          />
+        )}
+      </View>
+
+      {/* --- PAGINATION --- */}
+      {(selectionMode === 'salereport' && totalRecords > 0) ||
+      (selectionMode === 'detailedsalereport' && totalRecordsDetailed > 0) ||
+      (selectionMode === 'saleSummary' && totalRecordsSummary > 0) ? (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={
+              selectionMode === 'salereport'
+                ? currentPage === 1
+                : selectionMode === 'detailedsalereport'
+                ? currentPageDetailed === 1
+                : currentPageSummary === 1
+            }
+            onPress={() => {
+              if (selectionMode === 'salereport')
+                setCurrentPage(prev => prev - 1);
+              else if (selectionMode === 'detailedsalereport')
+                setCurrentPageDetailed(prev => prev - 1);
+              else setCurrentPageSummary(prev => prev - 1);
+            }}
+            style={[
+              styles.pageBtn,
+              (selectionMode === 'salereport'
+                ? currentPage === 1
+                : selectionMode === 'detailedsalereport'
+                ? currentPageDetailed === 1
+                : currentPageSummary === 1) && styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-left" size={24} color={THEME.white} />
+          </TouchableOpacity>
+
+          <Text style={styles.pageText}>
+            {selectionMode === 'salereport'
+              ? currentPage
+              : selectionMode === 'detailedsalereport'
+              ? currentPageDetailed
+              : currentPageSummary}{' '}
+            /{' '}
+            {selectionMode === 'salereport'
+              ? totalPages
+              : selectionMode === 'detailedsalereport'
+              ? totalPagesDetailed
+              : totalPagesSummary}
+          </Text>
+
+          <TouchableOpacity
+            disabled={
+              selectionMode === 'salereport'
+                ? currentPage === totalPages
+                : selectionMode === 'detailedsalereport'
+                ? currentPageDetailed === totalPagesDetailed
+                : currentPageSummary === totalPagesSummary
+            }
+            onPress={() => {
+              if (selectionMode === 'salereport')
+                setCurrentPage(prev => prev + 1);
+              else if (selectionMode === 'detailedsalereport')
+                setCurrentPageDetailed(prev => prev + 1);
+              else setCurrentPageSummary(prev => prev + 1);
+            }}
+            style={[
+              styles.pageBtn,
+              (selectionMode === 'salereport'
+                ? currentPage === totalPages
+                : selectionMode === 'detailedsalereport'
+                ? currentPageDetailed === totalPagesDetailed
+                : currentPageSummary === totalPagesSummary) &&
+                styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-right" size={24} color={THEME.white} />
+          </TouchableOpacity>
+        </View>
+      ) : null}
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -1266,273 +1173,302 @@ export default function AllUserSale({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER ---
+  headerWrapper: {
+    zIndex: 999,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 90,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: THEME.primary,
+  },
+  headerContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
+  iconBtn: {
+    padding: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
   },
 
-  // Filter Container
-  filterContainer: {
-    backgroundColor: backgroundColors.light,
+  // --- FILTER SECTION ---
+  filterSection: {
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
+    paddingVertical: 15,
     paddingHorizontal: 15,
-    marginTop: 10,
-    marginBottom: 4,
-    marginHorizontal: 12,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+    marginTop: -70,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  dateContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  datePicker: {
-    width: '48%',
-  },
-  dateLabel: {
-    color: backgroundColors.dark,
-    fontWeight: '600',
-    marginBottom: 5,
-    fontSize: 14,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-    height: 48,
-  },
-  dateText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '500',
+    shadowOffset: {width: 0, height: 2},
+    zIndex: 1000,
   },
   radioContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '80%',
+    justifyContent: 'space-around',
+    marginBottom: 4,
+    flexWrap: 'wrap',
   },
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginHorizontal: 5,
+    marginBottom: 5,
   },
   radioText: {
-    color: backgroundColors.dark,
-    marginLeft: -5,
+    color: THEME.textDark,
+    marginLeft: 2,
     fontWeight: '500',
+    fontSize: 13,
   },
   dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
-    height: 48,
-    marginBottom: 10,
+    backgroundColor: THEME.white,
+    borderColor: THEME.border,
+    borderRadius: 8,
+    minHeight: 45,
   },
   dropdownDisabled: {
-    backgroundColor: '#dfdfdfff',
-    borderColor: '#ccc',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+    opacity: 0.7,
   },
   dropDownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
+    borderColor: THEME.border,
+    backgroundColor: THEME.white,
   },
-
-  // Summary Container
-  summaryContainer: {
-    marginHorizontal: 12,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 14,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    marginTop: 0,
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.white,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    flex: 1,
+    justifyContent: 'center',
+    elevation: 2,
     shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
+  },
+  dateText: {
+    fontSize: 14,
+    color: THEME.textDark,
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  dateSeparator: {
+    marginHorizontal: 10,
+    color: THEME.textGray,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  // --- STATS SECTION ---
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '700',
     marginBottom: 4,
   },
-  innerSummaryCtx: {
-    flexDirection: 'row',
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  statLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    textAlign: 'center',
   },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#555',
-    fontWeight: '500',
-  },
-  summaryValue: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-    fontWeight: 'bold',
+  statDivider: {
+    width: 1,
+    height: '80%',
+    backgroundColor: THEME.border,
+    alignSelf: 'center',
   },
 
-  // FlatList Styling
+  // --- LIST & CARDS ---
   listContainer: {
     flex: 1,
-    paddingHorizontal: '3%',
-    marginTop: 4,
+    marginTop: 5,
+    paddingHorizontal: 15,
   },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 5,
+  },
+  tableHeaderLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: THEME.textGray,
+    letterSpacing: 1,
+  },
+  tableHeaderCount: {
+    fontSize: 12,
+    color: THEME.primary,
+    fontWeight: '700',
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
     elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
   },
-  row: {
+  avatarContainer: {
+    width: 45,
+    height: 45,
+    borderRadius: 23,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(42, 101, 43, 0.1)',
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.primary,
+  },
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 2,
+    flex: 1,
+  },
+  dateLabelList: {
+    fontSize: 12,
+    color: THEME.textGray,
+    marginBottom: 4,
+  },
+  detailRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  subText: {
-    fontSize: 12,
-    color: backgroundColors.dark,
     marginTop: 2,
+    flexWrap: 'wrap',
   },
-  emptyContainer: {
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailSeparator: {
+    width: 1,
+    height: 12,
+    backgroundColor: '#D1D5DB',
+    marginHorizontal: 8,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: THEME.textGray,
+    marginRight: 4,
+  },
+  detailText: {
+    fontSize: 12,
+    color: THEME.textDark,
+    fontWeight: '600',
+  },
+
+  centerContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
+    paddingVertical: 50,
   },
   emptyText: {
     marginTop: 10,
+    color: THEME.textGray,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
   },
 
-  // Pagination Styling
+  // --- PAGINATION ---
   paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
     position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
-  },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
+    bottom: 100,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+    paddingHorizontal: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: backgroundColors.light,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
+  pageBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
+  disabledBtn: {
+    opacity: 0.3,
   },
-  pageCurrent: {
+  pageText: {
+    color: THEME.white,
     fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
+    marginHorizontal: 15,
+    fontSize: 14,
   },
 });

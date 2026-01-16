@@ -7,6 +7,7 @@ import {
   ScrollView,
   Image,
   Modal,
+  StatusBar,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import React, {useEffect, useState} from 'react';
@@ -15,9 +16,29 @@ import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import backgroundColors from '../../Colors';
 import LottieView from 'lottie-react-native';
 import {BackHandler} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import backgroundColors from '../../Colors';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+  success: '#10B981',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  shadow: '#000',
+};
 
 interface CashClose {
   sales_total: string;
@@ -105,115 +126,115 @@ export default function SaleCashClose({navigation}: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Modern Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Cash Close</Text>
+            <View style={{width: 40}} />
           </View>
-        </View>
+        </LinearGradient>
+      </View>
 
-        <ScrollView style={styles.scrollContainer}>
-          {/* Cash Summary Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Cash Summary</Text>
-
-            <View style={styles.summaryCard}>
-              <View style={styles.summaryRow}>
-                <View style={styles.summaryLabelContainer}>
-                  <Icon
-                    name="person"
-                    size={20}
-                    color={backgroundColors.dark}
-                    style={styles.summaryIcon}
-                  />
-                  <Text style={styles.summaryLabel}>User:</Text>
-                </View>
-                <Text style={styles.summaryValue}>{userName ?? 'N/A'}</Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <View style={styles.summaryLabelContainer}>
-                  <Icon
-                    name="account-balance-wallet"
-                    size={20}
-                    color={backgroundColors.dark}
-                    style={styles.summaryIcon}
-                  />
-                  <Text style={styles.summaryLabel}>Cash In Hand:</Text>
-                </View>
-                <Text style={styles.summaryValue}>
-                  {cashClose?.cash_in_hand ?? '0.00'}
-                </Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <View style={styles.summaryLabelContainer}>
-                  <Icon
-                    name="trending-up"
-                    size={20}
-                    color={backgroundColors.dark}
-                    style={styles.summaryIcon}
-                  />
-                  <Text style={styles.summaryLabel}>Total Sales:</Text>
-                </View>
-                <Text style={styles.summaryValue}>
-                  {cashClose?.sales_total ?? '0.00'}
-                </Text>
-              </View>
-
-              <View style={styles.summaryRow}>
-                <View style={styles.summaryLabelContainer}>
-                  <Icon
-                    name="trending-down"
-                    size={20}
-                    color={backgroundColors.dark}
-                    style={styles.summaryIcon}
-                  />
-                  <Text style={styles.summaryLabel}>Total Return:</Text>
-                </View>
-                <Text style={styles.summaryValue}>
-                  {cashClose?.return_amount ?? '0.00'}
-                </Text>
-              </View>
-
-              <View style={[styles.summaryRow, styles.totalRow]}>
-                <View style={styles.summaryLabelContainer}>
-                  <Icon
-                    name="account-balance"
-                    size={20}
-                    color={backgroundColors.primary}
-                    style={styles.summaryIcon}
-                  />
-                  <Text style={[styles.summaryLabel, styles.totalLabel]}>
-                    Closing Amount:
-                  </Text>
-                </View>
-                <Text style={[styles.summaryValue, styles.totalValue]}>
-                  {cashClose?.closing_amount ?? '0.00'}
-                </Text>
-              </View>
+      <ScrollView
+        style={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}>
+        {/* Cash Summary Section */}
+        <View style={styles.contentContainer}>
+          <View style={styles.infoCard}>
+            <View style={styles.cardHeader}>
+              <Icon name="point-of-sale" size={32} color={THEME.primary} />
+              <Text style={styles.cardTitle}>Register Summary</Text>
             </View>
 
-            <TouchableOpacity style={styles.closeButton} onPress={cashRegister}>
-              <Icon name="lock" size={20} color="white" />
-              <Text style={styles.closeButtonText}>Close Register</Text>
-            </TouchableOpacity>
+            <View style={styles.divider} />
+
+            <View style={styles.detailRow}>
+              <View style={styles.labelContainer}>
+                <View style={[styles.iconBox, {backgroundColor: '#E3F2FD'}]}>
+                  <Icon name="person" size={18} color="#1565C0" />
+                </View>
+                <Text style={styles.detailLabel}>User</Text>
+              </View>
+              <Text style={styles.detailValue}>{userName ?? 'N/A'}</Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <View style={styles.labelContainer}>
+                <View style={[styles.iconBox, {backgroundColor: '#FFF3E0'}]}>
+                  <Icon
+                    name="account-balance-wallet"
+                    size={18}
+                    color="#EF6C00"
+                  />
+                </View>
+                <Text style={styles.detailLabel}>Cash In Hand</Text>
+              </View>
+              <Text style={styles.detailValue}>
+                {cashClose?.cash_in_hand ?? '0.00'}
+              </Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <View style={styles.labelContainer}>
+                <View style={[styles.iconBox, {backgroundColor: '#E8F5E9'}]}>
+                  <Icon name="trending-up" size={18} color="#2E7D32" />
+                </View>
+                <Text style={styles.detailLabel}>Total Sales</Text>
+              </View>
+              <Text style={styles.detailValue}>
+                {cashClose?.sales_total ?? '0.00'}
+              </Text>
+            </View>
+
+            <View style={styles.detailRow}>
+              <View style={styles.labelContainer}>
+                <View style={[styles.iconBox, {backgroundColor: '#FFEBEE'}]}>
+                  <Icon name="trending-down" size={18} color="#C62828" />
+                </View>
+                <Text style={styles.detailLabel}>Total Return</Text>
+              </View>
+              <Text style={styles.detailValue}>
+                {cashClose?.return_amount ?? '0.00'}
+              </Text>
+            </View>
+
+            <View style={styles.totalBlock}>
+              <Text style={styles.totalLabel}>Closing Amount</Text>
+              <Text style={styles.totalValue}>
+                {cashClose?.closing_amount ?? '0.00'}
+              </Text>
+            </View>
           </View>
 
-          <View style={{height: 100}} />
-        </ScrollView>
+          <TouchableOpacity
+            style={styles.actionBtn}
+            onPress={cashRegister}
+            activeOpacity={0.8}>
+            <LinearGradient
+              colors={[THEME.gradientStart, THEME.gradientEnd]}
+              style={styles.actionBtnGradient}>
+              <Icon name="lock" size={20} color={THEME.white} />
+              <Text style={styles.actionBtnText}>Close Register</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
 
-        <Toast />
-      </View>
+        <View style={{height: 100}} />
+      </ScrollView>
+
+      <Toast />
 
       {/* Warning Modal */}
       <Modal
@@ -239,6 +260,7 @@ export default function SaleCashClose({navigation}: any) {
           </View>
         </View>
       </Modal>
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -246,136 +268,144 @@ export default function SaleCashClose({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 0,
+    zIndex: 1,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
-  },
-  scrollContainer: {
-    flex: 1,
-    paddingHorizontal: 12,
-    marginTop: 10,
-  },
-  section: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    marginVertical: 8,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    marginBottom: 16,
-  },
-  summaryCard: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 12,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  summaryRow: {
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingVertical: 4,
   },
-  summaryLabelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
+  },
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+
+  // --- Content ---
+  scrollContainer: {
     flex: 1,
   },
-  summaryIcon: {
-    marginRight: 8,
+  contentContainer: {
+    padding: 20,
   },
-  summaryLabel: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '500',
+  infoCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 8,
+    marginBottom: 20,
   },
-  summaryValue: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'right',
+  cardHeader: {
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.2)',
-    paddingTop: 12,
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.textDark,
     marginTop: 8,
-    marginBottom: 0,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 15,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  labelContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  detailLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textGray,
+  },
+  detailValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  totalBlock: {
+    marginTop: 10,
+    paddingTop: 15,
+    borderTopWidth: 2,
+    borderTopColor: '#F3F4F6',
+    borderStyle: 'dashed',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   totalLabel: {
-    color: backgroundColors.primary,
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    color: THEME.textDark,
   },
   totalValue: {
-    color: backgroundColors.primary,
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '800',
+    color: THEME.primary,
   },
-  closeButton: {
+
+  // --- Action Button ---
+  actionBtn: {
+    borderRadius: 16,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  actionBtnGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 12,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    marginTop: 20,
-    shadowColor: backgroundColors.dark,
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    paddingVertical: 18,
+    borderRadius: 16,
+    gap: 10,
   },
-  closeButtonText: {
-    color: backgroundColors.light,
+  actionBtnText: {
     fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
+
+  // --- Modal ---
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
@@ -383,59 +413,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContainer: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 20,
+    backgroundColor: THEME.white,
+    borderRadius: 24,
     padding: 30,
     alignItems: 'center',
-    width: '95%',
-    maxWidth: 400,
+    width: '85%',
+    maxWidth: 340,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.3,
+    shadowOffset: {width: 0, height: 10},
+    shadowOpacity: 0.25,
     shadowRadius: 20,
     elevation: 10,
   },
   warningAnimation: {
-    width: 150,
-    height: 150,
+    width: 120,
+    height: 120,
+    marginBottom: 10,
   },
   warningTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    color: backgroundColors.danger,
-    marginTop: 10,
-    marginBottom: 8,
+    fontSize: 24,
+    fontWeight: '800',
+    color: THEME.danger,
+    marginBottom: 10,
   },
   warningMessage: {
     fontSize: 16,
-    color: backgroundColors.dark,
+    color: THEME.textGray,
     textAlign: 'center',
-    paddingHorizontal: 10,
-    marginBottom: 20,
+    marginBottom: 25,
     lineHeight: 22,
+    fontWeight: '500',
   },
   okButton: {
-    backgroundColor: backgroundColors.primary,
-    paddingVertical: 14,
-    paddingHorizontal: 50,
+    backgroundColor: THEME.primary,
+    paddingVertical: 12,
+    paddingHorizontal: 40,
     borderRadius: 12,
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    minWidth: 120,
+    elevation: 2,
   },
   okButtonText: {
-    color: 'white',
-    fontSize: 17,
-    fontWeight: 'bold',
-    textAlign: 'center',
+    color: THEME.white,
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

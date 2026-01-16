@@ -2,24 +2,47 @@ import {
   BackHandler,
   Image,
   Modal,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  ScrollView,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import backgroundColors from '../Colors';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import {useUser} from '../CTX/UserContext';
 import LottieView from 'lottie-react-native';
 import Toast from 'react-native-toast-message';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../BottomBar';
 
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  danger: '#EF4444',
+  dangerLight: '#FEE2E2',
+  success: '#10B981',
+};
+
+// --- INTERFACES ---
 interface Labour {
+  id: number;
   labr_name: string;
   labr_cnic: string;
   labr_address: string;
@@ -59,12 +82,36 @@ const initialEditForm: EditForm = {
   labr_third_contact: '',
 };
 
+// --- HELPER COMPONENT: Detail Row ---
+const DetailRow = ({
+  label,
+  value,
+  icon,
+  isLast,
+}: {
+  label: string;
+  value: string | undefined;
+  icon: string;
+  isLast?: boolean;
+}) => (
+  <View style={[styles.detailRow, isLast && {borderBottomWidth: 0}]}>
+    <View style={styles.iconBox}>
+      <Icon name={icon} size={20} color={THEME.primary} />
+    </View>
+    <View style={styles.detailTextContainer}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value || '--'}</Text>
+    </View>
+  </View>
+);
+
 const LabourDetails = ({navigation, route}: any) => {
   const {id} = route.params;
   const {token} = useUser();
   const [labour, setLabour] = useState<Labour | null>(null);
   const [modalVisible, setModalVisible] = useState('');
   const [editForm, setEditForm] = useState<EditForm>(initialEditForm);
+  const [loading, setLoading] = useState(false);
 
   const handleEditInputChange = (field: keyof EditForm, value: string) => {
     setEditForm(prev => ({
@@ -75,6 +122,7 @@ const LabourDetails = ({navigation, route}: any) => {
 
   // Get Labour Details
   const fetchLabDetails = async () => {
+    setLoading(true);
     try {
       const res = await axios.get(
         `${BASE_URL}/showlabour?id=${id}&_token=${token}`,
@@ -84,10 +132,11 @@ const LabourDetails = ({navigation, route}: any) => {
           },
         },
       );
-
       setLabour(res.data);
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -127,8 +176,8 @@ const LabourDetails = ({navigation, route}: any) => {
           },
         },
       );
-
       setEditForm(res.data);
+      setModalVisible('Edit');
     } catch (error) {
       console.log(error);
     }
@@ -147,7 +196,7 @@ const LabourDetails = ({navigation, route}: any) => {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
-        text2: 'Please fill all fields and select a role before updating.',
+        text2: 'Labour name is mandatory.',
         visibilityTime: 1500,
       });
       return;
@@ -190,16 +239,9 @@ const LabourDetails = ({navigation, route}: any) => {
       const data = res.data;
 
       if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'Labour has been updated successfully!',
-          visibilityTime: 1500,
-        });
-
         setEditForm(initialEditForm);
         setModalVisible('');
-
+        fetchLabDetails(); // Refresh data
         setTimeout(() => {
           setModalVisible('Success');
         }, 500);
@@ -238,310 +280,378 @@ const LabourDetails = ({navigation, route}: any) => {
 
   useEffect(() => {
     fetchLabDetails();
-
     const backKey = () => {
       navigation.navigate('Labour');
       return true;
     };
-
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
       backKey,
     );
-
     return () => backHandler.remove();
   }, []);
+
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerCenter}>
-          <TouchableOpacity
-            onPress={() => {
-              navigation.navigate('Labour');
-            }}>
-            <Icon
-              name="chevron-left"
-              size={28}
-              color={backgroundColors.light}
-            />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Labour Details</Text>
-        </View>
+    <View style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-        <TouchableOpacity
-          style={[styles.headerBtn]}
-          onPress={() => {
-            setModalVisible('Delete');
-          }}>
-          <Icon name="delete" size={28} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Details */}
       <ScrollView
-        style={styles.detailsContainer}
-        showsVerticalScrollIndicator={false}>
-        {/* Avatar */}
-        <View style={styles.avatarBox}>
-          <Image
-            source={require('../../assets/man.png')}
-            style={styles.avatar}
-          />
-          <Text style={styles.custName}>{labour?.labr_name}</Text>
-        </View>
-
-        <View style={styles.innerDetails}>
-          <View style={styles.innerHeader}>
-            <Text style={styles.headerText}>Labour Details</Text>
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{paddingBottom: 100}}>
+        {/* --- HEADER BACKGROUND --- */}
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          {/* Nav Bar */}
+          <SafeAreaView style={styles.navBar}>
             <TouchableOpacity
-              style={{flexDirection: 'row', gap: 5}}
-              onPress={() => {
-                getEditData();
-                setModalVisible('Edit');
-              }}>
-              <Text style={styles.editText}>Edit</Text>
-              <Icon
-                name="square-edit-outline"
-                size={18}
-                color={backgroundColors.dark}
-              />
+              onPress={() => navigation.navigate('Labour')}
+              style={styles.navBtn}>
+              <Icon name="arrow-left" size={24} color={THEME.white} />
             </TouchableOpacity>
+            <Text style={styles.navTitle}>Labour Details</Text>
+            <TouchableOpacity
+              onPress={() => setModalVisible('Delete')}
+              style={[styles.navBtn]}>
+              <Icon name="trash-can-outline" size={22} color={THEME.white} />
+            </TouchableOpacity>
+          </SafeAreaView>
+
+          {/* Profile Section */}
+          <View style={styles.profileSection}>
+            <View style={styles.avatarWrapper}>
+              <Image
+                source={require('../../assets/man.png')}
+                style={styles.avatar}
+              />
+              <TouchableOpacity
+                style={styles.editBadge}
+                activeOpacity={0.8}
+                onPress={() => getEditData()}>
+                <Icon name="pencil" size={16} color={THEME.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.profileName}>
+              {labour?.labr_name || 'Loading...'}
+            </Text>
+
+            {/* Badge Row (Address as default badge since no Type/Area) */}
+            <View style={styles.badgeRow}>
+              {labour?.labr_address ? (
+                <View style={styles.capsuleBadge}>
+                  <Icon
+                    name="map-marker-outline"
+                    size={14}
+                    color={THEME.white}
+                  />
+                  <Text style={styles.capsuleText}>{labour.labr_address}</Text>
+                </View>
+              ) : (
+                <View style={styles.capsuleBadge}>
+                  <Text style={styles.capsuleText}>No Address</Text>
+                </View>
+              )}
+            </View>
+
+            {/* Main Balance Card (Floating) */}
+            <View style={styles.balanceCard}>
+              <View>
+                <Text style={styles.balanceLabel}>Opening Balance</Text>
+                <Text style={styles.balanceAmount}>
+                  Rs. {labour?.labr_opening_balance || '0.00'}
+                </Text>
+              </View>
+              <View style={styles.balanceIcon}>
+                <Icon name="wallet-outline" size={24} color={THEME.white} />
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* --- CONTENT CARDS --- */}
+        <View style={styles.contentContainer}>
+          {/* Personal Info */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Personal Information</Text>
+            </View>
+            <DetailRow
+              icon="card-account-details-outline"
+              label="CNIC"
+              value={labour?.labr_cnic}
+            />
+            <DetailRow
+              icon="email-outline"
+              label="Email"
+              value={labour?.labr_email}
+            />
+            <DetailRow
+              icon="map-marker-radius-outline"
+              label="Address"
+              value={labour?.labr_address}
+              isLast
+            />
           </View>
 
-          {/* Details */}
-          <View style={styles.detailsView}>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Labour Name</Text>
-              <Text style={styles.value}>{labour?.labr_name ?? '--'}</Text>
+          {/* Contact Info */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Contact Details</Text>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact</Text>
-              <Text style={styles.value}>{labour?.labr_contact ?? '--'}</Text>
+            <DetailRow
+              icon="phone"
+              label="Primary Phone"
+              value={labour?.labr_contact}
+            />
+            <DetailRow
+              icon="account-tie-outline"
+              label="Contact Person 1"
+              value={labour?.labr_contact_person_one}
+            />
+            <DetailRow
+              icon="phone-classic"
+              label="Secondary Phone"
+              value={labour?.labr_sec_contact}
+            />
+            <DetailRow
+              icon="account-tie-outline"
+              label="Contact Person 2"
+              value={labour?.labr_contact_person_two}
+            />
+            <DetailRow
+              icon="phone-classic"
+              label="Third Phone"
+              value={labour?.labr_third_contact}
+              isLast
+            />
+          </View>
+
+          {/* Financials Info */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Financial Setup</Text>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>CNIC</Text>
-              <Text style={styles.value}>{labour?.labr_cnic ?? '--'}</Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>{labour?.labr_email ?? '--'}</Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact Person 1</Text>
-              <Text style={styles.value}>
-                {labour?.labr_contact_person_one ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact</Text>
-              <Text style={styles.value}>
-                {labour?.labr_sec_contact ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact Person 2</Text>
-              <Text style={styles.value}>
-                {labour?.labr_contact_person_two ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact</Text>
-              <Text style={styles.value}>
-                {labour?.labr_third_contact ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Address</Text>
-              <Text style={styles.value}>{labour?.labr_address ?? '--'}</Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Opening Balance</Text>
-              <Text style={styles.value}>
-                {labour?.labr_opening_balance ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Payment Type</Text>
-              <Text style={styles.value}>
-                {labour?.labr_payment_type ?? '--'}
-              </Text>
-            </View>
-            <View style={[styles.detailsRow, {borderBottomWidth: 0}]}>
-              <Text style={styles.label}>Transaction Type</Text>
-              <Text style={styles.value}>
-                {labour?.labr_transaction_type ?? '--'}
-              </Text>
-            </View>
+            <DetailRow
+              icon="cash-multiple"
+              label="Payment Type"
+              value={labour?.labr_payment_type}
+            />
+            <DetailRow
+              icon="bank-transfer"
+              label="Transaction Type"
+              value={labour?.labr_transaction_type}
+              isLast
+            />
           </View>
         </View>
       </ScrollView>
 
-      {/*Delete Modal*/}
+      {/* --- DELETE CONFIRMATION MODAL --- */}
       <Modal
         visible={modalVisible === 'Delete'}
         transparent
         animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.deleteModalContainer}>
-            <View style={styles.delAnim}>
+            <View style={styles.lottieContainer}>
               <LottieView
-                style={{flex: 1}}
                 source={require('../../assets/warning.json')}
                 autoPlay
                 loop={false}
+                style={{width: '100%', height: '100%'}}
               />
             </View>
-
-            {/* Title */}
-            <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-
-            {/* Subtitle */}
-            <Text style={styles.deleteModalMessage}>
-              You won’t be able to revert this record!
+            <Text style={styles.modalTitle}>Delete Labour?</Text>
+            <Text style={styles.modalText}>
+              This action cannot be undone. All data associated with this labour
+              record will be lost.
             </Text>
-
-            {/* Buttons */}
-            <View style={styles.deleteModalActions}>
+            <View style={styles.modalBtnRow}>
               <TouchableOpacity
-                style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
+                style={styles.btnCancel}
                 onPress={() => setModalVisible('')}>
-                <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
-                  Cancel
-                </Text>
+                <Text style={styles.btnCancelText}>Cancel</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
+                style={styles.btnDelete}
                 onPress={handleDeleteLabr}>
-                <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
+                <Text style={styles.btnDeleteText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/*Edit*/}
+      {/* --- SUCCESS MODAL --- */}
+      <Modal
+        visible={modalVisible === 'Success'}
+        transparent
+        animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.deleteModalContainer}>
+            <View style={styles.lottieContainer}>
+              <LottieView
+                source={require('../../assets/success.json')}
+                autoPlay
+                loop={false}
+                style={{width: '100%', height: '100%'}}
+              />
+            </View>
+            <Text style={styles.modalTitle}>Success</Text>
+            <Text style={styles.modalText}>
+              Labour record updated successfully.
+            </Text>
+            <TouchableOpacity
+              style={[styles.btnPrimary, {width: '100%', marginTop: 15}]}
+              onPress={() => setModalVisible('')}>
+              <Text style={styles.btnPrimaryText}>OK, Great</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* --- EDIT LABOUR MODAL --- */}
       <Modal
         visible={modalVisible === 'Edit'}
         transparent
         animationType="slide">
-        <View style={styles.editLabModalOverlay}>
-          <ScrollView style={styles.editLabModalContainer}>
-            {/* Header */}
-            <View style={styles.editLabHeader}>
-              <Text style={styles.editLabTitle}>Edit Labour</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.editModalContainer}>
+            <View style={styles.editModalHeader}>
+              <Text style={styles.editModalTitle}>Edit Labour</Text>
               <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('');
-                  setEditForm(initialEditForm);
-                }}
-                style={styles.editLabCloseBtn}>
-                <Icon name="close" size={20} color="#144272" />
+                onPress={() => setModalVisible('')}
+                style={styles.closeModalBtn}>
+                <Icon name="close" size={22} color={THEME.textDark} />
               </TouchableOpacity>
             </View>
 
-            {/* Form */}
-            <View style={styles.editLabForm}>
-              {/* Row 1 */}
-              <View style={styles.editLabField}>
-                <Text style={styles.editLabLabel}>Labour Name *</Text>
+            <ScrollView
+              style={styles.editModalBody}
+              contentContainerStyle={{paddingBottom: 30}}>
+              {/* Form Fields */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Labour Name *</Text>
                 <TextInput
-                  style={styles.editLabInput}
+                  style={styles.input}
                   value={editForm.labr_name}
                   onChangeText={t => handleEditInputChange('labr_name', t)}
                 />
               </View>
-              <View style={styles.editLabField}>
-                <Text style={styles.editLabLabel}>CNIC</Text>
+
+              <View style={styles.rowInputs}>
+                <View style={{flex: 1, marginRight: 10}}>
+                  <Text style={styles.label}>CNIC</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.labr_cnic}
+                    keyboardType="numeric"
+                    maxLength={15}
+                    placeholder="xxxxx-xxxxxxx-x"
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
+                      if (cleaned.length > 5)
+                        cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
+                      if (cleaned.length > 13)
+                        cleaned =
+                          cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
+                      if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
+                      handleEditInputChange('labr_cnic', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={{flex: 1}}>
+                  <Text style={styles.label}>Email</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.labr_email}
+                    keyboardType="email-address"
+                    onChangeText={t => handleEditInputChange('labr_email', t)}
+                  />
+                </View>
+              </View>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Physical Address</Text>
                 <TextInput
-                  style={styles.editLabInput}
-                  value={editForm.labr_cnic}
-                  keyboardType="numeric"
-                  maxLength={15}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                    if (cleaned.length > 5)
-                      cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                    if (cleaned.length > 13)
-                      cleaned =
-                        cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                    if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                    handleEditInputChange('labr_cnic', cleaned);
-                  }}
+                  style={styles.input}
+                  value={editForm.labr_address}
+                  multiline
+                  onChangeText={t => handleEditInputChange('labr_address', t)}
                 />
               </View>
 
-              {/* Row 2 */}
-              <View style={styles.editLabField}>
-                <Text style={styles.editLabLabel}>Contact</Text>
-                <TextInput
-                  style={styles.editLabInput}
-                  value={editForm.labr_contact}
-                  keyboardType="phone-pad"
-                  maxLength={12}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                    if (cleaned.length > 4)
-                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                    handleEditInputChange('labr_contact', cleaned);
-                  }}
-                />
-              </View>
-              <View style={styles.editLabField}>
-                <Text style={styles.editLabLabel}>Email</Text>
-                <TextInput
-                  style={styles.editLabInput}
-                  value={editForm.labr_email}
-                  keyboardType="email-address"
-                  onChangeText={t => handleEditInputChange('labr_email', t)}
-                />
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderText}>Contact Info</Text>
               </View>
 
-              {/* Row 3 */}
-              <View style={styles.editLabField}>
-                <Text style={styles.editLabLabel}>Contact Person 1</Text>
-                <TextInput
-                  style={styles.editLabInput}
-                  value={editForm.labr_contact_person_one}
-                  onChangeText={t =>
-                    handleEditInputChange('labr_contact_person_one', t)
-                  }
-                />
-              </View>
-              <View style={styles.editLabField}>
-                <Text style={styles.editLabLabel}>Contact 1</Text>
-                <TextInput
-                  style={styles.editLabInput}
-                  value={editForm.labr_sec_contact}
-                  keyboardType="phone-pad"
-                  maxLength={12}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                    if (cleaned.length > 4)
-                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                    handleEditInputChange('labr_sec_contact', cleaned);
-                  }}
-                />
+              <View style={styles.rowInputs}>
+                <View style={{flex: 1, marginRight: 10}}>
+                  <Text style={styles.label}>Primary Contact</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.labr_contact}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleEditInputChange('labr_contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={{flex: 1}}>
+                  <Text style={styles.label}>Contact Person 1</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.labr_contact_person_one}
+                    onChangeText={t =>
+                      handleEditInputChange('labr_contact_person_one', t)
+                    }
+                  />
+                </View>
               </View>
 
-              {/* Row 4 */}
-              <View style={styles.editLabField}>
-                <Text style={styles.editLabLabel}>Contact Person 2</Text>
-                <TextInput
-                  style={styles.editLabInput}
-                  value={editForm.labr_contact_person_two}
-                  onChangeText={t =>
-                    handleEditInputChange('labr_contact_person_two', t)
-                  }
-                />
+              <View style={styles.rowInputs}>
+                <View style={{flex: 1, marginRight: 10}}>
+                  <Text style={styles.label}>Secondary Contact</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.labr_sec_contact}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleEditInputChange('labr_sec_contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={{flex: 1}}>
+                  <Text style={styles.label}>Contact Person 2</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.labr_contact_person_two}
+                    onChangeText={t =>
+                      handleEditInputChange('labr_contact_person_two', t)
+                    }
+                  />
+                </View>
               </View>
-              <View style={styles.editLabField}>
-                <Text style={styles.editLabLabel}>Contact 2</Text>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Third Contact</Text>
                 <TextInput
-                  style={styles.editLabInput}
+                  style={styles.input}
                   value={editForm.labr_third_contact}
                   keyboardType="phone-pad"
                   maxLength={12}
@@ -555,71 +665,24 @@ const LabourDetails = ({navigation, route}: any) => {
                 />
               </View>
 
-              {/* Address */}
-              <View style={[styles.editLabField, {flex: 1}]}>
-                <Text style={styles.editLabLabel}>Address</Text>
-                <TextInput
-                  style={styles.editLabInput}
-                  value={editForm.labr_address}
-                  onChangeText={t => handleEditInputChange('labr_address', t)}
-                />
-              </View>
-
-              {/* Update Button */}
               <TouchableOpacity
-                style={styles.editLabSubmitBtn}
+                style={styles.btnPrimary}
                 onPress={handleUpdateLabr}>
-                <Icon name="account-edit" size={20} color="white" />
-                <Text style={styles.editLabSubmitText}>Update Labour</Text>
+                <Icon
+                  name="check-circle-outline"
+                  size={20}
+                  color="white"
+                  style={{marginRight: 8}}
+                />
+                <Text style={styles.btnPrimaryText}>Update Labour</Text>
               </TouchableOpacity>
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
           <Toast />
         </View>
       </Modal>
-
-      {/*Success*/}
-      <Modal
-        visible={modalVisible === 'Success'}
-        transparent
-        animationType="fade">
-        <View style={styles.modalOverlay}>
-          <View style={styles.deleteModalContainer}>
-            <View style={styles.delAnim}>
-              <LottieView
-                style={{flex: 1}}
-                source={require('../../assets/success.json')}
-                autoPlay
-                duration={2500}
-                loop={false}
-              />
-            </View>
-
-            {/* Title */}
-            <Text style={styles.deleteModalTitle}>Updated!</Text>
-
-            {/* Subtitle */}
-            <Text style={styles.deleteModalMessage}>
-              Labour record has been updated successfully!
-            </Text>
-
-            {/* Buttons */}
-            <View style={styles.deleteModalActions}>
-              <TouchableOpacity
-                style={[
-                  styles.deleteModalBtn,
-                  {backgroundColor: backgroundColors.success},
-                ]}
-                onPress={() => {
-                  setModalVisible('');
-                }}>
-                <Text style={styles.deleteModalBtnText}>Ok</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+      <BottomBar />
+    </View>
   );
 };
 
@@ -628,268 +691,333 @@ export default LabourDetails;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerCenter: {
-    flex: 1,
-    gap: 10,
-    flexDirection: 'row',
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
+    backgroundColor: THEME.background,
   },
 
-  // Details container
-  detailsContainer: {
-    flex: 1,
-    paddingHorizontal: '3%',
+  // --- HEADER & PROFILE ---
+  headerContainer: {
+    paddingBottom: 30, // Reduced from 40
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  avatarBox: {
-    marginVertical: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatar: {
-    height: 125,
-    width: 125,
-  },
-  custName: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginTop: 10,
-    color: backgroundColors.primary,
-  },
-
-  // Inner Details
-  innerDetails: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginBottom: 30,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  innerHeader: {
-    width: '100%',
-    height: 50,
-    borderBottomColor: backgroundColors.primary,
-    borderBottomWidth: 1,
+  navBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  headerText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: backgroundColors.dark,
-  },
-  editText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-  },
-  detailsView: {
-    flex: 1,
-  },
-  detailsRow: {
-    alignItems: 'baseline',
-    paddingVertical: 10,
-    borderBottomWidth: 0.6,
-    borderBottomColor: backgroundColors.primary,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.primary,
-  },
-  value: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-  },
-
-  //Delete Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
     paddingHorizontal: 20,
+    marginTop: Platform.OS === 'android' ? 30 : 0,
+    marginBottom: 10,
   },
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
+  navBtn: {
+    width: 40,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  navTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
+  },
+  profileSection: {
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  avatarWrapper: {
+    marginBottom: 12,
+    position: 'relative',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-    width: '100%',
-    alignSelf: 'center',
+    shadowRadius: 5,
+    elevation: 8,
   },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: THEME.white,
+    backgroundColor: THEME.white,
   },
-  deleteModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 8,
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: THEME.white,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
   },
-  deleteModalMessage: {
-    fontSize: 14,
-    color: '#555',
+  profileName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: THEME.white,
+    marginBottom: 4,
     textAlign: 'center',
-    marginBottom: 20,
   },
-  deleteModalActions: {
+  badgeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
+    gap: 8, // Reduced from 10
+    marginBottom: 12, // Reduced from 16
   },
-  deleteModalBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
+  capsuleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    gap: 4,
+  },
+  capsuleText: {
+    color: THEME.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  balanceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    width: '100%',
+    padding: 12, // Reduced from 16
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  balanceLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  balanceAmount: {
+    color: THEME.white,
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  balanceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
+
+  // --- CONTENT SECTION ---
+  contentContainer: {
+    marginTop: -24, // Pulls content up to overlap header
+    paddingHorizontal: 12,
+    gap: 10,
   },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
+  sectionCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 12, // Slightly tighter radius
+    padding: 12, // Reduced padding
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.08, // Slightly more visible shadow
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  cardHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 8, // Reduced
+    marginBottom: 8, // Reduced
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5, // Reduced from 6
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6', // Slightly darker than F9FAFB for better separator visibility
+  },
+  iconBox: {
+    width: 32, // Reduced from 36
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10, // Reduced from 12
+  },
+  detailTextContainer: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    marginBottom: 0,
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: THEME.textDark,
+    fontWeight: '600',
   },
 
-  // Edit Labour Modal Styles
-  editLabModalOverlay: {
+  // --- MODALS ---
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    padding: 20,
   },
-  editLabModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
+  deleteModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
+  },
+  lottieContainer: {
+    width: 100,
+    height: 100,
+    marginBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: THEME.textDark,
+    marginBottom: 8,
+  },
+  modalText: {
+    fontSize: 14,
+    color: THEME.textGray,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  btnCancel: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  btnCancelText: {
+    color: THEME.textDark,
+    fontWeight: '700',
+  },
+  btnDelete: {
+    flex: 1,
+    backgroundColor: THEME.danger,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  btnDeleteText: {
+    color: THEME.white,
+    fontWeight: '700',
+  },
+
+  // --- EDIT MODAL STYLES ---
+  editModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
     maxHeight: '90%',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
     elevation: 10,
   },
-  editLabHeader: {
+  editModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#F3F4F6',
   },
-  editLabTitle: {
+  editModalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.primary,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  editLabCloseBtn: {
+  closeModalBtn: {
     padding: 5,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
   },
-  editLabForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+  editModalBody: {
+    padding: 20,
   },
-  editLabField: {
-    flex: 1,
-    marginBottom: 5,
+  formGroup: {
+    marginBottom: 16,
   },
-  editLabFullRow: {
+  rowInputs: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  sectionHeader: {
     marginBottom: 15,
+    marginTop: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 5,
   },
-  editLabLabel: {
-    fontSize: 14,
+  sectionHeaderText: {
+    color: THEME.primary,
+    fontWeight: '700',
+    fontSize: 13,
+    textTransform: 'uppercase',
+  },
+  label: {
+    fontSize: 12,
     fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 5,
+    color: '#4B5563',
+    marginBottom: 6,
   },
-  editLabInput: {
+  input: {
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    height: 45,
-    borderRadius: 8,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
+    color: THEME.textDark,
   },
-  editLabDropdownRow: {
-    marginBottom: 15,
-  },
-  editLabDropdownField: {
-    flex: 1,
-  },
-  editLabDropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    minHeight: 42,
-    zIndex: 999,
-  },
-  editLabDropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    zIndex: 1000,
-    maxHeight: 160,
-  },
-  editLabDropdownText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  editLabDropdownPlaceholder: {
-    color: '#999',
-    fontSize: 14,
-  },
-  editLabSubmitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
+  btnPrimary: {
+    backgroundColor: THEME.primary,
+    borderRadius: 12,
     paddingVertical: 15,
-    marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 10,
   },
-  editLabSubmitText: {
-    color: 'white',
+  btnPrimaryText: {
+    color: THEME.white,
     fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    fontWeight: '700',
   },
 });

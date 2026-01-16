@@ -7,6 +7,8 @@ import {
   FlatList,
   Image,
   BackHandler,
+  Dimensions,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -21,7 +23,26 @@ import Toast from 'react-native-toast-message';
 import {useUser} from '../../../CTX/UserContext';
 import RNPrint from 'react-native-print';
 import LinearGradient from 'react-native-linear-gradient';
-import backgroundColors from '../../../Colors';
+import BottomBar from '../../../BottomBar';
+
+const {width} = Dimensions.get('window');
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  danger: '#EF4444',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 interface Accounts {
   id: number;
@@ -76,6 +97,13 @@ export default function FixAccounts({navigation}: any) {
     const currentDate = selectedDate || endDate;
     setShowEndDatePicker(false);
     setEndDate(currentDate);
+  };
+
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
   // Pagination
@@ -350,282 +378,292 @@ export default function FixAccounts({navigation}: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={26} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Fixed Accounts</Text>
+            <TouchableOpacity onPress={handlePrint} style={styles.iconBtn}>
+              <Icon name="printer" size={26} color={THEME.white} />
+            </TouchableOpacity>
           </View>
+        </LinearGradient>
+      </View>
 
-          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="#fff" />
+      {/* --- FILTER SECTION --- */}
+      <View style={styles.filterSection}>
+        {/* Dropdown */}
+        <DropDownPicker
+          items={transformedAcc}
+          open={open}
+          setOpen={setOpen}
+          value={accValue}
+          setValue={setAccValue}
+          placeholder="Select Account"
+          disabled={selectionMode === 'allaccounts'}
+          placeholderStyle={{color: THEME.textGray}}
+          textStyle={{color: THEME.textDark}}
+          ArrowUpIconComponent={() => (
+            <Icon name="chevron-up" size={20} color={THEME.textDark} />
+          )}
+          ArrowDownIconComponent={() => (
+            <Icon name="chevron-down" size={20} color={THEME.textDark} />
+          )}
+          style={[
+            styles.dropdown,
+            selectionMode === 'allaccounts' && styles.dropdownDisabled,
+          ]}
+          dropDownContainerStyle={styles.dropDownContainer}
+          listMode="SCROLLVIEW"
+          listItemLabelStyle={{
+            color: THEME.textDark,
+            fontWeight: '500',
+          }}
+          labelStyle={{
+            color: THEME.textDark,
+            fontSize: 14,
+            fontWeight: '500',
+          }}
+          searchable
+          searchPlaceholder="Search account..."
+          searchTextInputStyle={{
+            borderWidth: 0,
+            borderColor: 'transparent',
+          }}
+          searchContainerStyle={{
+            borderBottomColor: THEME.border,
+            borderBottomWidth: 1,
+            paddingVertical: 10,
+          }}
+        />
+
+        {/* Date Inputs */}
+        <View style={[styles.filterRow, {marginTop: 10}]}>
+          <TouchableOpacity
+            style={styles.dateInput}
+            onPress={() => setShowStartDatePicker(true)}>
+            <Icon name="calendar" size={20} color={THEME.primary} />
+            <Text style={styles.dateText}>
+              {startDate.toLocaleDateString()}
+            </Text>
+          </TouchableOpacity>
+
+          <Text style={styles.dateSeparator}>to</Text>
+
+          <TouchableOpacity
+            style={styles.dateInput}
+            onPress={() => setShowEndDatePicker(true)}>
+            <Icon name="calendar" size={20} color={THEME.primary} />
+            <Text style={styles.dateText}>{endDate.toLocaleDateString()}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Filter Section */}
-        <View style={styles.filterContainer}>
-          {/* Dropdown */}
-          <DropDownPicker
-            items={transformedAcc}
-            open={open}
-            setOpen={setOpen}
-            value={accValue}
-            setValue={setAccValue}
-            placeholder="Select Account"
-            disabled={selectionMode === 'allaccounts'}
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
-            ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
-            )}
-            ArrowDownIconComponent={() => (
-              <Icon
-                name="chevron-down"
-                size={18}
-                color={backgroundColors.dark}
-              />
-            )}
-            style={[
-              styles.dropdown,
-              selectionMode === 'allaccounts' && styles.dropdownDisabled,
-            ]}
-            dropDownContainerStyle={styles.dropDownContainer}
-            listMode="MODAL"
-            listItemLabelStyle={{
-              color: backgroundColors.dark,
-              fontWeight: '500',
-            }}
-            labelStyle={{
-              color: backgroundColors.dark,
-              fontSize: 16,
-            }}
-            searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
-            searchContainerStyle={{
-              borderColor: backgroundColors.gray,
-            }}
+        {showStartDatePicker && (
+          <DateTimePicker
+            value={startDate}
+            mode="date"
+            display="default"
+            onChange={onStartDateChange}
           />
+        )}
+        {showEndDatePicker && (
+          <DateTimePicker
+            value={endDate}
+            mode="date"
+            display="default"
+            onChange={onEndDateChange}
+          />
+        )}
 
-          {/* Date Pickers */}
-          <View style={styles.dateContainer}>
-            <View style={styles.datePicker}>
-              <Text style={styles.dateLabel}>From:</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowStartDatePicker(true)}>
-                <Text style={styles.dateText}>
-                  {startDate.toLocaleDateString()}
-                </Text>
-                <Icon name="calendar" size={18} color={backgroundColors.dark} />
-              </TouchableOpacity>
-              {showStartDatePicker && (
-                <DateTimePicker
-                  testID="startDatePicker"
-                  value={startDate}
-                  mode="date"
-                  is24Hour={true}
-                  display="default"
-                  onChange={onStartDateChange}
-                />
-              )}
-            </View>
+        {/* Radio Buttons */}
+        <View style={styles.radioContainer}>
+          <TouchableOpacity
+            style={styles.radioButton}
+            onPress={() => {
+              setSelectionMode('allaccounts');
+              setAccValue('');
+              setSingleAccountList([]);
+            }}>
+            <RadioButton
+              value="allaccounts"
+              status={selectionMode === 'allaccounts' ? 'checked' : 'unchecked'}
+              color={THEME.primary}
+              uncheckedColor={THEME.textGray}
+            />
+            <Text style={styles.radioText}>All Fixed Accounts</Text>
+          </TouchableOpacity>
 
-            <View style={styles.datePicker}>
-              <Text style={styles.dateLabel}>To:</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowEndDatePicker(true)}>
-                <Text style={styles.dateText}>
-                  {endDate.toLocaleDateString()}
-                </Text>
-                <Icon name="calendar" size={18} color={backgroundColors.dark} />
-              </TouchableOpacity>
-              {showEndDatePicker && (
-                <DateTimePicker
-                  testID="endDatePicker"
-                  value={endDate}
-                  mode="date"
-                  is24Hour={true}
-                  display="default"
-                  onChange={onEndDateChange}
-                />
-              )}
-            </View>
-          </View>
+          <TouchableOpacity
+            style={styles.radioButton}
+            onPress={() => {
+              setSelectionMode('singleaccounts');
+            }}>
+            <RadioButton
+              value="singleaccounts"
+              status={
+                selectionMode === 'singleaccounts' ? 'checked' : 'unchecked'
+              }
+              color={THEME.primary}
+              uncheckedColor={THEME.textGray}
+            />
+            <Text style={styles.radioText}>Single Fixed Account</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
 
-          {/* Radio Buttons */}
-          <View style={styles.radioContainer}>
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('allaccounts');
-                setAccValue('');
-                setSingleAccountList([]);
-              }}>
-              <RadioButton
-                value="allaccounts"
-                status={
-                  selectionMode === 'allaccounts' ? 'checked' : 'unchecked'
-                }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
-              />
-              <Text style={styles.radioText}>All Fixed Accounts</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('singleaccounts');
-              }}>
-              <RadioButton
-                value="singleaccounts"
-                status={
-                  selectionMode === 'singleaccounts' ? 'checked' : 'unchecked'
-                }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
-              />
-              <Text style={styles.radioText}>Single Fixed Account</Text>
-            </TouchableOpacity>
-          </View>
+      {/* --- STATS SECTION --- */}
+      <View style={styles.statsContainer}>
+        {/* Total Credit */}
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, {color: '#1976D2'}]}>
+            {formatNumber(totals.totalCredit)}
+          </Text>
+          <Text style={styles.statLabel}>Total Credit</Text>
         </View>
 
-        {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
-          <View style={styles.innerSummaryCtx}>
-            <Text style={styles.summaryLabel}>Total Credit: </Text>
-            <Text style={styles.summaryValue}>
-              {formatNumber(totals.totalCredit)}
-            </Text>
-          </View>
-          <View style={styles.innerSummaryCtx}>
-            <Text style={styles.summaryLabel}>Total Debit: </Text>
-            <Text style={styles.summaryValue}>
-              {formatNumber(totals.totalDebit)}
-            </Text>
-          </View>
-          <View style={styles.innerSummaryCtx}>
-            <Text style={styles.summaryLabel}>Net Balance: </Text>
-            <Text style={styles.summaryValue}>
-              {formatNumber(totals.netBalance)}
-            </Text>
-          </View>
+        <View style={styles.statDivider} />
+
+        {/* Total Debit */}
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, {color: '#388E3C'}]}>
+            {formatNumber(totals.totalDebit)}
+          </Text>
+          <Text style={styles.statLabel}>Total Debit</Text>
         </View>
 
-        <View style={styles.listContainer}>
-          <FlatList
-            data={paginatedData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <View style={styles.card}>
-                {/* Avatar + Name + Actions */}
-                <View style={styles.row}>
-                  <View>
-                    <Text style={styles.name}>{item.fixac_invoice_no}</Text>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Debit: </Text>
-                      {item.fixac_debit}
-                    </Text>
+        <View style={styles.statDivider} />
 
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Credit: </Text>
-                      {formatNumber(item.fixac_credit) ?? '0'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Balance: </Text>
-                      {formatNumber(item.fixac_balance) ?? '0'}
-                    </Text>
-                  </View>
+        {/* Net Balance */}
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, {color: '#F57C00'}]}>
+            {formatNumber(totals.netBalance)}
+          </Text>
+          <Text style={styles.statLabel}>Net Balance</Text>
+        </View>
+      </View>
 
-                  <View style={[{alignSelf: 'flex-start'}]}>
-                    <Text
-                      style={[
-                        styles.subText,
-                        {fontWeight: '700', verticalAlign: 'top'},
-                      ]}>
-                      <Icon name="calendar" size={12} color="#666" />{' '}
-                      {new Date(item.fixac_date)
-                        .toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                        .replace(/ /g, '-') || 'N/A'}
+      {/* --- LIST CONTENT --- */}
+      <View style={styles.listContainer}>
+        <View style={styles.tableHeaderRow}>
+          <Text style={styles.tableHeaderLabel}>ACCOUNT LIST</Text>
+          <Text style={styles.tableHeaderCount}>{totalRecords} Found</Text>
+        </View>
+
+        <FlatList
+          data={paginatedData}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => {
+            const invoice = item.fixac_invoice_no;
+            const description = item.fixac_description;
+            const credit = item.fixac_credit;
+            const debit = item.fixac_debit;
+            const balance = item.fixac_balance;
+            const date = item.fixac_date;
+
+            const initials = getInitials(description || invoice);
+
+            return (
+              <View style={styles.cardRow}>
+                {/* Avatar */}
+                <View style={styles.avatarContainer}>
+                  <Text style={styles.avatarText}>{initials}</Text>
+                </View>
+
+                {/* Info */}
+                <View style={styles.infoContainer}>
+                  <Text style={styles.nameText} numberOfLines={1}>
+                    {description || invoice}
+                  </Text>
+                  {date && (
+                    <Text style={styles.dateLabelList}>
+                      {new Date(date).toLocaleDateString()} • {invoice}
                     </Text>
+                  )}
+
+                  <View style={styles.detailRow}>
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Credit:</Text>
+                      <Text style={[styles.detailText, {color: '#1976D2'}]}>
+                        {formatNumber(credit) ?? '0'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.detailSeparator} />
+
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Debit:</Text>
+                      <Text style={[styles.detailText, {color: '#388E3C'}]}>
+                        {formatNumber(debit) ?? '0'}
+                      </Text>
+                    </View>
+
+                    <View style={styles.detailSeparator} />
+
+                    <View style={styles.detailItem}>
+                      <Text style={styles.detailLabel}>Bal:</Text>
+                      <Text style={[styles.detailText, {color: '#D32F2F'}]}>
+                        {formatNumber(balance) ?? '0'}
+                      </Text>
+                    </View>
                   </View>
                 </View>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-group" size={48} color="#666" />
-                <Text style={styles.emptyText}>No record found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 70}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
 
-        {/* Pagination Controls */}
-        {totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => prev - 1)}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
+                <Icon name="chevron-right" size={20} color="#D1D5DB" />
+              </View>
+            );
+          }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{paddingBottom: 160}}
+          ListEmptyComponent={
+            <View style={styles.centerContent}>
+              <Icon name="home-city-outline" size={48} color="#D1D5DB" />
+              <Text style={styles.emptyText}>No records found.</Text>
             </View>
-
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() => setCurrentPage(prev => prev + 1)}
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          }
+        />
       </View>
+
+      {/* --- PAGINATION (Floating) --- */}
+      {totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+            <Icon name="chevron-left" size={24} color={THEME.white} />
+          </TouchableOpacity>
+
+          <Text style={styles.pageText}>
+            Page {currentPage} of {totalPages}
+          </Text>
+
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() =>
+              setCurrentPage(prev => Math.min(prev + 1, totalPages))
+            }
+            style={[
+              styles.pageBtn,
+              currentPage === totalPages && styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-right" size={24} color={THEME.white} />
+          </TouchableOpacity>
+        </View>
+      )}
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -633,273 +671,300 @@ export default function FixAccounts({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER ---
+  headerWrapper: {
+    zIndex: 999,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 90,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: THEME.primary,
+  },
+  headerContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
+  iconBtn: {
+    padding: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
   },
 
-  // Filter Container
-  filterContainer: {
-    backgroundColor: backgroundColors.light,
+  // --- FILTER SECTION ---
+  filterSection: {
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
+    paddingVertical: 15,
     paddingHorizontal: 15,
-    marginTop: 10,
-    marginBottom: 4,
-    marginHorizontal: 12,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+    marginTop: -70,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  dateContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  datePicker: {
-    width: '48%',
-  },
-  dateLabel: {
-    color: backgroundColors.dark,
-    fontWeight: '600',
-    marginBottom: 5,
-    fontSize: 14,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-  },
-  dateText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '500',
+    shadowOffset: {width: 0, height: 2},
+    zIndex: 1000,
   },
   radioContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '75%',
+    justifyContent: 'space-around',
+    marginBottom: 10,
+    marginTop: 5,
   },
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   radioText: {
-    color: backgroundColors.dark,
-    marginLeft: -5,
+    color: THEME.textDark,
+    marginLeft: 5,
     fontWeight: '500',
+    fontSize: 14,
   },
   dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-    marginBottom: 10,
+    backgroundColor: THEME.white,
+    borderColor: THEME.border,
+    borderRadius: 8,
+    minHeight: 45,
   },
   dropdownDisabled: {
-    backgroundColor: '#dfdfdfff',
-    borderColor: '#ccc',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+    opacity: 0.7,
   },
   dropDownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
+    borderColor: THEME.border,
+    backgroundColor: THEME.white,
   },
-
-  // Summary Container
-  summaryContainer: {
-    marginHorizontal: 12,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 14,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.white,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    flex: 1,
+    justifyContent: 'center',
+    elevation: 2,
     shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
+  },
+  dateText: {
+    fontSize: 14,
+    color: THEME.textDark,
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  dateSeparator: {
+    marginHorizontal: 10,
+    color: THEME.textGray,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  // --- STATS SECTION ---
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    paddingVertical: 15,
+    paddingHorizontal: 10,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '700',
     marginBottom: 4,
   },
-  innerSummaryCtx: {
-    flexDirection: 'row',
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  statLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    textAlign: 'center',
   },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#555',
-    fontWeight: '500',
-  },
-  summaryValue: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-    fontWeight: 'bold',
+  statDivider: {
+    width: 1,
+    height: '80%',
+    backgroundColor: THEME.border,
+    alignSelf: 'center',
   },
 
-  // Pagination Styling
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
-  },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    alignItems: 'center',
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
-  },
-
-  // FlatList Styling
+  // --- LIST & CARDS ---
   listContainer: {
     flex: 1,
-    paddingHorizontal: '3%',
-    marginTop: 4,
+    marginTop: 5,
+    paddingHorizontal: 15,
   },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 5,
   },
-  row: {
+  tableHeaderLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: THEME.textGray,
+    letterSpacing: 1,
+  },
+  tableHeaderCount: {
+    fontSize: 12,
+    color: THEME.primary,
+    fontWeight: '700',
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
   },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
+  avatarContainer: {
+    width: 45,
+    height: 45,
+    borderRadius: 23,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(42, 101, 43, 0.1)',
   },
-  subText: {
+  avatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.primary,
+  },
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 4,
+    flex: 1,
+  },
+  dateLabelList: {
     fontSize: 12,
-    color: backgroundColors.dark,
-    marginTop: 2,
+    color: THEME.textGray,
+    marginBottom: 4,
   },
-  emptyContainer: {
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    flexWrap: 'wrap',
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailSeparator: {
+    width: 1,
+    height: 12,
+    backgroundColor: '#D1D5DB',
+    marginHorizontal: 8,
+  },
+  detailLabel: {
+    fontSize: 12,
+    color: THEME.textGray,
+    marginRight: 2,
+  },
+  detailText: {
+    fontSize: 12,
+    color: THEME.textDark,
+    fontWeight: '600',
+  },
+
+  centerContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
+    paddingVertical: 50,
   },
   emptyText: {
     marginTop: 10,
+    color: THEME.textGray,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+  },
+
+  // --- PAGINATION ---
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  pageBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabledBtn: {
+    opacity: 0.3,
+  },
+  pageText: {
+    color: THEME.white,
+    fontWeight: '700',
+    marginHorizontal: 15,
+    fontSize: 14,
   },
 });

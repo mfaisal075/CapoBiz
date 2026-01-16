@@ -7,6 +7,9 @@ import {
   TouchableOpacity,
   FlatList,
   BackHandler,
+  StatusBar,
+  Dimensions,
+  Platform,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -20,7 +23,26 @@ import BASE_URL from '../../BASE_URL';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+const {width} = Dimensions.get('window');
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 interface CustomerChequeList {
   id: number;
@@ -73,13 +95,13 @@ export default function CustomerAccounts({navigation}: any) {
     selectedDate?: Date,
   ) => {
     const currentDate = selectedDate || startDate;
-    setShowStartDatePicker(false);
+    setShowStartDatePicker(Platform.OS === 'ios');
     setStartDate(currentDate);
   };
 
   const onEndDateChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
     const currentDate = selectedDate || endDate;
-    setShowEndDatePicker(false);
+    setShowEndDatePicker(Platform.OS === 'ios');
     setEndDate(currentDate);
   };
 
@@ -87,28 +109,15 @@ export default function CustomerAccounts({navigation}: any) {
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
-  const currentData = custChequeList;
+  const currentData =
+    selectionMode === 'customers' ? custChequeList : suppChequeList;
   const totalRecords = currentData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
   // Slice data for pagination
-  const paginatedDataCust = currentData.slice(
+  const paginatedData = currentData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
-  );
-
-  // Pagination For Suppliers
-  const [currentPageSingle, setCurrentPageSingle] = useState(1);
-  const recordsPerPageSingle = 10;
-
-  const currentDataSingle = suppChequeList;
-  const totalRecordsSingle = currentDataSingle.length;
-  const totalPagesSinyle = Math.ceil(totalRecordsSingle / recordsPerPageSingle);
-
-  // Slice data for pagination
-  const paginatedDataSupp = currentDataSingle.slice(
-    (currentPageSingle - 1) * recordsPerPageSingle,
-    currentPageSingle * recordsPerPageSingle,
   );
 
   // Handle Print
@@ -275,7 +284,6 @@ export default function CustomerAccounts({navigation}: any) {
 
     custChequeList.forEach(cust => {
       const amount = parseFloat(cust.chi_amount) || 0;
-
       totalAmount += amount;
     });
 
@@ -290,7 +298,6 @@ export default function CustomerAccounts({navigation}: any) {
 
     suppChequeList.forEach(supp => {
       const amount = parseFloat(supp.chi_amount) || 0;
-
       totalAmount += amount;
     });
 
@@ -321,6 +328,17 @@ export default function CustomerAccounts({navigation}: any) {
     return () => backHandler.remove();
   }, [startDate, endDate, statusValue]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectionMode, startDate, endDate, statusValue]);
+
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
   function formatNumber(num: number | string): string {
     const n = typeof num === 'string' ? parseFloat(num) : num;
     if (isNaN(n)) return '0';
@@ -340,76 +358,104 @@ export default function CustomerAccounts({navigation}: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
+
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={26} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Cheque List</Text>
+            <TouchableOpacity onPress={handlePrint} style={styles.iconBtn}>
+              <Icon name="printer" size={26} color={THEME.white} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* --- FILTER SECTION --- */}
+      <View style={styles.filterSection}>
+        {/* Radio Buttons */}
+        <View style={styles.radioContainer}>
+          <TouchableOpacity
+            style={styles.radioButton}
+            onPress={() => setSelectionMode('customers')}>
+            <RadioButton
+              value="customers"
+              status={selectionMode === 'customers' ? 'checked' : 'unchecked'}
+              color={THEME.primary}
+              uncheckedColor={THEME.textGray}
             />
+            <Text style={styles.radioText}>Customers</Text>
           </TouchableOpacity>
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Cheque List</Text>
-          </View>
-
-          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="#fff" />
+          <TouchableOpacity
+            style={styles.radioButton}
+            onPress={() => setSelectionMode('suppliers')}>
+            <RadioButton
+              value="suppliers"
+              status={selectionMode === 'suppliers' ? 'checked' : 'unchecked'}
+              color={THEME.primary}
+              uncheckedColor={THEME.textGray}
+            />
+            <Text style={styles.radioText}>Suppliers</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Filter Section */}
-        <View style={styles.filterContainer}>
-          {/* Date Pickers */}
-          <View style={styles.dateContainer}>
-            <View style={styles.datePicker}>
-              <Text style={styles.dateLabel}>From:</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowStartDatePicker(true)}>
-                <Text style={styles.dateText}>
-                  {startDate.toLocaleDateString()}
-                </Text>
-                <Icon name="calendar" size={18} color="#144272" />
-              </TouchableOpacity>
-              {showStartDatePicker && (
-                <DateTimePicker
-                  testID="startDatePicker"
-                  value={startDate}
-                  mode="date"
-                  is24Hour={true}
-                  display="default"
-                  onChange={onStartDateChange}
-                />
-              )}
-            </View>
+        {/* Date Inputs */}
+        <View style={styles.filterRow}>
+          <TouchableOpacity
+            style={styles.dateInput}
+            onPress={() => setShowStartDatePicker(true)}>
+            <Icon name="calendar" size={20} color={THEME.primary} />
+            <Text style={styles.dateText}>
+              {startDate.toLocaleDateString()}
+            </Text>
+          </TouchableOpacity>
 
-            <View style={styles.datePicker}>
-              <Text style={styles.dateLabel}>To:</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowEndDatePicker(true)}>
-                <Text style={styles.dateText}>
-                  {endDate.toLocaleDateString()}
-                </Text>
-                <Icon name="calendar" size={18} color="#144272" />
-              </TouchableOpacity>
-              {showEndDatePicker && (
-                <DateTimePicker
-                  testID="endDatePicker"
-                  value={endDate}
-                  mode="date"
-                  is24Hour={true}
-                  display="default"
-                  onChange={onEndDateChange}
-                />
-              )}
-            </View>
-          </View>
+          <Text style={styles.dateSeparator}>to</Text>
 
-          {/* Dropdown */}
+          <TouchableOpacity
+            style={styles.dateInput}
+            onPress={() => setShowEndDatePicker(true)}>
+            <Icon name="calendar" size={20} color={THEME.primary} />
+            <Text style={styles.dateText}>{endDate.toLocaleDateString()}</Text>
+          </TouchableOpacity>
+        </View>
+
+        {showStartDatePicker && (
+          <DateTimePicker
+            testID="startDatePicker"
+            value={startDate}
+            mode="date"
+            is24Hour={true}
+            display="default"
+            onChange={onStartDateChange}
+          />
+        )}
+        {showEndDatePicker && (
+          <DateTimePicker
+            testID="endDatePicker"
+            value={endDate}
+            mode="date"
+            is24Hour={true}
+            display="default"
+            onChange={onEndDateChange}
+          />
+        )}
+
+        {/* Dropdown */}
+        <View style={{zIndex: 3000, marginTop: 10}}>
           <DropDownPicker
             items={statusItems}
             open={statusOpen}
@@ -417,312 +463,125 @@ export default function CustomerAccounts({navigation}: any) {
             value={statusValue}
             setValue={setStatusValue}
             placeholder="Select Status"
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
+            placeholderStyle={{color: THEME.textGray}}
+            textStyle={{color: THEME.textDark}}
             ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
+              <Icon name="chevron-up" size={20} color={THEME.textDark} />
             )}
             ArrowDownIconComponent={() => (
-              <Icon
-                name="chevron-down"
-                size={18}
-                color={backgroundColors.dark}
-              />
+              <Icon name="chevron-down" size={20} color={THEME.textDark} />
             )}
-            style={[styles.dropdown]}
+            style={styles.dropdown}
             dropDownContainerStyle={styles.dropDownContainer}
-            listMode="FLATLIST"
-            listItemLabelStyle={{
-              color: backgroundColors.dark,
-              fontWeight: '500',
-            }}
-            labelStyle={{
-              color: backgroundColors.dark,
-              fontSize: 16,
-            }}
+            listMode="SCROLLVIEW"
+            listItemLabelStyle={{color: THEME.textDark, fontWeight: '500'}}
+            labelStyle={{color: THEME.textDark, fontSize: 13}}
           />
-
-          {/* Radio Buttons */}
-          <View style={styles.radioContainer}>
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('customers');
-              }}>
-              <RadioButton
-                value="customers"
-                status={selectionMode === 'customers' ? 'checked' : 'unchecked'}
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
-              />
-              <Text style={styles.radioText}>Customers</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('suppliers');
-              }}>
-              <RadioButton
-                value="suppliers"
-                status={selectionMode === 'suppliers' ? 'checked' : 'unchecked'}
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
-              />
-              <Text style={styles.radioText}>Suppliers</Text>
-            </TouchableOpacity>
-          </View>
         </View>
-
-        {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
-          <View style={styles.innerSummaryCtx}>
-            <Text style={styles.summaryLabel}>Total Cheque Amount: </Text>
-            <Text style={styles.summaryValue}>{totals.totalSale}</Text>
-          </View>
-        </View>
-
-        {selectionMode === 'customers' && (
-          <View style={styles.listContainer}>
-            <FlatList
-              data={paginatedDataCust}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={styles.card}>
-                  {/* Avatar + Name + Actions */}
-                  <View style={styles.row}>
-                    <View>
-                      <Text style={styles.name}>{item.cust_name}</Text>
-                      <Text style={styles.subText}>
-                        <Text style={{fontWeight: '600'}}>Due Date: </Text>
-                        {new Date(item.chi_date)
-                          .toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-')}
-                      </Text>
-                    </View>
-
-                    <View style={[{alignSelf: 'flex-start', marginTop: 22}]}>
-                      <Text style={[styles.subText, {verticalAlign: 'top'}]}>
-                        <Text style={{fontWeight: '600'}}>
-                          Clearance Date:{' '}
-                        </Text>
-                        {item.chi_clear_date
-                          ? new Date(item.chi_clear_date)
-                              .toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                              .replace(/ /g, '-')
-                          : 'Not Cleared'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      marginTop: 5,
-                    }}>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Cheque No#: </Text>
-                      {item.chi_number ?? '0'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Amount: </Text>
-                      {formatNumber(item.chi_amount) ?? '0'}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Icon name="account-group" size={48} color="#666" />
-                  <Text style={styles.emptyText}>No record found.</Text>
-                </View>
-              }
-              contentContainerStyle={{paddingBottom: 90}}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        )}
-
-        {selectionMode === 'suppliers' && (
-          <View style={styles.listContainer}>
-            <FlatList
-              data={paginatedDataSupp}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={styles.card}>
-                  {/* Avatar + Name + Actions */}
-                  <View style={styles.row}>
-                    <View>
-                      <Text style={styles.name}>{item.sup_name}</Text>
-                      <Text style={styles.subText}>
-                        <Text style={{fontWeight: '600'}}>Due Date: </Text>
-                        {new Date(item.chi_date)
-                          .toLocaleDateString('en-GB', {
-                            day: 'numeric',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-')}
-                      </Text>
-                    </View>
-
-                    <View style={[{alignSelf: 'flex-start', marginTop: 22}]}>
-                      <Text style={[styles.subText, {verticalAlign: 'top'}]}>
-                        <Text style={{fontWeight: '600'}}>
-                          Clearance Date:{' '}
-                        </Text>
-                        {item.chi_clear_date
-                          ? new Date(item.chi_clear_date)
-                              .toLocaleDateString('en-GB', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                              .replace(/ /g, '-')
-                          : 'Not Cleared'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      marginTop: 5,
-                    }}>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Cheque No#: </Text>
-                      {item.chi_number ?? '0'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Amount: </Text>
-                      {formatNumber(item.chi_amount) ?? '0'}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Icon name="account-group" size={48} color="#666" />
-                  <Text style={styles.emptyText}>No record found.</Text>
-                </View>
-              }
-              contentContainerStyle={{paddingBottom: 90}}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        )}
-
-        {/* Pagination Controls */}
-        {selectionMode === 'customers' && totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() =>
-                setCurrentPage(prev => Math.min(prev + 1, totalPages))
-              }
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {selectionMode === 'suppliers' && totalRecordsSingle > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPageSingle === 1}
-              onPress={() =>
-                setCurrentPageSingle(prev => Math.max(prev - 1, 1))
-              }
-              style={[
-                styles.pageButton,
-                currentPageSingle === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPageSingle === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPageSingle}</Text>{' '}
-                of {totalPagesSinyle}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecordsSingle} records
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              disabled={currentPageSingle === totalPagesSinyle}
-              onPress={() =>
-                setCurrentPageSingle(prev =>
-                  Math.min(prev + 1, totalPagesSinyle),
-                )
-              }
-              style={[
-                styles.pageButton,
-                currentPageSingle === totalPagesSinyle &&
-                  styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPageSingle === totalPagesSinyle &&
-                    styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
       </View>
+
+      {/* Summary Stats Row */}
+      <View style={styles.statsContainer}>
+        <View style={styles.statItem}>
+          <Text style={[styles.statValue, {color: THEME.primary}]}>
+            {formatNumber(totals.totalSale)}
+          </Text>
+          <Text style={styles.statLabel}>Total Cheque Amount</Text>
+        </View>
+      </View>
+
+      {/* --- LIST DATA --- */}
+      <View style={styles.listContainer}>
+        <FlatList
+          data={paginatedData}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => {
+            const name =
+              selectionMode === 'customers' ? item.cust_name : item.sup_name;
+            const initials = getInitials(name);
+            const chequeDate = new Date(item.chi_date)
+              .toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })
+              .replace(/ /g, '-');
+
+            const clearDate = item.chi_clear_date
+              ? new Date(item.chi_clear_date)
+                  .toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  })
+                  .replace(/ /g, '-')
+              : 'Not Cleared';
+
+            return (
+              <View style={styles.cardRow}>
+                <View style={styles.avatarContainer}>
+                  <Text style={styles.avatarText}>{initials}</Text>
+                </View>
+                <View style={styles.infoContainer}>
+                  <Text style={styles.nameText} numberOfLines={1}>
+                    {name}
+                  </Text>
+                  <Text style={styles.dateLabelList}>
+                    #{item.chi_number} • {chequeDate}
+                  </Text>
+                  <Text style={[styles.dateLabelList, {marginBottom: 0}]}>
+                    {statusValue === 'Cleared'
+                      ? `Cleared: ${clearDate}`
+                      : `Due: ${chequeDate}`}
+                  </Text>
+                </View>
+                <View style={{alignItems: 'flex-end'}}>
+                  <Text style={[styles.detailText, {color: THEME.primary}]}>
+                    {formatNumber(item.chi_amount)}
+                  </Text>
+                </View>
+              </View>
+            );
+          }}
+          contentContainerStyle={{paddingBottom: 160}}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.centerContent}>
+              <Icon name="checkbook" size={60} color="#D1D5DB" />
+              <Text style={styles.emptyText}>No cheques found.</Text>
+            </View>
+          }
+        />
+      </View>
+
+      {/* --- PAGINATION (Bottom Floating) --- */}
+      {totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+            <Icon name="chevron-left" size={24} color={THEME.white} />
+          </TouchableOpacity>
+
+          <Text style={styles.pageText}>
+            Page {currentPage} of {totalPages}
+          </Text>
+
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() =>
+              setCurrentPage(prev => Math.min(prev + 1, totalPages))
+            }
+            style={[
+              styles.pageBtn,
+              currentPage === totalPages && styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-right" size={24} color={THEME.white} />
+          </TouchableOpacity>
+        </View>
+      )}
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -730,274 +589,248 @@ export default function CustomerAccounts({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER ---
+  headerWrapper: {
+    paddingBottom: 20,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 80,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: THEME.primary,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
+    justifyContent: 'space-between',
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
-  },
-  gradientBackground: {
+    color: THEME.white,
+    letterSpacing: 0.5,
     flex: 1,
+    textAlign: 'center',
+  },
+  iconBtn: {
+    padding: 6,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 8,
   },
 
-  // Filter Container
-  filterContainer: {
-    backgroundColor: backgroundColors.light,
+  // --- FILTER SECTION ---
+  filterSection: {
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    marginTop: 10,
-    marginBottom: 4,
-    marginHorizontal: 12,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    marginTop: -80,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  dateContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  datePicker: {
-    width: '48%',
-  },
-  dateLabel: {
-    color: backgroundColors.dark,
-    fontWeight: '600',
-    marginBottom: 5,
-    fontSize: 14,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-    height: 48,
-  },
-  dateText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '500',
+    shadowOffset: {width: 0, height: 2},
+    zIndex: 1000,
   },
   radioContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '60%',
-    marginBottom: 6,
+    justifyContent: 'space-around',
+    marginBottom: 4,
+    flexWrap: 'wrap',
   },
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginHorizontal: 5,
+    marginBottom: 5,
   },
   radioText: {
-    color: backgroundColors.dark,
-    marginLeft: -5,
+    color: THEME.textDark,
+    marginLeft: 2,
     fontWeight: '500',
+    fontSize: 13,
   },
   dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
-    height: 48,
-    marginBottom: 10,
-  },
-  dropdownDisabled: {
-    backgroundColor: '#dfdfdfff',
-    borderColor: '#ccc',
+    backgroundColor: THEME.white,
+    borderColor: THEME.border,
+    borderRadius: 8,
+    minHeight: 45,
   },
   dropDownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 10,
-    maxHeight: 75,
+    borderColor: THEME.border,
+    backgroundColor: THEME.white,
   },
-
-  // Pagination Styling
-  paginationContainer: {
+  filterRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    marginTop: 0,
   },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.white,
     paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    flex: 1,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: THEME.border,
   },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
+  dateText: {
+    fontSize: 13,
+    color: THEME.textDark,
+    marginLeft: 8,
+    fontWeight: '500',
   },
-  pageButtonText: {
-    color: backgroundColors.light,
+  dateSeparator: {
+    marginHorizontal: 10,
+    color: THEME.textGray,
     fontWeight: '600',
     fontSize: 14,
   },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    alignItems: 'center',
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
-  },
 
-  // Summary Container
-  summaryContainer: {
-    marginHorizontal: 12,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 14,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
+  // --- STATS SECTION ---
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
+  },
+  statItem: {
+    alignItems: 'center',
+    flex: 1,
+  },
+  statValue: {
+    fontSize: 18,
+    fontWeight: '700',
     marginBottom: 4,
   },
-  innerSummaryCtx: {
-    flexDirection: 'row',
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#555',
-    fontWeight: '500',
-  },
-  summaryValue: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-    fontWeight: 'bold',
+  statLabel: {
+    fontSize: 12,
+    color: THEME.textGray,
   },
 
-  // FlatList Styling
+  // --- LIST & CARDS ---
   listContainer: {
     flex: 1,
-    paddingHorizontal: '3%',
-    marginTop: 4,
+    marginTop: 0,
+    paddingHorizontal: 16,
   },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 12,
+    marginBottom: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
     elevation: 2,
-  },
-  row: {
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
   },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
+  avatarContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(42, 101, 43, 0.1)',
   },
-  subText: {
+  avatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.primary,
+  },
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 2,
+    flex: 1,
+  },
+  dateLabelList: {
     fontSize: 12,
-    color: backgroundColors.dark,
-    marginTop: 2,
+    color: THEME.textGray,
+    marginBottom: 6,
   },
-  emptyContainer: {
+  detailText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+
+  centerContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
+    paddingVertical: 50,
   },
   emptyText: {
     marginTop: 10,
+    color: THEME.textGray,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+  },
+
+  // --- PAGINATION ---
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  pageBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabledBtn: {
+    opacity: 0.3,
+  },
+  pageText: {
+    color: THEME.white,
+    fontWeight: '700',
+    marginHorizontal: 15,
+    fontSize: 14,
   },
 });

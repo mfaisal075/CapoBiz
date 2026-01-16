@@ -7,6 +7,9 @@ import {
   FlatList,
   Image,
   BackHandler,
+  StatusBar,
+  Dimensions,
+  ScrollView,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -20,7 +23,26 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  danger: '#EF4444',
+  success: '#10B981',
+  info: '#3B82F6',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 interface Category {
   id: number;
@@ -61,7 +83,7 @@ export default function ExpenseReport({navigation}: any) {
   >([]);
 
   const [selectionMode, setSelectionMode] = useState<
-    'allExpenses' | 'categoryWiseExpenses' | ''
+    'allExpenses' | 'categoryWiseExpenses'
   >('allExpenses');
 
   const [startDate, setStartDate] = useState(new Date());
@@ -92,7 +114,6 @@ export default function ExpenseReport({navigation}: any) {
   const totalRecords = currentData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
-  // Slice data for pagination
   const paginatedData = currentData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
@@ -106,7 +127,6 @@ export default function ExpenseReport({navigation}: any) {
   const totalRecordsSingle = currentDataSingle.length;
   const totalPagesSinyle = Math.ceil(totalRecordsSingle / recordsPerPageSingle);
 
-  // Slice data for pagination
   const paginatedDataCategory = currentDataSingle.slice(
     (currentPageSingle - 1) * recordsPerPageSingle,
     currentPageSingle * recordsPerPageSingle,
@@ -130,43 +150,38 @@ export default function ExpenseReport({navigation}: any) {
       categoryDropdown.find(cat => cat.id.toString() === catValue)?.expc_name ||
       'Customer';
 
-    // Get current date
     const dateStr = new Date().toLocaleDateString();
 
-    // Build HTML table rows
     const rows = dataList
       .map(
         (item, index) => `
           <tr>
-            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word; text-align:center;">${
+            <td style="border:1px solid #000; padding:4px; text-align:center;">${
               index + 1
             }</td>
-            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${new Date(
+            <td style="border:1px solid #000; padding:4px;">${new Date(
               item.exp_date,
-            ).toLocaleDateString('en-US', {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric',
-            })}</td>
+            ).toLocaleDateString()}</td>
             ${
-              selectionMode === 'allExpenses' &&
-              `
-              <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${item.expc_name}</td>`
+              selectionMode === 'allExpenses'
+                ? `<td style="border:1px solid #000; padding:4px;">${
+                    (item as ExpanseData).expc_name
+                  }</td>`
+                : ''
             }
-            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+            <td style="border:1px solid #000; padding:4px;">${
               item.exp_addedby
             }</td>
-            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+            <td style="border:1px solid #000; padding:4px;">${
               item.exp_desc
             }</td>
-            <td style="border:1px solid #000; padding:4px; word-wrap:break-word; white-space:normal; word-break:break-word;">${
+            <td style="border:1px solid #000; padding:4px; text-align:right;">${
               item.exp_amount
             }</td>
           </tr>`,
       )
       .join('');
 
-    // HTML Template
     const html = `
         <html>
           <head>
@@ -195,24 +210,10 @@ export default function ExpenseReport({navigation}: any) {
               </div>
               <div style="display:flex; justify-content:space-between; width: 35%; gap: 20px;">
                 <div style="font-size:12px;">
-                  <span style="font-weight: bold;">From:</span> ${startDate.toLocaleDateString(
-                    'en-US',
-                    {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                    },
-                  )}
+                  <span style="font-weight: bold;">From:</span> ${startDate.toLocaleDateString()}
                 </div>
                 <div style="font-size:12px;">
-                  <span style="font-weight: bold;">To:</span> ${endDate.toLocaleDateString(
-                    'en-US',
-                    {
-                      day: '2-digit',
-                      month: 'short',
-                      year: 'numeric',
-                    },
-                  )}
+                  <span style="font-weight: bold;">To:</span> ${endDate.toLocaleDateString()}
                 </div>
               </div>
             </div>
@@ -223,10 +224,9 @@ export default function ExpenseReport({navigation}: any) {
                   <th style="border:1px solid #000; padding:6px;">Sr#</th>
                   <th style="border:1px solid #000; padding:6px;">Date</th>
                   ${
-                    selectionMode === 'allExpenses' &&
-                    `
-                    <th style="border:1px solid #000; padding:6px;">Category</th>
-                    `
+                    selectionMode === 'allExpenses'
+                      ? '<th style="border:1px solid #000; padding:6px;">Category</th>'
+                      : ''
                   }
                   <th style="border:1px solid #000; padding:6px;">Added By</th>
                   <th style="border:1px solid #000; padding:6px;">Note</th>
@@ -241,10 +241,13 @@ export default function ExpenseReport({navigation}: any) {
         </html>
       `;
 
-    await RNPrint.print({html});
+    try {
+      await RNPrint.print({html});
+    } catch (error) {
+      console.log('Print Error:', error);
+    }
   };
 
-  // Fetch Expanse Category
   const fetchExpanseCatDropdown = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchexpensecategorydropdown`);
@@ -254,7 +257,6 @@ export default function ExpenseReport({navigation}: any) {
     }
   };
 
-  // Fetch Expanses
   const fetchExpanses = async () => {
     try {
       const res = await axios.post(`${BASE_URL}/fetchexpense`, {
@@ -268,7 +270,6 @@ export default function ExpenseReport({navigation}: any) {
     }
   };
 
-  // Fetch Category Wise Expanses
   const fetchCateWiseExpanses = async () => {
     try {
       const res = await axios.post(`${BASE_URL}/fetchcatexpense`, {
@@ -282,101 +283,164 @@ export default function ExpenseReport({navigation}: any) {
     }
   };
 
-  // Calculate All Expanse Total
-  const calculateAllExpanseTotal = () => {
-    let totalAmount = 0;
-
-    expanseData.forEach(exp => {
-      const amount = parseFloat(exp.exp_amount) || 0;
-
-      totalAmount += amount;
-    });
-
-    return {
-      totalExpanse: totalAmount.toFixed(2),
-    };
+  const calculateTotal = (data: any[]) => {
+    return data
+      .reduce((sum, item) => sum + (parseFloat(item.exp_amount) || 0), 0)
+      .toFixed(2);
   };
 
-  // Calculate Category Wise Expanse Total
-  const calculateCategoryExpanseTotal = () => {
-    let totalAmount = 0;
-
-    cateWiseexpanseData.forEach(exp => {
-      const amount = parseFloat(exp.exp_amount) || 0;
-
-      totalAmount += amount;
-    });
-
-    return {
-      totalExpanse: totalAmount.toFixed(2),
-    };
+  const totals = {
+    totalExpanse:
+      selectionMode === 'allExpenses'
+        ? calculateTotal(expanseData)
+        : calculateTotal(cateWiseexpanseData),
   };
-
-  const totals =
-    selectionMode === 'allExpenses'
-      ? calculateAllExpanseTotal()
-      : calculateCategoryExpanseTotal();
 
   useEffect(() => {
     fetchExpanseCatDropdown();
     fetchCateWiseExpanses();
     fetchExpanses();
-
-    const backKey = () => {
-      navigation.navigate('Dashboard');
-      return true;
-    };
-
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
-      backKey,
+      () => {
+        navigation.navigate('Dashboard');
+        return true;
+      },
     );
-
     return () => backHandler.remove();
   }, [startDate, endDate, catValue]);
 
   function formatNumber(num: number | string): string {
     const n = typeof num === 'string' ? parseFloat(num) : num;
     if (isNaN(n)) return '0';
-
-    const abs = Math.abs(n);
-
-    if (abs >= 10000000) {
-      return (n / 10000000).toFixed(n % 10000000 === 0 ? 0 : 2) + 'Cr';
-    } else if (abs >= 100000) {
-      return (n / 100000).toFixed(n % 100000 === 0 ? 0 : 2) + 'L';
-    } else if (abs >= 1000) {
-      return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2) + 'K';
-    } else {
-      return n.toString();
-    }
+    return n.toLocaleString();
   }
+
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  // Render Card Item
+  const renderCard = (item: ExpanseData | CategoryWiseExpanseData) => {
+    const rowData = item as ExpanseData; // flexible cast
+    const categoryName = rowData.expc_name || 'Category';
+
+    return (
+      <View style={styles.cardRow}>
+        {/* Avatar / Icon */}
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatarText}>{getInitials(categoryName)}</Text>
+        </View>
+
+        {/* Info */}
+        <View style={styles.infoContainer}>
+          <Text style={styles.categoryText} numberOfLines={1}>
+            {categoryName}
+          </Text>
+          <View style={styles.detailRow}>
+            <Text style={styles.dateLabel}>
+              {new Date(rowData.exp_date).toLocaleDateString('en-GB', {
+                day: '2-digit',
+                month: 'short',
+                year: 'numeric',
+              })}
+            </Text>
+            {rowData.exp_addedby ? (
+              <>
+                <Text style={styles.dotSeparator}>•</Text>
+                <Text style={styles.addedByText} numberOfLines={1}>
+                  {rowData.exp_addedby}
+                </Text>
+              </>
+            ) : null}
+          </View>
+          {rowData.exp_desc ? (
+            <Text style={styles.noteText} numberOfLines={1}>
+              {rowData.exp_desc}
+            </Text>
+          ) : null}
+        </View>
+
+        {/* Amount */}
+        <View style={{alignItems: 'flex-end'}}>
+          <Text style={styles.amountText}>
+            {formatNumber(rowData.exp_amount)}
+          </Text>
+        </View>
+      </View>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
+
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Expense Report</Text>
+            <TouchableOpacity onPress={handlePrint} style={styles.iconBtn}>
+              <Icon name="printer" size={24} color={THEME.white} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* --- FILTER SECTION --- */}
+      <View style={styles.filterSection}>
+        {/* Radio Mode Selection */}
+        <View style={styles.radioRow}>
+          <TouchableOpacity
+            style={styles.radioBtn}
+            onPress={() => {
+              setSelectionMode('allExpenses');
+              setCatValue('');
+            }}>
+            <RadioButton.Android
+              value="allExpenses"
+              status={selectionMode === 'allExpenses' ? 'checked' : 'unchecked'}
+              color={THEME.primary}
+              onPress={() => {
+                setSelectionMode('allExpenses');
+                setCatValue('');
+              }}
             />
+            <Text style={styles.radioLabel}>All Expenses</Text>
           </TouchableOpacity>
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Expense Report</Text>
-          </View>
-
-          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="#fff" />
+          <TouchableOpacity
+            style={styles.radioBtn}
+            onPress={() => setSelectionMode('categoryWiseExpenses')}>
+            <RadioButton.Android
+              value="categoryWiseExpenses"
+              status={
+                selectionMode === 'categoryWiseExpenses'
+                  ? 'checked'
+                  : 'unchecked'
+              }
+              color={THEME.primary}
+              onPress={() => setSelectionMode('categoryWiseExpenses')}
+            />
+            <Text style={styles.radioLabel}>Category Wise</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Filter Section */}
-        <View style={styles.filterContainer}>
-          {/* Dropdown */}
+        {/* Dropdown for Category */}
+        <View style={{zIndex: 2000, marginBottom: 12}}>
+          <Text style={styles.inputLabel}>Select Category</Text>
           <DropDownPicker
             items={transformedCategory}
             open={catOpen}
@@ -385,364 +449,168 @@ export default function ExpenseReport({navigation}: any) {
             setValue={setCatValue}
             placeholder="Select Category"
             disabled={selectionMode === 'allExpenses'}
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
-            ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
-            )}
-            ArrowDownIconComponent={() => (
-              <Icon
-                name="chevron-down"
-                size={18}
-                color={backgroundColors.dark}
-              />
-            )}
             style={[
               styles.dropdown,
               selectionMode === 'allExpenses' && styles.dropdownDisabled,
             ]}
-            dropDownContainerStyle={styles.dropDownContainer}
+            dropDownContainerStyle={styles.dropdownContainer}
             listMode="MODAL"
-            listItemLabelStyle={{
-              color: backgroundColors.dark,
-              fontWeight: '500',
-            }}
-            labelStyle={{
-              color: backgroundColors.dark,
-              fontSize: 16,
-            }}
-            searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
-            searchContainerStyle={{
-              borderColor: backgroundColors.gray,
-            }}
+            theme="LIGHT"
           />
-
-          {/* Radio Buttons */}
-          <View style={styles.radioContainer}>
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('allExpenses');
-                setCatValue('');
-              }}>
-              <RadioButton
-                value="allExpenses"
-                status={
-                  selectionMode === 'allExpenses' ? 'checked' : 'unchecked'
-                }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
-              />
-              <Text style={styles.radioText}>All Expenses</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('categoryWiseExpenses');
-              }}>
-              <RadioButton
-                value="categoryWiseExpenses"
-                status={
-                  selectionMode === 'categoryWiseExpenses'
-                    ? 'checked'
-                    : 'unchecked'
-                }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
-              />
-              <Text style={styles.radioText}>Category Wise Expenses</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Date Pickers */}
-          <View style={styles.dateContainer}>
-            <View style={styles.datePicker}>
-              <Text style={styles.dateLabel}>From:</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowStartDatePicker(true)}>
-                <Text style={styles.dateText}>
-                  {startDate.toLocaleDateString()}
-                </Text>
-                <Icon name="calendar" size={18} color={backgroundColors.dark} />
-              </TouchableOpacity>
-              {showStartDatePicker && (
-                <DateTimePicker
-                  testID="startDatePicker"
-                  value={startDate}
-                  mode="date"
-                  is24Hour={true}
-                  display="default"
-                  onChange={onStartDateChange}
-                />
-              )}
-            </View>
-
-            <View style={styles.datePicker}>
-              <Text style={styles.dateLabel}>To:</Text>
-              <TouchableOpacity
-                style={styles.dateButton}
-                onPress={() => setShowEndDatePicker(true)}>
-                <Text style={styles.dateText}>
-                  {endDate.toLocaleDateString()}
-                </Text>
-                <Icon name="calendar" size={18} color={backgroundColors.dark} />
-              </TouchableOpacity>
-              {showEndDatePicker && (
-                <DateTimePicker
-                  testID="endDatePicker"
-                  value={endDate}
-                  mode="date"
-                  is24Hour={true}
-                  display="default"
-                  onChange={onEndDateChange}
-                />
-              )}
-            </View>
-          </View>
         </View>
 
-        {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
-          <View style={styles.innerSummaryCtx}>
-            <Text style={styles.summaryLabel}>Total Expense Amount: </Text>
-            <Text style={styles.summaryValue}>
-              {formatNumber(totals.totalExpanse)}
+        {/* Dates */}
+        <View style={styles.filterRow}>
+          {/* Start Date */}
+          <TouchableOpacity
+            style={styles.dateInput}
+            onPress={() => setShowStartDatePicker(true)}>
+            <Icon name="calendar" size={20} color={THEME.primary} />
+            <Text style={styles.dateText}>
+              {startDate.toLocaleDateString('en-GB')}
             </Text>
-          </View>
+          </TouchableOpacity>
+
+          <Text style={styles.dateSeparator}>to</Text>
+
+          {/* End Date */}
+          <TouchableOpacity
+            style={styles.dateInput}
+            onPress={() => setShowEndDatePicker(true)}>
+            <Icon name="calendar" size={20} color={THEME.primary} />
+            <Text style={styles.dateText}>
+              {endDate.toLocaleDateString('en-GB')}
+            </Text>
+          </TouchableOpacity>
         </View>
 
-        {selectionMode === 'allExpenses' && (
-          <View style={styles.listContainer}>
-            <FlatList
-              data={paginatedData}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={styles.card}>
-                  {/* Avatar + Name + Actions */}
-                  <View style={styles.row}>
-                    <View>
-                      <Text style={styles.name}>{item.expc_name}</Text>
-                      <Text style={styles.subText}>
-                        <Text style={{fontWeight: '600'}}>Added By: </Text>
-                        {item.exp_addedby}
-                      </Text>
-                    </View>
-
-                    <View style={[{alignSelf: 'flex-start', marginTop: 22}]}>
-                      <Text
-                        style={[
-                          styles.subText,
-                          {fontWeight: '700', verticalAlign: 'top'},
-                        ]}>
-                        <Icon name="calendar" size={12} color="#666" />{' '}
-                        {new Date(item.exp_date)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-') || 'N/A'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      marginTop: 5,
-                    }}>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Order Total: </Text>
-                      {item.exp_desc ?? '0'}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Discount: </Text>
-                      {formatNumber(item.exp_amount) ?? '0'}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Icon name="account-group" size={48} color="#666" />
-                  <Text style={styles.emptyText}>No record found.</Text>
-                </View>
-              }
-              contentContainerStyle={{paddingBottom: 90}}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
-        )}
-        {selectionMode === 'categoryWiseExpenses' && (
-          <View style={styles.listContainer}>
-            <FlatList
-              data={cateWiseexpanseData}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({item}) => (
-                <View style={styles.card}>
-                  {/* Avatar + Name + Actions */}
-                  <View style={styles.row}>
-                    <View>
-                      <Text style={styles.name}>
-                        {formatNumber(item.exp_amount)}
-                      </Text>
-                      <Text style={styles.subText}>
-                        <Text style={{fontWeight: '600'}}>Added By: </Text>
-                        {item.exp_addedby}
-                      </Text>
-                    </View>
-
-                    <View style={[{alignSelf: 'flex-start', marginTop: 22}]}>
-                      <Text
-                        style={[
-                          styles.subText,
-                          {fontWeight: '700', verticalAlign: 'top'},
-                        ]}>
-                        <Icon name="calendar" size={12} color="#666" />{' '}
-                        {new Date(item.exp_date)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-') || 'N/A'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      justifyContent: 'space-between',
-                      marginTop: 5,
-                    }}>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Order Total: </Text>
-                      {item.exp_desc ?? '0'}
-                    </Text>
-                  </View>
-                </View>
-              )}
-              ListEmptyComponent={
-                <View style={styles.emptyContainer}>
-                  <Icon name="account-group" size={48} color="#666" />
-                  <Text style={styles.emptyText}>No record found.</Text>
-                </View>
-              }
-              contentContainerStyle={{paddingBottom: 90}}
-              showsVerticalScrollIndicator={false}
-            />
-          </View>
+        {showStartDatePicker && (
+          <DateTimePicker
+            value={startDate}
+            mode="date"
+            display="default"
+            onChange={onStartDateChange}
+          />
         )}
 
-        {/* Pagination Controls */}
-        {selectionMode === 'allExpenses' && totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
+        {showEndDatePicker && (
+          <DateTimePicker
+            value={endDate}
+            mode="date"
+            display="default"
+            onChange={onEndDateChange}
+          />
+        )}
+      </View>
 
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
+      <View style={{flex: 1}}>
+        <ScrollView
+          contentContainerStyle={{paddingBottom: 150}}
+          showsVerticalScrollIndicator={false}>
+          {/* --- STATS SECTION --- */}
+          <View style={styles.statsContainer}>
+            <View style={styles.statItem}>
+              <Text style={styles.statLabel}>Total Expense Amount</Text>
+              <Text style={styles.statValue}>
+                {formatNumber(totals.totalExpanse)}
               </Text>
             </View>
-
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() =>
-                setCurrentPage(prev => Math.min(prev + 1, totalPages))
-              }
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
           </View>
-        )}
 
-        {selectionMode === 'categoryWiseExpenses' && totalRecordsSingle > 0 && (
+          {/* --- LIST SECTION --- */}
+          <View style={styles.listContainer}>
+            {selectionMode === 'allExpenses' ? (
+              <FlatList
+                data={paginatedData}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={({item}) => renderCard(item)}
+                scrollEnabled={false}
+                ListEmptyComponent={
+                  <View style={styles.emptyContainer}>
+                    <Icon
+                      name="clipboard-text-outline"
+                      size={50}
+                      color={THEME.textGray}
+                    />
+                    <Text style={styles.emptyText}>No expenses found.</Text>
+                  </View>
+                }
+              />
+            ) : (
+              <FlatList
+                data={paginatedDataCategory}
+                keyExtractor={(item, index) => index.toString()}
+                renderItem={({item}) => renderCard(item)}
+                scrollEnabled={false}
+                ListEmptyComponent={
+                  <View style={styles.emptyContainer}>
+                    <Icon name="cash-remove" size={60} color="#D1D5DB" />
+                    <Text style={styles.emptyText}>No expenses found.</Text>
+                  </View>
+                }
+              />
+            )}
+          </View>
+        </ScrollView>
+
+        {/* --- PAGINATION (Bottom Floating) --- */}
+        {(selectionMode === 'allExpenses' ? totalRecords : totalRecordsSingle) >
+          0 && (
           <View style={styles.paginationContainer}>
             <TouchableOpacity
-              disabled={currentPageSingle === 1}
+              disabled={
+                (selectionMode === 'allExpenses'
+                  ? currentPage
+                  : currentPageSingle) === 1
+              }
               onPress={() =>
-                setCurrentPageSingle(prev => Math.max(prev - 1, 1))
+                selectionMode === 'allExpenses'
+                  ? setCurrentPage(prev => Math.max(prev - 1, 1))
+                  : setCurrentPageSingle(prev => Math.max(prev - 1, 1))
               }
               style={[
-                styles.pageButton,
-                currentPageSingle === 1 && styles.pageButtonDisabled,
+                styles.pageBtn,
+                (selectionMode === 'allExpenses'
+                  ? currentPage
+                  : currentPageSingle) === 1 && styles.pageBtnDisabled,
               ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPageSingle === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
+              <Icon name="chevron-left" size={24} color={THEME.white} />
             </TouchableOpacity>
 
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPageSingle}</Text>{' '}
-                of {totalPagesSinyle}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecordsSingle} records
-              </Text>
-            </View>
+            <Text style={styles.pageInfoText}>
+              {selectionMode === 'allExpenses'
+                ? currentPage
+                : currentPageSingle}
+              {' / '}
+              {selectionMode === 'allExpenses' ? totalPages : totalPagesSinyle}
+            </Text>
 
             <TouchableOpacity
-              disabled={currentPageSingle === totalPagesSinyle}
+              disabled={
+                selectionMode === 'allExpenses'
+                  ? currentPage === totalPages
+                  : currentPageSingle === totalPagesSinyle
+              }
               onPress={() =>
-                setCurrentPageSingle(prev =>
-                  Math.min(prev + 1, totalPagesSinyle),
-                )
+                selectionMode === 'allExpenses'
+                  ? setCurrentPage(p => p + 1)
+                  : setCurrentPageSingle(p => p + 1)
               }
               style={[
-                styles.pageButton,
-                currentPageSingle === totalPagesSinyle &&
-                  styles.pageButtonDisabled,
+                styles.pageBtn,
+                (selectionMode === 'allExpenses'
+                  ? currentPage === totalPages
+                  : currentPageSingle === totalPagesSinyle) &&
+                  styles.pageBtnDisabled,
               ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPageSingle === totalPagesSinyle &&
-                    styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
+              <Icon name="chevron-right" size={24} color={THEME.white} />
             </TouchableOpacity>
           </View>
         )}
       </View>
+
+      <Toast />
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -750,274 +618,285 @@ export default function ExpenseReport({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER ---
+  headerWrapper: {
+    zIndex: 999,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 60,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: THEME.primary,
+  },
+  headerContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
+  iconBtn: {
+    padding: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
   },
 
-  // Filter Container
-  filterContainer: {
-    backgroundColor: backgroundColors.light,
+  // --- FILTER SECTION ---
+  filterSection: {
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    marginTop: 10,
-    marginBottom: 4,
-    marginHorizontal: 12,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+    padding: 10,
+    marginTop: -40,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+    shadowOffset: {width: 0, height: 2},
+    zIndex: 1000,
   },
-  dateContainer: {
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  radioRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
     marginBottom: 8,
+    gap: 16,
   },
-  datePicker: {
-    width: '48%',
+  radioBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  dateLabel: {
-    color: backgroundColors.dark,
+  radioLabel: {
+    fontSize: 14,
+    color: THEME.textDark,
+    marginLeft: 4,
+  },
+  inputLabel: {
+    fontSize: 12,
     fontWeight: '600',
-    marginBottom: 5,
-    fontSize: 14,
-  },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-    height: 48,
-  },
-  dateText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  radioContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '70%',
+    color: THEME.textGray,
     marginBottom: 6,
-  },
-  radioButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  radioText: {
-    color: backgroundColors.dark,
-    marginLeft: -5,
-    fontWeight: '500',
+    textTransform: 'uppercase',
   },
   dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
-    height: 48,
-    marginBottom: 10,
+    borderColor: THEME.border,
+    borderRadius: 8,
+    minHeight: 44,
   },
   dropdownDisabled: {
-    backgroundColor: '#dfdfdfff',
-    borderColor: '#ccc',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
   },
-  dropDownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
+  dropdownContainer: {
+    borderColor: THEME.border,
   },
-
-  // Summary Container
-  summaryContainer: {
-    marginHorizontal: 12,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 14,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.white,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    flex: 1,
+    justifyContent: 'center',
+    elevation: 2,
     shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
+  },
+  dateText: {
+    fontSize: 14,
+    color: THEME.textDark,
+    marginLeft: 8,
+    fontWeight: '600',
+  },
+  dateSeparator: {
+    marginHorizontal: 10,
+    color: THEME.textGray,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  // --- STATS ---
+  statsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 10,
     elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
+  },
+  statItem: {
+    alignItems: 'center',
+  },
+  statValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: THEME.primary,
     marginBottom: 4,
   },
-  innerSummaryCtx: {
-    flexDirection: 'row',
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: '#555',
-    fontWeight: '500',
-  },
-  summaryValue: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-    fontWeight: 'bold',
-  },
-
-  // Pagination Styling
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
-  },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: backgroundColors.light,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    alignItems: 'center',
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
+  statLabel: {
     fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
+    color: THEME.textGray,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontWeight: '600',
   },
 
-  // FlatList Styling
+  // --- LIST / CARD ---
   listContainer: {
-    flex: 1,
-    paddingHorizontal: '3%',
-    marginTop: 4,
+    paddingHorizontal: 0, // removed padding as card width is controlled
+    marginTop: 5,
   },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  row: {
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    width: '94%',
+    alignSelf: 'center',
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    shadowColor: '#222',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
-  name: {
+  avatarContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
+    fontWeight: '800',
+    color: THEME.primary,
+    letterSpacing: 0.5,
   },
-  subText: {
-    fontSize: 12,
-    color: backgroundColors.dark,
-    marginTop: 2,
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    marginRight: 8,
   },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 2,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  dateLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    fontWeight: '500',
+  },
+  dotSeparator: {
+    marginHorizontal: 4,
+    color: THEME.textGray,
+    fontSize: 10,
+  },
+  addedByText: {
+    fontSize: 11,
+    color: THEME.textGray,
+    maxWidth: 100,
+  },
+  noteText: {
+    fontSize: 11,
+    color: THEME.textGray,
+    fontStyle: 'italic',
+  },
+  amountText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.danger, // Kept red for expense
+  },
+
   emptyContainer: {
+    padding: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
   },
   emptyText: {
     marginTop: 10,
     fontSize: 16,
-    color: '#666',
+    color: THEME.textGray,
     textAlign: 'center',
+  },
+
+  // --- PAGINATION ---
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 4},
+  },
+  pageBtn: {
+    padding: 5,
+  },
+  pageBtnDisabled: {
+    backgroundColor: 'transparent',
+    opacity: 0.3,
+  },
+  pageInfo: {
+    marginHorizontal: 0,
+    backgroundColor: 'transparent',
+  },
+  pageInfoText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.white,
+    marginHorizontal: 15,
   },
 });

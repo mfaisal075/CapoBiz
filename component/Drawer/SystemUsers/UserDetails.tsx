@@ -2,23 +2,44 @@ import {
   BackHandler,
   Image,
   Modal,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
+  TouchableOpacity,
   View,
+  ScrollView,
+  StatusBar,
+  Dimensions,
+  SafeAreaView,
+  Platform,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
-import {TouchableOpacity} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import backgroundColors from '../../Colors';
-import {ScrollView} from 'react-native';
-import LottieView from 'lottie-react-native';
-import BASE_URL from '../../BASE_URL';
-import Toast from 'react-native-toast-message';
 import axios from 'axios';
+import BASE_URL from '../../BASE_URL';
 import {useUser} from '../../CTX/UserContext';
+import LottieView from 'lottie-react-native';
+import Toast from 'react-native-toast-message';
 import DropDownPicker from 'react-native-dropdown-picker';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME (Matching CustomerDetails.tsx) ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  danger: '#EF4444',
+  dangerLight: '#FEE2E2',
+};
 
 interface EditUser {
   user_id: number;
@@ -42,6 +63,30 @@ interface RolesDropDown {
   id: number;
   role_name: string;
 }
+
+// --- HELPER COMPONENT FOR ROWS ---
+// --- HELPER COMPONENT: Detail Row ---
+const DetailRow = ({
+  label,
+  value,
+  icon,
+  isLast,
+}: {
+  label: string;
+  value: string;
+  icon: string;
+  isLast?: boolean;
+}) => (
+  <View style={[styles.detailRow, isLast && {borderBottomWidth: 0}]}>
+    <View style={styles.iconBox}>
+      <Icon name={icon} size={20} color={THEME.primary} />
+    </View>
+    <View style={styles.detailTextContainer}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value || '--'}</Text>
+    </View>
+  </View>
+);
 
 const UserDetails = ({navigation, route}: any) => {
   const {id, name, contact, email, cnic, role} = route.params;
@@ -251,95 +296,102 @@ const UserDetails = ({navigation, route}: any) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerCenter}>
-          <TouchableOpacity
-            onPress={() => {
-              navigation.navigate('Users');
-            }}>
-            <Icon
-              name="chevron-left"
-              size={28}
-              color={backgroundColors.light}
-            />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>User Details</Text>
-        </View>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-        <TouchableOpacity
-          style={[styles.headerBtn]}
-          onPress={() => setModalVisible('Delete')}>
-          <Icon name="delete" size={28} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Details */}
       <ScrollView
-        style={styles.detailsContainer}
-        showsVerticalScrollIndicator={false}>
-        {/* Avatar */}
-        <View style={styles.avatarBox}>
-          <Image
-            source={require('../../../assets/man.png')}
-            style={styles.avatar}
-          />
-          <Text style={styles.custName}>{name}</Text>
-        </View>
-
-        {/* Inner Details */}
-        <View style={styles.innerDetails}>
-          <View style={styles.innerHeader}>
-            <Text style={styles.headerText}>User Details</Text>
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{paddingBottom: 100}}>
+        {/* --- HEADER BACKGROUND --- */}
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          {/* Nav Bar */}
+          <SafeAreaView style={styles.navBar}>
             <TouchableOpacity
-              style={{flexDirection: 'row', gap: 5}}
-              onPress={() => {
-                setModalVisible('Edit');
-                getEditData();
-              }}>
-              <Text style={styles.editText}>Edit</Text>
-              <Icon
-                name="square-edit-outline"
-                size={18}
-                color={backgroundColors.dark}
-              />
+              onPress={() => navigation.navigate('Users')}
+              style={styles.navBtn}>
+              <Icon name="arrow-left" size={24} color={THEME.white} />
             </TouchableOpacity>
+            <Text style={styles.navTitle}>User Profile</Text>
+            <TouchableOpacity
+              onPress={() => setModalVisible('Delete')}
+              style={styles.navBtn}>
+              <Icon name="trash-can-outline" size={22} color={THEME.white} />
+            </TouchableOpacity>
+          </SafeAreaView>
+
+          {/* Profile Section */}
+          <View style={styles.profileSection}>
+            <View style={styles.avatarWrapper}>
+              <Image
+                source={require('../../../assets/man.png')}
+                style={styles.avatar}
+              />
+              <TouchableOpacity
+                style={styles.editBadge}
+                activeOpacity={0.8}
+                onPress={() => {
+                  getEditData();
+                  setModalVisible('Edit');
+                }}>
+                <Icon name="pencil" size={16} color={THEME.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.profileName}>{name || 'Loading...'}</Text>
+
+            <View style={styles.badgeRow}>
+              <View style={styles.capsuleBadge}>
+                <Icon
+                  name="shield-account-outline"
+                  size={14}
+                  color={THEME.white}
+                />
+                <Text style={styles.capsuleText}>{role || 'Role'}</Text>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* --- DETAILS CARDS --- */}
+        <View style={styles.contentContainer}>
+          {/* Card 1: Personal Info */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Personal Information</Text>
+            </View>
+            <DetailRow icon="account" label="Full Name" value={name} />
+            <DetailRow icon="card-account-details" label="CNIC" value={cnic} />
+            <DetailRow icon="email" label="Email" value={email} isLast />
           </View>
 
-          {/* Details */}
-          <View style={styles.detailsView}>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Name</Text>
-              <Text style={styles.value}>{name ?? '--'}</Text>
+          {/* Card 2: Contact Details */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Contact Details</Text>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact</Text>
-              <Text style={styles.value}>{contact ?? '--'}</Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>CNIC</Text>
-              <Text style={styles.value}>{cnic ?? '--'}</Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>{email ?? '--'}</Text>
-            </View>
-            <View style={[styles.detailsRow, {borderBottomWidth: 0}]}>
-              <Text style={styles.label}>Role</Text>
-              <Text style={styles.value}>{role ?? '--'}</Text>
-            </View>
+            <DetailRow
+              icon="phone"
+              label="Primary Contact"
+              value={contact}
+              isLast
+            />
           </View>
         </View>
       </ScrollView>
 
-      {/* Delete User Modal */}
+      {/* Delete Modal */}
       <Modal
         visible={modalVisible === 'Delete'}
         transparent
         animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.deleteModalContainer}>
-            <View style={styles.delAnim}>
+            <View style={styles.lottieContainer}>
               <LottieView
                 style={{flex: 1}}
                 source={require('../../../assets/warning.json')}
@@ -347,27 +399,18 @@ const UserDetails = ({navigation, route}: any) => {
                 loop={false}
               />
             </View>
-
-            <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-            <Text style={styles.deleteModalMessage}>
-              You won't be able to revert this record!
-            </Text>
-
-            <View style={styles.deleteModalActions}>
+            <Text style={styles.modalTitle}>Delete User?</Text>
+            <Text style={styles.modalText}>This action cannot be undone.</Text>
+            <View style={styles.modalBtnRow}>
               <TouchableOpacity
-                style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
-                onPress={() => {
-                  setModalVisible('');
-                }}>
-                <Text style={[styles.deleteModalBtnText, {color: backgroundColors.dark}]}>
-                  Cancel
-                </Text>
+                style={styles.btnCancel}
+                onPress={() => setModalVisible('')}>
+                <Text style={styles.btnCancelText}>Cancel</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
+                style={styles.btnDelete}
                 onPress={handleDeleteUser}>
-                <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
+                <Text style={styles.btnDeleteText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -379,88 +422,58 @@ const UserDetails = ({navigation, route}: any) => {
         visible={modalVisible === 'Edit'}
         transparent
         animationType="slide">
-        <View style={styles.addCustomerModalOverlay}>
-          <ScrollView style={styles.addCustomerModalContainer}>
-            <View style={styles.addCustomerHeader}>
-              <Text style={styles.addCustomerTitle}>Edit User</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.editModalContainer}>
+            <View style={styles.editModalHeader}>
+              <Text style={styles.editModalTitle}>Edit User</Text>
               <TouchableOpacity
                 onPress={() => {
                   setModalVisible('');
                   setEditForm(initialEditUser);
                   setRoleValue(null);
                 }}
-                style={styles.addCustomerCloseBtn}>
-                <Icon name="close" size={20} color={backgroundColors.dark} />
+                style={styles.closeModalBtn}>
+                <Icon name="close" size={24} color={THEME.textDark} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.addCustomerForm}>
-              <View style={styles.addCustomerDropdownRow}>
-                <View style={styles.addCustomerDropdownField}>
-                  <Text style={styles.addCustomerLabel}>Role *</Text>
-                  <DropDownPicker
-                    items={transformedRoleDropDown}
-                    open={roleOpen}
-                    setOpen={setRoleOpen}
-                    value={roleValue}
-                    setValue={setRoleValue}
-                    placeholder="Select Role *"
-                    placeholderStyle={styles.addCustomerDropdownPlaceholder}
-                    textStyle={styles.addCustomerDropdownText}
-                    ArrowUpIconComponent={() => (
-                      <Icon
-                        name="chevron-up"
-                        size={18}
-                        color={backgroundColors.dark}
-                      />
-                    )}
-                    ArrowDownIconComponent={() => (
-                      <Icon
-                        name="chevron-down"
-                        size={18}
-                        color={backgroundColors.dark}
-                      />
-                    )}
-                    style={styles.addCustomerDropdown}
-                    dropDownContainerStyle={styles.addCustomerDropdownContainer}
-                    listMode="SCROLLVIEW"
-                    listItemLabelStyle={{
-                      color: backgroundColors.dark,
-                      fontWeight: '500',
-                    }}
-                    labelStyle={{
-                      color: backgroundColors.dark,
-                      fontSize: 16,
-                    }}
-                    searchable
-                    searchTextInputStyle={{
-                      borderWidth: 0,
-                      width: '100%',
-                    }}
-                    searchContainerStyle={{
-                      borderColor: backgroundColors.gray,
-                    }}
-                  />
-                </View>
+            <ScrollView
+              style={styles.editModalBody}
+              contentContainerStyle={{paddingBottom: 30}}>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Role *</Text>
+                <DropDownPicker
+                  items={transformedRoleDropDown}
+                  open={roleOpen}
+                  setOpen={setRoleOpen}
+                  value={roleValue}
+                  setValue={setRoleValue}
+                  placeholder="Select Role"
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  zIndex={3000}
+                  zIndexInverse={1000}
+                />
               </View>
 
-              <View style={styles.addCustomerField}>
-                <Text style={styles.addCustomerLabel}>Name *</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Full Name *</Text>
                 <TextInput
-                  style={styles.addCustomerInput}
-                  placeholderTextColor="#999"
+                  style={styles.input}
                   placeholder="Enter full name"
+                  placeholderTextColor={THEME.textGray}
                   value={editForm.name}
                   onChangeText={text => handleEditInputChange('name', text)}
                 />
               </View>
 
-              <View style={styles.addCustomerField}>
-                <Text style={styles.addCustomerLabel}>Contact *</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Contact *</Text>
                 <TextInput
-                  style={styles.addCustomerInput}
-                  placeholderTextColor="#999"
+                  style={styles.input}
                   placeholder="0300-1234567"
+                  placeholderTextColor={THEME.textGray}
                   keyboardType="phone-pad"
                   maxLength={12}
                   value={editForm.contact}
@@ -475,12 +488,12 @@ const UserDetails = ({navigation, route}: any) => {
                 />
               </View>
 
-              <View style={styles.addCustomerField}>
-                <Text style={styles.addCustomerLabel}>CNIC *</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>CNIC *</Text>
                 <TextInput
-                  style={styles.addCustomerInput}
-                  placeholderTextColor="#999"
+                  style={styles.input}
                   placeholder="12345-1234567-1"
+                  placeholderTextColor={THEME.textGray}
                   keyboardType="numeric"
                   maxLength={15}
                   value={editForm.cnic}
@@ -498,12 +511,12 @@ const UserDetails = ({navigation, route}: any) => {
                 />
               </View>
 
-              <View style={styles.addCustomerField}>
-                <Text style={styles.addCustomerLabel}>Email *</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Email *</Text>
                 <TextInput
-                  style={styles.addCustomerInput}
-                  placeholderTextColor="#999"
+                  style={styles.input}
                   placeholder="user@example.com"
+                  placeholderTextColor={THEME.textGray}
                   keyboardType="email-address"
                   value={editForm.email}
                   onChangeText={text => handleEditInputChange('email', text)}
@@ -511,18 +524,22 @@ const UserDetails = ({navigation, route}: any) => {
               </View>
 
               <TouchableOpacity
-                style={styles.addCustomerSubmitBtn}
+                style={styles.btnPrimary}
                 onPress={handleUpdateUser}>
-                <Icon name="account-edit" size={20} color="white" />
-                <Text style={styles.addCustomerSubmitText}>Update User</Text>
+                <Icon
+                  name="check-circle-outline"
+                  size={20}
+                  color="white"
+                  style={{marginRight: 8}}
+                />
+                <Text style={styles.btnPrimaryText}>Update User</Text>
               </TouchableOpacity>
-            </View>
-          </ScrollView>
-          <Toast />
+            </ScrollView>
+          </View>
         </View>
+        <Toast />
       </Modal>
-
-      <Toast />
+      <BottomBar />
     </SafeAreaView>
   );
 };
@@ -532,274 +549,291 @@ export default UserDetails;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER & PROFILE ---
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  navBar: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+    paddingHorizontal: 20,
+    marginBottom: 10,
   },
-  headerCenter: {
-    flex: 1,
-    gap: 10,
-    flexDirection: 'row',
+  navBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
   },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
+  navTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-
-  // Details container
-  detailsContainer: {
-    flex: 1,
-    paddingHorizontal: '3%',
-  },
-  avatarBox: {
-    marginVertical: 25,
-    justifyContent: 'center',
+  profileSection: {
     alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  avatarWrapper: {
+    marginBottom: 12,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
   },
   avatar: {
-    height: 125,
-    width: 125,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: THEME.white,
+    backgroundColor: THEME.white,
   },
-  custName: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginTop: 10,
-    color: backgroundColors.primary,
-  },
-
-  // Inner Details
-  innerDetails: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginBottom: 30,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  innerHeader: {
-    width: '100%',
-    height: 50,
-    borderBottomColor: backgroundColors.primary,
-    borderBottomWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  headerText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: backgroundColors.dark,
-  },
-  editText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-  },
-  detailsView: {
-    flex: 1,
-  },
-  detailsRow: {
-    alignItems: 'baseline',
-    paddingVertical: 10,
-    borderBottomWidth: 0.6,
-    borderBottomColor: backgroundColors.primary,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.primary,
-  },
-  value: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-  },
-
-  //Delete Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: THEME.white,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-    width: '100%',
-    alignSelf: 'center',
+    elevation: 4,
   },
-  deleteModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
+  profileName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: THEME.white,
     marginBottom: 8,
   },
-  deleteModalMessage: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  deleteModalActions: {
+  badgeRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  deleteModalBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 10,
   },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
+  capsuleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
+  capsuleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.white,
+    marginLeft: 6,
   },
 
-  // Edit Customer Modal Styles
-  addCustomerModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
+  // --- CONTENT ---
+  contentContainer: {
     paddingHorizontal: 20,
+    marginTop: -20, // Overlap header slightly less due to missing balance card
   },
-  addCustomerModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    maxHeight: '70%',
+  sectionCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    padding: 20,
+    marginBottom: 20,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOffset: {width: 0, height: 10},
+    shadowOpacity: 0.08,
+    shadowRadius: 20,
+    elevation: 5,
   },
-  addCustomerHeader: {
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    marginBottom: 15,
+    paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#F3F4F6',
   },
-  addCustomerTitle: {
-    fontSize: 18,
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: THEME.textDark,
+    letterSpacing: 0.5,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  iconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  detailTextContainer: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    marginBottom: 0,
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: THEME.textDark,
+    fontWeight: '600',
+  },
+
+  // --- MODALS ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  deleteModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
+  },
+  lottieContainer: {
+    width: 100,
+    height: 100,
+    marginBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 20,
     fontWeight: 'bold',
-    color: backgroundColors.dark,
+    color: THEME.textDark,
+    marginBottom: 8,
   },
-  addCustomerCloseBtn: {
-    padding: 5,
+  modalText: {
+    fontSize: 14,
+    color: THEME.textGray,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
   },
-  addCustomerForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
   },
-  addCustomerRow: {
+  btnCancel: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  btnCancelText: {
+    color: THEME.textDark,
+    fontWeight: '700',
+  },
+  btnDelete: {
+    flex: 1,
+    backgroundColor: THEME.danger,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  btnDeleteText: {
+    color: THEME.white,
+    fontWeight: '700',
+  },
+
+  // --- EDIT MODAL STYLES ---
+  editModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    maxHeight: '90%',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
+    elevation: 10,
+  },
+  editModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 15,
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
   },
-  addCustomerField: {
-    flex: 1,
-    marginBottom: 5,
+  editModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  addCustomerFullRow: {
-    marginBottom: 15,
+  closeModalBtn: {
+    padding: 5,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
   },
-  addCustomerLabel: {
-    fontSize: 14,
+  editModalBody: {
+    padding: 20,
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 12,
     fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 5,
+    color: '#4B5563',
+    marginBottom: 6,
   },
-  addCustomerInput: {
-    backgroundColor: backgroundColors.light,
+  input: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-  },
-  addCustomerDropdownRow: {
-    marginBottom: 15,
-  },
-  addCustomerDropdownField: {
-    flex: 1,
-  },
-  addCustomerDropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-  },
-  addCustomerDropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
-  },
-  addCustomerDropdownText: {
-    color: '#333',
     fontSize: 14,
+    color: THEME.textDark,
   },
-  addCustomerDropdownPlaceholder: {
-    color: '#888',
-    fontSize: 14,
-  },
-  addCustomerSubmitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
+  dropdown: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
     borderRadius: 10,
+    minHeight: 45,
+  },
+  dropdownContainer: {
+    borderColor: '#E5E7EB',
+  },
+  btnPrimary: {
+    backgroundColor: THEME.primary,
+    borderRadius: 12,
     paddingVertical: 15,
-    marginTop: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 10,
   },
-  addCustomerSubmitText: {
-    color: 'white',
+  btnPrimaryText: {
+    color: THEME.white,
     fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    fontWeight: '700',
   },
 });

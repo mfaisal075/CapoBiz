@@ -2,22 +2,48 @@ import {
   StyleSheet,
   Text,
   View,
-  SafeAreaView,
-  Image,
   TouchableOpacity,
   FlatList,
   TextInput,
   Modal,
+  StatusBar,
+  ScrollView,
+  BackHandler,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
-import backgroundColors from '../../Colors';
-import {BackHandler} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  danger: '#EF4444',
+};
+
+// --- HELPER: Get Initials ---
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  const parts = name.split(' ');
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 interface Categories {
   id: number;
@@ -38,61 +64,48 @@ export default function CategoryProducts({navigation}: any) {
     title: '',
     message: '',
   });
+  const [loading, setLoading] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
-
   const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
-
-  // Slice data for pagination
   const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
 
-  // Fetch Category Dropdown
+  // Fetch Category
   const fetchCatDropdown = async () => {
+    setLoading(true);
     try {
       const res = await axios.get(`${BASE_URL}/fetchcategories`);
-
       const catData = res.data.cat;
-
       setFilteredData(catData);
       setMasterData(catData);
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Add Category
   const addCategory = async () => {
     if (!addCate) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please fill out field',
-      });
+      Toast.show({type: 'error', text1: 'Please fill out field'});
       return;
     }
-
     try {
       const res = await axios.post(`${BASE_URL}/addcategory`, {
         cat_name: addCate.trim(),
       });
-
       const data = res.data;
-
       if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Category has been added successfully',
-        });
         setAddCate('');
         fetchCatDropdown();
         setModal('');
-
         setTimeout(() => {
           setSuccessModal({
             visible: true,
@@ -108,12 +121,7 @@ export default function CategoryProducts({navigation}: any) {
         });
       }
     } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: `${error}`,
-      });
-      console.log(error);
+      Toast.show({type: 'error', text1: 'Error', text2: `${error}`});
     }
   };
 
@@ -124,43 +132,31 @@ export default function CategoryProducts({navigation}: any) {
         id: selectedCate?.id,
       });
       const data = res.data;
-      console.log(data);
-
       if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Deleted!',
-          text2: 'Category has been deleted successfully.',
-        });
         fetchCatDropdown();
         setSelectedCate(null);
         setModal('');
+        Toast.show({
+          type: 'success',
+          text1: 'Deleted!',
+          text2: 'Category deleted.',
+        });
       } else if (res.status === 200 && data.status === 201) {
         Toast.show({
           type: 'error',
           text1: 'Warning!',
-          text2:
-            'You have products in this category, cannot delete this category!.',
-          visibilityTime: 3000,
+          text2: 'Products exist in this category.',
         });
       }
     } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: `${error}`,
-      });
-      console.log(error);
+      Toast.show({type: 'error', text1: 'Error', text2: `${error}`});
     }
   };
 
   // Edit Category
   const editCategory = async () => {
     if (!editCate) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please fill out field',
-      });
+      Toast.show({type: 'error', text1: 'Please fill out field'});
       return;
     }
     try {
@@ -168,20 +164,12 @@ export default function CategoryProducts({navigation}: any) {
         cat_id: selectedCate?.id,
         cat_name: editCate.trim(),
       });
-
       const data = res.data;
-
       if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'Category has been Updated successfully',
-        });
         fetchCatDropdown();
         setEditCate('');
         setSelectedCate(null);
         setModal('');
-
         setTimeout(() => {
           setSuccessModal({
             visible: true,
@@ -197,370 +185,289 @@ export default function CategoryProducts({navigation}: any) {
         });
       }
     } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: `${error}`,
-      });
-      console.log(error);
+      Toast.show({type: 'error', text1: 'Error', text2: `${error}`});
     }
   };
 
-  // Search Filter
   const searchFilter = (text: string) => {
+    setSearchQuery(text);
     if (text) {
       const newData = masterData.filter(item => {
-        const itemData = item.pcat_name
-          ? item.pcat_name.toLocaleUpperCase()
-          : ''.toLocaleLowerCase();
-        const textData = text.toLocaleUpperCase();
+        const itemData = item.pcat_name ? item.pcat_name.toUpperCase() : '';
+        const textData = text.toUpperCase();
         return itemData.indexOf(textData) > -1;
       });
       setFilteredData(newData);
-      setSearchQuery(text);
     } else {
       setFilteredData(masterData);
-      setSearchQuery(text);
     }
   };
 
   useEffect(() => {
     fetchCatDropdown();
-
     const backKey = () => {
       navigation.navigate('Dashboard');
       return true;
     };
-
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
       backKey,
     );
-
     return () => backHandler.remove();
   }, []);
 
+  const renderItem = ({item}: {item: Categories}) => {
+    return (
+      <View style={styles.cardRow}>
+        {/* Avatar */}
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatarText}>{getInitials(item.pcat_name)}</Text>
+        </View>
+
+        {/* Info */}
+        <View style={styles.infoContainer}>
+          <Text style={styles.nameText} numberOfLines={1}>
+            {item.pcat_name}
+          </Text>
+          {/* <View style={styles.iconTextRow}>
+            <Icon name="shape-outline" size={14} color={THEME.textGray} />
+            <Text style={styles.subText}>Product Category</Text>
+          </View> */}
+        </View>
+
+        {/* Delete Action */}
+        <TouchableOpacity
+          onPress={() => {
+            setModal('delCategory');
+            setSelectedCate(item);
+          }}
+          style={{padding: 8}}>
+          <Icon name="trash-can-outline" size={22} color={THEME.danger} />
+        </TouchableOpacity>
+
+        {/* Edit Action */}
+        <TouchableOpacity
+          onPress={() => {
+            setModal('editCategory');
+            setEditCate(item.pcat_name);
+            setSelectedCate(item);
+          }}
+          style={{padding: 8}}>
+          <Icon name="pencil" size={22} color={THEME.primary} />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Categories</Text>
+            <TouchableOpacity
+              onPress={() => setModal('Add')}
+              style={styles.iconBtn}>
+              <Icon name="plus" size={24} color={THEME.white} />
+            </TouchableOpacity>
           </View>
+        </LinearGradient>
 
-          <TouchableOpacity
-            onPress={() => setModal('Add')}
-            style={[styles.headerBtn]}>
-            <Text style={styles.addBtnText}>Add</Text>
-            <Icon name="plus" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Filter */}
-        <View style={styles.searchFilter}>
-          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+        {/* Floating Search */}
+        <View style={styles.floatingSearchContainer}>
+          <Icon name="magnify" size={22} color={THEME.primary} />
           <TextInput
-            placeholder="Search by supplier name"
-            style={styles.search}
+            placeholder="Search categories..."
+            placeholderTextColor={THEME.textLight}
+            style={styles.floatingSearchInput}
             value={searchQuery}
-            onChangeText={text => searchFilter(text)}
+            onChangeText={searchFilter}
           />
-        </View>
-
-        <View style={styles.listContainer}>
-          <FlatList
-            data={currentData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <View style={styles.card}>
-                {/* Avatar + Name + Actions */}
-                <View style={styles.row}>
-                  <View style={styles.avatarBox}>
-                    <Image
-                      source={require('../../../assets/diagram.png')}
-                      style={styles.avatar}
-                    />
-                  </View>
-
-                  <View style={{flex: 1}}>
-                    <Text style={styles.name}>{item.pcat_name}</Text>
-                  </View>
-
-                  {/* Actions on right */}
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModal('editCategory');
-                        setEditCate(item.pcat_name);
-                        setSelectedCate({
-                          id: item.id,
-                          pcat_name: item.pcat_name,
-                        });
-                      }}>
-                      <Icon
-                        name="pencil"
-                        size={20}
-                        color={backgroundColors.success}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => {
-                        setModal('delCategory');
-                        setSelectedCate({
-                          id: item.id,
-                          pcat_name: item.pcat_name,
-                        });
-                      }}>
-                      <Icon
-                        name="delete"
-                        size={20}
-                        color={backgroundColors.danger}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-group" size={48} color="#666" />
-                <Text style={styles.emptyText}>No record found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-
-        {/*Delete Category*/}
-        <Modal
-          visible={modal === 'delCategory'}
-          transparent
-          animationType="fade">
-          <View style={styles.addCustomerModalOverlay}>
-            <View style={styles.deleteModalContainer}>
-              <View style={styles.delAnim}>
-                <LottieView
-                  style={{flex: 1}}
-                  source={require('../../../assets/warning.json')}
-                  autoPlay
-                  loop={false}
-                />
-              </View>
-
-              {/* Title */}
-              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-
-              {/* Subtitle */}
-              <Text style={styles.deleteModalMessage}>
-                You won’t be able to revert this record!
-              </Text>
-
-              {/* Buttons */}
-              <View style={styles.deleteModalActions}>
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
-                  onPress={() => setModal('')}>
-                  <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
-                  onPress={delCategory}>
-                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/* Edit Category Modal */}
-        <Modal
-          visible={modal === 'editCategory'}
-          transparent
-          animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <View style={styles.addCustomerModalContainer}>
-              {/* Header */}
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Edit Category</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModal('');
-                    setEditCate('');
-                    setSelectedCate(null);
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color={backgroundColors.dark} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Form */}
-              <View style={styles.addCustomerForm}>
-                <View style={styles.addCustomerFullRow}>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholder="Enter category name *"
-                    placeholderTextColor="#999"
-                    value={editCate}
-                    onChangeText={t => setEditCate(t)}
-                  />
-                </View>
-
-                {/* Submit Button */}
-                <TouchableOpacity
-                  style={styles.addCustomerSubmitBtn}
-                  onPress={editCategory}>
-                  <Icon name="pencil" size={20} color="white" />
-                  <Text style={styles.addCustomerSubmitText}>
-                    Update Category
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/* Add Category Modal */}
-        <Modal visible={modal === 'Add'} transparent animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <View style={styles.addCustomerModalContainer}>
-              {/* Header */}
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Add New Category</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModal('');
-                    setAddCate('');
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color={backgroundColors.dark} />
-                </TouchableOpacity>
-              </View>
-
-              {/* Form */}
-              <View style={styles.addCustomerForm}>
-                <View style={styles.addCustomerFullRow}>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholder="Enter category name *"
-                    placeholderTextColor="#999"
-                    value={addCate}
-                    onChangeText={t => setAddCate(t)}
-                  />
-                </View>
-
-                {/* Submit */}
-                <TouchableOpacity
-                  style={styles.addCustomerSubmitBtn}
-                  onPress={addCategory}>
-                  <Icon name="shape-plus" size={20} color="white" />
-                  <Text style={styles.addCustomerSubmitText}>Add Category</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/*Success*/}
-        <Modal visible={successModal.visible} transparent animationType="fade">
-          <View style={styles.addCustomerModalOverlay}>
-            <View style={styles.deleteModalContainer}>
-              <View style={styles.delAnim}>
-                <LottieView
-                  style={{flex: 1}}
-                  source={require('../../../assets/success.json')}
-                  autoPlay
-                  duration={2500}
-                  loop={false}
-                />
-              </View>
-
-              {/* Title */}
-              <Text style={styles.deleteModalTitle}>{successModal.title}</Text>
-
-              {/* Subtitle */}
-              <Text style={styles.deleteModalMessage}>
-                {successModal.message}
-              </Text>
-
-              {/* Buttons */}
-              <View style={styles.deleteModalActions}>
-                <TouchableOpacity
-                  style={[
-                    styles.deleteModalBtn,
-                    {backgroundColor: backgroundColors.success},
-                  ]}
-                  onPress={() =>
-                    setSuccessModal({visible: false, title: '', message: ''})
-                  }>
-                  <Text style={styles.deleteModalBtnText}>Ok</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        {/* Pagination Controls */}
-        {totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => prev - 1)}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => searchFilter('')}>
+              <Icon name="close-circle" size={18} color={THEME.textLight} />
             </TouchableOpacity>
+          )}
+        </View>
+      </View>
 
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
+      {/* --- CONTENT --- */}
+      <View style={styles.listContainer}>
+        {loading ? (
+          <View style={styles.centerContent}>
+            <LottieView
+              source={require('../../../assets/Loading-Dots.json')}
+              autoPlay
+              loop
+              style={styles.lottie}
+            />
+          </View>
+        ) : (
+          <>
+            <View style={styles.tableHeaderRow}>
+              <Text style={styles.tableHeaderLabel}>CATEGORY LIST</Text>
+              <Text style={styles.tableHeaderCount}>{totalRecords} Found</Text>
             </View>
 
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() => setCurrentPage(prev => prev + 1)}
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
-          </View>
+            <FlatList
+              data={currentData}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={renderItem}
+              contentContainerStyle={{paddingBottom: 160}}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.centerContent}>
+                  <Icon name="shape-outline" size={60} color="#D1D5DB" />
+                  <Text style={styles.emptyText}>No categories found</Text>
+                </View>
+              }
+            />
+          </>
         )}
       </View>
+
+      {/* --- PAGINATION --- */}
+      {!loading && totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => prev - 1)}
+            style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+            <Icon name="chevron-left" size={24} color={THEME.white} />
+          </TouchableOpacity>
+          <Text style={styles.pageText}>
+            Page {currentPage} of {totalPages}
+          </Text>
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() => setCurrentPage(prev => prev + 1)}
+            style={[
+              styles.pageBtn,
+              currentPage === totalPages && styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-right" size={24} color={THEME.white} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* --- MODALS (Keeping functional styles mostly as they were but ensuring they work) --- */}
+
+      {/* Delete Modal */}
+      <Modal visible={modal === 'delCategory'} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.deleteModalContainer}>
+            <View style={{width: 100, height: 100, marginBottom: 15}}>
+              <LottieView
+                style={{flex: 1}}
+                source={require('../../../assets/warning.json')}
+                autoPlay
+                loop={false}
+              />
+            </View>
+            <Text style={styles.modalTitle}>Are you sure?</Text>
+            <Text style={styles.modalText}>
+              You won’t be able to revert this record!
+            </Text>
+            <View style={styles.modalBtnRow}>
+              <TouchableOpacity
+                style={styles.btnCancel}
+                onPress={() => setModal('')}>
+                <Text style={styles.btnCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.btnDelete} onPress={delCategory}>
+                <Text style={styles.btnDeleteText}>Yes, Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Add/Edit Modal */}
+      <Modal
+        visible={modal === 'Add' || modal === 'editCategory'}
+        transparent
+        animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.deleteModalContainer}>
+            {/* Reusing container style for consistency or can use a separate one */}
+            <View style={styles.modalHeaderRow}>
+              <Text style={styles.modalTitle}>
+                {modal === 'Add' ? 'Add Category' : 'Edit Category'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setModal('');
+                  setAddCate('');
+                  setEditCate('');
+                  setSelectedCate(null);
+                }}>
+                <Icon name="close" size={22} color={THEME.textDark} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{width: '100%', marginTop: 20}}>
+              <Text style={styles.label}>Category Name *</Text>
+              <TextInput
+                style={styles.input}
+                value={modal === 'Add' ? addCate : editCate}
+                onChangeText={t =>
+                  modal === 'Add' ? setAddCate(t) : setEditCate(t)
+                }
+                placeholder="Enter category name"
+              />
+
+              <TouchableOpacity
+                style={[styles.btnPrimary, {marginTop: 20}]}
+                onPress={modal === 'Add' ? addCategory : editCategory}>
+                <Text
+                  style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+                  {modal === 'Add' ? 'Save Category' : 'Update Category'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+      <Toast />
+
+      {/* Success Modal */}
+      <Modal visible={successModal.visible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.deleteModalContainer}>
+            <View style={{width: 100, height: 100}}>
+              <LottieView
+                source={require('../../../assets/success.json')}
+                autoPlay
+                duration={2500}
+                loop={false}
+                style={{width: '100%', height: '100%'}}
+              />
+            </View>
+            <Text style={styles.modalTitle}>{successModal.title}</Text>
+            <Text style={styles.modalText}>{successModal.message}</Text>
+            <TouchableOpacity
+              style={[styles.btnPrimary, {width: '100%', marginTop: 15}]}
+              onPress={() =>
+                setSuccessModal({visible: false, title: '', message: ''})
+              }>
+              <Text style={{color: 'white', fontWeight: 'bold'}}>Ok</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -568,328 +475,263 @@ export default function CategoryProducts({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 20,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: 10,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
+  },
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  // --- Floating Search ---
+  floatingSearchContainer: {
+    position: 'absolute',
+    bottom: -24,
+    left: 12,
+    right: 12,
+    backgroundColor: THEME.white,
+    borderRadius: 10,
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.light,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
+  floatingSearchInput: {
     flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
+    marginLeft: 10,
+    fontSize: 15,
+    color: THEME.textDark,
   },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
-  },
-
-  // Search Filter
-  searchFilter: {
-    width: '94%',
-    alignSelf: 'center',
-    height: 48,
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  search: {
-    height: '100%',
-    fontSize: 14,
-    color: backgroundColors.dark,
-    width: '100%',
-  },
-
-  // FlatList Styling
+  // --- List & Cards ---
   listContainer: {
     flex: 1,
-    paddingHorizontal: '3%',
+    paddingTop: 10,
   },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 14,
   },
-  row: {
+  tableHeaderLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textGray,
+    letterSpacing: 0.5,
+  },
+  tableHeaderCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.primary,
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    width: '94%',
+    alignSelf: 'center',
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#222',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
-  avatarBox: {
+  avatarContainer: {
     width: 50,
     height: 50,
     borderRadius: 25,
+    backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
-  },
-  avatar: {
-    height: 40,
-    width: 40,
+    marginRight: 12,
   },
   avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+    fontSize: 18,
+    fontWeight: '800',
+    color: THEME.primary,
+    letterSpacing: 0.5,
   },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 4,
+  },
+  iconTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   subText: {
     fontSize: 12,
-    color: '#555',
-    marginTop: 2,
+    color: THEME.textGray,
+    marginLeft: 4,
   },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 12,
-    marginLeft: 10,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
-  },
-  emptyText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-
-  // Pagination Component
+  // --- Pagination ---
   paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
     position: 'absolute',
-    bottom: 0,
-    width: '100%',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
+  pageBtn: {
+    padding: 8,
   },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
+  disabledBtn: {
+    opacity: 0.3,
   },
-  pageButtonText: {
-    color: '#fff',
+  pageText: {
+    color: THEME.white,
+    fontSize: 14,
     fontWeight: '600',
-    fontSize: 14,
+    marginHorizontal: 15,
   },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    paddingHorizontal: 10,
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
-  },
-
-  // Add Customer Modal Styles
-  addCustomerModalOverlay: {
+  // --- Modals ---
+  modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  addCustomerModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  addCustomerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  addCustomerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-  },
-  addCustomerCloseBtn: {
-    padding: 5,
-  },
-  addCustomerForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  addCustomerFullRow: {
-    marginBottom: 15,
-  },
-  addCustomerLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 5,
-  },
-  addCustomerInput: {
-    borderWidth: 0.6,
-    borderColor: '#00000047',
-    height: 45,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#333',
-    backgroundColor: backgroundColors.light,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 6,
-  },
-  addCustomerSubmitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 20,
-  },
-  addCustomerSubmitText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-
-  //Delete Modal
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
     padding: 20,
+  },
+  deleteModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    padding: 24,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
     width: '100%',
-    alignSelf: 'center',
   },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
-  },
-  deleteModalTitle: {
+  modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: THEME.textDark,
     marginBottom: 8,
   },
-  deleteModalMessage: {
+  modalText: {
     fontSize: 14,
-    color: '#555',
+    color: THEME.textGray,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
-  deleteModalActions: {
+  modalBtnRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
     width: '100%',
   },
-  deleteModalBtn: {
+  btnCancel: {
     flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
   },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
+  btnCancelText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: THEME.textDark,
   },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
+  btnDelete: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 12,
+    backgroundColor: THEME.danger,
+    alignItems: 'center',
+  },
+  btnDeleteText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
+  },
+  btnPrimary: {
+    backgroundColor: THEME.primary,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  // Common
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lottie: {
+    width: 100,
+    height: 100,
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: THEME.textGray,
+  },
+  modalHeaderRow: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textGray,
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: '#F9FAFB',
+    color: THEME.textDark,
   },
 });

@@ -1,45 +1,57 @@
 import {
-  Platform,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
   SafeAreaView,
   ScrollView,
+  TouchableOpacity,
   FlatList,
   Image,
   BackHandler,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
-import {useDrawer} from '../../DrawerContext';
-import DropDownPicker from 'react-native-dropdown-picker';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import {RadioButton} from 'react-native-paper';
-import axios from 'axios';
-import BASE_URL from '../../BASE_URL';
+import {useDrawer} from '../../DrawerContext';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import DropDownPicker from 'react-native-dropdown-picker';
 import {useNavigation} from '@react-navigation/native';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import BASE_URL from '../../BASE_URL';
+import axios from 'axios';
 import LinearGradient from 'react-native-linear-gradient';
-import backgroundColors from '../../Colors';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+  success: '#10B981',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  shadow: '#000',
+};
 
 interface Suppliers {
   id: number;
   sup_name: string;
   sup_company_name: string;
-}
-
-interface AllSupplierData {
-  sup_name: string;
-  supac_total_bill_amount: number;
-  supac_paid_amount: number;
-  supac_balance: number;
-}
-
-interface SingleSupplier {
-  id: string;
-  sup_name: string;
-  sup_company_name: string;
   sup_address: string;
+}
+
+interface SuppliersAccounts {
+  sup_name: string;
+  supac_total_bill_amount: string;
+  supac_paid_amount: string;
+  supac_balance: string;
 }
 
 interface DetailsWithout {
@@ -60,14 +72,12 @@ interface DetailsWith {
   supac_total_bill_amount: string;
   supac_paid_amount: string;
   supac_balance: string;
-  supac_payment_type: string;
-  supac_payment_method: string;
 }
 
 export default function SupplierAccount() {
-  const [selectedTab, setSelectedTab] = useState('Single');
   const {openDrawer, closeDrawer} = useDrawer();
   const navigation = useNavigation();
+  const [selectedTab, setSelectedTab] = useState('Single');
   const [Open, setOpen] = useState(false);
   const [suppValue, setSuppValue] = useState<string | ''>('');
   const [fromDate, setFromDate] = useState<Date | null>(null);
@@ -75,30 +85,30 @@ export default function SupplierAccount() {
   const [showDatePicker, setShowDatePicker] = useState<'from' | 'to' | null>(
     null,
   );
-  const [selectedOption, setSelectedOption] = useState<
-    'withoutDetails' | 'withDetails'
-  >('withoutDetails');
-  const [allSuppData, setAllSuppData] = useState<AllSupplierData[]>([]);
   const [suppDropdown, setSuppDropdown] = useState<Suppliers[]>([]);
-  const [suppData, setSuppData] = useState<SingleSupplier | null>(null);
-  const [accountDetailsWithout, setAccountDetailsWithout] = useState<
-    DetailsWithout[]
-  >([]);
-  const [chequeCount, setChequeCount] = useState<number | null>(null);
-  const [chequeAmount, setChequeAmount] = useState<number | null>(null);
-  const [accountDetailsWith, setAccountDetailsWith] = useState<DetailsWith[]>(
-    [],
-  );
-
-  // Pagination states
-  const [currentPageAll, setCurrentPageAll] = useState(1);
-  const [currentPageSingle, setCurrentPageSingle] = useState(1);
-  const [itemsPerPage] = useState(5);
-
   const transformedSupp = suppDropdown.map(sup => ({
     label: `${sup.sup_name}_${sup.sup_company_name}`,
     value: sup.id.toString(),
   }));
+  const [suppData, setSuppData] = useState<Suppliers | null>(null);
+  const [allSuppAccount, setAllSuppAccount] = useState<SuppliersAccounts[]>([]);
+  const [accountDetailsWithout, setAccountDetailsWithout] = useState<
+    DetailsWithout[]
+  >([]);
+  const [accountDetailsWith, setAccountDetailsWith] = useState<DetailsWith[]>(
+    [],
+  );
+  const [chequeCount, setChequeCount] = useState('');
+  const [chequeAmount, setChequeAmount] = useState('');
+  const [selectedOption, setSelectedOption] = useState<
+    'withoutDetails' | 'withDetails'
+  >('withoutDetails');
+
+  // Pagination states
+  const [currentPageWithout, setCurrentPageWithout] = useState(1);
+  const [currentPageWith, setCurrentPageWith] = useState(1);
+  const [currentPageAll, setCurrentPageAll] = useState(1);
+  const ITEMS_PER_PAGE = 10;
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
@@ -116,34 +126,15 @@ export default function SupplierAccount() {
     setShowDatePicker(null);
   };
 
-  // Calculate All Supplier Totals
-  const calculateTotals = () => {
-    let totalReceivables = 0;
-    let totalReceived = 0;
-
-    allSuppData.forEach(sup => {
-      const receivable = sup.supac_total_bill_amount || 0;
-      const received = sup.supac_paid_amount || 0;
-
-      totalReceivables += receivable;
-      totalReceived += received;
-    });
-
-    return {
-      totalReceivables: totalReceivables.toFixed(2),
-      totalReceived: totalReceived.toFixed(2),
-      netReceivables: (totalReceivables - totalReceived).toFixed(2),
-    };
+  // Pagination helper functions
+  const getPaginatedData = (data: any[], currentPage: number) => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
+    return data.slice(startIndex, endIndex);
   };
 
-  // Fetch All Supplier Data
-  const fetchAllSupplierData = async () => {
-    try {
-      const res = await axios.get(`${BASE_URL}/allsupplieraccount`);
-      setAllSuppData(res.data.supp);
-    } catch (error) {
-      console.log(error);
-    }
+  const getTotalPages = (dataLength: number) => {
+    return Math.ceil(dataLength / ITEMS_PER_PAGE);
   };
 
   // Fetch Supplier dropdown
@@ -175,6 +166,54 @@ export default function SupplierAccount() {
     }
   };
 
+  // Fetch All Supplier
+  const fetchAllSuppAccounts = async () => {
+    try {
+      const res = await axios.get(`${BASE_URL}/allsupplieraccount`);
+      setAllSuppAccount(res.data.supp);
+      setCurrentPageAll(1); // Reset to first page on data fetch
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  function formatNumber(num: number | string): string {
+    const n = typeof num === 'string' ? parseFloat(num) : num;
+    if (isNaN(n)) return '0';
+
+    const abs = Math.abs(n);
+
+    if (abs >= 10000000) {
+      return (n / 10000000).toFixed(n % 10000000 === 0 ? 0 : 2) + 'Cr';
+    } else if (abs >= 100000) {
+      return (n / 100000).toFixed(n % 100000 === 0 ? 0 : 2) + 'L';
+    } else if (abs >= 1000) {
+      return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2) + 'K';
+    } else {
+      return n.toString();
+    }
+  }
+
+  //Calculate Totals
+  const calculateTotals = () => {
+    let totalReceivables = 0;
+    let totalReceived = 0;
+
+    allSuppAccount.forEach(account => {
+      const receivable = parseFloat(account.supac_total_bill_amount) || 0;
+      const received = parseFloat(account.supac_paid_amount) || 0;
+
+      totalReceivables += receivable;
+      totalReceived += received;
+    });
+
+    return {
+      totalReceivables: totalReceivables.toFixed(2),
+      totalReceived: totalReceived.toFixed(2),
+      netReceivables: (totalReceivables - totalReceived).toFixed(2),
+    };
+  };
+
   // Fetch Single Supplier Without Details
   const fetchSuppWithoutDetails = async () => {
     try {
@@ -191,21 +230,35 @@ export default function SupplierAccount() {
       setAccountDetailsWithout(res.data.cust);
       setChequeCount(res.data.no_of_chqs);
       setChequeAmount(res.data.chq[0]?.chi_amount || 0);
+      setCurrentPageWithout(1); // Reset to first page on data fetch
     } catch (error) {
       console.log(error);
     }
   };
 
-  // Calculate Without Details Totals
+  // Fetch Single Supplier With Details
+  const fetchSuppWithDetails = async () => {
+    try {
+      const from = fromDate?.toISOString().split('T')[0];
+      const to = toDate?.toISOString().split('T')[0];
+      const res = await axios.post(`${BASE_URL}/singlesupplieraccount`, {
+        supplier_id: suppValue,
+        from,
+        to,
+      });
+      setAccountDetailsWith(res.data.account);
+      setCurrentPageWith(1); // Reset to first page on data fetch
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // Calculate With Details Totals
   const calculateWithoutTotals = () => {
-    const dataToCalculate =
-      selectedOption === 'withoutDetails'
-        ? accountDetailsWithout
-        : accountDetailsWith;
     let totalReceivables = 0;
     let totalReceived = 0;
 
-    dataToCalculate.forEach(invc => {
+    accountDetailsWith.forEach(invc => {
       const receivables = parseFloat(invc.supac_total_bill_amount) || 0;
       const received = parseFloat(invc.supac_paid_amount) || 0;
 
@@ -220,50 +273,7 @@ export default function SupplierAccount() {
     };
   };
 
-  // Fetch Single Supplier With Details
-  const fetchSuppWithDetails = async () => {
-    try {
-      const from = fromDate?.toISOString().split('T')[0];
-      const to = toDate?.toISOString().split('T')[0];
-      const res = await axios.post(`${BASE_URL}/singlesupplieraccount`, {
-        supplier_id: suppValue,
-        from,
-        to,
-      });
-      setAccountDetailsWith(res.data.account);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  // Pagination helpers for All Suppliers
-  const paginateAllSuppliers = () => {
-    const startIndex = (currentPageAll - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return allSuppData.slice(startIndex, endIndex);
-  };
-
-  const totalPagesAll = Math.ceil(allSuppData.length / itemsPerPage);
-
-  // Pagination helpers for Single Supplier
-  const paginateSingleSupplier = () => {
-    const data =
-      selectedOption === 'withoutDetails'
-        ? accountDetailsWithout
-        : accountDetailsWith;
-    const startIndex = (currentPageSingle - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
-    return data.slice(startIndex, endIndex);
-  };
-
-  const totalPagesSingle = Math.ceil(
-    (selectedOption === 'withoutDetails'
-      ? accountDetailsWithout
-      : accountDetailsWith
-    ).length / itemsPerPage,
-  );
-
-  // Pagination controls component
+  // Pagination Component
   const PaginationControls = ({
     currentPage,
     totalPages,
@@ -278,42 +288,33 @@ export default function SupplierAccount() {
     return (
       <View style={styles.paginationContainer}>
         <TouchableOpacity
-          style={[
-            styles.paginationBtn,
-            currentPage === 1 && styles.disabledBtn,
-          ]}
-          onPress={() => onPageChange(Math.max(1, currentPage - 1))}
+          style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]}
+          onPress={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}>
           <Icon
             name="chevron-left"
-            size={20}
-            color={
-              currentPage === 1 ? 'rgba(0,0,0,0.3)' : backgroundColors.dark
-            }
+            size={24}
+            color={currentPage === 1 ? '#ccc' : THEME.white}
           />
         </TouchableOpacity>
 
-        <View style={styles.pageIndicator}>
+        <View style={styles.pageInfo}>
           <Text style={styles.pageText}>
-            {currentPage} of {totalPages}
+            Page {currentPage} of {totalPages}
           </Text>
         </View>
 
         <TouchableOpacity
           style={[
-            styles.paginationBtn,
-            currentPage === totalPages && styles.disabledBtn,
+            styles.pageBtn,
+            currentPage === totalPages && styles.pageBtnDisabled,
           ]}
-          onPress={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          onPress={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}>
           <Icon
             name="chevron-right"
-            size={20}
-            color={
-              currentPage === totalPages
-                ? 'rgba(0,0,0,0.3)'
-                : backgroundColors.dark
-            }
+            size={24}
+            color={currentPage === totalPages ? '#ccc' : THEME.white}
           />
         </TouchableOpacity>
       </View>
@@ -321,15 +322,11 @@ export default function SupplierAccount() {
   };
 
   useEffect(() => {
-    fetchAllSupplierData();
-    fetchSuppWithoutDetails();
-    getSuppData();
     fetchSuppDropdown();
+    getSuppData();
+    fetchAllSuppAccounts();
+    fetchSuppWithoutDetails();
     fetchSuppWithDetails();
-  }, [suppValue, fromDate, toDate]);
-
-  useEffect(() => {
-    setCurrentPageSingle(1);
 
     const backKey = () => {
       navigation.navigate('Dashboard' as never);
@@ -342,374 +339,258 @@ export default function SupplierAccount() {
     );
 
     return () => backHandler.remove();
-  }, [selectedOption]);
+  }, [suppValue, fromDate, toDate]);
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.headerContainer}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={openDrawer} style={styles.menuBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Supplier Account</Text>
+            <View style={{width: 24}} />
           </View>
+        </LinearGradient>
+
+        {/* Floating Segment Control */}
+        <View style={styles.floatingSegmentContainer}>
+          <TouchableOpacity
+            style={[
+              styles.segmentBtn,
+              selectedTab === 'Single' && styles.segmentBtnActive,
+            ]}
+            onPress={() => setSelectedTab('Single')}>
+            <Text
+              style={[
+                styles.segmentText,
+                selectedTab === 'Single' && styles.segmentTextActive,
+              ]}>
+              Single Supplier
+            </Text>
+          </TouchableOpacity>
+          <View style={styles.segmentDivider} />
+          <TouchableOpacity
+            style={[
+              styles.segmentBtn,
+              selectedTab === 'All' && styles.segmentBtnActive,
+            ]}
+            onPress={() => setSelectedTab('All')}>
+            <Text
+              style={[
+                styles.segmentText,
+                selectedTab === 'All' && styles.segmentTextActive,
+              ]}>
+              All Suppliers
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={{paddingBottom: 100}}
+        showsVerticalScrollIndicator={false}>
+        {/* Action Buttons */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, {backgroundColor: THEME.primary}]}
+            onPress={() => {
+              closeDrawer();
+              navigation.navigate('SupplierAddPayment' as never);
+            }}>
+            <Icon name="cash-plus" size={20} color="white" />
+            <Text style={styles.actionBtnText}>Add Payment</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, {backgroundColor: THEME.danger}]}
+            onPress={() => {
+              closeDrawer();
+              navigation.navigate('SupplierChequeClearance' as never);
+            }}>
+            <Icon name="bank-remove" size={20} color="white" />
+            <Text style={styles.actionBtnText}>Clearance</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
-          {/* Toggle Buttons */}
-          <View style={styles.toggleBtnContainer}>
-            <TouchableOpacity
-              style={[
-                styles.toggleBtn,
-                selectedTab === 'Single' && {
-                  backgroundColor: backgroundColors.primary,
-                },
-              ]}
-              onPress={() => setSelectedTab('Single')}>
-              <Text
-                style={[
-                  styles.toggleBtnText,
-                  selectedTab === 'Single' && {color: backgroundColors.light},
-                ]}>
-                Single Supplier
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.toggleBtn,
-                selectedTab === 'All' && {
-                  backgroundColor: backgroundColors.primary,
-                },
-              ]}
-              onPress={() => setSelectedTab('All')}>
-              <Text
-                style={[
-                  styles.toggleBtnText,
-                  selectedTab === 'All' && {color: backgroundColors.light},
-                ]}>
-                All Suppliers
-              </Text>
-            </TouchableOpacity>
-          </View>
+        {selectedTab === 'Single' ? (
+          <>
+            {/* Filter Card */}
+            <View style={styles.filterCard}>
+              <Text style={styles.cardTitle}>Filter Options</Text>
 
-          {/* Action Buttons */}
-          <View
-            style={[styles.toggleBtnContainer, {justifyContent: 'flex-end'}]}>
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                {backgroundColor: backgroundColors.primary},
-              ]}
-              onPress={() => {
-                closeDrawer();
-                navigation.navigate('SupplierAddPayment' as never);
-              }}>
-              <Icon name="payment" size={16} color="white" />
-              <Text style={styles.actionBtnText}>+</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                {backgroundColor: backgroundColors.danger},
-              ]}
-              onPress={() => {
-                closeDrawer();
-                navigation.navigate('SupplierChequeClearance' as never);
-              }}>
-              <Icon name="account-balance-wallet" size={16} color="white" />
-              <Text style={styles.actionBtnText}>-</Text>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Select Supplier</Text>
+                <DropDownPicker
+                  items={transformedSupp}
+                  open={Open}
+                  value={suppValue}
+                  setValue={setSuppValue}
+                  setOpen={setOpen}
+                  placeholder="Select Supplier"
+                  placeholderStyle={{color: '#999'}}
+                  textStyle={{color: THEME.textDark}}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  searchable
+                />
+              </View>
 
-          {selectedTab === 'Single' ? (
-            <>
-              {/* Single Supplier Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Supplier Information</Text>
-
-                <View style={styles.dropdownRow}>
-                  <Icon
-                    name="person"
-                    size={28}
-                    color={backgroundColors.dark}
-                    style={styles.personIcon}
-                  />
-                  <DropDownPicker
-                    items={transformedSupp}
-                    open={Open}
-                    value={suppValue}
-                    setValue={setSuppValue}
-                    setOpen={setOpen}
-                    placeholder="Select Supplier"
-                    placeholderStyle={styles.dropdownPlaceholder}
-                    textStyle={styles.dropdownText}
-                    style={styles.dropdown}
-                    dropDownContainerStyle={styles.dropdownContainer}
-                    ArrowUpIconComponent={() => (
-                      <Icon
-                        name="keyboard-arrow-up"
-                        size={18}
-                        color={backgroundColors.dark}
-                      />
-                    )}
-                    ArrowDownIconComponent={() => (
-                      <Icon
-                        name="keyboard-arrow-down"
-                        size={18}
-                        color={backgroundColors.dark}
-                      />
-                    )}
-                    listMode="SCROLLVIEW"
-                    listItemLabelStyle={{
-                      color: backgroundColors.dark,
-                      fontWeight: '500',
-                    }}
-                    labelStyle={{
-                      color: backgroundColors.dark,
-                      marginLeft: 30,
-                      fontSize: 16,
-                    }}
-                    searchable
-                    searchTextInputStyle={{
-                      borderWidth: 0,
-                      width: '100%',
-                    }}
-                    searchContainerStyle={{
-                      borderColor: backgroundColors.gray,
-                    }}
-                  />
+              {suppData && (
+                <View style={styles.customerInfoBox}>
+                  <Text style={styles.custInfoTitle}>{suppData.sup_name}</Text>
+                  <Text style={styles.custInfoSub}>
+                    {suppData.sup_company_name} | {suppData.sup_address}
+                  </Text>
                 </View>
+              )}
 
-                {suppData && (
-                  <View style={styles.supplierInfo}>
-                    <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Supplier Name:</Text>
-                      <Text style={styles.infoValue}>{suppData.sup_name}</Text>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Company Name:</Text>
-                      <Text style={styles.infoValue}>
-                        {suppData.sup_company_name}
-                      </Text>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Address:</Text>
-                      <Text style={styles.infoValue}>
-                        {suppData.sup_address}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {/* Date Range Section */}
-                <View style={styles.dateSection}>
-                  <Text style={styles.inputLabel}>Date Range</Text>
-                  <View style={styles.dateRow}>
-                    <TouchableOpacity
-                      onPress={() => setShowDatePicker('from')}
-                      style={styles.dateInput}>
-                      <Icon
-                        name="event"
-                        size={20}
-                        color={backgroundColors.dark}
-                      />
-                      <Text style={styles.dateText}>
-                        {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setShowDatePicker('to')}
-                      style={styles.dateInput}>
-                      <Icon
-                        name="event"
-                        size={20}
-                        color={backgroundColors.dark}
-                      />
-                      <Text style={styles.dateText}>
-                        {toDate ? toDate.toLocaleDateString() : 'To Date'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={
-                      showDatePicker === 'from'
-                        ? fromDate ?? new Date()
-                        : toDate ?? new Date()
-                    }
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={handleDateChange}
-                    themeVariant="dark"
-                    style={{backgroundColor: '#144272'}}
-                  />
-                )}
-
-                {/* Account Type Selection */}
-                <View style={styles.accountTypeSection}>
-                  <Text style={styles.inputLabel}>Account</Text>
-                  <RadioButton.Group
-                    onValueChange={value =>
-                      setSelectedOption(
-                        value as 'withoutDetails' | 'withDetails',
-                      )
-                    }
-                    value={selectedOption}>
-                    <View style={styles.radioRow}>
-                      <View style={styles.radioOption}>
-                        <RadioButton.Android
-                          value="withoutDetails"
-                          color={backgroundColors.primary}
-                          uncheckedColor={backgroundColors.dark}
-                        />
-                        <Text style={styles.radioLabel}>Without Details</Text>
-                      </View>
-                      <View style={styles.radioOption}>
-                        <RadioButton.Android
-                          value="withDetails"
-                          color={backgroundColors.primary}
-                          uncheckedColor={backgroundColors.dark}
-                        />
-                        <Text style={styles.radioLabel}>With Details</Text>
-                      </View>
-                    </View>
-                  </RadioButton.Group>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Date Range</Text>
+                <View style={styles.dateRow}>
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker('from')}
+                    style={styles.dateInput}>
+                    <Icon name="calendar" size={20} color={THEME.primary} />
+                    <Text style={styles.dateText}>
+                      {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker('to')}
+                    style={styles.dateInput}>
+                    <Icon name="calendar" size={20} color={THEME.primary} />
+                    <Text style={styles.dateText}>
+                      {toDate ? toDate.toLocaleDateString() : 'To Date'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Account Details Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
-                  {selectedOption === 'withoutDetails'
-                    ? 'Account Summary'
-                    : 'Detailed Transactions'}
-                </Text>
-
-                {selectedOption === 'withoutDetails' ? (
-                  accountDetailsWithout.length === 0 ? (
-                    <View style={styles.emptyState}>
-                      <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
-                      <Text style={styles.emptyStateText}>
-                        No transactions found
-                      </Text>
-                    </View>
-                  ) : (
-                    <>
-                      <FlatList
-                        data={paginateSingleSupplier()}
-                        keyExtractor={item => item.id}
-                        scrollEnabled={false}
-                        renderItem={({item}) => (
-                          <View style={styles.transactionCard}>
-                            <View style={styles.transactionHeader}>
-                              <Text style={styles.invoiceNumber}>
-                                {item.supac_invoice_no}
-                              </Text>
-                              <Text style={styles.transactionDate}>
-                                {new Date(item.supac_date)
-                                  .toLocaleDateString('en-GB', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })
-                                  .replace(/ /g, '-')}
-                              </Text>
-                            </View>
-
-                            <View style={styles.transactionDetails}>
-                              <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Payable:</Text>
-                                <Text style={styles.detailValue}>
-                                  {item.supac_total_bill_amount}
-                                </Text>
-                              </View>
-                              <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Paid:</Text>
-                                <Text style={styles.detailValue}>
-                                  {item.supac_paid_amount}
-                                </Text>
-                              </View>
-                              <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Balance:</Text>
-                                <Text style={styles.detailValue}>
-                                  {item.supac_balance}
-                                </Text>
-                              </View>
-                              <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Type:</Text>
-                                <Text style={styles.detailValue}>
-                                  {item.supac_payment_type}
-                                </Text>
-                              </View>
-                              <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Method:</Text>
-                                <Text style={styles.detailValue}>
-                                  {item.supac_payment_method}
-                                </Text>
-                              </View>
-                            </View>
-                          </View>
-                        )}
-                      />
-
-                      <PaginationControls
-                        currentPage={currentPageSingle}
-                        totalPages={totalPagesSingle}
-                        onPageChange={setCurrentPageSingle}
-                      />
-                    </>
-                  )
-                ) : accountDetailsWith.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
-                    <Text style={styles.emptyStateText}>
-                      No detailed transactions found
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>View Type</Text>
+                <View style={styles.radioRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.radioChip,
+                      selectedOption === 'withoutDetails' &&
+                        styles.radioChipActive,
+                    ]}
+                    onPress={() => setSelectedOption('withoutDetails')}>
+                    <Text
+                      style={[
+                        styles.radioLabel,
+                        selectedOption === 'withoutDetails' &&
+                          styles.radioLabelActive,
+                      ]}>
+                      Summary
                     </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.radioChip,
+                      selectedOption === 'withDetails' &&
+                        styles.radioChipActive,
+                    ]}
+                    onPress={() => setSelectedOption('withDetails')}>
+                    <Text
+                      style={[
+                        styles.radioLabel,
+                        selectedOption === 'withDetails' &&
+                          styles.radioLabelActive,
+                      ]}>
+                      Detailed
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Transaction List */}
+            <View style={styles.listSection}>
+              <View style={styles.listHeaderRow}>
+                <Text style={styles.listHeaderTitle}>Transactions</Text>
+                <Text style={styles.listHeaderCount}>
+                  {selectedOption === 'withoutDetails'
+                    ? accountDetailsWithout.length
+                    : accountDetailsWith.length}
+                </Text>
+              </View>
+
+              {selectedOption === 'withoutDetails' ? (
+                accountDetailsWithout.length === 0 ? (
+                  <View style={styles.emptyContainer}>
+                    <Icon name="receipt" size={48} color="#ccc" />
+                    <Text style={styles.emptyText}>No transactions found.</Text>
                   </View>
                 ) : (
                   <>
                     <FlatList
-                      data={paginateSingleSupplier()}
+                      data={getPaginatedData(
+                        accountDetailsWithout,
+                        currentPageWithout,
+                      )}
                       keyExtractor={item => item.id}
                       scrollEnabled={false}
                       renderItem={({item}) => (
                         <View style={styles.transactionCard}>
                           <View style={styles.transactionHeader}>
-                            <Text style={styles.invoiceNumber}>
-                              {item.supac_invoice_no}
-                            </Text>
-                            <Text style={styles.transactionDate}>
+                            <View style={styles.invoiceBadge}>
+                              <Icon
+                                name="file-document-outline"
+                                size={14}
+                                color={THEME.primary}
+                              />
+                              <Text style={styles.invoiceText}>
+                                {item.supac_invoice_no}
+                              </Text>
+                            </View>
+                            <Text style={styles.dateTextList}>
                               {new Date(item.supac_date).toLocaleDateString(
                                 'en-GB',
                               )}
                             </Text>
                           </View>
 
-                          <View style={styles.transactionDetails}>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>Payable:</Text>
-                              <Text style={styles.detailValue}>
+                          <View style={styles.divider} />
+
+                          <View style={styles.statsRow}>
+                            <View style={styles.statCol}>
+                              <Text style={styles.statLabel}>Payable</Text>
+                              <Text style={styles.statValue}>
                                 {item.supac_total_bill_amount}
                               </Text>
                             </View>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>Paid:</Text>
-                              <Text style={styles.detailValue}>
+                            <View style={styles.statColCenter}>
+                              <Text style={styles.statLabel}>Paid</Text>
+                              <Text
+                                style={[
+                                  styles.statValue,
+                                  {color: THEME.success},
+                                ]}>
                                 {item.supac_paid_amount}
                               </Text>
                             </View>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>Balance:</Text>
-                              <Text style={styles.detailValue}>
+                            <View style={styles.statColRight}>
+                              <Text style={styles.statLabel}>Balance</Text>
+                              <Text
+                                style={[
+                                  styles.statValue,
+                                  {color: THEME.danger},
+                                ]}>
                                 {item.supac_balance}
                               </Text>
                             </View>
@@ -717,170 +598,257 @@ export default function SupplierAccount() {
                         </View>
                       )}
                     />
-
                     <PaginationControls
-                      currentPage={currentPageSingle}
-                      totalPages={totalPagesSingle}
-                      onPageChange={setCurrentPageSingle}
+                      currentPage={currentPageWithout}
+                      totalPages={getTotalPages(accountDetailsWithout.length)}
+                      onPageChange={setCurrentPageWithout}
                     />
                   </>
-                )}
-
-                {/* Summary Section */}
-                <View style={styles.summarySection}>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Unpaid Cheques:</Text>
-                    <Text style={styles.summaryValue}>
-                      {chequeCount || '0'}
-                    </Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>
-                      Unpaid Cheque Amount:
-                    </Text>
-                    <Text style={styles.summaryValue}>
-                      {(chequeAmount || 0).toFixed(2)}
-                    </Text>
-                  </View>
-                  {(() => {
-                    const {netReceivables, totalReceivables, totalReceived} =
-                      calculateWithoutTotals();
-                    return (
-                      <>
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>
-                            Total Receivables:
-                          </Text>
-                          <Text style={styles.summaryValue}>
-                            {totalReceivables}
-                          </Text>
-                        </View>
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>
-                            Total Received:
-                          </Text>
-                          <Text style={styles.summaryValue}>
-                            {totalReceived}
-                          </Text>
-                        </View>
-                        <View style={[styles.summaryRow, styles.totalRow]}>
-                          <Text
-                            style={[styles.summaryLabel, styles.totalLabel]}>
-                            Net Receivables:
-                          </Text>
-                          <Text
-                            style={[styles.summaryValue, styles.totalValue]}>
-                            {netReceivables}
-                          </Text>
-                        </View>
-                      </>
-                    );
-                  })()}
+                )
+              ) : accountDetailsWith.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Icon name="receipt" size={48} color="#ccc" />
+                  <Text style={styles.emptyText}>No transactions found.</Text>
                 </View>
-              </View>
-            </>
-          ) : (
-            <>
-              {/* All Suppliers Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>All Supplier Accounts</Text>
-
-                {allSuppData.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Icon name="people" size={40} color="rgba(0,0,0,0.5)" />
-                    <Text style={styles.emptyStateText}>
-                      No supplier accounts found
-                    </Text>
-                  </View>
-                ) : (
-                  <>
-                    <FlatList
-                      data={paginateAllSuppliers()}
-                      keyExtractor={(item, index) => index.toString()}
-                      scrollEnabled={false}
-                      renderItem={({item}) => (
-                        <View style={styles.supplierAccountCard}>
-                          <Text style={styles.supplierName}>
-                            {item.sup_name}
+              ) : (
+                <>
+                  <FlatList
+                    data={getPaginatedData(accountDetailsWith, currentPageWith)}
+                    keyExtractor={item => item.id}
+                    scrollEnabled={false}
+                    renderItem={({item}) => (
+                      <View style={styles.transactionCard}>
+                        <View style={styles.transactionHeader}>
+                          <View style={styles.invoiceBadge}>
+                            <Icon
+                              name="file-document-outline"
+                              size={14}
+                              color={THEME.primary}
+                            />
+                            <Text style={styles.invoiceText}>
+                              {item.supac_invoice_no}
+                            </Text>
+                          </View>
+                          <Text style={styles.dateTextList}>
+                            {new Date(item.supac_date).toLocaleDateString(
+                              'en-GB',
+                            )}
                           </Text>
-                          <View style={styles.accountDetails}>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>
-                                Bill Amount:
-                              </Text>
-                              <Text style={styles.detailValue}>
-                                {item.supac_total_bill_amount.toFixed(2)}
-                              </Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>
-                                Paid Amount:
-                              </Text>
-                              <Text style={styles.detailValue}>
-                                {item.supac_paid_amount.toFixed(2)}
-                              </Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>Balance:</Text>
-                              <Text style={styles.detailValue}>
-                                {item.supac_balance.toFixed(2)}
-                              </Text>
-                            </View>
+                        </View>
+
+                        <View style={styles.divider} />
+
+                        <View style={styles.statsRow}>
+                          <View style={styles.statCol}>
+                            <Text style={styles.statLabel}>Payable</Text>
+                            <Text style={styles.statValue}>
+                              {item.supac_total_bill_amount}
+                            </Text>
+                          </View>
+                          <View style={styles.statColCenter}>
+                            <Text style={styles.statLabel}>Paid</Text>
+                            <Text
+                              style={[
+                                styles.statValue,
+                                {color: THEME.success},
+                              ]}>
+                              {item.supac_paid_amount}
+                            </Text>
+                          </View>
+                          <View style={styles.statColRight}>
+                            <Text style={styles.statLabel}>Balance</Text>
+                            <Text
+                              style={[styles.statValue, {color: THEME.danger}]}>
+                              {item.supac_balance}
+                            </Text>
                           </View>
                         </View>
-                      )}
-                    />
+                      </View>
+                    )}
+                  />
+                  <PaginationControls
+                    currentPage={currentPageWith}
+                    totalPages={getTotalPages(accountDetailsWith.length)}
+                    onPageChange={setCurrentPageWith}
+                  />
+                </>
+              )}
+            </View>
 
-                    <PaginationControls
-                      currentPage={currentPageAll}
-                      totalPages={totalPagesAll}
-                      onPageChange={setCurrentPageAll}
-                    />
-                  </>
-                )}
-
-                {/* All Suppliers Summary */}
-                <View style={styles.summarySection}>
-                  {(() => {
-                    const {totalReceivables, totalReceived, netReceivables} =
-                      calculateTotals();
-                    return (
-                      <>
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>
-                            Total Receivables:
-                          </Text>
-                          <Text style={styles.summaryValue}>
-                            {totalReceivables}
-                          </Text>
-                        </View>
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>
-                            Total Received:
-                          </Text>
-                          <Text style={styles.summaryValue}>
-                            {totalReceived}
-                          </Text>
-                        </View>
-                        <View style={[styles.summaryRow, styles.totalRow]}>
-                          <Text
-                            style={[styles.summaryLabel, styles.totalLabel]}>
-                            Net Receivables:
-                          </Text>
-                          <Text
-                            style={[styles.summaryValue, styles.totalValue]}>
-                            {netReceivables}
-                          </Text>
-                        </View>
-                      </>
-                    );
-                  })()}
-                </View>
+            {/* Summary Card */}
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryHeader}>
+                <Text style={styles.cardTitle}>Account Summary</Text>
               </View>
-            </>
-          )}
-        </ScrollView>
-      </View>
+              <View style={styles.summaryBody}>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Unpaid Cheques</Text>
+                  <Text style={styles.summaryValue}>{chequeCount || '0'}</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Unpaid Cheque Amount</Text>
+                  <Text style={styles.summaryValue}>
+                    {parseFloat(chequeAmount || '0').toFixed(2)}
+                  </Text>
+                </View>
+                {(() => {
+                  const {netReceivables, totalReceivables, totalReceived} =
+                    calculateWithoutTotals();
+                  return (
+                    <>
+                      <View style={styles.summaryDivider} />
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>
+                          Total Receivables
+                        </Text>
+                        <Text style={styles.summaryValue}>
+                          {totalReceivables}
+                        </Text>
+                      </View>
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryLabel}>Total Received</Text>
+                        <Text style={styles.summaryValue}>{totalReceived}</Text>
+                      </View>
+                      <View style={styles.summaryTotalRow}>
+                        <Text style={styles.summaryTotalLabel}>
+                          Net Receivables
+                        </Text>
+                        <Text style={styles.summaryTotalValue}>
+                          {netReceivables}
+                        </Text>
+                      </View>
+                    </>
+                  );
+                })()}
+              </View>
+            </View>
+          </>
+        ) : (
+          <>
+            {/* All Suppliers List */}
+            <View style={styles.listSection}>
+              <View style={styles.listHeaderRow}>
+                <Text style={styles.listHeaderTitle}>All Accounts</Text>
+              </View>
+
+              {allSuppAccount.length === 0 ? (
+                <View style={styles.emptyContainer}>
+                  <Icon name="account-group-outline" size={48} color="#ccc" />
+                  <Text style={styles.emptyText}>
+                    No supplier accounts found.
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <FlatList
+                    data={getPaginatedData(allSuppAccount, currentPageAll)}
+                    keyExtractor={(item, index) => index.toString()}
+                    scrollEnabled={false}
+                    renderItem={({item}) => (
+                      <View style={styles.transactionCard}>
+                        <View style={styles.cardHeaderSimple}>
+                          <View style={styles.avatarContainer}>
+                            <Text style={styles.avatarText}>
+                              {item.sup_name.substring(0, 2).toUpperCase()}
+                            </Text>
+                          </View>
+                          <Text style={styles.customerName}>
+                            {item.sup_name}
+                          </Text>
+                        </View>
+
+                        <View style={styles.divider} />
+
+                        <View style={styles.statsRow}>
+                          <View style={styles.statCol}>
+                            <Text style={styles.statLabel}>Bill Amount</Text>
+                            <Text style={styles.statValue}>
+                              {formatNumber(item.supac_total_bill_amount)}
+                            </Text>
+                          </View>
+                          <View style={styles.statColCenter}>
+                            <Text style={styles.statLabel}>Paid</Text>
+                            <Text
+                              style={[
+                                styles.statValue,
+                                {color: THEME.success},
+                              ]}>
+                              {formatNumber(item.supac_paid_amount)}
+                            </Text>
+                          </View>
+                          <View style={styles.statColRight}>
+                            <Text style={styles.statLabel}>Balance</Text>
+                            <Text
+                              style={[styles.statValue, {color: THEME.danger}]}>
+                              {formatNumber(item.supac_balance)}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    )}
+                  />
+                  <PaginationControls
+                    currentPage={currentPageAll}
+                    totalPages={getTotalPages(allSuppAccount.length)}
+                    onPageChange={setCurrentPageAll}
+                  />
+                </>
+              )}
+            </View>
+
+            {/* All Suppliers Summary */}
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryHeader}>
+                <Text style={styles.cardTitle}>Overall Summary</Text>
+              </View>
+              {(() => {
+                const {totalReceivables, totalReceived, netReceivables} =
+                  calculateTotals();
+                return (
+                  <View style={styles.summaryBody}>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Total Receivables</Text>
+                      <Text style={styles.summaryValue}>
+                        {formatNumber(totalReceivables)}
+                      </Text>
+                    </View>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryLabel}>Total Received</Text>
+                      <Text style={styles.summaryValue}>
+                        {formatNumber(totalReceived)}
+                      </Text>
+                    </View>
+                    <View style={styles.summaryTotalRow}>
+                      <Text style={styles.summaryTotalLabel}>
+                        Net Receivables
+                      </Text>
+                      <Text style={styles.summaryTotalValue}>
+                        {formatNumber(netReceivables)}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })()}
+            </View>
+          </>
+        )}
+        <View style={{height: 100}} />
+      </ScrollView>
+
+      {/* Date Pickers */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={
+            showDatePicker === 'from'
+              ? fromDate || new Date()
+              : toDate || new Date()
+          }
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -888,236 +856,272 @@ export default function SupplierAccount() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: THEME.background,
   },
 
-  scrollContainer: {
-    flex: 1,
-    paddingHorizontal: 12,
+  // --- HEADER ---
+  headerWrapper: {
+    marginBottom: 20,
+    zIndex: 1,
   },
-  toggleBtnContainer: {
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 40, // Extra space for floating segment
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 8,
-  },
-  toggleBtn: {
-    width: '48%',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    backgroundColor: backgroundColors.light,
-    borderColor: backgroundColors.gray,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
   },
-  toggleBtnText: {
-    color: backgroundColors.dark,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
+  },
+  menuBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+
+  // --- FLOATING SEGMENT ---
+  floatingSegmentContainer: {
+    position: 'absolute',
+    bottom: -24,
+    left: 20,
+    right: 20,
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    height: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  segmentBtn: {
+    flex: 1,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 10,
+  },
+  segmentBtnActive: {
+    backgroundColor: THEME.primaryLight,
+  },
+  segmentText: {
+    fontSize: 13,
     fontWeight: '600',
-    fontSize: 16,
+    color: THEME.textGray,
+  },
+  segmentTextActive: {
+    color: THEME.primary,
+    fontWeight: '700',
+  },
+  segmentDivider: {
+    width: 1,
+    height: '60%',
+    backgroundColor: '#eee',
+    marginHorizontal: 4,
+  },
+
+  // --- CONTENT ---
+  scrollContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+
+  // Action Buttons
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 15,
+    gap: 10,
   },
   actionBtn: {
-    width: '15%',
-    marginHorizontal: 4,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    elevation: 2,
+    gap: 5,
   },
   actionBtnText: {
     color: 'white',
     fontWeight: '600',
-    fontSize: 18,
-    marginLeft: 4,
+    fontSize: 13,
   },
-  section: {
-    backgroundColor: backgroundColors.light,
+
+  // Card Styles
+  filterCard: {
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    marginVertical: 8,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    marginBottom: 16,
-  },
-  dropdownRow: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    color: 'rgba(0,0,0,0.8)',
-    fontSize: 14,
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-  dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-    marginBottom: 4,
-  },
-  dropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
-  },
-  dropdownText: {
-    color: 'white',
-    fontSize: 14,
-  },
-  dropdownPlaceholder: {
-    color: 'rgba(0,0,0,0.7)',
-    marginLeft: 30,
-    fontSize: 16,
-  },
-  personIcon: {
-    position: 'absolute',
-    zIndex: 10000,
-    top: 7,
-    left: 6,
-  },
-  supplierInfo: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    padding: 12,
+    padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.03)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  infoLabel: {
-    color: backgroundColors.dark,
+  cardTitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '700',
+    color: THEME.textDark,
+    textTransform: 'uppercase',
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 8,
+    letterSpacing: 0.5,
   },
-  infoValue: {
-    color: backgroundColors.dark,
+  inputGroup: {
+    marginBottom: 12,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.textGray,
+    marginBottom: 6,
+  },
+  dropdown: {
+    borderColor: THEME.border,
+    borderRadius: 10,
+    minHeight: 45,
+  },
+  dropdownContainer: {
+    borderColor: THEME.border,
+  },
+  customerInfoBox: {
+    marginTop: -4,
+    marginBottom: 12,
+    backgroundColor: THEME.primaryLight,
+    padding: 10,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.primary,
+  },
+  custInfoTitle: {
     fontSize: 14,
+    fontWeight: '700',
+    color: THEME.primary,
   },
-  dateSection: {
-    marginBottom: 16,
+  custInfoSub: {
+    fontSize: 12,
+    color: THEME.textGray,
   },
   dateRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 10,
   },
   dateInput: {
-    width: '48%',
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: backgroundColors.light,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: THEME.border,
     borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
+    height: 45,
+    backgroundColor: THEME.white,
   },
   dateText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  accountTypeSection: {
-    marginBottom: 16,
+    fontSize: 13,
+    color: THEME.textDark,
   },
   radioRow: {
-    width: '72%',
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 10,
   },
-  radioOption: {
-    flexDirection: 'row',
+  radioChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: THEME.border,
     alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  radioChipActive: {
+    backgroundColor: THEME.primaryLight,
+    borderColor: THEME.primary,
   },
   radioLabel: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    color: THEME.textGray,
+    fontWeight: '600',
   },
-  emptyState: {
+  radioLabelActive: {
+    color: THEME.primary,
+  },
+
+  // Transaction List Styles
+  listSection: {
+    marginBottom: 20,
+  },
+  listHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  listHeaderTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textGray,
+    textTransform: 'uppercase',
+  },
+  listHeaderCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.primary,
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
-  },
-  emptyStateText: {
-    color: 'rgba(0,0,0,0.7)',
-    fontSize: 16,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  transactionCard: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    padding: 30,
+    backgroundColor: '#fff',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#eee',
+    borderStyle: 'dashed',
+  },
+  emptyText: {
+    marginTop: 10,
+    color: THEME.textGray,
+    fontSize: 14,
+  },
+
+  // Transaction Card (New)
+  transactionCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   transactionHeader: {
     flexDirection: 'row',
@@ -1125,119 +1129,181 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  invoiceNumber: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: '600',
+  invoiceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  transactionDate: {
-    color: 'rgba(0,0,0,0.7)',
+  invoiceText: {
     fontSize: 12,
+    fontWeight: '700',
+    color: THEME.primary,
   },
-  transactionDetails: {
-    marginTop: 4,
+  dateTextList: {
+    fontSize: 12,
+    color: THEME.textGray,
   },
-  detailRow: {
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginBottom: 8,
+  },
+  statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
   },
-  detailLabel: {
-    color: backgroundColors.dark,
-    fontSize: 12,
+  statCol: {
+    flex: 1,
+  },
+  statColCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statColRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    marginBottom: 2,
     fontWeight: '500',
   },
-  detailValue: {
-    color: backgroundColors.dark,
-    fontSize: 12,
+  statValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  supplierAccountCard: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  supplierName: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  accountDetails: {
-    marginTop: 4,
-  },
-  summarySection: {
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 8,
+
+  // Summary Card
+  summaryCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
     padding: 16,
-    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  summaryHeader: {
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 8,
+  },
+  summaryBody: {
+    gap: 8,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
   },
   summaryLabel: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '600',
+    fontSize: 13,
+    color: THEME.textGray,
   },
   summaryValue: {
-    color: backgroundColors.dark,
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '600',
+    color: THEME.textDark,
   },
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.2)',
-    paddingTop: 8,
-    marginTop: 8,
+  summaryDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 4,
   },
-  totalLabel: {
-    color: backgroundColors.dark,
+  summaryTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+    backgroundColor: THEME.primaryLight,
+    padding: 10,
+    borderRadius: 8,
+  },
+  summaryTotalLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  summaryTotalValue: {
     fontSize: 16,
-    fontWeight: 'bold',
-  },
-  totalValue: {
-    color: backgroundColors.primary,
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    color: THEME.primary,
   },
 
+  // All Supplier specific styles
+  cardHeaderSimple: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+  },
+  avatarContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  customerName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+
+  // Pagination Controls
   paginationContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 16,
-    marginBottom: 8,
+    marginVertical: 6,
+    gap: 16,
   },
-  paginationBtn: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    padding: 10,
+  pageBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: THEME.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  pageBtnDisabled: {
+    backgroundColor: '#E5E7EB',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  pageInfo: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.2)',
-  },
-  disabledBtn: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  pageIndicator: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginHorizontal: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
+    borderColor: '#eee',
   },
   pageText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
+    color: THEME.textDark,
   },
 });

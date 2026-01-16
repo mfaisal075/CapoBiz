@@ -7,15 +7,37 @@ import {
   ScrollView,
   Image,
   BackHandler,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import {RadioButton, Checkbox} from 'react-native-paper';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+const {width} = Dimensions.get('window');
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  danger: '#EF4444',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 export default function SaleInvoice({navigation}: any) {
   const {openDrawer} = useDrawer();
@@ -70,229 +92,214 @@ export default function SaleInvoice({navigation}: any) {
     return () => backHandler.remove();
   }, []);
 
+  // Custom Radio Button Component
+  const CustomRadioButton = ({
+    label,
+    selected,
+    onPress,
+  }: {
+    label: string;
+    selected: boolean;
+    onPress: () => void;
+  }) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.radioOption, selected && styles.selectedOption]}
+      activeOpacity={0.7}>
+      <View
+        style={[styles.radioCircle, selected && {borderColor: THEME.primary}]}>
+        {selected && <View style={styles.radioInnerCircle} />}
+      </View>
+      <Text style={[styles.radioText, selected && styles.selectedText]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
+  // Custom Checkbox Component
+  const CustomCheckbox = ({
+    label,
+    checked,
+    onPress,
+  }: {
+    label: string;
+    checked: boolean;
+    onPress: () => void;
+  }) => (
+    <TouchableOpacity
+      onPress={onPress}
+      style={[styles.checkboxOption, checked && styles.selectedOption]}
+      activeOpacity={0.7}>
+      <View
+        style={[
+          styles.checkboxBox,
+          checked && {
+            backgroundColor: THEME.primary,
+            borderColor: THEME.primary,
+          },
+        ]}>
+        {checked && <Icon name="check" size={14} color="white" />}
+      </View>
+      <Text style={[styles.checkboxText, checked && styles.selectedText]}>
+        {label}
+      </Text>
+    </TouchableOpacity>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Configure Sale Invoice</Text>
+            <View style={{width: 40}} />
+          </View>
+        </LinearGradient>
+      </View>
+
+      <ScrollView
+        style={styles.contentContainer}
+        contentContainerStyle={{paddingBottom: 100}}
+        showsVerticalScrollIndicator={false}>
+        {/* Invoice Language Section */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.iconBox}>
+              <Icon name="translate" size={20} color={THEME.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Invoice Language</Text>
+          </View>
+
+          <View style={styles.radioGroup}>
+            <CustomRadioButton
+              label="English"
+              selected={selectedLang === 'English'}
+              onPress={() => setSelectedLang('English')}
+            />
+            <CustomRadioButton
+              label="Urdu"
+              selected={selectedLang === 'Urdu'}
+              onPress={() => setSelectedLang('Urdu')}
+            />
           </View>
         </View>
 
-        <ScrollView
-          style={styles.contentContainer}
-          showsVerticalScrollIndicator={false}>
-          {/* Invoice Language Section */}
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <Icon name="translate" size={20} color={backgroundColors.dark} />
-              <Text style={styles.sectionTitle}>Invoice Language</Text>
-            </View>
-
-            <RadioButton.Group
-              onValueChange={value =>
-                setSelectedLang(value as 'English' | 'Urdu')
-              }
-              value={selectedLang}>
-              <View style={styles.radioGroup}>
-                <TouchableOpacity
-                  onPress={() => setSelectedLang('English')}
-                  style={styles.radioOption}
-                  activeOpacity={0.7}>
-                  <RadioButton.Android
-                    value="English"
-                    color={backgroundColors.primary}
-                    uncheckedColor={backgroundColors.dark}
-                  />
-                  <Text style={styles.radioText}>English</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setSelectedLang('Urdu')}
-                  style={styles.radioOption}
-                  activeOpacity={0.7}>
-                  <RadioButton.Android
-                    value="Urdu"
-                    color={backgroundColors.primary}
-                    uncheckedColor={backgroundColors.dark}
-                  />
-                  <Text style={styles.radioText}>Urdu</Text>
-                </TouchableOpacity>
-              </View>
-            </RadioButton.Group>
-          </View>
-
-          {/* Make Fields Editable Section */}
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
+        {/* Make Fields Editable Section */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.iconBox}>
               <Icon
                 name="pencil-box-multiple"
                 size={20}
-                color={backgroundColors.dark}
+                color={THEME.primary}
               />
-
-              <Text style={styles.sectionTitle}>Make Fields Editable</Text>
             </View>
-
-            <View style={styles.checkboxGroup}>
-              <TouchableOpacity
-                style={styles.checkboxOption}
-                activeOpacity={0.7}
-                onPress={() => {
-                  const newOptions = selectedOptions.includes('qty_pos')
-                    ? selectedOptions.filter(opt => opt !== 'qty_pos')
-                    : [...selectedOptions, 'qty_pos'];
-                  setSelectedOptions(newOptions);
-                }}>
-                <Checkbox.Android
-                  status={
-                    selectedOptions.includes('qty_pos')
-                      ? 'checked'
-                      : 'unchecked'
-                  }
-                  color={backgroundColors.primary}
-                  uncheckedColor={backgroundColors.dark}
-                />
-                <Text style={styles.checkboxText}>Quantity</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.checkboxOption}
-                activeOpacity={0.7}
-                onPress={() => {
-                  const newOptions = selectedOptions.includes('price_pos')
-                    ? selectedOptions.filter(opt => opt !== 'price_pos')
-                    : [...selectedOptions, 'price_pos'];
-                  setSelectedOptions(newOptions);
-                }}>
-                <Checkbox.Android
-                  status={
-                    selectedOptions.includes('price_pos')
-                      ? 'checked'
-                      : 'unchecked'
-                  }
-                  color={backgroundColors.primary}
-                  uncheckedColor={backgroundColors.dark}
-                />
-                <Text style={styles.checkboxText}>Unit Price</Text>
-              </TouchableOpacity>
-            </View>
+            <Text style={styles.sectionTitle}>Make Fields Editable</Text>
           </View>
 
-          {/* Invoice Size Section */}
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <Icon
-                name="format-size"
-                size={20}
-                color={backgroundColors.dark}
-              />
-              <Text style={styles.sectionTitle}>Invoice Size</Text>
-            </View>
+          <View style={styles.checkboxGroup}>
+            <CustomCheckbox
+              label="Quantity"
+              checked={selectedOptions.includes('qty_pos')}
+              onPress={() => {
+                const newOptions = selectedOptions.includes('qty_pos')
+                  ? selectedOptions.filter(opt => opt !== 'qty_pos')
+                  : [...selectedOptions, 'qty_pos'];
+                setSelectedOptions(newOptions);
+              }}
+            />
+            <CustomCheckbox
+              label="Unit Price"
+              checked={selectedOptions.includes('price_pos')}
+              onPress={() => {
+                const newOptions = selectedOptions.includes('price_pos')
+                  ? selectedOptions.filter(opt => opt !== 'price_pos')
+                  : [...selectedOptions, 'price_pos'];
+                setSelectedOptions(newOptions);
+              }}
+            />
+          </View>
+        </View>
 
-            <RadioButton.Group
-              onValueChange={value =>
-                setInvoiceSize(value as 'A4' | 'A5' | 'receipt')
-              }
-              value={invoiceSize}>
-              <View style={styles.radioGroup}>
-                <TouchableOpacity
-                  onPress={() => setInvoiceSize('A4')}
-                  style={styles.radioOption}
-                  activeOpacity={0.7}>
-                  <RadioButton.Android
-                    value="A4"
-                    color={backgroundColors.primary}
-                    uncheckedColor={backgroundColors.dark}
-                  />
-                  <Text style={styles.radioText}>A4</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setInvoiceSize('A5')}
-                  style={styles.radioOption}
-                  activeOpacity={0.7}>
-                  <RadioButton.Android
-                    value="A5"
-                    color={backgroundColors.primary}
-                    uncheckedColor={backgroundColors.dark}
-                  />
-                  <Text style={styles.radioText}>A5</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setInvoiceSize('receipt')}
-                  style={styles.radioOption}
-                  activeOpacity={0.7}>
-                  <RadioButton.Android
-                    value="receipt"
-                    color={backgroundColors.primary}
-                    uncheckedColor={backgroundColors.dark}
-                  />
-                  <Text style={styles.radioText}>Receipt Size</Text>
-                </TouchableOpacity>
-              </View>
-            </RadioButton.Group>
+        {/* Invoice Size Section */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.iconBox}>
+              <Icon name="format-size" size={20} color={THEME.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Invoice Size</Text>
           </View>
 
-          {/* Show Builty Section */}
-          <View style={styles.card}>
-            <View style={styles.sectionHeader}>
-              <Icon
-                name="file-document"
-                size={20}
-                color={backgroundColors.dark}
-              />
-              <Text style={styles.sectionTitle}>Show Builty Section</Text>
-            </View>
+          <View style={styles.radioGroup}>
+            <CustomRadioButton
+              label="A4"
+              selected={invoiceSize === 'A4'}
+              onPress={() => setInvoiceSize('A4')}
+            />
+            <CustomRadioButton
+              label="A5"
+              selected={invoiceSize === 'A5'}
+              onPress={() => setInvoiceSize('A5')}
+            />
+            <CustomRadioButton
+              label="Receipt"
+              selected={invoiceSize === 'receipt'}
+              onPress={() => setInvoiceSize('receipt')}
+            />
+          </View>
+        </View>
 
-            <RadioButton.Group
-              onValueChange={value => setShowBuilty(value as 'Y' | 'N')}
-              value={showBuilty}>
-              <View style={styles.radioGroup}>
-                <TouchableOpacity
-                  onPress={() => setShowBuilty('Y')}
-                  style={styles.radioOption}
-                  activeOpacity={0.7}>
-                  <RadioButton.Android
-                    value="Y"
-                    color={backgroundColors.primary}
-                    uncheckedColor={backgroundColors.dark}
-                  />
-                  <Text style={styles.radioText}>Yes</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setShowBuilty('N')}
-                  style={styles.radioOption}
-                  activeOpacity={0.7}>
-                  <RadioButton.Android
-                    value="N"
-                    color={backgroundColors.primary}
-                    uncheckedColor={backgroundColors.dark}
-                  />
-                  <Text style={styles.radioText}>No</Text>
-                </TouchableOpacity>
-              </View>
-            </RadioButton.Group>
+        {/* Show Builty Section */}
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.iconBox}>
+              <Icon name="file-document" size={20} color={THEME.primary} />
+            </View>
+            <Text style={styles.sectionTitle}>Show Builty Section</Text>
           </View>
 
-          {/* Save Button */}
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={handleAddInvoice}
-            activeOpacity={0.8}>
+          <View style={styles.radioGroup}>
+            <CustomRadioButton
+              label="Yes"
+              selected={showBuilty === 'Y'}
+              onPress={() => setShowBuilty('Y')}
+            />
+            <CustomRadioButton
+              label="No"
+              selected={showBuilty === 'N'}
+              onPress={() => setShowBuilty('N')}
+            />
+          </View>
+        </View>
+
+        {/* Save Button */}
+        <TouchableOpacity
+          style={styles.saveButton}
+          onPress={handleAddInvoice}
+          activeOpacity={0.8}>
+          <LinearGradient
+            colors={[THEME.gradientStart, THEME.gradientEnd]}
+            style={styles.saveButtonGradient}>
             <Icon name="content-save" size={20} color="white" />
             <Text style={styles.saveButtonText}>Save Configuration</Text>
-          </TouchableOpacity>
-        </ScrollView>
-        <Toast />
-      </View>
+          </LinearGradient>
+        </TouchableOpacity>
+        <View style={{height: 20}} />
+      </ScrollView>
+      <Toast />
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -300,128 +307,169 @@ export default function SaleInvoice({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 10,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.light,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
   },
 
   contentContainer: {
     flex: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
     paddingTop: 10,
   },
   card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    marginBottom: 15,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    marginBottom: 16,
+    padding: 16,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    paddingBottom: 10,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 12,
+  },
+  iconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: backgroundColors.dark,
-    marginLeft: 8,
+    color: THEME.textDark,
   },
   radioGroup: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
   },
   radioOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 20,
-    paddingVertical: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    backgroundColor: THEME.background,
+  },
+  selectedOption: {
+    borderColor: THEME.primary,
+    backgroundColor: THEME.primaryLight,
+  },
+  radioCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: THEME.textGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  radioInnerCircle: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: THEME.primary,
   },
   radioText: {
     fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-    marginLeft: 8,
+    color: THEME.textGray,
+    fontWeight: '600',
+  },
+  selectedText: {
+    color: THEME.primary,
+    fontWeight: '700',
   },
   checkboxGroup: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
   },
   checkboxOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 20,
-    paddingVertical: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    backgroundColor: THEME.background,
+  },
+  checkboxBox: {
+    width: 20,
+    height: 20,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: THEME.textGray,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
   },
   checkboxText: {
     fontSize: 14,
-    color: '#333',
-    fontWeight: '500',
-    marginLeft: 8,
+    color: THEME.textGray,
+    fontWeight: '600',
   },
   saveButton: {
+    borderRadius: 12,
+    marginTop: 10,
+    shadowColor: THEME.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 4},
+    elevation: 4,
+    overflow: 'hidden',
+  },
+  saveButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 12,
-    paddingVertical: 15,
-    marginTop: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
+    paddingVertical: 16,
   },
   saveButtonText: {
-    color: 'white',
+    color: THEME.white,
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,

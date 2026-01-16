@@ -4,11 +4,12 @@ import {
   SafeAreaView,
   View,
   TouchableOpacity,
-  Image,
   Dimensions,
-  FlatList,
   Modal,
   ScrollView,
+  StatusBar,
+  Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useNavigation, NavigationProp} from '@react-navigation/native';
@@ -17,23 +18,48 @@ import {useUser} from './CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from './BASE_URL';
-import backgroundColors from './Colors';
 import dayjs from 'dayjs';
-import Toast from 'react-native-toast-message';
-import RNPrint from 'react-native-print';
+import BottomBar from './BottomBar';
+
+import LinearGradient from 'react-native-linear-gradient';
+import {fetchStockAndNotify} from './NotificationService';
 
 const {width} = Dimensions.get('window');
 
-// Type definitions
+// --- MODERN THEME (Deep Earthy Green & Gold Accents) ---
+const THEME = {
+  primary: '#1A5D1A', // Deep Forest Green
+  primaryDark: '#0D3B0D',
+  primaryLight: '#E3F2E3',
+  secondary: '#FFC107', // Gold/Amber for accents
+  accent: '#2E7D32',
+  background: '#F8F9FA', // Very light gray, almost white
+  surface: '#FFFFFF',
+  textMain: '#111827',
+  textSecondary: '#6B7280',
+  textLight: '#9CA3AF',
+  danger: '#EF4444',
+  success: '#10B981',
+  border: '#E5E7EB',
+  purple: '#8B5CF6',
+  orange: '#F97316',
+  blue: '#3B82F6',
+  cyan: '#06B6D4',
+};
+
+// --- INTERFACES ---
 interface StatItem {
   title: string;
-  icon: any;
+  icon: string; // Changed from 'any' to 'string' for vector icon name
   screen: string;
   count?: string | number;
+  type?: 'money' | 'count';
+  color: string;
 }
 
 type RootStackParamList = {
   Login: undefined;
+  'Point of Sale': undefined;
 };
 
 type DashboardNavigationProp = NavigationProp<RootStackParamList>;
@@ -51,50 +77,6 @@ interface Counts {
   current_month_sale: number;
 }
 
-interface InvoiceList {
-  id: number;
-  sal_date: string;
-  sal_order_total: string;
-  sal_invoice_no: string;
-  sal_payment_method: string;
-  slcust_name: string;
-  name: string;
-}
-
-interface SingleInvoice {
-  config: {
-    bus_name: string;
-    bus_address: string;
-    bus_contact1: string;
-  };
-  sale: {
-    cust_name: string;
-    name: string;
-    slcust_address: string;
-    sal_builty_contact: string;
-    sal_builty_address: string;
-    contact: string;
-    sal_change_amount: string;
-    created_at: string;
-    sal_freight_exp: string;
-    sal_labr_exp: string;
-    sal_discount: string;
-    sal_payment_amount: string;
-    sal_total_amount: string;
-    sal_order_total: string;
-    note: string;
-  };
-  prev_balance: string;
-}
-
-interface InvoiceSaleDetails {
-  prod_name: string;
-  sald_qty: string;
-  sald_fretail_price: string;
-  sald_total_fretailprice: string;
-  ums_name: string;
-}
-
 export default function Dashboard(): JSX.Element {
   const {userName, userEmail} = useUser();
   const {
@@ -109,65 +91,24 @@ export default function Dashboard(): JSX.Element {
   const {openDrawer} = useDrawer();
   const [date, setDate] = useState(dayjs());
   const [count, setCount] = useState<Counts | null>(null);
-  const [invcList, setInvcList] = useState<InvoiceList[]>([]);
-  const [modal, setModal] = useState('');
-  const [invcSaleDetails, setInvcSaleDetails] = useState<InvoiceSaleDetails[]>(
-    [],
-  );
-  const [invoiceData, setInvoiceData] = useState<SingleInvoice | null>(null);
-  const [selectedInvc, setSelectedInvc] = useState('');
 
   const toggleModal = () => {
     setModalVisible(!isModalVisible);
   };
 
-  // Fetch Sale Invoice List
-  const fetchinvcList = async () => {
-    try {
-      const from = '2024-11-07';
-      const to = new Date().toISOString().split('T')[0];
-      const res = await axios.post(`${BASE_URL}/getinvoices`, {
-        from,
-        to,
-      });
-
-      setInvcList(res.data.inv_data);
-    } catch (error) {
-      console.log(error);
-    }
-  };
-
-  // Get Single Invoice
-  const singleInvc = async (inv: string) => {
-    try {
-      const res = await axios.post(`${BASE_URL}/invoiceprint`, {
-        invoice: inv,
-      });
-
-      setInvoiceData(res.data);
-      setInvcSaleDetails(res.data.saledetail);
-    } catch (error) {
-      console.log();
-    }
-  };
-
   useEffect(() => {
-    setInterval(() => {
+    const timer = setInterval(() => {
       setDate(dayjs());
-    }, 1000 * 1);
+    }, 1000 * 60); // Update every minute is enough
 
     const fetchUserData = async () => {
       try {
-        // Only proceed with the second request if login was successful
         const res = await axios.get(`${BASE_URL}/poscashregister`);
-
         setUserName(res.data?.authenticated_user?.name ?? '');
         setUserEmail(res.data?.authenticated_user?.email ?? '');
 
-        // Getting bussiness details
         const bus = await axios.get(`${BASE_URL}/dashboaddata`);
         setCount(bus.data);
-
         setBussName(bus.data?.businessdata?.bus_name ?? '');
         setBussAddress(bus.data?.businessdata?.bus_address ?? '');
         setBussContact(bus.data?.businessdata?.bus_contact1 ?? '');
@@ -175,783 +116,329 @@ export default function Dashboard(): JSX.Element {
         console.log(error);
       }
     };
+    const requestNotificationPermission = async () => {
+      if (Platform.OS === 'android' && Platform.Version >= 33) {
+        try {
+          await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+          );
+        } catch (err) {
+          console.warn(err);
+        }
+      }
+    };
 
     fetchUserData();
-    fetchinvcList();
+    requestNotificationPermission();
+    fetchStockAndNotify();
+
+    return () => clearInterval(timer);
   }, []);
 
   function formatNumber(num: number): string {
-    if (num >= 100000) {
-      return (num / 100000).toFixed(num % 100000 === 0 ? 0 : 2) + 'L';
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + 'M';
     } else if (num >= 1000) {
-      return (num / 1000).toFixed(num % 1000 === 0 ? 0 : 2) + 'K';
+      return (num / 1000).toFixed(1) + 'k';
     } else {
       return num.toString();
     }
   }
 
-  const generateReceiptHTML = () => {
-    if (!invoiceData) return '';
-
-    const itemsHTML = invcSaleDetails
-      .map(
-        item => `
-    <tr>
-      <td style="padding: 8px 4px; font-size: 13px;">${item.prod_name}</td>
-      <td style="padding: 8px 4px; text-align: center; font-size: 13px;">${
-        item.sald_qty
-      }</td>
-      <td style="padding: 8px 4px; text-align: center; font-size: 13px;">${
-        item.ums_name
-      }</td>
-      <td style="padding: 8px 4px; text-align: right; font-size: 13px;">${parseFloat(
-        item.sald_fretail_price,
-      ).toFixed(2)}</td>
-      <td style="padding: 8px 4px; text-align: right; font-size: 13px;">${parseFloat(
-        item.sald_total_fretailprice,
-      ).toFixed(2)}</td>
-    </tr>
-  `,
-      )
-      .join('');
-
-    return `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <meta charset="utf-8">
-      <title>Receipt ${selectedInvc}</title>
-      <style>
-        body { 
-          font-family: Arial, sans-serif; 
-          font-size: 14px; 
-          margin: 0; 
-          padding: 20px; 
-          max-width: 400px;
-          margin: 0 auto;
-        }
-        .header { 
-          text-align: center; 
-          margin-bottom: 20px; 
-          padding-bottom: 15px;
-          border-bottom: 2px dashed #000;
-        }
-        .shop-name { 
-          font-weight: bold; 
-          font-size: 24px;
-          margin-bottom: 8px;
-        }
-        .shop-address { 
-          font-size: 14px;
-          margin: 5px 0;
-        }
-        .shop-phone { 
-          font-size: 14px;
-          margin: 5px 0;
-        }
-        .divider {
-          border-bottom: 2px dashed #000;
-          margin: 15px 0;
-        }
-        .receipt-info { 
-          display: flex; 
-          justify-content: space-between;
-          margin-bottom: 5px;
-          font-size: 13px;
-        }
-        .customer-details { 
-          margin-bottom: 15px;
-          padding-bottom: 15px;
-          border-bottom: 2px dashed #000;
-        }
-        .detail-row {
-          display: flex;
-          justify-content: space-between;
-          margin-bottom: 5px;
-          font-size: 13px;
-        }
-        .detail-label {
-          font-weight: 600;
-        }
-        table { 
-          width: 100%; 
-          border-collapse: collapse;
-          margin-bottom: 15px;
-        }
-        th { 
-          text-align: center;
-          padding: 8px 4px;
-          border-bottom: 2px dashed #000;
-          font-size: 13px;
-          font-weight: 600;
-        }
-        th:first-child,
-        td:first-child {
-          text-align: left;
-        }
-        th:last-child,
-        td:last-child {
-          text-align: right;
-        }
-        .table-footer {
-          border-top: 2px dashed #000;
-          padding-top: 10px;
-        }
-        .summary { 
-          margin-top: 15px;
-          padding-top: 15px;
-          border-top: 2px dashed #000;
-        }
-        .summary-row { 
-          display: flex; 
-          justify-content: space-between;
-          margin-bottom: 8px;
-          font-size: 13px;
-        }
-        .summary-label {
-          font-weight: 400;
-        }
-        .summary-value {
-          text-align: right;
-        }
-        .total-row { 
-          border-top: 2px solid #000;
-          padding-top: 8px;
-          margin-top: 8px;
-          font-weight: bold;
-          font-size: 14px;
-        }
-        .footer { 
-          text-align: center;
-          margin-top: 20px;
-          padding-top: 15px;
-          border-top: 2px dashed #000;
-        }
-        .thank-you { 
-          text-align: center;
-          margin: 20px 0 15px 0;
-          font-weight: bold;
-          font-size: 16px;
-        }
-        .developer-info {
-          font-size: 12px;
-          text-align: center;
-          color: #666;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="header">
-        <div class="shop-name">${invoiceData.config.bus_name}</div>
-        <div class="shop-address">${invoiceData.config.bus_address}</div>
-        <div class="shop-phone">${invoiceData.config.bus_contact1}</div>
-      </div>
-      
-      <div class="receipt-info">
-        <span><strong>Receipt#:</strong> ${selectedInvc}</span>
-      </div>
-      <div class="receipt-info">
-        <span><strong>Date:</strong> ${new Date(
-          invoiceData.sale.created_at,
-        ).toLocaleDateString('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-        })}</span>
-      </div>
-      <div class="receipt-info">
-        <span><strong>Maker:</strong> ${invoiceData.sale.name}</span>
-      </div>
-      
-      <div class="divider"></div>
-      
-      <div class="customer-details">
-        <div class="detail-row">
-          <span class="detail-label">Customer:</span>
-          <span>${invoiceData.sale.cust_name}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Contact#:</span>
-          <span>${invoiceData.sale.contact || 'N/A'}</span>
-        </div>
-        <div class="detail-row">
-          <span class="detail-label">Address:</span>
-          <span>${invoiceData.sale.slcust_address || 'NILL'}</span>
-        </div>
-      </div>
-      
-      <table>
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Qty</th>
-            <th>UOM</th>
-            <th>Price</th>
-            <th>Total</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${itemsHTML}
-        </tbody>
-      </table>
-      
-      <div class="table-footer">
-        <div class="summary-row">
-          <span class="summary-label"><strong>Total Items</strong></span>
-          <span class="summary-value">${invcSaleDetails.length}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label"></span>
-          <span class="summary-value"><strong>Subtotal ${
-            invoiceData.sale.sal_order_total
-          }</strong></span>
-        </div>
-      </div>
-      
-      <div class="summary">
-        <div class="summary-row">
-          <span class="summary-label">Order Total:</span>
-          <span class="summary-value">${invoiceData.sale.sal_order_total}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label">Discount:</span>
-          <span class="summary-value">${invoiceData.sale.sal_discount}</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label">Previous Balance:</span>
-          <span class="summary-value">${invoiceData.prev_balance}</span>
-        </div>
-        <div class="summary-row total-row">
-          <span class="summary-label">Payable:</span>
-          <span class="summary-value">${
-            invoiceData.sale.sal_total_amount
-          }</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label">Paid:</span>
-          <span class="summary-value">${
-            invoiceData.sale.sal_payment_amount
-          }</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label">Balance:</span>
-          <span class="summary-value">${
-            invoiceData.sale.sal_change_amount
-          }</span>
-        </div>
-        <div class="summary-row">
-          <span class="summary-label">Note:</span>
-          <span class="summary-value">${invoiceData.sale.note || 'NILL'}</span>
-        </div>
-      </div>
-      
-      <div class="footer">
-        <div class="thank-you">Software Developed</div>
-        <div class="developer-info">
-          <div>with love by</div>
-          <div style="margin-top: 5px;"><strong>Technic Mentors</strong></div>
-        </div>
-      </div>
-    </body>
-    </html>
-  `;
-  };
-
-  // Print Receipt
-  const printReceipt = async () => {
-    try {
-      // Generate HTML content for the receipt
-      const htmlContent = generateReceiptHTML();
-
-      // Print the receipt
-      await RNPrint.print({
-        html: htmlContent,
-      });
-
-      Toast.show({
-        type: 'success',
-        text1: 'Receipt printed successfully',
-      });
-    } catch (error) {
-      console.error('Failed to print receipt:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Failed to print receipt',
-      });
-    }
-  };
-
-  // POS Dashboard Stats (static for now)
+  // --- STATS DATA ---
   const stats: StatItem[] = [
     {
-      title: 'Customers',
-      icon: require('../assets/users.png'),
-      screen: 'Customer',
-      count: count?.customer,
-    },
-    {
-      title: 'Suppliers',
-      icon: require('../assets/truck.png'),
-      screen: 'Suppliers',
-      count: count?.suppliers,
-    },
-    {
-      title: 'Employees',
-      icon: require('../assets/name-tag.png'),
-      screen: 'Employees',
-      count: count?.employees,
-    },
-    {
-      title: 'Current Stock',
-      icon: require('../assets/stock.png'),
-      screen: 'Current Stock',
-      count: `${formatNumber(Number(count?.currentstockqty))} - ${formatNumber(
-        Number(count?.currentstocksubqty),
-      )}`,
-    },
-    {
-      title: 'Products',
-      icon: require('../assets/product.png'),
-      screen: 'Products',
-      count: count?.product,
-    },
-    {
-      title: 'Sale Invoices',
-      icon: require('../assets/receipt.png'),
+      title: 'Total Sales',
+      icon: 'cash-multiple',
       screen: 'Invoice List',
       count: count?.sale,
+      type: 'money',
+      color: THEME.success,
     },
     {
       title: 'Purchases',
-      icon: require('../assets/purchase.png'),
+      icon: 'cart-arrow-down',
       screen: 'Purchase List',
       count: count?.purchase,
+      type: 'money',
+      color: THEME.blue,
     },
     {
       title: 'Expenses',
-      icon: require('../assets/payment.png'),
+      icon: 'wallet-outline',
       screen: 'Manage Expenses',
       count: formatNumber(Number(count?.expenseamount)),
+      type: 'money',
+      color: THEME.danger,
+    },
+    {
+      title: 'Stock Qty',
+      icon: 'package-variant-closed',
+      screen: 'Current Stock',
+      count: `${formatNumber(Number(count?.currentstockqty))}`,
+      type: 'count',
+      color: THEME.purple,
+    },
+    {
+      title: 'Customers',
+      icon: 'account-group',
+      screen: 'Customer',
+      count: count?.customer,
+      type: 'count',
+      color: THEME.orange,
+    },
+    {
+      title: 'Suppliers',
+      icon: 'truck-delivery',
+      screen: 'Suppliers',
+      count: count?.suppliers,
+      type: 'count',
+      color: THEME.cyan,
+    },
+    {
+      title: 'Employees',
+      icon: 'card-account-details-outline',
+      screen: 'Employees',
+      count: count?.employees,
+      type: 'count',
+      color: THEME.textSecondary,
+    },
+    {
+      title: 'Products',
+      icon: 'cube-outline',
+      screen: 'Products',
+      count: count?.product,
+      type: 'count',
+      color: THEME.primary,
+    },
+    {
+      title: 'Reports',
+      icon: 'file-chart-outline',
+      screen: 'All User Sales', // Navigating to All User Sales as requested
+      count: 'View',
+      type: 'count',
+      color: THEME.secondary,
     },
   ];
 
-  const renderStatCard = (item: StatItem, index: number) => (
+  const DashboardCard = ({item}: {item: StatItem}) => (
     <TouchableOpacity
-      key={index}
-      style={[
-        styles.card,
-        {backgroundColor: backgroundColors.light},
-        // Apply special styling to first two cards
-        index < 2 && styles.overlappingCard,
-      ]}
-      onPress={() => {
-        navigation.navigate(item.screen as never);
-      }}>
-      <View style={[styles.iconContainer]}>
-        <Image source={item.icon} style={styles.cardIcon} />
-        <Text style={styles.count}>{item.count}</Text>
+      activeOpacity={0.8}
+      style={styles.gridItem}
+      onPress={() => navigation.navigate(item.screen as never)}>
+      <View style={styles.gridIconContainer}>
+        <Icon name={item.icon} size={28} color={THEME.primary} />
       </View>
-      <Text style={styles.cardTitle}>{item.title}</Text>
+      <Text style={styles.gridLabel} numberOfLines={1}>
+        {item.title}
+      </Text>
+      {/* <Text style={styles.gridCount} numberOfLines={1}>
+        {item.count || '0'}
+      </Text> */}
     </TouchableOpacity>
   );
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.innerHeader}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerButton}>
-            <View>
-              <Image
-                source={require('../assets/menu.png')}
-                style={styles.menuIcon}
-                tintColor="white"
-              />
-            </View>
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.primaryDark}
+        translucent={false} // Solid status bar for cleaner look
+      />
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>CapoBiz POS</Text>
+      {/* --- HEADER --- */}
+      <View style={styles.headerContainer}>
+        <LinearGradient
+          colors={[THEME.primary, THEME.primaryDark]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={StyleSheet.absoluteFillObject}
+        />
+        <View style={styles.headerContent}>
+          <View style={styles.headerTopRow}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={26} color={THEME.surface} />
+            </TouchableOpacity>
+
+            <View style={styles.brandContainer}>
+              <Text style={styles.appTitle}>CapoBiz</Text>
+              <View style={styles.brandBadge}>
+                <Text style={styles.brandBadgeText}>POS</Text>
+              </View>
+            </View>
+
+            <View style={styles.rightActions}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate('Notifications' as never)}
+                style={styles.notificationBtn}>
+                <Icon name="bell-outline" size={30} color={THEME.surface} />
+                <View style={styles.notificationBadge} />
+              </TouchableOpacity>
+
+              {/* <TouchableOpacity onPress={toggleModal} style={styles.profileBtn}>
+                <Text style={styles.profileInitials}>
+                  {userName ? userName.charAt(0).toUpperCase() : 'U'}
+                </Text>
+              </TouchableOpacity> */}
+            </View>
           </View>
 
-          <TouchableOpacity onPress={toggleModal} style={styles.headerButton}>
-            <View style={styles.profileBadge}>
-              <Icon name="account" size={28} color={backgroundColors.dark} />
+          <View style={styles.greetingContainer}>
+            <View>
+              <Text style={styles.greetingSub}>Hello,</Text>
+              <Text style={styles.greetingMain}>
+                {userName || 'Store Manager'}
+              </Text>
             </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Timer Section */}
-        <View style={styles.timerSection}>
-          <Text style={styles.time}>{date.format('hh:mm:ss')}</Text>
-        </View>
-      </View>
-
-      <View style={{zIndex: 1000}}>
-        {/* Dashboard Stats */}
-        <View style={styles.statsGrid}>
-          {stats.map((item, index) => renderStatCard(item, index))}
+            <View style={styles.dateBadge}>
+              <Icon
+                name="calendar"
+                size={14}
+                color={THEME.surface}
+                style={{marginRight: 4}}
+              />
+              <Text style={styles.dateText}>{date.format('DD MMM, YYYY')}</Text>
+            </View>
+          </View>
         </View>
       </View>
 
-      {/* Latest Invoices */}
-      <View style={styles.invcContainer}>
-        <View style={styles.invcHeader}>
-          <Text style={styles.invcTitle}>Latest 5 Sales</Text>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Invoice List' as never)}>
-            <Text style={styles.seeMoreBtnText}>See More</Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.listContainer}>
-          <FlatList
-            data={invcList.slice(0, 5)}
-            keyExtractor={item => item.id.toString()}
-            renderItem={({item}) => (
-              <View style={styles.invcCard}>
-                <View style={styles.row}>
-                  <View>
-                    <Text style={styles.name}>{item.sal_invoice_no}</Text>
-                    <Text style={styles.subText}>
-                      <Icon name="cash-multiple" size={12} color="#666" />{' '}
-                      {item.sal_order_total}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Icon name="account" size={12} color="#666" />{' '}
-                      {item.slcust_name || 'N/A'}
-                    </Text>
-                  </View>
-
-                  <View style={{alignSelf: 'flex-start'}}>
-                    <Text style={[styles.subText, {fontWeight: '700'}]}>
-                      <Icon name="calendar" size={12} color="#666" />{' '}
-                      {new Date(item.sal_date).toLocaleDateString('en-US', {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      })}
-                    </Text>
-                  </View>
+      {/* --- BODY --- */}
+      <View style={styles.bodyContainer}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}>
+          {/* --- Stats Overview (Circles) --- */}
+          <View style={styles.overviewGrid}>
+            {[
+              {
+                title: 'Customers',
+                count: count?.customer || 0,
+                icon: 'account-group', // Matches user image
+                color: '#1E88E5', // Blue
+                screen: 'Customer',
+              },
+              {
+                title: 'Suppliers',
+                count: count?.suppliers || 0,
+                icon: 'account-multiple', // Use icon that looks like group/suppliers
+                color: '#FB8C00', // Orange
+                screen: 'Suppliers',
+              },
+              {
+                title: 'Products',
+                count: count?.product || 0,
+                icon: 'package-variant',
+                color: '#E53935', // Redish
+                screen: 'Products',
+              },
+              {
+                title: 'ale Invoices', // Typo fix: Sale Invoices
+                count: count?.sale || 0, // Using sale count
+                icon: 'cart-outline',
+                color: '#43A047', // Green
+                screen: 'Invoice List',
+              },
+            ].map((item, index) => (
+              <TouchableOpacity
+                key={index}
+                activeOpacity={0.9}
+                style={styles.overviewCard}
+                onPress={() => navigation.navigate(item.screen as never)}>
+                <View
+                  style={[
+                    styles.overviewIconBox,
+                    {backgroundColor: item.color},
+                  ]}>
+                  <Icon name={item.icon} size={24} color="#FFFFFF" />
                 </View>
-                <TouchableOpacity
-                  style={{alignSelf: 'flex-end', marginTop: -20}}
-                  onPress={() => {
-                    setModal('View');
-                    singleInvc(item.sal_invoice_no);
-                    setSelectedInvc(item.sal_invoice_no);
-                  }}>
-                  <Icon
-                    name="receipt"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                </TouchableOpacity>
-              </View>
-            )}
-            contentContainerStyle={{paddingBottom: 40}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
+                <View style={styles.overviewContent}>
+                  <Text style={styles.overviewTitle}>
+                    {item.title === 'ale Invoices'
+                      ? 'Sale Invoices'
+                      : item.title}
+                  </Text>
+                  <Text style={styles.overviewCount}>
+                    {typeof item.count === 'number' ||
+                    !isNaN(Number(item.count))
+                      ? formatNumber(Number(item.count))
+                      : item.count}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Stats Grid */}
+          <View style={[styles.sectionHeader, {marginTop: 0}]}>
+            <Text style={styles.sectionTitle}>Quick Access</Text>
+          </View>
+          <View style={styles.gridContainer}>
+            {stats.map((item, index) => (
+              <DashboardCard key={index} item={item} />
+            ))}
+          </View>
+
+          {/* Recent Sales */}
+
+          <View style={{height: 100}} />
+        </ScrollView>
+
+        {/* --- POS FAB BUTTON --- */}
+        <TouchableOpacity
+          activeOpacity={0.8}
+          style={styles.fab}
+          onPress={() => navigation.navigate('Point of Sale' as never)}>
+          <LinearGradient
+            colors={[THEME.primary, THEME.primaryDark]}
+            style={styles.fabGradient}
+            start={{x: 0, y: 0}}
+            end={{x: 1, y: 1}}>
+            <Icon name="cart" size={28} color={THEME.surface} />
+            <Text style={styles.fabText}>POS</Text>
+          </LinearGradient>
+        </TouchableOpacity>
       </View>
 
-      {/* User Modal */}
+      {/* --- 1. PROFILE MODAL --- */}
       <Modal
         visible={isModalVisible}
-        transparent={true}
+        transparent
         animationType="fade"
         onRequestClose={toggleModal}>
         <TouchableOpacity
-          style={styles.modalOverlayUser}
+          style={styles.modalBackdrop}
           activeOpacity={1}
           onPress={toggleModal}>
-          <TouchableOpacity
-            activeOpacity={1}
-            style={styles.modalContent}
-            onPress={e => e.stopPropagation()}>
-            <View style={styles.modalHeader}>
-              <View style={styles.userAvatarContainer}>
-                <Image
-                  style={styles.userAvatar}
-                  source={require('../assets/user.png')}
-                  tintColor={backgroundColors.light}
-                />
-              </View>
-              <View style={styles.userInfo}>
-                <Text style={styles.userName}>
-                  {userName ?? 'Store Manager'}
+          <View style={styles.profileDropdown}>
+            <View style={styles.dropdownHeader}>
+              <View style={styles.dropdownAvatar}>
+                <Text style={styles.dropdownAvatarText}>
+                  {userName?.charAt(0) || 'U'}
                 </Text>
-                <Text style={styles.userEmail}>
-                  {userEmail ?? 'manager@capobiz.com'}
+              </View>
+              <View>
+                <Text style={styles.dropdownName}>{userName || 'User'}</Text>
+                <Text style={styles.dropdownEmail}>
+                  {userEmail || 'user@capobiz.com'}
                 </Text>
               </View>
             </View>
+            <View style={styles.divider} />
             <TouchableOpacity
-              style={styles.logoutButton}
+              style={styles.menuItem}
               onPress={() => navigation.navigate('Login')}>
-              <Icon name="logout" size={22} color={backgroundColors.light} />
-              <Text style={styles.logoutText}>Sign Out</Text>
+              <Icon name="logout" size={20} color={THEME.danger} />
+              <Text style={[styles.menuText, {color: THEME.danger}]}>
+                Logout
+              </Text>
             </TouchableOpacity>
-          </TouchableOpacity>
+          </View>
         </TouchableOpacity>
       </Modal>
 
-      {/* Receipt View Modal */}
-      <Modal
-        visible={modal === 'View'}
-        animationType="slide"
-        transparent
-        onRequestClose={() => {
-          setModal('');
-          setInvoiceData(null);
-          setInvcSaleDetails([]);
-          setSelectedInvc('');
-        }}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContainer}>
-            {/* Modal Handle */}
-            <View style={styles.modalHandle} />
-
-            {/* Header */}
-            <View style={styles.receiptModalHeader}>
-              <View style={styles.headerLeft}>
-                <View style={styles.invoiceIconContainer}>
-                  <Icon name="receipt" size={24} color="#144272" />
-                </View>
-                <View>
-                  <Text style={styles.modalTitle}>Sale Invoice</Text>
-                  <Text style={styles.modalSubtitle}>Invoice Details</Text>
-                </View>
-              </View>
-              <TouchableOpacity
-                onPress={() => {
-                  setModal('');
-                  setInvoiceData(null);
-                  setInvcSaleDetails([]);
-                  setSelectedInvc('');
-                }}
-                style={styles.closeButton}>
-                <Icon name="close" size={24} color="#666" />
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              style={styles.receiptModalContent}
-              showsVerticalScrollIndicator={false}>
-              {/* Company Info Card */}
-              <View style={styles.companyCard}>
-                <View style={styles.companyHeader}>
-                  <Text style={styles.companyName}>
-                    {invoiceData?.config?.bus_name || 'N/A'}
-                  </Text>
-                </View>
-                <Text style={styles.companyAddress}>
-                  {invoiceData?.config?.bus_address || 'N/A'}
-                </Text>
-                <Text style={styles.companyContact}>
-                  {invoiceData?.config?.bus_contact1 || 'Contact: N/A'}
-                </Text>
-              </View>
-
-              {/* Order Info Grid */}
-              <View style={styles.orderInfoGrid}>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Receipt#:</Text>
-                  <Text style={styles.infoValue}>{selectedInvc ?? 'N/A'}</Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Date:</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.sale.created_at
-                      ? new Date(invoiceData?.sale.created_at)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-')
-                      : 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Maker:</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.sale?.name ?? 'N/A'}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.orderInfoGrid}>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Customer:</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.sale?.cust_name ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Contact:</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.sale.contact ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Address:</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.sale.slcust_address ?? 'N/A'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Order Table Section */}
-              <View style={styles.tableSection}>
-                <View style={styles.tableContainer}>
-                  {/* Table Header */}
-                  <View style={styles.tableHeader}>
-                    <Text style={[styles.tableHeaderText, styles.col1]}>
-                      Item
-                    </Text>
-                    <Text style={[styles.tableHeaderText, styles.col2]}>
-                      Qty
-                    </Text>
-                    <Text style={[styles.tableHeaderText, styles.col3]}>
-                      UOM
-                    </Text>
-                    <Text style={[styles.tableHeaderText, styles.col4]}>
-                      Price
-                    </Text>
-                    <Text style={[styles.tableHeaderText, styles.col5]}>
-                      Total
-                    </Text>
-                  </View>
-
-                  {/* Table Rows */}
-                  <FlatList
-                    data={invcSaleDetails}
-                    keyExtractor={(_, index) => index.toString()}
-                    renderItem={({item, index}) => (
-                      <View style={[styles.tableRow]}>
-                        <Text style={[styles.tableCell, styles.col1]}>
-                          {item.prod_name}
-                        </Text>
-                        <Text style={[styles.tableCell, styles.col2]}>
-                          {item.sald_qty}
-                        </Text>
-                        <Text style={[styles.tableCell, styles.col3]}>
-                          {item.ums_name}
-                        </Text>
-                        <Text style={[styles.tableCell, styles.col4]}>
-                          {Number(item.sald_fretail_price).toLocaleString()}
-                        </Text>
-                        <Text style={[styles.tableCell, styles.col5]}>
-                          {Number(
-                            item.sald_total_fretailprice,
-                          ).toLocaleString()}
-                        </Text>
-                      </View>
-                    )}
-                    scrollEnabled={false}
-                    ListFooterComponent={
-                      <View
-                        style={{
-                          borderTopWidth: 1.5,
-                          borderTopColor: backgroundColors.dark,
-                          flexDirection: 'row',
-                          paddingVertical: 2.5,
-                        }}>
-                        <Text
-                          style={[
-                            styles.tableHeaderText,
-                            {flex: 0.2, textAlign: 'left'},
-                          ]}>
-                          Total Items
-                        </Text>
-                        <Text style={[styles.tableCell, {flex: 0.15}]}>
-                          {invcSaleDetails.length}
-                        </Text>
-                        <Text style={[styles.tableHeaderText, {flex: 0.2}]}>
-                          Subtotals
-                        </Text>
-                        <View style={{flex: 0.2}} />
-                        <Text style={[styles.tableCell, {flex: 0.2}]}>
-                          {invoiceData?.sale?.sal_order_total}
-                        </Text>
-                      </View>
-                    }
-                  />
-                </View>
-              </View>
-
-              <View style={styles.orderInfoGrid}>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Total Order:</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.sale?.sal_order_total ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Discount:</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.sale?.sal_discount ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Previous Bal.:</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.prev_balance ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Payable:</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.sale?.sal_total_amount ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Paid:</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.sale?.sal_payment_amount ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Balance:</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.sale?.sal_change_amount ?? 'N/A'}
-                  </Text>
-                </View>
-                <View style={styles.infoCard}>
-                  <Text style={styles.infoLabel}>Note:</Text>
-                  <Text style={styles.infoValue}>
-                    {invoiceData?.sale?.note ?? 'N/A'}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Footer */}
-              <View style={styles.modalFooter}>
-                <Text style={styles.thankYou}>Thank you for your visit</Text>
-                <View style={styles.developerInfo}>
-                  <Text style={styles.developerText}>
-                    Software Developed with ❤️ by
-                  </Text>
-                  <Text style={styles.companyContact}>
-                    Technic Mentors | +923111122144
-                  </Text>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.printBtn}
-                  onPress={printReceipt}>
-                  <Icon
-                    name="printer"
-                    size={20}
-                    color={backgroundColors.light}
-                  />
-                  <Text style={styles.printBtnText}>Print</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
+      {/* --- BOTTOM BAR --- */}
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -959,459 +446,326 @@ export default function Dashboard(): JSX.Element {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
-    height: '20%',
-    backgroundColor: backgroundColors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+  // --- Header ---
+  headerContainer: {
+    paddingTop: Platform.OS === 'android' ? 10 : 0,
+    paddingBottom: 25,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-    zIndex: 999,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    zIndex: 10,
   },
-  innerHeader: {
-    height: '20%',
+  headerContent: {
+    paddingHorizontal: 20,
+    paddingTop: 10,
+  },
+  headerTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 20,
   },
-  timerSection: {
-    marginTop: '5%',
-    paddingHorizontal: '2%',
+  iconBtn: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
-  time: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: backgroundColors.light,
-    textAlign: 'right',
-  },
-  headerButton: {
-    width: 44,
-    height: 44,
+  brandContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+  },
+  appTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: THEME.surface,
+    letterSpacing: 0.5,
+  },
+  brandBadge: {
+    backgroundColor: THEME.secondary,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    marginLeft: 6,
+    transform: [{rotate: '-5deg'}],
+  },
+  brandBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: THEME.primaryDark,
+  },
+  rightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  profileBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: THEME.surface,
     justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
-  menuIcon: {
-    width: 28,
-    height: 28,
+  profileInitials: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.primary,
   },
-  headerCenter: {
+  notificationBtn: {
+    padding: 4,
+    position: 'relative',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
-    color: 'white',
+  notificationBadge: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: THEME.secondary,
+    borderWidth: 1,
+    borderColor: THEME.primary,
+  },
+  greetingContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-end',
+  },
+  greetingSub: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 14,
+    marginBottom: 2,
+  },
+  greetingMain: {
+    color: THEME.surface,
     fontSize: 20,
     fontWeight: '700',
   },
-  profileBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,1)',
+  dateBadge: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 20,
   },
-  statsGrid: {
+  dateText: {
+    color: THEME.surface,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  // --- Body ---
+  bodyContainer: {
+    flex: 1,
+    marginTop: -20, // Overlap effect
+  },
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 30, // Account for overlap
+    paddingBottom: 120, // Increased to prevent content from hiding behind BottomBar
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.textMain,
+  },
+
+  // --- Stats Section (Circles) ---
+
+  // --- Business Overview (New) ---
+  overviewGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    paddingBottom: 24,
-    marginTop: -40,
-    marginBottom: -20,
+    marginBottom: 0,
   },
-  card: {
-    width: (width - 50) / 2,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    elevation: 2,
-  },
-  overlappingCard: {
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
-  iconContainer: {
-    width: 80,
-    height: 36,
+  overviewCard: {
+    width: '48%', // 2 columns
+    backgroundColor: THEME.surface,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: THEME.textSecondary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  overviewIconBox: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  overviewContent: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  overviewTitle: {
+    fontSize: 11,
+    color: THEME.textSecondary,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  overviewCount: {
+    fontSize: 15, // Reduced slightly to fit
+    fontWeight: 'bold',
+    color: THEME.textMain,
+  },
+
+  // --- Grid ---
+  gridContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
   },
-  cardIcon: {
-    width: 36,
-    height: 36,
-  },
-  count: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-  },
-  cardTitle: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-    fontWeight: 'bold',
-    marginTop: 4,
-  },
-  modalOverlayUser: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
-    alignItems: 'flex-end',
-    paddingTop: 70,
-    paddingRight: 10,
-  },
-  modalContent: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    width: 280,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  modalHeader: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: 8,
-    paddingTop: 24,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  userAvatarContainer: {
-    width: 45,
-    height: 45,
-    borderRadius: 35,
-    backgroundColor: '#777',
-    alignItems: 'center',
+  gridItem: {
+    width: (width - 32 - 20) / 3, // 3 columns
+    aspectRatio: 1,
+    backgroundColor: THEME.surface,
+    borderRadius: 16,
     justifyContent: 'center',
-    shadowColor: backgroundColors.primary,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  userAvatar: {
-    width: 32,
-    height: 32,
-  },
-  userInfo: {
     alignItems: 'center',
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 2,
+    padding: 8,
   },
-  userName: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1F2937',
+  gridIconContainer: {
+    width: 35,
+    height: 35,
+    borderRadius: 17.5,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 4,
   },
-  userEmail: {
-    fontSize: 13,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  logoutButton: {
-    marginHorizontal: 20,
-    marginVertical: 20,
-    backgroundColor: backgroundColors.danger,
-    borderRadius: 14,
-    paddingVertical: 14,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 8,
-    shadowColor: backgroundColors.danger,
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  logoutText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  invcContainer: {
-    flex: 1,
-  },
-  invcHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
-    paddingBottom: 5,
-  },
-  invcTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-  },
-  seeMoreBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.primary,
-  },
-  listContainer: {
-    flex: 1,
-    paddingHorizontal: '3%',
-  },
-  invcCard: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  subText: {
+  gridLabel: {
     fontSize: 12,
-    color: '#555',
+    color: THEME.textMain,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  gridCount: {
+    fontSize: 10,
+    color: THEME.textSecondary,
+    fontWeight: '500',
     marginTop: 2,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-end',
+
+  // --- Transactions ---
+
+  // --- FAB ---
+  fab: {
+    position: 'absolute',
+    bottom: 90, // Adjusted to sit above BottomBar
+    right: 20,
+    borderRadius: 30,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 8},
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
   },
-  modalContainer: {
-    backgroundColor: '#FAFBFC',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: '80%',
-    paddingBottom: 20,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#DDD',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  receiptModalHeader: {
+  fabGradient: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 30,
   },
-  headerLeft: {
+  fabText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.surface,
+    marginLeft: 8,
+  },
+
+  // --- Modal: Profile ---
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+  },
+  profileDropdown: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 110 : 70,
+    right: 20,
+    width: 260,
+    backgroundColor: THEME.surface,
+    borderRadius: 20,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 10},
+    shadowOpacity: 0.2,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  dropdownHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    marginBottom: 10,
   },
-  invoiceIconContainer: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#2a652b24',
-    borderRadius: 12,
+  dropdownAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: THEME.primary,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
   },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 2,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 20,
-    backgroundColor: backgroundColors.gray,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  companyCard: {
-    marginHorizontal: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-    paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: backgroundColors.dark,
-    borderStyle: 'dotted',
-  },
-  companyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  companyName: {
+  dropdownAvatarText: {
     fontSize: 20,
+    fontWeight: 'bold',
+    color: THEME.surface,
+  },
+  dropdownName: {
+    fontSize: 15,
     fontWeight: '700',
-    color: '#144272',
+    color: THEME.textMain,
   },
-  companyAddress: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '400',
-  },
-  companyContact: {
+  dropdownEmail: {
     fontSize: 12,
-    color: backgroundColors.dark,
-    fontWeight: '600',
-    textAlign: 'center',
+    color: THEME.textSecondary,
   },
-  orderInfoGrid: {
-    marginTop: 10,
-    borderBottomColor: backgroundColors.dark,
-    borderBottomWidth: 2,
-    borderStyle: 'dotted',
-    marginHorizontal: 20,
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 12,
   },
-  infoCard: {
-    width: '60%',
+  menuItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
-    borderRadius: 8,
+    paddingVertical: 4,
   },
-  infoLabel: {
-    fontSize: 12,
-    color: backgroundColors.dark,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  infoValue: {
-    fontSize: 14,
-    color: backgroundColors.dark,
-    fontWeight: '400',
-  },
-  tableSection: {
-    marginTop: 20,
-    marginHorizontal: 20,
-    borderBottomWidth: 2,
-    borderColor: backgroundColors.dark,
-    borderStyle: 'dotted',
-  },
-  tableContainer: {
-    overflow: 'hidden',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    borderBottomColor: backgroundColors.dark,
-    borderBottomWidth: 1.5,
-    paddingBottom: 5,
-  },
-  tableHeaderText: {
-    color: backgroundColors.dark,
-    fontWeight: '600',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 6,
-    alignItems: 'center',
-  },
-  tableCell: {
-    fontSize: 12,
-    color: backgroundColors.dark,
-    textAlign: 'center',
-  },
-  col1: {
-    flex: 0.2,
-    textAlign: 'left',
-  },
-  col2: {
-    flex: 0.15,
-  },
-  col3: {
-    flex: 0.22,
-  },
-  col4: {
-    flex: 0.18,
-  },
-  col5: {
-    flex: 0.2,
-  },
-  modalFooter: {
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-  },
-  thankYou: {
-    fontSize: 16,
-    color: backgroundColors.primary,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  developerInfo: {
-    alignItems: 'center',
-  },
-  developerText: {
-    fontSize: 12,
-    color: '#888',
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  receiptModalContent: {
-    flex: 1,
-  },
-  printBtn: {
-    backgroundColor: backgroundColors.primary,
-    flexDirection: 'row',
-    paddingHorizontal: 10,
-    paddingVertical: 10,
-    alignSelf: 'center',
-    gap: 5,
-    marginVertical: 5,
-    borderRadius: 10,
-  },
-  printBtnText: {
-    color: '#fff',
-    fontSize: 14,
+  menuText: {
+    marginLeft: 12,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

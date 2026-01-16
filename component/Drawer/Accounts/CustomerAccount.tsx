@@ -6,20 +6,41 @@ import {
   ScrollView,
   TouchableOpacity,
   FlatList,
-  Animated,
-  Image,
   BackHandler,
+  StatusBar,
+  TextInput,
 } from 'react-native';
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {RadioButton} from 'react-native-paper';
 import {useDrawer} from '../../DrawerContext';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import DropDownPicker from 'react-native-dropdown-picker';
 import {useNavigation} from '@react-navigation/native';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import BASE_URL from '../../BASE_URL';
 import axios from 'axios';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  success: '#10B981',
+  shadow: '#000',
+  info: '#3B82F6',
+};
 
 interface Customers {
   id: number;
@@ -89,7 +110,7 @@ export default function CustomerAccount() {
   const [currentPageWithout, setCurrentPageWithout] = useState(1);
   const [currentPageWith, setCurrentPageWith] = useState(1);
   const [currentPageAll, setCurrentPageAll] = useState(1);
-  const ITEMS_PER_PAGE = 5;
+  const ITEMS_PER_PAGE = 10;
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
@@ -158,43 +179,6 @@ export default function CustomerAccount() {
     }
   };
 
-  function formatNumber(num: number | string): string {
-    const n = typeof num === 'string' ? parseFloat(num) : num;
-    if (isNaN(n)) return '0';
-
-    const abs = Math.abs(n);
-
-    if (abs >= 10000000) {
-      return (n / 10000000).toFixed(n % 10000000 === 0 ? 0 : 2) + 'Cr';
-    } else if (abs >= 100000) {
-      return (n / 100000).toFixed(n % 100000 === 0 ? 0 : 2) + 'L';
-    } else if (abs >= 1000) {
-      return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2) + 'K';
-    } else {
-      return n.toString();
-    }
-  }
-
-  //Calculate Totals
-  const calculateTotals = () => {
-    let totalReceivables = 0;
-    let totalReceived = 0;
-
-    allCustAccount.forEach(account => {
-      const receivable = parseFloat(account.custac_total_bill_amount) || 0;
-      const received = parseFloat(account.custac_paid_amount) || 0;
-
-      totalReceivables += receivable;
-      totalReceived += received;
-    });
-
-    return {
-      totalReceivables: totalReceivables.toFixed(2),
-      totalReceived: totalReceived.toFixed(2),
-      netReceivables: (totalReceivables - totalReceived).toFixed(2),
-    };
-  };
-
   // Fetch Single Customer Without Details
   const fetchCustWithoutDetails = async () => {
     try {
@@ -254,6 +238,26 @@ export default function CustomerAccount() {
     };
   };
 
+  // Calculate All Customer Totals
+  const calculateTotals = () => {
+    let totalReceivables = 0;
+    let totalReceived = 0;
+
+    allCustAccount.forEach(item => {
+      const receivables = parseFloat(item.custac_total_bill_amount) || 0;
+      const received = parseFloat(item.custac_paid_amount) || 0;
+
+      totalReceivables += receivables;
+      totalReceived += received;
+    });
+
+    return {
+      totalReceivables: totalReceivables.toFixed(2),
+      totalReceived: totalReceived.toFixed(2),
+      netReceivables: (totalReceivables - totalReceived).toFixed(2),
+    };
+  };
+
   // Pagination Component
   const PaginationControls = ({
     currentPage,
@@ -269,42 +273,33 @@ export default function CustomerAccount() {
     return (
       <View style={styles.paginationContainer}>
         <TouchableOpacity
-          style={[
-            styles.paginationBtn,
-            currentPage === 1 && styles.paginationBtnDisabled,
-          ]}
+          style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]}
           onPress={() => onPageChange(currentPage - 1)}
           disabled={currentPage === 1}>
           <Icon
             name="chevron-left"
-            size={20}
-            color={
-              currentPage === 1 ? 'rgba(0,0,0,0.3)' : backgroundColors.dark
-            }
+            size={24}
+            color={currentPage === 1 ? '#ccc' : THEME.white}
           />
         </TouchableOpacity>
 
-        <View style={styles.paginationInfo}>
-          <Text style={styles.paginationText}>
+        <View style={styles.pageInfo}>
+          <Text style={styles.pageText}>
             Page {currentPage} of {totalPages}
           </Text>
         </View>
 
         <TouchableOpacity
           style={[
-            styles.paginationBtn,
-            currentPage === totalPages && styles.paginationBtnDisabled,
+            styles.pageBtn,
+            currentPage === totalPages && styles.pageBtnDisabled,
           ]}
           onPress={() => onPageChange(currentPage + 1)}
           disabled={currentPage === totalPages}>
           <Icon
             name="chevron-right"
-            size={20}
-            color={
-              currentPage === totalPages
-                ? 'rgba(0,0,0,0.3)'
-                : backgroundColors.dark
-            }
+            size={24}
+            color={currentPage === totalPages ? '#ccc' : THEME.white}
           />
         </TouchableOpacity>
       </View>
@@ -332,386 +327,255 @@ export default function CustomerAccount() {
   }, [customerVal, fromDate, toDate]);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+    <View style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Customer Account</Text>
+            <View style={{width: 24}} />
           </View>
+        </LinearGradient>
+
+        {/* Floating Segment Control (Replaces Search Bar) */}
+        <View style={styles.floatingSegmentContainer}>
+          <TouchableOpacity
+            style={[
+              styles.segmentBtn,
+              selectedTab === 'Single' && styles.segmentBtnActive,
+            ]}
+            onPress={() => setSelectedTab('Single')}>
+            <Text
+              style={[
+                styles.segmentText,
+                selectedTab === 'Single' && styles.segmentTextActive,
+              ]}>
+              Single Customer
+            </Text>
+          </TouchableOpacity>
+          <View style={styles.segmentDivider} />
+          <TouchableOpacity
+            style={[
+              styles.segmentBtn,
+              selectedTab === 'All' && styles.segmentBtnActive,
+            ]}
+            onPress={() => setSelectedTab('All')}>
+            <Text
+              style={[
+                styles.segmentText,
+                selectedTab === 'All' && styles.segmentTextActive,
+              ]}>
+              All Customer
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={{paddingBottom: 100}}
+        showsVerticalScrollIndicator={false}>
+        {/* Action Buttons */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, {backgroundColor: THEME.primary}]}
+            onPress={() => {
+              closeDrawer();
+              navigation.navigate('AddCustomerPayment' as never);
+            }}>
+            <Icon name="cash-plus" size={20} color="white" />
+            <Text style={styles.actionBtnText}>Add Payment</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, {backgroundColor: THEME.danger}]}
+            onPress={() => {
+              closeDrawer();
+              navigation.navigate('ChequeClearance' as never);
+            }}>
+            <Icon name="bank-remove" size={20} color="white" />
+            <Text style={styles.actionBtnText}>Clearance</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
-          {/* Toggle Buttons */}
-          <View style={styles.toggleBtnContainer}>
-            <TouchableOpacity
-              style={[
-                styles.toggleBtn,
-                selectedTab === 'Single' && {
-                  backgroundColor: backgroundColors.primary,
-                },
-              ]}
-              onPress={() => setSelectedTab('Single')}>
-              <Text
-                style={[
-                  styles.toggleBtnText,
-                  selectedTab === 'Single' && {color: backgroundColors.light},
-                ]}>
-                Single Customer
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.toggleBtn,
-                selectedTab === 'All' && {
-                  backgroundColor: backgroundColors.primary,
-                },
-              ]}
-              onPress={() => setSelectedTab('All')}>
-              <Text
-                style={[
-                  styles.toggleBtnText,
-                  selectedTab === 'All' && {color: backgroundColors.light},
-                ]}>
-                All Customer
-              </Text>
-            </TouchableOpacity>
-          </View>
+        {selectedTab === 'Single' ? (
+          <>
+            {/* Filter Card */}
+            <View style={styles.card}>
+              <View style={styles.cardHeader}>
+                <Text style={styles.cardTitle}>Filter Options</Text>
+              </View>
 
-          {/* Action Buttons */}
-          <View
-            style={[
-              styles.toggleBtnContainer,
-              {
-                justifyContent: 'flex-end',
-                marginVertical: 4,
-              },
-            ]}>
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                {backgroundColor: backgroundColors.primary},
-              ]}
-              onPress={() => {
-                closeDrawer();
-                navigation.navigate('AddCustomerPayment' as never);
-              }}>
-              <Icon name="payment" size={16} color="white" />
-              <Text style={styles.actionBtnText}>+</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                {backgroundColor: backgroundColors.danger},
-              ]}
-              onPress={() => {
-                closeDrawer();
-                navigation.navigate('ChequeClearance' as never);
-              }}>
-              <Icon name="account-balance-wallet" size={16} color="white" />
-              <Text style={styles.actionBtnText}>-</Text>
-            </TouchableOpacity>
-          </View>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Select Customer</Text>
+                <DropDownPicker
+                  items={transformedCust}
+                  open={Open}
+                  value={customerVal}
+                  setValue={setCustomerVal}
+                  setOpen={setOpen}
+                  placeholder="Select Customer"
+                  placeholderStyle={{color: '#999'}}
+                  textStyle={{color: THEME.textDark}}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={[styles.dropdownContainer]}
+                  listMode="SCROLLVIEW"
+                  searchable
+                />
+              </View>
 
-          {selectedTab === 'Single' ? (
-            <>
-              {/* Single Customer Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Customer Information</Text>
-
-                <View style={styles.dropdownRow}>
-                  <Icon
-                    name="person"
-                    size={28}
-                    color={backgroundColors.dark}
-                    style={styles.personIcon}
-                  />
-                  <DropDownPicker
-                    items={transformedCust}
-                    open={Open}
-                    value={customerVal}
-                    setValue={setCustomerVal}
-                    setOpen={setOpen}
-                    placeholder="Select Customer"
-                    placeholderStyle={styles.dropdownPlaceholder}
-                    textStyle={styles.dropdownText}
-                    style={styles.dropdown}
-                    dropDownContainerStyle={styles.dropdownContainer}
-                    ArrowUpIconComponent={() => (
-                      <Icon
-                        name="keyboard-arrow-up"
-                        size={18}
-                        color={backgroundColors.dark}
-                      />
-                    )}
-                    ArrowDownIconComponent={() => (
-                      <Icon
-                        name="keyboard-arrow-down"
-                        size={18}
-                        color={backgroundColors.dark}
-                      />
-                    )}
-                    listMode="SCROLLVIEW"
-                    listItemLabelStyle={{
-                      color: backgroundColors.dark,
-                      fontWeight: '500',
-                    }}
-                    labelStyle={{
-                      color: backgroundColors.dark,
-                      marginLeft: 30,
-                      fontSize: 16,
-                    }}
-                    searchable
-                    searchTextInputStyle={{
-                      borderWidth: 0,
-                      width: '100%',
-                    }}
-                    searchContainerStyle={{
-                      borderColor: backgroundColors.gray,
-                    }}
-                  />
+              {custData && (
+                <View style={styles.customerInfoBox}>
+                  <Text style={styles.custInfoTitle}>{custData.cust_name}</Text>
+                  <Text style={styles.custInfoSub}>
+                    {custData.cust_fathername} | {custData.cust_address}
+                  </Text>
                 </View>
+              )}
 
-                {custData && (
-                  <View style={styles.customerInfo}>
-                    <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Customer Name:</Text>
-                      <Text style={styles.infoValue}>
-                        {custData.cust_name ?? 'N/A'}
-                      </Text>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Father Name:</Text>
-                      <Text style={styles.infoValue}>
-                        {custData.cust_fathername ?? 'N/A'}
-                      </Text>
-                    </View>
-                    <View style={styles.infoRow}>
-                      <Text style={styles.infoLabel}>Address:</Text>
-                      <Text style={styles.infoValue}>
-                        {custData.cust_address ?? 'N/A'}
-                      </Text>
-                    </View>
-                  </View>
-                )}
-
-                {/* Date Range Section */}
-                <View style={styles.dateSection}>
-                  <Text style={styles.inputLabel}>Date Range</Text>
-                  <View style={styles.dateRow}>
-                    <TouchableOpacity
-                      onPress={() => setShowDatePicker('from')}
-                      style={styles.dateInput}>
-                      <Icon
-                        name="event"
-                        size={20}
-                        color={backgroundColors.dark}
-                      />
-                      <Text style={styles.dateText}>
-                        {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setShowDatePicker('to')}
-                      style={styles.dateInput}>
-                      <Icon
-                        name="event"
-                        size={20}
-                        color={backgroundColors.dark}
-                      />
-                      <Text style={styles.dateText}>
-                        {toDate ? toDate.toLocaleDateString() : 'To Date'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-
-                {showDatePicker && (
-                  <DateTimePicker
-                    value={
-                      showDatePicker === 'from'
-                        ? fromDate ?? new Date()
-                        : toDate ?? new Date()
-                    }
-                    mode="date"
-                    display="default"
-                    onChange={handleDateChange}
-                  />
-                )}
-
-                {/* Account Type Selection */}
-                <View style={styles.accountTypeSection}>
-                  <Text style={styles.inputLabel}>Account</Text>
-                  <RadioButton.Group
-                    onValueChange={value =>
-                      setSelectedOption(
-                        value as 'withoutDetails' | 'withDetails',
-                      )
-                    }
-                    value={selectedOption}>
-                    <View style={styles.radioRow}>
-                      <TouchableOpacity
-                        style={styles.radioOption}
-                        onPress={() => setSelectedOption('withoutDetails')}>
-                        <RadioButton.Android
-                          value="withoutDetails"
-                          color={backgroundColors.primary}
-                          uncheckedColor={backgroundColors.dark}
-                        />
-                        <Text style={styles.radioLabel}>Without Details</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={styles.radioOption}
-                        onPress={() => setSelectedOption('withDetails')}>
-                        <RadioButton.Android
-                          value="withDetails"
-                          color={backgroundColors.primary}
-                          uncheckedColor={backgroundColors.dark}
-                        />
-                        <Text style={styles.radioLabel}>With Details</Text>
-                      </TouchableOpacity>
-                    </View>
-                  </RadioButton.Group>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Date Range</Text>
+                <View style={styles.dateRow}>
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker('from')}
+                    style={styles.dateInput}>
+                    <Icon name="calendar" size={20} color={THEME.primary} />
+                    <Text style={styles.dateText}>
+                      {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => setShowDatePicker('to')}
+                    style={styles.dateInput}>
+                    <Icon name="calendar" size={20} color={THEME.primary} />
+                    <Text style={styles.dateText}>
+                      {toDate ? toDate.toLocaleDateString() : 'To Date'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               </View>
 
-              {/* Account Details Section */}
-              <View style={[styles.section, {marginBottom: 20}]}>
-                <Text style={styles.sectionTitle}>
-                  {selectedOption === 'withoutDetails'
-                    ? 'Account Summary'
-                    : 'Detailed Transactions'}
-                </Text>
-
-                {selectedOption === 'withoutDetails' ? (
-                  accountDetailsWithout.length === 0 ? (
-                    <View style={styles.emptyState}>
-                      <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
-                      <Text style={styles.emptyStateText}>
-                        No transactions found
-                      </Text>
-                    </View>
-                  ) : (
-                    <>
-                      <FlatList
-                        data={getPaginatedData(
-                          accountDetailsWithout,
-                          currentPageWithout,
-                        )}
-                        keyExtractor={item => item.id}
-                        scrollEnabled={false}
-                        renderItem={({item}) => (
-                          <View style={styles.transactionCard}>
-                            <View style={styles.transactionHeader}>
-                              <Text style={styles.invoiceNumber}>
-                                {item.custac_invoice_no}
-                              </Text>
-                              <Text style={styles.transactionDate}>
-                                {new Date(item.custac_date)
-                                  .toLocaleDateString('en-GB', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric',
-                                  })
-                                  .replace(/ /g, '-')}
-                              </Text>
-                            </View>
-
-                            <View style={styles.transactionDetails}>
-                              <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Payable:</Text>
-                                <Text style={styles.detailValue}>
-                                  {item.custac_total_bill_amount}
-                                </Text>
-                              </View>
-                              <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Paid:</Text>
-                                <Text style={styles.detailValue}>
-                                  {item.custac_paid_amount}
-                                </Text>
-                              </View>
-                              <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Balance:</Text>
-                                <Text style={styles.detailValue}>
-                                  {item.custac_balance}
-                                </Text>
-                              </View>
-                              <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Type:</Text>
-                                <Text style={styles.detailValue}>
-                                  {item.custac_payment_type}
-                                </Text>
-                              </View>
-                              <View style={styles.detailRow}>
-                                <Text style={styles.detailLabel}>Method:</Text>
-                                <Text style={styles.detailValue}>
-                                  {item.custac_payment_method}
-                                </Text>
-                              </View>
-                            </View>
-                          </View>
-                        )}
-                      />
-                      <PaginationControls
-                        currentPage={currentPageWithout}
-                        totalPages={getTotalPages(accountDetailsWithout.length)}
-                        onPageChange={setCurrentPageWithout}
-                      />
-                    </>
-                  )
-                ) : accountDetailsWith.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
-                    <Text style={styles.emptyStateText}>
-                      No detailed transactions found
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>View Type</Text>
+                <View style={styles.radioRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.radioChip,
+                      selectedOption === 'withoutDetails' &&
+                        styles.radioChipActive,
+                    ]}
+                    onPress={() => setSelectedOption('withoutDetails')}>
+                    <Text
+                      style={[
+                        styles.radioLabel,
+                        selectedOption === 'withoutDetails' &&
+                          styles.radioLabelActive,
+                      ]}>
+                      Summary
                     </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.radioChip,
+                      selectedOption === 'withDetails' &&
+                        styles.radioChipActive,
+                    ]}
+                    onPress={() => setSelectedOption('withDetails')}>
+                    <Text
+                      style={[
+                        styles.radioLabel,
+                        selectedOption === 'withDetails' &&
+                          styles.radioLabelActive,
+                      ]}>
+                      Detailed
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+
+            {/* Transaction List */}
+            <View style={styles.listSection}>
+              <View style={styles.listHeaderRow}>
+                <Text style={styles.listHeaderTitle}>Transactions</Text>
+                <Text style={styles.listHeaderCount}>
+                  {selectedOption === 'withoutDetails'
+                    ? accountDetailsWithout.length
+                    : accountDetailsWith.length}
+                </Text>
+              </View>
+
+              {selectedOption === 'withoutDetails' ? (
+                accountDetailsWithout.length === 0 ? (
+                  <View style={styles.emptyState}>
+                    <Icon name="receipt" size={48} color={THEME.textLight} />
+                    <Text style={styles.emptyText}>No transactions found.</Text>
                   </View>
                 ) : (
                   <>
                     <FlatList
                       data={getPaginatedData(
-                        accountDetailsWith,
-                        currentPageWith,
+                        accountDetailsWithout,
+                        currentPageWithout,
                       )}
                       keyExtractor={item => item.id}
                       scrollEnabled={false}
                       renderItem={({item}) => (
                         <View style={styles.transactionCard}>
                           <View style={styles.transactionHeader}>
-                            <Text style={styles.invoiceNumber}>
-                              {item.custac_invoice_no}
-                            </Text>
-                            <Text style={styles.transactionDate}>
+                            <View style={styles.invoiceBadge}>
+                              <Icon
+                                name="file-document-outline"
+                                size={14}
+                                color={THEME.primary}
+                              />
+                              <Text style={styles.invoiceText}>
+                                {item.custac_invoice_no}
+                              </Text>
+                            </View>
+                            <Text style={styles.dateTextList}>
                               {new Date(item.custac_date).toLocaleDateString(
                                 'en-GB',
                               )}
                             </Text>
                           </View>
 
-                          <View style={styles.transactionDetails}>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>Payable:</Text>
-                              <Text style={styles.detailValue}>
+                          <View style={styles.divider} />
+
+                          <View style={styles.statsRow}>
+                            <View style={styles.statCol}>
+                              <Text style={styles.statLabel}>Payable</Text>
+                              <Text style={styles.statValue}>
                                 {item.custac_total_bill_amount}
                               </Text>
                             </View>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>Paid:</Text>
-                              <Text style={styles.detailValue}>
+                            <View style={styles.statColCenter}>
+                              <Text style={styles.statLabel}>Paid</Text>
+                              <Text
+                                style={[
+                                  styles.statValue,
+                                  {color: THEME.success},
+                                ]}>
                                 {item.custac_paid_amount}
                               </Text>
                             </View>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>Balance:</Text>
-                              <Text style={styles.detailValue}>
+                            <View style={styles.statColRight}>
+                              <Text style={styles.statLabel}>Balance</Text>
+                              <Text
+                                style={[
+                                  styles.statValue,
+                                  {color: THEME.danger},
+                                ]}>
                                 {item.custac_balance}
                               </Text>
                             </View>
@@ -720,403 +584,547 @@ export default function CustomerAccount() {
                       )}
                     />
                     <PaginationControls
-                      currentPage={currentPageWith}
-                      totalPages={getTotalPages(accountDetailsWith.length)}
-                      onPageChange={setCurrentPageWith}
+                      currentPage={currentPageWithout}
+                      totalPages={getTotalPages(accountDetailsWithout.length)}
+                      onPageChange={setCurrentPageWithout}
                     />
                   </>
-                )}
-
-                {/* Summary Section */}
-                <View style={styles.summarySection}>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>Unpaid Cheques:</Text>
-                    <Text style={styles.summaryValue}>
-                      {chequeCount || '0'}
-                    </Text>
-                  </View>
-                  <View style={styles.summaryRow}>
-                    <Text style={styles.summaryLabel}>
-                      Unpaid Cheque Amount:
-                    </Text>
-                    <Text style={styles.summaryValue}>
-                      {parseFloat(chequeAmount || '0').toFixed(2)}
-                    </Text>
-                  </View>
-                  {(() => {
-                    const {netReceivables, totalReceivables, totalReceived} =
-                      calculateWithoutTotals();
-                    return (
-                      <>
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>
-                            Total Receivables:
-                          </Text>
-                          <Text style={styles.summaryValue}>
-                            {totalReceivables}
-                          </Text>
-                        </View>
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>
-                            Total Received:
-                          </Text>
-                          <Text style={styles.summaryValue}>
-                            {totalReceived}
-                          </Text>
-                        </View>
-                        <View style={[styles.summaryRow, styles.totalRow]}>
-                          <Text
-                            style={[styles.summaryLabel, styles.totalLabel]}>
-                            Net Receivables:
-                          </Text>
-                          <Text
-                            style={[styles.summaryValue, styles.totalValue]}>
-                            {netReceivables}
-                          </Text>
-                        </View>
-                      </>
-                    );
-                  })()}
+                )
+              ) : accountDetailsWith.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Icon name="receipt" size={48} color={THEME.textLight} />
+                  <Text style={styles.emptyText}>No transactions found.</Text>
                 </View>
-              </View>
-            </>
-          ) : (
-            <>
-              {/* All Customers Section */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>All Customer Accounts</Text>
+              ) : (
+                <>
+                  <FlatList
+                    data={getPaginatedData(accountDetailsWith, currentPageWith)}
+                    keyExtractor={item => item.id}
+                    scrollEnabled={false}
+                    renderItem={({item}) => (
+                      <View style={styles.transactionCard}>
+                        <View style={styles.transactionHeader}>
+                          <View style={styles.invoiceBadge}>
+                            <Icon
+                              name="file-document-outline"
+                              size={14}
+                              color={THEME.primary}
+                            />
+                            <Text style={styles.invoiceText}>
+                              {item.custac_invoice_no}
+                            </Text>
+                          </View>
+                          <Text style={styles.dateTextList}>
+                            {new Date(item.custac_date).toLocaleDateString(
+                              'en-GB',
+                            )}
+                          </Text>
+                        </View>
 
-                {allCustAccount.length === 0 ? (
-                  <View style={styles.emptyState}>
-                    <Icon name="people" size={40} color="rgba(0,0,0,0.5)" />
-                    <Text style={styles.emptyStateText}>
-                      No customer accounts found
-                    </Text>
-                  </View>
-                ) : (
-                  <>
-                    <FlatList
-                      data={getPaginatedData(allCustAccount, currentPageAll)}
-                      keyExtractor={(item, index) => index.toString()}
-                      scrollEnabled={false}
-                      renderItem={({item}) => (
-                        <View style={styles.customerAccountCard}>
+                        <View style={styles.divider} />
+
+                        <View style={styles.statsRow}>
+                          <View style={styles.statCol}>
+                            <Text style={styles.statLabel}>Payable</Text>
+                            <Text style={styles.statValue}>
+                              {item.custac_total_bill_amount}
+                            </Text>
+                          </View>
+                          <View style={styles.statColCenter}>
+                            <Text style={styles.statLabel}>Paid</Text>
+                            <Text
+                              style={[
+                                styles.statValue,
+                                {color: THEME.success},
+                              ]}>
+                              {item.custac_paid_amount}
+                            </Text>
+                          </View>
+                          <View style={styles.statColRight}>
+                            <Text style={styles.statLabel}>Balance</Text>
+                            <Text
+                              style={[styles.statValue, {color: THEME.danger}]}>
+                              {item.custac_balance}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    )}
+                  />
+                  <PaginationControls
+                    currentPage={currentPageWith}
+                    totalPages={getTotalPages(accountDetailsWith.length)}
+                    onPageChange={setCurrentPageWith}
+                  />
+                </>
+              )}
+            </View>
+
+            {/* Summary Card */}
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryHeader}>
+                <Text style={styles.summaryTitle}>Account Summary</Text>
+              </View>
+              <View style={styles.summaryBody}>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryItemLabel}>Unpaid Cheques</Text>
+                  <Text style={styles.summaryItemValue}>
+                    {chequeCount || '0'}
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryItemLabel}>
+                    Unpaid Cheque Amount
+                  </Text>
+                  <Text style={styles.summaryItemValue}>
+                    {parseFloat(chequeAmount || '0').toFixed(2)}
+                  </Text>
+                </View>
+
+                {(() => {
+                  const {netReceivables, totalReceivables, totalReceived} =
+                    calculateWithoutTotals();
+                  return (
+                    <>
+                      <View style={styles.summaryDivider} />
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryItemLabel}>
+                          Total Receivables
+                        </Text>
+                        <Text style={styles.summaryItemValue}>
+                          {totalReceivables}
+                        </Text>
+                      </View>
+                      <View style={styles.summaryRow}>
+                        <Text style={styles.summaryItemLabel}>
+                          Total Received
+                        </Text>
+                        <Text style={styles.summaryItemValue}>
+                          {totalReceived}
+                        </Text>
+                      </View>
+                      <View style={styles.summaryTotalRow}>
+                        <Text style={styles.summaryTotalLabel}>
+                          Net Receivables
+                        </Text>
+                        <Text style={styles.summaryTotalValue}>
+                          {netReceivables}
+                        </Text>
+                      </View>
+                    </>
+                  );
+                })()}
+              </View>
+            </View>
+          </>
+        ) : (
+          <>
+            {/* All Customers List */}
+            <View style={styles.listSection}>
+              <View style={styles.listHeaderRow}>
+                <Text style={styles.listHeaderTitle}>All Accounts</Text>
+              </View>
+
+              {allCustAccount.length === 0 ? (
+                <View style={styles.emptyState}>
+                  <Icon
+                    name="account-group"
+                    size={48}
+                    color={THEME.textLight}
+                  />
+                  <Text style={styles.emptyText}>
+                    No customer accounts found.
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <FlatList
+                    data={getPaginatedData(allCustAccount, currentPageAll)}
+                    keyExtractor={(item, index) => index.toString()}
+                    scrollEnabled={false}
+                    renderItem={({item}) => (
+                      <View style={styles.transactionCard}>
+                        <View style={styles.cardHeaderSimple}>
+                          <View style={styles.avatarContainer}>
+                            <Text style={styles.avatarText}>
+                              {item.cust_name.substring(0, 2).toUpperCase()}
+                            </Text>
+                          </View>
                           <Text style={styles.customerName}>
                             {item.cust_name}
                           </Text>
-                          <View style={styles.accountDetails}>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>
-                                Bill Amount:
-                              </Text>
-                              <Text style={styles.detailValue}>
-                                {formatNumber(item.custac_total_bill_amount)}
-                              </Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>
-                                Paid Amount:
-                              </Text>
-                              <Text style={styles.detailValue}>
-                                {formatNumber(item.custac_paid_amount)}
-                              </Text>
-                            </View>
-                            <View style={styles.detailRow}>
-                              <Text style={styles.detailLabel}>Balance:</Text>
-                              <Text style={styles.detailValue}>
-                                {formatNumber(item.custac_balance)}
-                              </Text>
-                            </View>
+                        </View>
+
+                        <View style={styles.divider} />
+
+                        <View style={styles.statsRow}>
+                          <View style={styles.statCol}>
+                            <Text style={styles.statLabel}>Total Bill</Text>
+                            <Text style={styles.statValue}>
+                              {item.custac_total_bill_amount}
+                            </Text>
+                          </View>
+                          <View style={styles.statColCenter}>
+                            <Text style={styles.statLabel}>Paid</Text>
+                            <Text
+                              style={[
+                                styles.statValue,
+                                {color: THEME.success},
+                              ]}>
+                              {item.custac_paid_amount}
+                            </Text>
+                          </View>
+                          <View style={styles.statColRight}>
+                            <Text style={styles.statLabel}>Balance</Text>
+                            <Text
+                              style={[styles.statValue, {color: THEME.danger}]}>
+                              {item.custac_balance}
+                            </Text>
                           </View>
                         </View>
-                      )}
-                    />
-                    <PaginationControls
-                      currentPage={currentPageAll}
-                      totalPages={getTotalPages(allCustAccount.length)}
-                      onPageChange={setCurrentPageAll}
-                    />
-                  </>
-                )}
+                      </View>
+                    )}
+                  />
+                  <PaginationControls
+                    currentPage={currentPageAll}
+                    totalPages={getTotalPages(allCustAccount.length)}
+                    onPageChange={setCurrentPageAll}
+                  />
+                </>
+              )}
+            </View>
 
-                {/* All Customers Summary */}
-                <View style={styles.summarySection}>
-                  {(() => {
-                    const {totalReceivables, totalReceived, netReceivables} =
-                      calculateTotals();
-                    return (
-                      <>
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>
-                            Total Receivables:
-                          </Text>
-                          <Text style={styles.summaryValue}>
-                            {formatNumber(totalReceivables)}
-                          </Text>
-                        </View>
-                        <View style={styles.summaryRow}>
-                          <Text style={styles.summaryLabel}>
-                            Total Received:
-                          </Text>
-                          <Text style={styles.summaryValue}>
-                            {formatNumber(totalReceived)}
-                          </Text>
-                        </View>
-                        <View style={[styles.summaryRow, styles.totalRow]}>
-                          <Text
-                            style={[styles.summaryLabel, styles.totalLabel]}>
-                            Net Receivables:
-                          </Text>
-                          <Text
-                            style={[styles.summaryValue, styles.totalValue]}>
-                            {formatNumber(netReceivables)}
-                          </Text>
-                        </View>
-                      </>
-                    );
-                  })()}
-                </View>
+            {/* Overall Totals */}
+            <View style={styles.summaryCard}>
+              <View style={styles.summaryHeader}>
+                <Text style={styles.summaryTitle}>Overall Summary</Text>
               </View>
-            </>
-          )}
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+              {(() => {
+                const {netReceivables, totalReceivables, totalReceived} =
+                  calculateTotals();
+                return (
+                  <View style={styles.summaryBody}>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryItemLabel}>
+                        Total Receivables
+                      </Text>
+                      <Text style={styles.summaryItemValue}>
+                        {totalReceivables}
+                      </Text>
+                    </View>
+                    <View style={styles.summaryRow}>
+                      <Text style={styles.summaryItemLabel}>
+                        Total Received
+                      </Text>
+                      <Text style={styles.summaryItemValue}>
+                        {totalReceived}
+                      </Text>
+                    </View>
+                    <View style={styles.summaryTotalRow}>
+                      <Text style={styles.summaryTotalLabel}>
+                        Net Receivables
+                      </Text>
+                      <Text style={styles.summaryTotalValue}>
+                        {netReceivables}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })()}
+            </View>
+          </>
+        )}
+      </ScrollView>
+
+      {/* Date Pickers */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={
+            showDatePicker === 'from'
+              ? fromDate || new Date()
+              : toDate || new Date()
+          }
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+        />
+      )}
+      <BottomBar />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
+    backgroundColor: THEME.background,
   },
 
-  scrollContainer: {
-    flex: 1,
-    paddingHorizontal: 12,
+  // --- HEADER ---
+  headerWrapper: {
+    marginBottom: 20,
+    zIndex: 1,
   },
-  toggleBtnContainer: {
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 40, // Extra space for floating segment
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginVertical: 8,
-  },
-  toggleBtn: {
-    width: '48%',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    backgroundColor: backgroundColors.light,
-    borderColor: backgroundColors.gray,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
   },
-  toggleBtnText: {
-    color: backgroundColors.dark,
-    fontWeight: '600',
-    fontSize: 16,
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  actionBtn: {
-    width: '15%',
-    marginHorizontal: 4,
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    alignItems: 'center',
+  },
+
+  // --- FLOATING SEGMENT ---
+  floatingSegmentContainer: {
+    position: 'absolute',
+    bottom: -24,
+    left: 20,
+    right: 20,
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    height: 48,
     flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  actionBtnText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 18,
-    marginLeft: 4,
-  },
-  section: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    marginVertical: 8,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    marginBottom: 16,
-  },
-  dropdownRow: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    color: 'rgba(0,0,0,0.8)',
-    fontSize: 14,
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-  dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
+    alignItems: 'center',
+    padding: 4,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 10,
-    height: 48,
+    elevation: 5,
   },
-  dropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
+  segmentBtn: {
+    flex: 1,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
     borderRadius: 10,
-    maxHeight: 200,
   },
-  dropdownText: {
-    color: 'white',
-    fontSize: 14,
+  segmentBtnActive: {
+    backgroundColor: THEME.primaryLight,
   },
-  dropdownPlaceholder: {
-    color: 'rgba(0,0,0,0.7)',
-    marginLeft: 30,
-    fontSize: 16,
+  segmentText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textGray,
   },
-  personIcon: {
-    position: 'absolute',
-    zIndex: 10000,
-    top: 7,
-    left: 6,
+  segmentTextActive: {
+    color: THEME.primary,
+    fontWeight: '700',
   },
-  customerInfo: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    padding: 12,
+  segmentDivider: {
+    width: 1,
+    height: '60%',
+    backgroundColor: '#eee',
+    marginHorizontal: 4,
+  },
+
+  // --- CONTENT ---
+  scrollContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+  },
+
+  // Action Buttons
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginBottom: 15,
+    gap: 10,
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    elevation: 2,
+    gap: 5,
+  },
+  actionBtnText: {
+    color: 'white', // Keeping 'white' string as THEME.white might be string too but consistency with local file usage
+    fontWeight: '600',
+    fontSize: 13,
+  },
+
+  // Card Styles
+  card: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.03)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+  cardHeader: {
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 8,
   },
-  infoLabel: {
-    color: backgroundColors.dark,
+  cardTitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '700',
+    color: THEME.textDark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  infoValue: {
-    color: backgroundColors.dark,
+  formGroup: {
+    marginBottom: 12,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.textGray,
+    marginBottom: 6,
+  },
+  dropdown: {
+    borderColor: THEME.border,
+    borderRadius: 10,
+    minHeight: 45,
+  },
+  dropdownContainer: {
+    borderColor: THEME.border,
+  },
+  customerInfoBox: {
+    marginTop: -4,
+    marginBottom: 12,
+    backgroundColor: THEME.primaryLight,
+    padding: 10,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: THEME.primary,
+  },
+  custInfoTitle: {
     fontSize: 14,
+    fontWeight: '700',
+    color: THEME.primary,
   },
-  dateSection: {
-    marginBottom: 16,
+  custInfoSub: {
+    fontSize: 12,
+    color: THEME.textGray,
   },
   dateRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 10,
   },
   dateInput: {
-    width: '48%',
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: backgroundColors.light,
+    gap: 8,
+    borderWidth: 1,
+    borderColor: THEME.border,
     borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
+    height: 45,
+    backgroundColor: THEME.white,
   },
   dateText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    marginLeft: 8,
-  },
-  accountTypeSection: {
-    marginBottom: 16,
+    fontSize: 13,
+    color: THEME.textDark,
   },
   radioRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '75%',
+    gap: 10,
   },
-  radioOption: {
-    flexDirection: 'row',
+  radioChip: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: THEME.border,
     alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+  },
+  radioChipActive: {
+    backgroundColor: THEME.primaryLight,
+    borderColor: THEME.primary,
   },
   radioLabel: {
-    color: backgroundColors.dark,
+    fontSize: 13,
+    color: THEME.textGray,
+    fontWeight: '600',
+  },
+  radioLabelActive: {
+    color: THEME.primary,
+  },
+
+  // Transaction List Styles
+  listSection: {
+    marginBottom: 20,
+  },
+  listHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  listHeaderTitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '700',
+    color: THEME.textGray,
+    textTransform: 'uppercase',
+  },
+  listHeaderCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.primary,
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
-  },
-  emptyStateText: {
-    color: 'rgba(0,0,0,0.7)',
-    fontSize: 16,
-    marginTop: 8,
-    textAlign: 'center',
-  },
-  transactionCard: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    padding: 30,
+    backgroundColor: '#fff',
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#eee',
+    borderStyle: 'dashed',
+  },
+  emptyText: {
+    marginTop: 10,
+    color: THEME.textGray,
+    fontSize: 14,
+  },
+
+  // Transaction Card
+  transactionCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   transactionHeader: {
     flexDirection: 'row',
@@ -1124,120 +1132,187 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  invoiceNumber: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: '600',
+  invoiceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  transactionDate: {
-    color: 'rgba(0,0,0,0.7)',
+  invoiceText: {
     fontSize: 12,
+    fontWeight: '700',
+    color: THEME.primary,
   },
-  transactionDetails: {
-    marginTop: 4,
+  dateTextList: {
+    fontSize: 12,
+    color: THEME.textGray,
   },
-  detailRow: {
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginBottom: 8,
+  },
+  statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
   },
-  detailLabel: {
-    color: backgroundColors.dark,
-    fontSize: 12,
+  statCol: {
+    flex: 1,
+  },
+  statColCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  statColRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    marginBottom: 2,
     fontWeight: '500',
   },
-  detailValue: {
-    color: backgroundColors.dark,
-    fontSize: 12,
+  statValue: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  customerAccountCard: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    padding: 12,
+
+  // All Customer specific styles
+  cardHeaderSimple: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
     marginBottom: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  avatarContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.primary,
   },
   customerName: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  accountDetails: {
-    marginTop: 4,
-  },
-  summarySection: {
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 8,
+
+  // Summary Card
+  summaryCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
     padding: 16,
-    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+    marginBottom: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  summaryHeader: {
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 8,
+  },
+  summaryTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    textTransform: 'uppercase',
+  },
+  summaryBody: {
+    gap: 8,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    alignItems: 'center',
   },
-  summaryLabel: {
-    color: backgroundColors.dark,
+  summaryItemLabel: {
+    fontSize: 13,
+    color: THEME.textGray,
+  },
+  summaryItemValue: {
     fontSize: 14,
     fontWeight: '600',
+    color: THEME.textDark,
   },
-  summaryValue: {
-    color: backgroundColors.dark,
+  summaryDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 4,
+  },
+  summaryTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+    backgroundColor: THEME.primaryLight,
+    padding: 10,
+    borderRadius: 8,
+  },
+  summaryTotalLabel: {
     fontSize: 14,
-    fontWeight: '400',
+    fontWeight: '700',
+    color: THEME.primary,
   },
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.2)',
-    paddingTop: 8,
-    marginTop: 8,
-  },
-  totalLabel: {
-    color: backgroundColors.dark,
+  summaryTotalValue: {
     fontSize: 16,
-    fontWeight: 'bold',
-  },
-  totalValue: {
-    color: backgroundColors.primary,
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '800',
+    color: THEME.primary,
   },
 
-  // Pagination Styles
+  // Pagination Controls
   paginationContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 16,
-    marginBottom: 8,
+    alignItems: 'center',
+    marginVertical: 6,
+    gap: 16,
   },
-  paginationBtn: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    padding: 10,
+  pageBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: THEME.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  pageBtnDisabled: {
+    backgroundColor: '#E5E7EB',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  pageInfo: {
+    backgroundColor: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.2)',
+    borderColor: '#eee',
   },
-  paginationBtnDisabled: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  paginationInfo: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginHorizontal: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  paginationText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
+  pageText: {
+    fontSize: 12,
     fontWeight: '600',
+    color: THEME.textDark,
   },
 });

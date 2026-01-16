@@ -11,19 +11,39 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Image,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
-import Icon from 'react-native-vector-icons/MaterialIcons';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
 import LinearGradient from 'react-native-linear-gradient';
-import backgroundColors from '../../Colors';
 import {BackHandler} from 'react-native';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+  success: '#10B981',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  shadow: '#000',
+};
 
 interface Employee {
   id: number;
@@ -82,7 +102,7 @@ export default function EmployeeAccount({navigation}: any) {
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(5);
+  const ITEMS_PER_PAGE = 10;
 
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
@@ -138,6 +158,7 @@ export default function EmployeeAccount({navigation}: any) {
         `${BASE_URL}/fetchemppayment?from=${from}&to=${to}&employee=${empValue}_token=${token}`,
       );
       setEmpData(res.data.emp);
+      setCurrentPage(1);
     } catch (error) {
       console.log(error);
     }
@@ -272,13 +293,13 @@ export default function EmployeeAccount({navigation}: any) {
   };
 
   // Pagination helpers
-  const paginateData = () => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    const endIndex = startIndex + itemsPerPage;
+  const getPaginatedData = () => {
+    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+    const endIndex = startIndex + ITEMS_PER_PAGE;
     return empData.slice(startIndex, endIndex);
   };
 
-  const totalPages = Math.ceil(empData.length / itemsPerPage);
+  const totalPages = Math.ceil(empData.length / ITEMS_PER_PAGE);
 
   // Pagination controls component
   const PaginationControls = () => {
@@ -287,42 +308,33 @@ export default function EmployeeAccount({navigation}: any) {
     return (
       <View style={styles.paginationContainer}>
         <TouchableOpacity
-          style={[
-            styles.paginationBtn,
-            currentPage === 1 && styles.disabledBtn,
-          ]}
+          style={[styles.pageBtn, currentPage === 1 && styles.pageBtnDisabled]}
           onPress={() => setCurrentPage(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}>
           <Icon
             name="chevron-left"
-            size={20}
-            color={
-              currentPage === 1 ? 'rgba(0,0,0,0.3)' : backgroundColors.dark
-            }
+            size={24}
+            color={currentPage === 1 ? '#ccc' : THEME.primary}
           />
         </TouchableOpacity>
 
-        <View style={styles.pageIndicator}>
+        <View style={styles.pageInfo}>
           <Text style={styles.pageText}>
-            {currentPage} of {totalPages}
+            {currentPage} <Text style={{color: '#999'}}>/</Text> {totalPages}
           </Text>
         </View>
 
         <TouchableOpacity
           style={[
-            styles.paginationBtn,
-            currentPage === totalPages && styles.disabledBtn,
+            styles.pageBtn,
+            currentPage === totalPages && styles.pageBtnDisabled,
           ]}
           onPress={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}>
           <Icon
             name="chevron-right"
-            size={20}
-            color={
-              currentPage === totalPages
-                ? 'rgba(0,0,0,0.3)'
-                : backgroundColors.dark
-            }
+            size={24}
+            color={currentPage === totalPages ? '#ccc' : THEME.primary}
           />
         </TouchableOpacity>
       </View>
@@ -364,118 +376,81 @@ export default function EmployeeAccount({navigation}: any) {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+    <View style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Employee Account</Text>
+            <View style={{width: 24}} />
           </View>
+        </LinearGradient>
+      </View>
+
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={{paddingBottom: 100}}
+        showsVerticalScrollIndicator={false}>
+        {/* Action Buttons */}
+        <View style={styles.actionRow}>
+          <TouchableOpacity
+            style={[styles.actionBtn, {backgroundColor: THEME.primary}]}
+            onPress={() => setModalVisible('Payment')}>
+            <Icon name="cash-plus" size={20} color="white" />
+            <Text style={styles.actionBtnText}>Payment</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, {backgroundColor: THEME.danger}]}
+            onPress={() => setModalVisible('WithDraw')}>
+            <Icon name="bank-remove" size={20} color="white" />
+            <Text style={styles.actionBtnText}>Withdraw</Text>
+          </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
-          {/* Action Buttons */}
-          <View style={[styles.toggleBtnContainer, {marginVertical: 5}]}>
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                {backgroundColor: backgroundColors.primary},
-              ]}
-              onPress={() => setModalVisible('Payment')}>
-              <Icon name="payment" size={18} color="white" />
-              <Text style={styles.actionBtnText}>+</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.actionBtn,
-                {backgroundColor: backgroundColors.danger},
-              ]}
-              onPress={() => setModalVisible('WithDraw')}>
-              <Icon name="account-balance-wallet" size={18} color="white" />
-              <Text style={styles.actionBtnText}>-</Text>
-            </TouchableOpacity>
+        {/* Filter Card */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardTitle}>Filter Options</Text>
           </View>
 
-          {/* Employee Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Employee Information</Text>
-            <View style={styles.dropdownRow}>
-              <Icon
-                name="person"
-                size={28}
-                color={backgroundColors.dark}
-                style={styles.personIcon}
-              />
-              <DropDownPicker
-                items={transformedEmp}
-                open={Open}
-                value={empValue}
-                setValue={setEmpValaue}
-                setOpen={setOpen}
-                placeholder="Select Employee *"
-                placeholderStyle={styles.dropdownPlaceholder}
-                textStyle={styles.dropdownText}
-                style={styles.dropdown}
-                dropDownContainerStyle={styles.dropdownContainer}
-                ArrowUpIconComponent={() => (
-                  <Icon
-                    name="keyboard-arrow-up"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon
-                    name="keyboard-arrow-down"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                listMode="SCROLLVIEW"
-                listItemLabelStyle={{
-                  color: backgroundColors.dark,
-                  fontWeight: '500',
-                }}
-                labelStyle={{
-                  color: backgroundColors.dark,
-                  marginLeft: 30,
-                  fontSize: 16,
-                }}
-                searchable
-                searchTextInputStyle={{
-                  borderWidth: 0,
-                  width: '100%',
-                }}
-                searchContainerStyle={{
-                  borderColor: backgroundColors.gray,
-                }}
-              />
-            </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Select Employee</Text>
+            <DropDownPicker
+              items={transformedEmp}
+              open={Open}
+              value={empValue}
+              setValue={setEmpValaue}
+              setOpen={setOpen}
+              placeholder="Select Employee"
+              placeholderStyle={{color: '#999'}}
+              textStyle={{color: THEME.textDark}}
+              style={styles.dropdown}
+              dropDownContainerStyle={styles.dropdownContainer}
+              listMode="SCROLLVIEW"
+              zIndex={3000}
+              zIndexInverse={1000}
+              searchable
+            />
+          </View>
 
-            <View
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                width: '60%',
-              }}>
-              <Text style={[styles.inputLabel, {fontWeight: '600'}]}>
-                From:
-              </Text>
-              <Text style={[styles.inputLabel, {fontWeight: '600'}]}>To:</Text>
-            </View>
+          <View style={styles.formGroup}>
+            <Text style={styles.label}>Date Range</Text>
             <View style={styles.dateRow}>
               <TouchableOpacity
                 onPress={() => setShowDatePicker('from')}
                 style={styles.dateInput}>
-                <Icon name="event" size={20} color={backgroundColors.dark} />
+                <Icon name="calendar" size={20} color={THEME.primary} />
                 <Text style={styles.dateText}>
                   {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
                 </Text>
@@ -483,663 +458,651 @@ export default function EmployeeAccount({navigation}: any) {
               <TouchableOpacity
                 onPress={() => setShowDatePicker('to')}
                 style={styles.dateInput}>
-                <Icon name="event" size={20} color={backgroundColors.dark} />
+                <Icon name="calendar" size={20} color={THEME.primary} />
                 <Text style={styles.dateText}>
                   {toDate ? toDate.toLocaleDateString() : 'To Date'}
                 </Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
 
-            {showDatePicker && (
-              <DateTimePicker
-                value={
-                  showDatePicker === 'from'
-                    ? fromDate ?? new Date()
-                    : toDate ?? new Date()
-                }
-                mode="date"
-                display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                onChange={handleDateChange}
-                themeVariant="dark"
-              />
-            )}
+        {/* Transaction List */}
+        <View style={styles.listSection}>
+          <View style={styles.listHeaderRow}>
+            <Text style={styles.listHeaderTitle}>Transactions</Text>
           </View>
 
-          {/* Account Details Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Account Transactions</Text>
-
-            {empData.length === 0 ? (
-              <View style={styles.emptyState}>
-                <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
-                <Text style={styles.emptyStateText}>No transactions found</Text>
-              </View>
-            ) : (
-              <>
-                <FlatList
-                  data={paginateData()}
-                  keyExtractor={(item, index) => index.toString()}
-                  scrollEnabled={false}
-                  renderItem={({item}) => (
-                    <View style={styles.transactionCard}>
-                      <View style={styles.transactionHeader}>
-                        <Text style={styles.invoiceNumber}>
+          {empData.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Icon name="receipt" size={48} color={THEME.textLight} />
+              <Text style={styles.emptyText}>No transactions found.</Text>
+            </View>
+          ) : (
+            <>
+              <FlatList
+                data={getPaginatedData()}
+                keyExtractor={(item, index) => index.toString()}
+                scrollEnabled={false}
+                renderItem={({item}) => (
+                  <View style={styles.transactionCard}>
+                    <View style={styles.transactionHeader}>
+                      <View style={styles.invoiceBadge}>
+                        <Icon
+                          name="file-document-outline"
+                          size={14}
+                          color={THEME.primary}
+                        />
+                        <Text style={styles.invoiceText}>
                           {item.empac_invoice_no}
                         </Text>
-                        <Text style={styles.transactionDate}>
-                          {new Date(item.empac_date)
-                            .toLocaleDateString('en-GB', {
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                            .replace(/ /g, '-')}
+                      </View>
+                      <Text style={styles.dateTextList}>
+                        {new Date(item.empac_date).toLocaleDateString('en-GB')}
+                      </Text>
+                    </View>
+
+                    <View style={styles.divider} />
+
+                    <View style={styles.statsRow}>
+                      <View style={styles.statCol}>
+                        <Text style={styles.statLabel}>Earning</Text>
+                        <Text
+                          style={[styles.statValue, {color: THEME.success}]}>
+                          {formatNumber(item.empac_earning)}
                         </Text>
                       </View>
-
-                      <View style={styles.transactionDetails}>
-                        <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>Earnings:</Text>
-                          <Text style={styles.detailValue}>
-                            {formatNumber(item.empac_earning)}
-                          </Text>
-                        </View>
-                        <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>Withdrawals:</Text>
-                          <Text style={styles.detailValue}>
-                            {formatNumber(item.empac_withdraw_amount)}
-                          </Text>
-                        </View>
-                        <View style={styles.detailRow}>
-                          <Text style={styles.detailLabel}>Balance:</Text>
-                          <Text style={styles.detailValue}>
-                            {formatNumber(item.empac_balance)}
-                          </Text>
-                        </View>
+                      <View style={styles.statColCenter}>
+                        <Text style={styles.statLabel}>Withdraw</Text>
+                        <Text style={[styles.statValue, {color: THEME.danger}]}>
+                          {formatNumber(item.empac_withdraw_amount)}
+                        </Text>
+                      </View>
+                      <View style={styles.statColRight}>
+                        <Text style={styles.statLabel}>Balance</Text>
+                        <Text style={styles.statValue}>
+                          {formatNumber(item.empac_balance)}
+                        </Text>
                       </View>
                     </View>
-                  )}
-                />
+                  </View>
+                )}
+              />
+              <PaginationControls />
+            </>
+          )}
+        </View>
 
-                <PaginationControls />
-              </>
-            )}
-
-            {/* Summary Section */}
-            <View style={styles.summarySection}>
-              {(() => {
-                const {netBalance, totalEarning, totalWithdraw} =
-                  calculateTotals();
-                return (
-                  <>
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Total Earnings:</Text>
-                      <Text style={styles.summaryValue}>
-                        {formatNumber(totalEarning)}
-                      </Text>
-                    </View>
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryLabel}>Total Withdraw:</Text>
-                      <Text style={styles.summaryValue}>
-                        {formatNumber(totalWithdraw)}
-                      </Text>
-                    </View>
-                    <View style={[styles.summaryRow, styles.totalRow]}>
-                      <Text style={[styles.summaryLabel, styles.totalLabel]}>
-                        Net Balance:
-                      </Text>
-                      <Text style={[styles.summaryValue, styles.totalValue]}>
-                        {formatNumber(netBalance)}
-                      </Text>
-                    </View>
-                  </>
-                );
-              })()}
-            </View>
+        {/* Summary Card */}
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryHeader}>
+            <Text style={styles.summaryTitle}>Account Summary</Text>
           </View>
-        </ScrollView>
-      </View>
+          <View style={styles.summaryBody}>
+            {(() => {
+              const {netBalance, totalEarning, totalWithdraw} =
+                calculateTotals();
+              return (
+                <>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryItemLabel}>Total Earnings</Text>
+                    <Text
+                      style={[styles.summaryItemValue, {color: THEME.success}]}>
+                      {formatNumber(totalEarning)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={styles.summaryItemLabel}>Total Withdraw</Text>
+                    <Text
+                      style={[styles.summaryItemValue, {color: THEME.danger}]}>
+                      {formatNumber(totalWithdraw)}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryDivider} />
+                  <View style={styles.summaryTotalRow}>
+                    <Text style={styles.summaryTotalLabel}>Net Balance</Text>
+                    <Text style={styles.summaryTotalValue}>
+                      {formatNumber(netBalance)}
+                    </Text>
+                  </View>
+                </>
+              );
+            })()}
+          </View>
+        </View>
+
+        <View style={{height: 50}} />
+
+        {showDatePicker && (
+          <DateTimePicker
+            value={
+              showDatePicker === 'from'
+                ? fromDate ?? new Date()
+                : toDate ?? new Date()
+            }
+            mode="date"
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={handleDateChange}
+          />
+        )}
+      </ScrollView>
 
       {/* Add & WithDraw Payment Modal */}
       <Modal
         visible={modalVisible === 'Payment' || modalVisible === 'WithDraw'}
         transparent
-        animationType="slide">
+        animationType="fade"
+        onRequestClose={() => setModalVisible('')}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardAvoidContainer}>
-          <SafeAreaView style={{flex: 1}}>
-            <View style={styles.modalContainer}>
-              {/* Header */}
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>
-                  {modalVisible === 'WithDraw'
-                    ? 'Withdraw Payment'
-                    : 'Add Payment'}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setCustomerVal('');
-                    setCashAddForm(initialEmployeeAddFrom);
-                  }}
-                  style={styles.closeButton}>
-                  <Icon name="close" size={24} color={backgroundColors.dark} />
-                </TouchableOpacity>
+          style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>
+                {modalVisible === 'WithDraw'
+                  ? 'Withdraw Payment'
+                  : 'Add Payment'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setCustomerVal('');
+                  setCashAddForm(initialEmployeeAddFrom);
+                }}
+                style={styles.closeButton}>
+                <Icon name="close" size={24} color={THEME.textGray} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={{maxHeight: 400}}
+              showsVerticalScrollIndicator={false}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Select Employee</Text>
+                <DropDownPicker
+                  items={transformedEmp}
+                  open={modalDropdowOpen}
+                  value={customerVal}
+                  setValue={setCustomerVal}
+                  setOpen={setModalDropdowOpen}
+                  placeholder="Select Employee"
+                  placeholderStyle={{color: '#999'}}
+                  textStyle={{color: THEME.textDark}}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  zIndex={3000}
+                  zIndexInverse={1000}
+                  searchable
+                />
               </View>
 
-              {/* Body */}
-              <ScrollView
-                style={styles.modalBodyScroll}
-                contentContainerStyle={styles.modalBodyContent}
-                keyboardShouldPersistTaps="handled">
-                <View style={styles.modalBody}>
-                  <View style={styles.dropdownRow}>
-                    <Icon
-                      name="person"
-                      size={28}
-                      color={backgroundColors.dark}
-                      style={styles.personIcon}
-                    />
-                    <DropDownPicker
-                      items={transformedEmp}
-                      open={modalDropdowOpen}
-                      value={customerVal}
-                      setValue={setCustomerVal}
-                      setOpen={setModalDropdowOpen}
-                      placeholder="Select Employee"
-                      placeholderStyle={{color: '#777', marginLeft: 30}}
-                      textStyle={{color: backgroundColors.dark}}
-                      style={[styles.dropdown]}
-                      dropDownContainerStyle={styles.dropdownContainer}
-                      ArrowUpIconComponent={() => (
-                        <Icon
-                          name="keyboard-arrow-up"
-                          size={18}
-                          color={backgroundColors.dark}
-                        />
-                      )}
-                      ArrowDownIconComponent={() => (
-                        <Icon
-                          name="keyboard-arrow-down"
-                          size={18}
-                          color={backgroundColors.dark}
-                        />
-                      )}
-                      listMode="SCROLLVIEW"
-                      listItemLabelStyle={{
-                        color: backgroundColors.dark,
-                        fontWeight: '500',
-                      }}
-                      labelStyle={{
-                        color: backgroundColors.dark,
-                        marginLeft: 30,
-                        fontSize: 16,
-                      }}
-                      searchable
-                      searchTextInputStyle={{
-                        borderWidth: 0,
-                        width: '100%',
-                      }}
-                      searchContainerStyle={{
-                        borderColor: backgroundColors.gray,
-                      }}
-                    />
-                  </View>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Amount</Text>
+                <TextInput
+                  style={styles.input}
+                  keyboardType="number-pad"
+                  value={cashAddFrom.amount}
+                  maxLength={9}
+                  onChangeText={t => cashOnChange('amount', t)}
+                  placeholder="Enter amount"
+                  placeholderTextColor="#999"
+                />
+              </View>
 
-                  <View style={styles.inputRow}>
-                    <Text style={[styles.inputLabel, {color: '#000'}]}>
-                      Amount <Text style={{color: 'red'}}>*</Text>
-                    </Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {color: '#000', borderColor: '#ccc'},
-                      ]}
-                      keyboardType="number-pad"
-                      value={cashAddFrom.amount}
-                      maxLength={9}
-                      onChangeText={t => cashOnChange('amount', t)}
-                      placeholder="Enter amount *"
-                      placeholderTextColor="#666"
-                    />
-                  </View>
-
-                  <View style={styles.inputRow}>
-                    <Text style={[styles.inputLabel, {color: '#000'}]}>
-                      Date <Text style={{color: 'red'}}>*</Text>
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setShowDatePicker('from')}
-                      style={[
-                        styles.dateInput,
-                        {borderColor: '#ccc', width: '100%'},
-                      ]}>
-                      <Icon name="event" size={20} color="#666" />
-                      <Text style={[styles.dateText, {color: '#000'}]}>
-                        {cashAddFrom.date
-                          ? cashAddFrom.date.toLocaleDateString()
-                          : 'Select Date'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.inputRow}>
-                    <Text style={[styles.inputLabel, {color: '#000'}]}>
-                      Added By <Text style={{color: 'red'}}>*</Text>
-                    </Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {color: '#000', borderColor: '#ccc'},
-                      ]}
-                      value={cashAddFrom.addedBy}
-                      onChangeText={t => cashOnChange('addedBy', t)}
-                      placeholder="Enter name"
-                      placeholderTextColor="#666"
-                    />
-                  </View>
-
-                  <View style={styles.inputRow}>
-                    <Text style={[styles.inputLabel, {color: '#000'}]}>
-                      Note
-                    </Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        styles.textArea,
-                        {color: '#000', borderColor: '#ccc'},
-                      ]}
-                      multiline
-                      numberOfLines={4}
-                      value={cashAddFrom.note}
-                      onChangeText={t => cashOnChange('note', t)}
-                      placeholder="Enter note"
-                      placeholderTextColor="#666"
-                    />
-                  </View>
-                </View>
-              </ScrollView>
-
-              {/* Footer Button */}
-              <View style={styles.modalFooter}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Date</Text>
                 <TouchableOpacity
-                  style={styles.submitButton}
-                  onPress={() => {
-                    modalVisible === 'Payment' && addPayment();
-                    modalVisible === 'WithDraw' && withdrawPayment();
-                  }}>
-                  <Text style={styles.submitButtonText}>
-                    {modalVisible === 'WithDraw'
-                      ? 'Withdraw Payment'
-                      : 'Add Payment'}
+                  onPress={() => setShowDatePicker('from')}
+                  style={styles.dateInput}>
+                  <Icon name="calendar" size={20} color={THEME.primary} />
+                  <Text style={styles.dateText}>
+                    {cashAddFrom.date
+                      ? cashAddFrom.date.toLocaleDateString()
+                      : 'Select Date'}
                   </Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </SafeAreaView>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Added By</Text>
+                <TextInput
+                  style={styles.input}
+                  value={cashAddFrom.addedBy}
+                  onChangeText={t => cashOnChange('addedBy', t)}
+                  placeholder="Enter name"
+                  placeholderTextColor="#999"
+                />
+              </View>
+
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Note</Text>
+                <TextInput
+                  style={[styles.input, styles.textArea]}
+                  multiline
+                  numberOfLines={3}
+                  value={cashAddFrom.note}
+                  onChangeText={t => cashOnChange('note', t)}
+                  placeholder="Enter note"
+                  placeholderTextColor="#999"
+                />
+              </View>
+            </ScrollView>
+
+            <TouchableOpacity
+              style={styles.submitBtn}
+              onPress={() => {
+                modalVisible === 'Payment' && addPayment();
+                modalVisible === 'WithDraw' && withdrawPayment();
+              }}>
+              <Text style={styles.submitBtnText}>
+                {modalVisible === 'WithDraw'
+                  ? 'Withdraw Payment'
+                  : 'Add Payment'}
+              </Text>
+            </TouchableOpacity>
+          </View>
         </KeyboardAvoidingView>
       </Modal>
-    </SafeAreaView>
+      <BottomBar />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 0,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
 
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 12,
+    paddingHorizontal: 16,
+    paddingTop: 10,
   },
-  toggleBtnContainer: {
+
+  // --- Action Buttons ---
+  actionRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
-    marginVertical: 8,
+    marginBottom: 15,
+    gap: 10,
   },
   actionBtn: {
-    marginHorizontal: 4,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    alignItems: 'center',
     flexDirection: 'row',
-    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 15,
+    borderRadius: 20,
+    elevation: 2,
+    gap: 5,
   },
   actionBtnText: {
-    color: 'white',
+    color: THEME.white,
     fontWeight: '600',
-    fontSize: 14,
-    marginLeft: 4,
+    fontSize: 13,
   },
-  section: {
-    backgroundColor: backgroundColors.light,
+
+  // --- Card Styles ---
+  card: {
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    marginVertical: 8,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+    padding: 16,
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
     elevation: 2,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: 16,
   },
-  dropdownRow: {
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  formGroup: {
     marginBottom: 16,
   },
-  inputLabel: {
-    color: 'rgba(0,0,0,0.8)',
-    fontSize: 14,
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textGray,
     marginBottom: 6,
-    fontWeight: '500',
   },
   dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: '#F9FAFB',
+    borderColor: THEME.border,
     borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
     height: 48,
-    marginBottom: 4,
   },
   dropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
-  },
-  dropdownText: {
-    color: 'white',
-    fontSize: 14,
-  },
-  dropdownPlaceholder: {
-    color: 'rgba(0,0,0,0.7)',
-    marginLeft: 30,
-    fontSize: 16,
+    backgroundColor: '#fff',
+    borderColor: THEME.border,
   },
   dateRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  personIcon: {
-    position: 'absolute',
-    zIndex: 10000,
-    top: 7,
-    left: 6,
+    gap: 10,
   },
   dateInput: {
-    width: '48%',
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: backgroundColors.light,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: THEME.border,
     borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
     height: 48,
+    gap: 8,
   },
   dateText: {
-    fontWeight: '600',
-    color: backgroundColors.dark,
-    fontSize: 14,
-    marginLeft: 8,
+    fontSize: 13,
+    color: THEME.textDark,
+  },
+
+  // --- List Section ---
+  listSection: {
+    marginBottom: 5,
+  },
+  listHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 4,
+  },
+  listHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: THEME.textDark,
   },
   emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: 40,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
   },
-  emptyStateText: {
-    color: 'rgba(0,0,0,0.7)',
-    fontSize: 16,
-    marginTop: 8,
-    textAlign: 'center',
+  emptyText: {
+    marginTop: 10,
+    color: THEME.textGray,
+    fontSize: 14,
   },
+
+  // --- Transaction Card ---
   transactionCard: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
+    backgroundColor: THEME.white,
+    borderRadius: 14,
     padding: 12,
-    marginBottom: 8,
+    marginBottom: 10,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   transactionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 12,
   },
-  invoiceNumber: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: '600',
+  invoiceBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    gap: 4,
   },
-  transactionDate: {
-    color: 'rgba(0,0,0,0.7)',
+  invoiceText: {
     fontSize: 12,
+    fontWeight: '700',
+    color: THEME.primary,
   },
-  transactionDetails: {
-    marginTop: 4,
+  dateTextList: {
+    fontSize: 12,
+    color: THEME.textGray,
   },
-  detailRow: {
+  divider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginBottom: 12,
+  },
+  statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 4,
   },
-  detailLabel: {
-    color: backgroundColors.dark,
-    fontSize: 12,
-    fontWeight: '500',
+  statCol: {
+    flex: 1,
+    alignItems: 'flex-start',
   },
-  detailValue: {
-    color: backgroundColors.dark,
-    fontSize: 12,
+  statColCenter: {
+    flex: 1,
+    alignItems: 'center',
   },
-  summarySection: {
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 8,
-    padding: 16,
-    marginTop: 16,
+  statColRight: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  statLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    marginBottom: 2,
+    fontWeight: '600',
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+
+  // --- Pagination ---
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginVertical: 6,
+    gap: 16,
+  },
+  pageBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: THEME.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  pageBtnDisabled: {
+    backgroundColor: '#E5E7EB',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  pageInfo: {
+    backgroundColor: THEME.white,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: '#E5E7EB',
+  },
+  pageText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textDark,
+  },
+
+  // --- Summary Card ---
+  summaryCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  summaryHeader: {
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 8,
+  },
+  summaryTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    textTransform: 'uppercase',
+  },
+  summaryBody: {
+    gap: 8,
   },
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  summaryLabel: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  summaryValue: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '400',
-  },
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.2)',
-    paddingTop: 8,
-    marginTop: 8,
-  },
-  totalLabel: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  totalValue: {
-    color: backgroundColors.primary,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  paginationContainer: {
-    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 16,
-    marginBottom: 8,
   },
-  paginationBtn: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.2)',
+  summaryItemLabel: {
+    color: THEME.textGray,
+    fontSize: 14,
   },
-  disabledBtn: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderColor: 'rgba(0,0,0,0.05)',
-  },
-  pageIndicator: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    marginHorizontal: 12,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.5)',
-  },
-  pageText: {
-    color: backgroundColors.dark,
+  summaryItemValue: {
+    color: THEME.textDark,
     fontSize: 14,
     fontWeight: '600',
   },
-  // Modal Styles
-  keyboardAvoidContainer: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  summaryDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 4,
   },
-  modalContainer: {
-    maxWidth: '95%',
-    maxHeight: '80%',
-    alignSelf: 'center',
-    backgroundColor: 'white',
-    borderRadius: 10,
-    marginTop: 50,
-    overflow: 'hidden',
+  summaryTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: 4,
+    backgroundColor: THEME.primaryLight,
+    padding: 10,
+    borderRadius: 8,
+  },
+  summaryTotalLabel: {
+    color: THEME.textDark,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  summaryTotalValue: {
+    color: THEME.primary,
+    fontSize: 20,
+    fontWeight: '800',
+  },
+
+  // --- Modal ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    backgroundColor: THEME.white,
+    borderRadius: 20,
+    padding: 20,
+    elevation: 5,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#eee',
-  },
-  modalBodyScroll: {
-    flex: 1,
-  },
-  modalBodyContent: {
-    flexGrow: 1,
-    paddingBottom: 80,
-  },
-  modalBody: {
-    padding: 15,
-  },
-  modalFooter: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'white',
-    padding: 15,
-    borderTopWidth: 1,
-    borderTopColor: '#eee',
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
   closeButton: {
     padding: 5,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 15,
   },
-  submitButton: {
-    backgroundColor: backgroundColors.primary,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 5,
-  },
-  submitButtonText: {
-    color: 'white',
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  inputRow: {
-    marginBottom: 16,
+  inputGroup: {
+    marginBottom: 15,
   },
   input: {
-    backgroundColor: backgroundColors.light,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: THEME.border,
     borderRadius: 10,
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
     height: 48,
-    color: backgroundColors.dark,
+    color: THEME.textDark,
   },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
+    paddingVertical: 10,
+  },
+  submitBtn: {
+    backgroundColor: THEME.primary,
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  submitBtnText: {
+    color: THEME.white,
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

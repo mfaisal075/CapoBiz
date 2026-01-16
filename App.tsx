@@ -149,6 +149,8 @@ import AccountsDetails from './component/Drawer/AccountsDetails';
 import ProductDetails from './component/Drawer/Products/ProductDetails';
 import ExpenseDetails from './component/Drawer/Expenses/ExpenseDetails';
 import UserDetails from './component/Drawer/SystemUsers/UserDetails';
+import BiometricScreen from './component/Drawer/Configuration/BiometricScreen';
+import NotificationsScreen from './component/NotificationsScreen';
 
 const Stack = createStackNavigator();
 export const navigationRef = createNavigationContainerRef();
@@ -452,6 +454,11 @@ function App(): React.JSX.Element {
               />
               <Stack.Screen name="Access Control" component={AccessControl} />
               <Stack.Screen name="Sale Invoice" component={SaleInvoice} />
+              <Stack.Screen name="Biometric" component={BiometricScreen} />
+              <Stack.Screen
+                name="Notifications"
+                component={NotificationsScreen}
+              />
             </Stack.Navigator>
 
             <DrawerModal />

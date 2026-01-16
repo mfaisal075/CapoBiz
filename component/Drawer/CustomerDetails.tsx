@@ -7,19 +7,40 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ScrollView,
+  StatusBar,
+  Platform,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {SafeAreaView} from 'react-native-safe-area-context';
-import backgroundColors from '../Colors';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import {useUser} from '../CTX/UserContext';
-import {ScrollView} from 'react-native-gesture-handler';
 import LottieView from 'lottie-react-native';
 import Toast from 'react-native-toast-message';
 import DropDownPicker from 'react-native-dropdown-picker';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../BottomBar';
 
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  danger: '#EF4444',
+  dangerLight: '#FEE2E2',
+};
+
+// --- INTERFACES ---
 interface CustomersDetails {
   cust: {
     id: number;
@@ -118,6 +139,29 @@ interface AreaData {
   updated_at: string;
 }
 
+// --- HELPER COMPONENT: Detail Row ---
+const DetailRow = ({
+  label,
+  value,
+  icon,
+  isLast,
+}: {
+  label: string;
+  value: string;
+  icon: string;
+  isLast?: boolean;
+}) => (
+  <View style={[styles.detailRow, isLast && {borderBottomWidth: 0}]}>
+    <View style={styles.iconBox}>
+      <Icon name={icon} size={20} color={THEME.primary} />
+    </View>
+    <View style={styles.detailTextContainer}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value || '--'}</Text>
+    </View>
+  </View>
+);
+
 const CustomerDetails = ({navigation, route}: any) => {
   const {id} = route.params;
   const {token} = useUser();
@@ -129,25 +173,23 @@ const CustomerDetails = ({navigation, route}: any) => {
   const [modalVisible, setModalVisible] = useState('');
   const [editForm, setEditForm] = useState<EditCustomer>(initialEditCustomer);
   const [types, setTypes] = useState<TypeData[]>([]);
+  const [areaData, setAreaData] = useState<AreaData[]>([]);
+
   const transformedTypes = types.map(item => ({
     label: item.custtyp_name,
     value: item.id,
   }));
-  const [areaData, setAreaData] = useState<AreaData[]>([]);
+
   const transformedAreas = areaData.map(item => ({
     label: item.area_name,
     value: item.id,
   }));
 
-  // Add Customer Form On Change
   const editOnChange = (field: keyof EditCustomer, value: string | number) => {
-    setEditForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
+    setEditForm(prev => ({...prev, [field]: value}));
   };
 
-  // Fetch Type
+  // --- API CALLS ---
   const fetchType = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchtypedata`);
@@ -157,7 +199,6 @@ const CustomerDetails = ({navigation, route}: any) => {
     }
   };
 
-  // Fetch Area
   const fetchAreas = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchareadata`);
@@ -167,7 +208,6 @@ const CustomerDetails = ({navigation, route}: any) => {
     }
   };
 
-  // Fetch Customer Details
   const fetchCustDetails = async () => {
     try {
       const res = await axios.get(
@@ -179,33 +219,23 @@ const CustomerDetails = ({navigation, route}: any) => {
     }
   };
 
-  // Delete Customer
   const delCustomer = async () => {
     try {
-      const res = await axios.post(`${BASE_URL}/customerdelete`, {
-        id: id,
-      });
-
-      const data = res.data;
-      console.log(res.status);
-      console.log(data.status);
-
-      if (res.status === 200 && data.status === 200) {
+      const res = await axios.post(`${BASE_URL}/customerdelete`, {id: id});
+      if (res.status === 200 && res.data.status === 200) {
         Toast.show({
           type: 'success',
           text1: 'Deleted!',
-          text2: 'Customer has been Deleted successfully!',
-          visibilityTime: 1500,
+          text2: 'Customer has been deleted.',
         });
         setModalVisible('');
-        navigation.navigate('Customer');
+        navigation.goBack();
       }
     } catch (error) {
       console.log(error);
     }
   };
 
-  // Get Edit Form Data
   const getEditData = async () => {
     try {
       const res = await axios.get(
@@ -220,51 +250,17 @@ const CustomerDetails = ({navigation, route}: any) => {
     }
   };
 
-  // Update Customer
   const updateCustomer = async () => {
     const nameRegex = /^[A-Za-z ]+$/;
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
     const name = editForm.cust_name?.trim() || '';
     const fatherName = editForm.cust_fathername?.trim() || '';
     const email = editForm.cust_email?.trim() || '';
-
-    if (!nameRegex.test(name)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Name',
-        text2: 'Customer name should only contain letters and spaces.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    if (fatherName && !nameRegex.test(fatherName)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Father Name',
-        text2: 'Father name should only contain letters and spaces.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
-
-    if (email && !emailRegex.test(email)) {
-      Toast.show({
-        type: 'error',
-        text1: 'Invalid Email',
-        text2: 'Please enter a valid email address.',
-        visibilityTime: 2000,
-      });
-      return;
-    }
 
     if (!name) {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
-        text2: 'Field names with * are Mandatory',
-        visibilityTime: 2000,
+        text2: 'Name is mandatory',
       });
       return;
     }
@@ -287,44 +283,24 @@ const CustomerDetails = ({navigation, route}: any) => {
       });
 
       const data = res.data;
-
       if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'Customer record has been updated successfully',
-          visibilityTime: 1500,
-        });
         setEditForm(initialEditCustomer);
         setAreaValue('');
         setTypeValue('');
         setModalVisible('');
         fetchCustDetails();
-
-        setTimeout(() => {
-          setModalVisible('Success');
-        }, 500);
-      } else if (res.status === 200 && data.status === 202) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Contact number already exist!',
-          visibilityTime: 1500,
-        });
-      } else if (res.status === 200 && data.status === 203) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'CNIC number already exist!',
-          visibilityTime: 1500,
-        });
-      } else if (res.status === 200 && data.status === 204) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Email already exist!',
-          visibilityTime: 1500,
-        });
+        setTimeout(() => setModalVisible('Success'), 500);
+      } else {
+        if (data.status === 202)
+          Toast.show({
+            type: 'error',
+            text1: 'Warning',
+            text2: 'Contact exists',
+          });
+        if (data.status === 203)
+          Toast.show({type: 'error', text1: 'Warning', text2: 'CNIC exists'});
+        if (data.status === 204)
+          Toast.show({type: 'error', text1: 'Warning', text2: 'Email exists'});
       }
     } catch (error) {
       console.log(error);
@@ -335,491 +311,422 @@ const CustomerDetails = ({navigation, route}: any) => {
     fetchCustDetails();
     fetchType();
     fetchAreas();
-
-    const backKey = () => {
-      navigation.navigate('Customer');
-      return true;
-    };
-
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
-      backKey,
+      () => {
+        navigation.goBack();
+        return true;
+      },
     );
-
     return () => backHandler.remove();
   }, []);
+
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerCenter}>
-          <TouchableOpacity
-            onPress={() => {
-              navigation.navigate('Customer');
-            }}>
-            <Icon
-              name="chevron-left"
-              size={28}
-              color={backgroundColors.light}
-            />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Customer Details</Text>
-        </View>
+    <View style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-        <TouchableOpacity
-          style={[styles.headerBtn]}
-          onPress={() => setModalVisible('Delete')}>
-          <Icon name="delete" size={28} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Details */}
       <ScrollView
-        style={styles.detailsContainer}
-        showsVerticalScrollIndicator={false}>
-        {/* Avatar */}
-        <View style={styles.avatarBox}>
-          <Image
-            source={require('../../assets/man.png')}
-            style={styles.avatar}
-          />
-          <Text style={styles.custName}>{customer?.cust.cust_name}</Text>
-        </View>
-
-        {/* Inner Details */}
-        <View style={styles.innerDetails}>
-          <View style={styles.innerHeader}>
-            <Text style={styles.headerText}>Customer Details</Text>
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{paddingBottom: 100}}>
+        {/* --- HEADER BACKGROUND --- */}
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          {/* Nav Bar */}
+          <SafeAreaView style={styles.navBar}>
             <TouchableOpacity
-              style={{flexDirection: 'row', gap: 5}}
-              onPress={() => {
-                getEditData();
-                setModalVisible('Edit');
-              }}>
-              <Text style={styles.editText}>Edit</Text>
-              <Icon
-                name="square-edit-outline"
-                size={18}
-                color={backgroundColors.dark}
-              />
+              onPress={() => navigation.goBack()}
+              style={styles.navBtn}>
+              <Icon name="arrow-left" size={24} color={THEME.white} />
             </TouchableOpacity>
+            <Text style={styles.navTitle}>Profile</Text>
+            <TouchableOpacity
+              onPress={() => setModalVisible('Delete')}
+              style={styles.navBtn}>
+              <Icon name="trash-can-outline" size={22} color={THEME.white} />
+            </TouchableOpacity>
+          </SafeAreaView>
+
+          {/* Profile Section */}
+          <View style={styles.profileSection}>
+            <View style={styles.avatarWrapper}>
+              <Image
+                source={require('../../assets/man.png')} // Replace with customer image if available
+                style={styles.avatar}
+              />
+              <TouchableOpacity
+                style={styles.editBadge}
+                activeOpacity={0.8}
+                onPress={() => getEditData()}>
+                <Icon name="pencil" size={16} color={THEME.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.profileName}>
+              {customer?.cust?.cust_name || 'Loading...'}
+            </Text>
+
+            <View style={styles.badgeRow}>
+              <View style={styles.capsuleBadge}>
+                <Icon name="tag-outline" size={14} color={THEME.white} />
+                <Text style={styles.capsuleText}>
+                  {customer?.type?.custtyp_name || 'N/A'}
+                </Text>
+              </View>
+              <View style={styles.capsuleBadge}>
+                <Icon name="map-marker-outline" size={14} color={THEME.white} />
+                <Text style={styles.capsuleText}>
+                  {customer?.area?.area_name || 'N/A'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Main Balance Card (Floating) */}
+            <View style={styles.balanceCard}>
+              <View>
+                <Text style={styles.balanceLabel}>Opening Balance</Text>
+                <Text style={styles.balanceAmount}>
+                  Rs. {customer?.cust?.cust_opening_balance || '0.00'}
+                </Text>
+              </View>
+              <View style={styles.balanceIcon}>
+                <Icon name="wallet-outline" size={24} color={THEME.white} />
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* --- CONTENT CARDS --- */}
+        <View style={styles.contentContainer}>
+          {/* Personal Info */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Personal Information</Text>
+            </View>
+            <DetailRow
+              icon="account-details"
+              label="Father Name"
+              value={customer?.cust?.cust_fathername!}
+            />
+            <DetailRow
+              icon="card-account-details-outline"
+              label="CNIC"
+              value={customer?.cust?.cust_cnic!}
+            />
+            <DetailRow
+              icon="email-outline"
+              label="Email"
+              value={customer?.cust?.cust_email!}
+            />
+            <DetailRow
+              icon="map-marker-radius-outline"
+              label="Address"
+              value={customer?.cust?.cust_address!}
+              isLast
+            />
           </View>
 
-          {/* Details */}
-          <View style={styles.detailsView}>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Name</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_name ?? '--'}
-              </Text>
+          {/* Contact Info */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Contact Details</Text>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Father Name</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_fathername ?? '--'}
-              </Text>
+            <DetailRow
+              icon="phone"
+              label="Primary Phone"
+              value={customer?.cust?.cust_contact!}
+            />
+            <DetailRow
+              icon="account-tie-outline"
+              label="Contact Person 1"
+              value={customer?.cust?.cust_contact_person_one!}
+            />
+            <DetailRow
+              icon="phone-classic"
+              label="Secondary Phone"
+              value={customer?.cust?.cust_sec_contact!}
+            />
+            <DetailRow
+              icon="account-tie-outline"
+              label="Contact Person 2"
+              value={customer?.cust?.cust_contact_person_two!}
+            />
+            <DetailRow
+              icon="phone-classic"
+              label="Third Phone"
+              value={customer?.cust?.cust_third_contact!}
+              isLast
+            />
+          </View>
+
+          {/* Financials Info */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Financial Setup</Text>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_email ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Phone Number</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_contact ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact Person One</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_contact_person_one ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_sec_contact ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact Person Two</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_contact_person_two ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_third_contact ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>CNIC</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_cnic ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Address</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_address ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Customer Area</Text>
-              <Text style={styles.value}>
-                {customer?.area?.area_name ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Customer Type</Text>
-              <Text style={styles.value}>
-                {customer?.type?.custtyp_name ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Opening Balance</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_opening_balance ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Payment Type</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_payment_type ?? '--'}
-              </Text>
-            </View>
-            <View style={[styles.detailsRow, {borderBottomWidth: 0}]}>
-              <Text style={styles.label}>Transaction Type</Text>
-              <Text style={styles.value}>
-                {customer?.cust?.cust_transaction_type ?? '--'}
-              </Text>
-            </View>
+            <DetailRow
+              icon="cash-multiple"
+              label="Payment Type"
+              value={customer?.cust?.cust_payment_type!}
+            />
+            <DetailRow
+              icon="bank-transfer"
+              label="Transaction Type"
+              value={customer?.cust?.cust_transaction_type!}
+              isLast
+            />
           </View>
         </View>
       </ScrollView>
 
-      {/*Delete*/}
+      {/* --- DELETE CONFIRMATION MODAL --- */}
       <Modal
         visible={modalVisible === 'Delete'}
         transparent
         animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.deleteModalContainer}>
-            <View style={styles.delAnim}>
+            <View style={styles.lottieContainer}>
               <LottieView
-                style={{flex: 1}}
-                source={require('../../assets/warning.json')}
+                source={require('../../assets/warning.json')} // Ensure you have this or use an Icon
                 autoPlay
                 loop={false}
+                style={{width: '100%', height: '100%'}}
               />
             </View>
-
-            {/* Title */}
-            <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-
-            {/* Subtitle */}
-            <Text style={styles.deleteModalMessage}>
-              You won’t be able to revert this record!
+            <Text style={styles.modalTitle}>Delete Customer?</Text>
+            <Text style={styles.modalText}>
+              This action cannot be undone. All data associated with this
+              customer will be lost.
             </Text>
-
-            {/* Buttons */}
-            <View style={styles.deleteModalActions}>
+            <View style={styles.modalBtnRow}>
               <TouchableOpacity
-                style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
+                style={styles.btnCancel}
                 onPress={() => setModalVisible('')}>
-                <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
-                  Cancel
-                </Text>
+                <Text style={styles.btnCancelText}>Cancel</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
-                onPress={delCustomer}>
-                <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
+              <TouchableOpacity style={styles.btnDelete} onPress={delCustomer}>
+                <Text style={styles.btnDeleteText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/*Success*/}
+      {/* --- SUCCESS MODAL --- */}
       <Modal
         visible={modalVisible === 'Success'}
         transparent
         animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.deleteModalContainer}>
-            <View style={styles.delAnim}>
+            <View style={styles.lottieContainer}>
               <LottieView
-                style={{flex: 1}}
                 source={require('../../assets/success.json')}
                 autoPlay
-                duration={2500}
                 loop={false}
+                style={{width: '100%', height: '100%'}}
               />
             </View>
-
-            {/* Title */}
-            <Text style={styles.deleteModalTitle}>Updated!</Text>
-
-            {/* Subtitle */}
-            <Text style={styles.deleteModalMessage}>
-              Customer record has been updated successfully!
+            <Text style={styles.modalTitle}>Success</Text>
+            <Text style={styles.modalText}>
+              Customer record updated successfully.
             </Text>
-
-            {/* Buttons */}
-            <View style={styles.deleteModalActions}>
-              <TouchableOpacity
-                style={[
-                  styles.deleteModalBtn,
-                  {backgroundColor: backgroundColors.success},
-                ]}
-                onPress={() => {
-                  setModalVisible('');
-                }}>
-                <Text style={styles.deleteModalBtnText}>Ok</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity
+              style={[styles.btnPrimary, {width: '100%', marginTop: 15}]}
+              onPress={() => setModalVisible('')}>
+              <Text style={styles.btnPrimaryText}>OK, Great</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
 
-      {/*Edit*/}
+      {/* --- EDIT CUSTOMER MODAL --- */}
       <Modal
         visible={modalVisible === 'Edit'}
         transparent
         animationType="slide">
-        <View style={styles.addeditCustomerModalOverlay}>
-          <ScrollView style={styles.editCustomerModalContainer}>
-            {/* Header */}
-            <View style={styles.editCustomerHeader}>
-              <Text style={styles.editCustomerTitle}>Edit Customer</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.editModalContainer}>
+            <View style={styles.editModalHeader}>
+              <Text style={styles.editModalTitle}>Edit Customer</Text>
               <TouchableOpacity
                 onPress={() => setModalVisible('')}
-                style={styles.editCustomerCloseBtn}>
-                <Icon name="close" size={20} color="#144272" />
+                style={styles.closeModalBtn}>
+                <Icon name="close" size={22} color={THEME.textDark} />
               </TouchableOpacity>
             </View>
 
-            {/* Form */}
-            <View style={styles.editCustomerForm}>
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Customer Name *</Text>
+            <ScrollView
+              style={styles.editModalBody}
+              contentContainerStyle={{paddingBottom: 30}}>
+              {/* Form Fields */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Full Name *</Text>
                 <TextInput
-                  style={styles.editCustomerInput}
+                  style={styles.input}
                   value={editForm.cust_name}
                   onChangeText={t => editOnChange('cust_name', t)}
                 />
               </View>
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Father Name</Text>
-                <TextInput
-                  style={styles.editCustomerInput}
-                  value={editForm.cust_fathername}
-                  onChangeText={t => editOnChange('cust_fathername', t)}
-                />
+
+              <View style={styles.rowInputs}>
+                <View style={{flex: 1, marginRight: 10}}>
+                  <Text style={styles.label}>Father Name</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.cust_fathername}
+                    onChangeText={t => editOnChange('cust_fathername', t)}
+                  />
+                </View>
+                <View style={{flex: 1}}>
+                  <Text style={styles.label}>CNIC</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.cust_cnic}
+                    keyboardType="numeric"
+                    maxLength={15}
+                    placeholder="xxxxx-xxxxxxx-x"
+                    onChangeText={t => editOnChange('cust_cnic', t)}
+                  />
+                </View>
               </View>
 
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Email</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Email Address</Text>
                 <TextInput
-                  style={styles.editCustomerInput}
+                  style={styles.input}
                   value={editForm.cust_email}
                   keyboardType="email-address"
                   onChangeText={t => editOnChange('cust_email', t)}
                 />
               </View>
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Address</Text>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Physical Address</Text>
                 <TextInput
-                  style={styles.editCustomerInput}
+                  style={styles.input}
                   value={editForm.cust_address}
+                  multiline
                   onChangeText={t => editOnChange('cust_address', t)}
                 />
               </View>
 
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Contact</Text>
-                <TextInput
-                  style={styles.editCustomerInput}
-                  value={editForm.cust_contact}
-                  keyboardType="phone-pad"
-                  maxLength={12}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                    if (cleaned.length > 4)
-                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                    editOnChange('cust_contact', cleaned);
-                  }}
-                />
-              </View>
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>CNIC</Text>
-                <TextInput
-                  style={styles.editCustomerInput}
-                  value={editForm.cust_cnic}
-                  keyboardType="numeric"
-                  maxLength={15}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                    if (cleaned.length > 5)
-                      cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                    if (cleaned.length > 13)
-                      cleaned =
-                        cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                    if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                    editOnChange('cust_cnic', cleaned);
-                  }}
-                />
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderText}>Contact Info</Text>
               </View>
 
-              {/* Contact Persons */}
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Contact Person 1</Text>
-                <TextInput
-                  style={styles.editCustomerInput}
-                  value={editForm.cust_contact_person_one}
-                  keyboardType="phone-pad"
-                  maxLength={12}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                    if (cleaned.length > 4)
-                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                    editOnChange('cust_contact_person_one', cleaned);
-                  }}
-                />
-              </View>
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Contact</Text>
-                <TextInput
-                  style={styles.editCustomerInput}
-                  value={editForm.cust_sec_contact}
-                  keyboardType="phone-pad"
-                  maxLength={12}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                    if (cleaned.length > 4)
-                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                    editOnChange('cust_sec_contact', cleaned);
-                  }}
-                />
+              <View style={styles.rowInputs}>
+                <View style={{flex: 1, marginRight: 10}}>
+                  <Text style={styles.label}>Primary Contact</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.cust_contact}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    onChangeText={t => editOnChange('cust_contact', t)}
+                  />
+                </View>
+                <View style={{flex: 1}}>
+                  <Text style={styles.label}>Contact Person 1</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.cust_contact_person_one}
+                    onChangeText={t =>
+                      editOnChange('cust_contact_person_one', t)
+                    }
+                  />
+                </View>
               </View>
 
-              {/* Other Contacts */}
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Contact Person 2</Text>
-                <TextInput
-                  style={styles.editCustomerInput}
-                  value={editForm.cust_contact_person_two}
-                  keyboardType="phone-pad"
-                  maxLength={12}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                    if (cleaned.length > 4)
-                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                    editOnChange('cust_contact_person_two', cleaned);
-                  }}
-                />
+              <View style={styles.rowInputs}>
+                <View style={{flex: 1, marginRight: 10}}>
+                  <Text style={styles.label}>Secondary Contact</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.cust_sec_contact}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    onChangeText={t => editOnChange('cust_sec_contact', t)}
+                  />
+                </View>
+                <View style={{flex: 1}}>
+                  <Text style={styles.label}>Contact Person 2</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.cust_contact_person_two}
+                    onChangeText={t =>
+                      editOnChange('cust_contact_person_two', t)
+                    }
+                  />
+                </View>
               </View>
 
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Contact</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Third Contact</Text>
                 <TextInput
-                  style={styles.editCustomerInput}
+                  style={styles.input}
                   value={editForm.cust_third_contact}
                   keyboardType="phone-pad"
                   maxLength={12}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                    if (cleaned.length > 4)
-                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                    editOnChange('cust_third_contact', cleaned);
-                  }}
+                  onChangeText={t => editOnChange('cust_third_contact', t)}
                 />
               </View>
 
-              {/* Dropdowns */}
-              <View style={styles.editCustomerDropdownRow}>
-                <View style={styles.editCustomerDropdownField}>
-                  <Text style={styles.editCustomerLabel}>Customer Type</Text>
-                  <DropDownPicker
-                    items={transformedTypes}
-                    open={open}
-                    setOpen={setOpen}
-                    value={typeValue}
-                    setValue={setTypeValue}
-                    placeholder="Select type"
-                    style={styles.editCustomerDropdown}
-                    dropDownContainerStyle={
-                      styles.editCustomerDropdownContainer
-                    }
-                    textStyle={styles.editCustomerDropdownText}
-                    placeholderStyle={styles.editCustomerDropdownPlaceholder}
-                    listMode="SCROLLVIEW"
-                    searchable
-                    searchTextInputStyle={{
-                      borderWidth: 0,
-                      width: '100%',
-                    }}
-                    searchContainerStyle={{
-                      borderColor: backgroundColors.gray,
-                    }}
-                  />
-                </View>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionHeaderText}>Classification</Text>
               </View>
 
-              <View style={styles.editCustomerDropdownRow}>
-                <View style={styles.editCustomerDropdownField}>
-                  <Text style={styles.editCustomerLabel}>Area</Text>
-                  <DropDownPicker
-                    items={transformedAreas}
-                    open={openArea}
-                    setOpen={setOpenArea}
-                    value={areaValue}
-                    setValue={setAreaValue}
-                    placeholder="Select area"
-                    style={styles.editCustomerDropdown}
-                    dropDownContainerStyle={
-                      styles.editCustomerDropdownContainer
-                    }
-                    textStyle={styles.editCustomerDropdownText}
-                    placeholderStyle={styles.editCustomerDropdownPlaceholder}
-                    listMode="SCROLLVIEW"
-                    searchable
-                    searchTextInputStyle={{
-                      borderWidth: 0,
-                      width: '100%',
-                    }}
-                    searchContainerStyle={{
-                      borderColor: backgroundColors.gray,
-                    }}
-                  />
-                </View>
+              <View style={[styles.formGroup, {zIndex: 2000}]}>
+                <Text style={styles.label}>Customer Type</Text>
+                <DropDownPicker
+                  items={transformedTypes}
+                  open={open}
+                  setOpen={setOpen}
+                  value={typeValue}
+                  setValue={setTypeValue}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                />
               </View>
 
-              {/* Update Button */}
+              <View style={[styles.formGroup, {zIndex: 1000}]}>
+                <Text style={styles.label}>Area</Text>
+                <DropDownPicker
+                  items={transformedAreas}
+                  open={openArea}
+                  setOpen={setOpenArea}
+                  value={areaValue}
+                  setValue={setAreaValue}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                />
+              </View>
+
               <TouchableOpacity
-                style={styles.editCustomerSubmitBtn}
+                style={styles.btnPrimary}
                 onPress={updateCustomer}>
-                <Icon name="account-edit" size={20} color="white" />
-                <Text style={styles.editCustomerSubmitText}>
-                  Update Customer
-                </Text>
+                <Icon
+                  name="check-circle-outline"
+                  size={20}
+                  color="white"
+                  style={{marginRight: 8}}
+                />
+                <Text style={styles.btnPrimaryText}>Update Changes</Text>
               </TouchableOpacity>
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
           <Toast />
         </View>
       </Modal>
-    </SafeAreaView>
+      <BottomBar />
+    </View>
   );
 };
 
@@ -828,268 +735,339 @@ export default CustomerDetails;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerCenter: {
-    flex: 1,
-    gap: 10,
-    flexDirection: 'row',
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
+    backgroundColor: THEME.background,
   },
 
-  // Details container
-  detailsContainer: {
-    flex: 1,
-    paddingHorizontal: '3%',
+  // --- HEADER & PROFILE ---
+  headerContainer: {
+    paddingBottom: 30, // Reduced from 40
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  avatarBox: {
-    marginVertical: 25,
-    justifyContent: 'center',
+  navBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: Platform.OS === 'android' ? 30 : 0,
+    marginBottom: 10,
+  },
+  navBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  navTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
+  },
+  profileSection: {
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  avatarWrapper: {
+    marginBottom: 12,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
   },
   avatar: {
-    height: 125,
-    width: 125,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: THEME.white,
+    backgroundColor: THEME.white,
   },
-  custName: {
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: THEME.white,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+  },
+  profileName: {
     fontSize: 22,
-    fontWeight: '600',
-    marginTop: 10,
-    color: backgroundColors.primary,
+    fontWeight: '800',
+    color: THEME.white,
+    marginBottom: 4,
+    textAlign: 'center',
   },
-
-  // Inner Details
-  innerDetails: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginBottom: 30,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  innerHeader: {
-    width: '100%',
-    height: 50,
-    borderBottomColor: backgroundColors.primary,
-    borderBottomWidth: 1,
+  badgeRow: {
     flexDirection: 'row',
+    gap: 8, // Reduced from 10
+    marginBottom: 12, // Reduced from 16
+  },
+  capsuleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    gap: 4,
+  },
+  capsuleText: {
+    color: THEME.white,
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  balanceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    width: '100%',
+    padding: 12, // Reduced from 16
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  balanceLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  balanceAmount: {
+    color: THEME.white,
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  balanceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
     alignItems: 'center',
   },
-  headerText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: backgroundColors.dark,
+
+  // --- CONTENT SECTION ---
+  contentContainer: {
+    marginTop: -24, // Pulls content up to overlap header
+    paddingHorizontal: 12,
+    gap: 10,
   },
-  editText: {
+  sectionCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 12, // Slightly tighter radius
+    padding: 12, // Reduced padding
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.08, // Slightly more visible shadow
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  cardHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 8, // Reduced
+    marginBottom: 8, // Reduced
+  },
+  cardTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
+    fontWeight: '700',
+    color: THEME.textDark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  detailsView: {
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5, // Reduced from 6
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6', // Slightly darker than F9FAFB for better separator visibility
+  },
+  iconBox: {
+    width: 32, // Reduced from 36
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10, // Reduced from 12
+  },
+  detailTextContainer: {
     flex: 1,
   },
-  detailsRow: {
-    alignItems: 'baseline',
-    paddingVertical: 10,
-    borderBottomWidth: 0.6,
-    borderBottomColor: backgroundColors.primary,
+  detailLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    marginBottom: 0,
+    fontWeight: '500',
   },
-  label: {
+  detailValue: {
     fontSize: 14,
+    color: THEME.textDark,
     fontWeight: '600',
-    color: backgroundColors.primary,
-  },
-  value: {
-    fontSize: 16,
-    color: backgroundColors.dark,
   },
 
-  //Delete Modal
+  // --- MODALS ---
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
-    paddingHorizontal: 20,
+    padding: 20,
   },
   deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    padding: 24,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
     width: '100%',
-    alignSelf: 'center',
   },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
+  lottieContainer: {
+    width: 100,
+    height: 100,
     marginBottom: 15,
   },
-  deleteModalTitle: {
+  modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: THEME.textDark,
     marginBottom: 8,
   },
-  deleteModalMessage: {
+  modalText: {
     fontSize: 14,
-    color: '#555',
+    color: THEME.textGray,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
+    lineHeight: 20,
   },
-  deleteModalActions: {
+  modalBtnRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
     width: '100%',
   },
-  deleteModalBtn: {
+  btnCancel: {
     flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
   },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
+  btnCancelText: {
+    color: THEME.textDark,
+    fontWeight: '700',
   },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
+  btnDelete: {
+    flex: 1,
+    backgroundColor: THEME.danger,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  btnDeleteText: {
+    color: THEME.white,
+    fontWeight: '700',
   },
 
-  // Edit Customer Modal Styles
-  addeditCustomerModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 15,
-  },
-  editCustomerModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    maxHeight: '80%',
+  // --- EDIT MODAL STYLES ---
+  editModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    maxHeight: '90%',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
     elevation: 10,
   },
-  editCustomerHeader: {
+  editModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#F3F4F6',
   },
-  editCustomerTitle: {
+  editModalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.primary,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  editCustomerCloseBtn: {
+  closeModalBtn: {
     padding: 5,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
   },
-  editCustomerForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+  editModalBody: {
+    padding: 20,
   },
-  editCustomerField: {
-    flex: 1,
-    marginBottom: 5,
+  formGroup: {
+    marginBottom: 16,
   },
-  editCustomerFullRow: {
+  rowInputs: {
+    flexDirection: 'row',
+    marginBottom: 16,
+  },
+  sectionHeader: {
     marginBottom: 15,
+    marginTop: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 5,
   },
-  editCustomerLabel: {
-    fontSize: 14,
+  sectionHeaderText: {
+    color: THEME.primary,
+    fontWeight: '700',
+    fontSize: 13,
+    textTransform: 'uppercase',
+  },
+  label: {
+    fontSize: 12,
     fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 5,
+    color: '#4B5563',
+    marginBottom: 6,
   },
-  editCustomerInput: {
+  input: {
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: backgroundColors.gray,
-    height: 45,
-    borderRadius: 8,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 14,
-    color: backgroundColors.dark,
-    backgroundColor: '#f9f9f9',
+    color: THEME.textDark,
   },
-  editCustomerDropdownRow: {
-    marginBottom: 15,
-  },
-  editCustomerDropdownField: {
-    flex: 1,
-  },
-  editCustomerDropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    minHeight: 42,
-    zIndex: 999,
-  },
-  editCustomerDropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    zIndex: 1000,
-    maxHeight: 160,
-  },
-  editCustomerDropdownText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  editCustomerDropdownPlaceholder: {
-    color: '#999',
-    fontSize: 14,
-  },
-  editCustomerSubmitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
+  dropdown: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
     borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 20,
+    minHeight: 45,
   },
-  editCustomerSubmitText: {
-    color: 'white',
+  dropdownContainer: {
+    borderColor: '#E5E7EB',
+  },
+  btnPrimary: {
+    backgroundColor: THEME.primary,
+    borderRadius: 12,
+    paddingVertical: 15,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  btnPrimaryText: {
+    color: THEME.white,
     fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    fontWeight: '700',
   },
 });

@@ -2,23 +2,63 @@ import {
   BackHandler,
   Image,
   Modal,
-  SafeAreaView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  ScrollView,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import backgroundColors from '../Colors';
-import {ScrollView} from 'react-native-gesture-handler';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
 import {useUser} from '../CTX/UserContext';
 import LottieView from 'lottie-react-native';
 import Toast from 'react-native-toast-message';
 import {RadioButton} from 'react-native-paper';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  danger: '#EF4444',
+  border: '#E5E7EB',
+};
+
+// --- HELPER COMPONENT FOR ROWS ---
+const DetailRow = ({
+  label,
+  value,
+  icon,
+  isLast,
+}: {
+  label: string;
+  value: string;
+  icon: string;
+  isLast?: boolean;
+}) => (
+  <View style={[styles.detailRow, isLast && {borderBottomWidth: 0}]}>
+    <View style={styles.iconContainer}>
+      <Icon name={icon} size={18} color={THEME.primary} />
+    </View>
+    <View style={styles.textContainer}>
+      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.value}>{value || '--'}</Text>
+    </View>
+  </View>
+);
 
 interface EmployeeDetails {
   id: number;
@@ -95,7 +135,6 @@ const EmployeeDetails = ({navigation, route}: any) => {
         `${BASE_URL}/employeesshow?id=${id}&_token=${token}`,
       );
       setEmployee(res.data);
-      console.log(employee);
     } catch (error) {
       console.log(error);
     }
@@ -133,6 +172,11 @@ const EmployeeDetails = ({navigation, route}: any) => {
         `${BASE_URL}/editemployee?id=${id}&_token=${token}`,
       );
       setEditForm(res.data);
+      if (res.data.emp_type === 'Worker') {
+        setEditWorker('Worker');
+      } else {
+        setEditWorker('other');
+      }
     } catch (error) {
       console.log(error);
     }
@@ -212,22 +256,13 @@ const EmployeeDetails = ({navigation, route}: any) => {
         emp_type: empType,
       };
 
-      console.log('Edit payload:', payload);
-
       const res = await axios.post(`${BASE_URL}/updateemployee`, payload);
 
       if (res.status === 200 && res.data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'Employee has been updated successfully',
-          visibilityTime: 1500,
-        });
-        fetchEmpDetails();
         setEditForm(initialEditEmployee);
         setModalVisible('');
         setEditWorker('Worker');
-
+        fetchEmpDetails();
         setTimeout(() => {
           setModalVisible('Success');
         }, 500);
@@ -286,149 +321,187 @@ const EmployeeDetails = ({navigation, route}: any) => {
 
     return () => backHandler.remove();
   }, []);
+
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerCenter}>
-          <TouchableOpacity
-            onPress={() => {
-              navigation.navigate('Employees');
-            }}>
-            <Icon
-              name="chevron-left"
-              size={28}
-              color={backgroundColors.light}
-            />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Employee Details</Text>
-        </View>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-        <TouchableOpacity
-          style={[styles.headerBtn]}
-          onPress={() => {
-            setModalVisible('EmpDelete');
-          }}>
-          <Icon name="delete" size={28} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Employee Details */}
       <ScrollView
-        style={styles.detailsContainer}
-        showsVerticalScrollIndicator={false}>
-        {/* Avatar */}
-        <View style={styles.avatarBox}>
-          <Image
-            source={require('../../assets/man.png')}
-            style={styles.avatar}
-          />
-          <Text style={styles.empName}>{employee?.emp_name}</Text>
-        </View>
-
-        {/* Inner Details */}
-        <View style={styles.innerDetails}>
-          <View style={styles.innerHeader}>
-            <Text style={styles.headerText}>Employee Details</Text>
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{paddingBottom: 100}}>
+        {/* --- HEADER --- */}
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.headerGradient}>
+          {/* Top Navigation */}
+          <View style={styles.navBar}>
             <TouchableOpacity
-              style={{flexDirection: 'row', gap: 5}}
-              onPress={() => {
-                setModalVisible('EditEmp');
-                getEditData();
-              }}>
-              <Text style={styles.editText}>Edit</Text>
-              <Icon
-                name="square-edit-outline"
-                size={18}
-                color={backgroundColors.dark}
-              />
+              onPress={() => navigation.navigate('Employees')}
+              style={styles.navBtn}>
+              <Icon name="arrow-left" size={24} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.navTitle}>Employee Profile</Text>
+            <TouchableOpacity
+              onPress={() => setModalVisible('EmpDelete')}
+              style={styles.navBtn}>
+              <Icon name="trash-can-outline" size={22} color={THEME.white} />
             </TouchableOpacity>
           </View>
 
-          {/* Details */}
-          <View style={styles.detailsView}>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Employee Name</Text>
-              <Text style={styles.value}>{employee?.emp_name ?? '--'}</Text>
+          {/* Profile Content */}
+          <View style={styles.profileContent}>
+            {/* Avatar with White Border */}
+            <View style={styles.avatarContainer}>
+              <Image
+                source={require('../../assets/man.png')}
+                style={styles.avatarImage}
+              />
+              <TouchableOpacity
+                style={styles.editIconBtn}
+                onPress={() => {
+                  getEditData();
+                  setModalVisible('EditEmp');
+                }}>
+                <Icon name="pencil" size={16} color={THEME.primary} />
+              </TouchableOpacity>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Father Name</Text>
-              <Text style={styles.value}>
-                {employee?.emp_fathername ?? '--'}
-              </Text>
+
+            {/* Name & Role */}
+            <Text style={styles.profileName}>
+              {employee?.emp_name || 'Loading...'}
+            </Text>
+
+            {/* Badges Row */}
+            <View style={styles.badgesRow}>
+              <View style={styles.badge}>
+                <Icon
+                  name="card-account-details-outline"
+                  size={14}
+                  color="rgba(255,255,255,0.9)"
+                />
+                <Text style={styles.badgeText}>
+                  {employee?.emp_type || 'Worker'}
+                </Text>
+              </View>
+              <View style={styles.badge}>
+                <Icon
+                  name="map-marker-outline"
+                  size={14}
+                  color="rgba(255,255,255,0.9)"
+                />
+                <Text style={styles.badgeText}>
+                  {employee?.emp_address || 'General'}
+                </Text>
+              </View>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact</Text>
-              <Text style={styles.value}>{employee?.emp_contact ?? '--'}</Text>
+
+            {/* Quick Stats: Balance */}
+            {employee?.emp_opening_balance && (
+              <View style={styles.balanceContainer}>
+                <Text style={styles.balanceLabel}>Opening Balance</Text>
+                <Text style={styles.balanceValue}>
+                  Rs. {employee?.emp_opening_balance}
+                </Text>
+              </View>
+            )}
+          </View>
+        </LinearGradient>
+
+        {/* --- DETAILS CARDS --- */}
+        <View style={styles.contentContainer}>
+          {/* Card 1: Personal Info */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Personal Information</Text>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>{employee?.emp_email ?? '--'}</Text>
+            <DetailRow
+              icon="account"
+              label="Father Name"
+              value={employee?.emp_fathername!}
+            />
+            <DetailRow
+              icon="card-account-details"
+              label="CNIC"
+              value={employee?.emp_cnic!}
+            />
+            <DetailRow
+              icon="email"
+              label="Email"
+              value={employee?.emp_email!}
+            />
+            <DetailRow
+              icon="map-marker"
+              label="Address"
+              value={employee?.emp_address!}
+              isLast
+            />
+          </View>
+
+          {/* Card 2: Contact Details */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Contact Details</Text>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact Person 1</Text>
-              <Text style={styles.value}>
-                {employee?.emp_contact_person_one ?? '--'}
-              </Text>
+            <DetailRow
+              icon="phone"
+              label="Primary Contact"
+              value={employee?.emp_contact!}
+            />
+            <DetailRow
+              icon="account-tie"
+              label="Contact Person 1"
+              value={employee?.emp_contact_person_one!}
+            />
+            <DetailRow
+              icon="phone-classic"
+              label="Sec. Contact"
+              value={employee?.emp_sec_contact!}
+            />
+            <DetailRow
+              icon="account-tie"
+              label="Contact Person 2"
+              value={employee?.emp_contact_person_two!}
+            />
+            <DetailRow
+              icon="phone-classic"
+              label="Third Contact"
+              value={employee?.emp_third_contact!}
+              isLast
+            />
+          </View>
+
+          {/* Card 3: Financials */}
+          <View style={styles.card}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Financials</Text>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact</Text>
-              <Text style={styles.value}>
-                {employee?.emp_sec_contact ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact Person 2</Text>
-              <Text style={styles.value}>
-                {employee?.emp_contact_person_two ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact</Text>
-              <Text style={styles.value}>
-                {employee?.emp_third_contact ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Employee Type</Text>
-              <Text style={styles.value}>{employee?.emp_type ?? '--'}</Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Address</Text>
-              <Text style={styles.value}>{employee?.emp_address ?? '--'}</Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>CNIC</Text>
-              <Text style={styles.value}>{employee?.emp_cnic ?? '--'}</Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Opening Balance</Text>
-              <Text style={styles.value}>
-                {employee?.emp_opening_balance ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Transaction Type</Text>
-              <Text style={styles.value}>
-                {employee?.emp_transaction_type ?? '--'}
-              </Text>
-            </View>
-            <View style={[styles.detailsRow, {borderBottomWidth: 0}]}>
-              <Text style={styles.label}>Paymemt Type</Text>
-              <Text style={styles.value}>
-                {employee?.emp_payment_type ?? '--'}
-              </Text>
-            </View>
+            <DetailRow
+              icon="cash-multiple"
+              label="Payment Type"
+              value={employee?.emp_payment_type!}
+            />
+            <DetailRow
+              icon="bank-transfer"
+              label="Transaction Type"
+              value={employee?.emp_transaction_type!}
+              isLast
+            />
           </View>
         </View>
       </ScrollView>
 
-      {/*Epmloyee Delete*/}
+      {/* Delete Modal */}
       <Modal
         visible={modalVisible === 'EmpDelete'}
         transparent
         animationType="fade">
-        <View style={styles.delModalOverlay}>
+        <View style={styles.modalOverlay}>
           <View style={styles.deleteModalContainer}>
             <View style={styles.delAnim}>
               <LottieView
@@ -438,96 +511,121 @@ const EmployeeDetails = ({navigation, route}: any) => {
                 loop={false}
               />
             </View>
-
-            {/* Title */}
             <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-
-            {/* Subtitle */}
             <Text style={styles.deleteModalMessage}>
               You won’t be able to revert this record!
             </Text>
-
-            {/* Buttons */}
             <View style={styles.deleteModalActions}>
               <TouchableOpacity
-                style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
+                style={[styles.modalBtn, {backgroundColor: '#F3F4F6'}]}
                 onPress={() => setModalVisible('')}>
-                <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
+                <Text style={[styles.modalBtnText, {color: THEME.textDark}]}>
                   Cancel
                 </Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
+                style={[styles.modalBtn, {backgroundColor: THEME.danger}]}
                 onPress={delEmployee}>
-                <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
+                <Text style={[styles.modalBtnText, {color: 'white'}]}>
+                  Yes, Delete
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/*Edit Employee*/}
+      {/* Success Modal */}
+      <Modal
+        visible={modalVisible === 'Success'}
+        transparent
+        animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.deleteModalContainer}>
+            <View style={styles.delAnim}>
+              <LottieView
+                style={{flex: 1}}
+                source={require('../../assets/success.json')}
+                autoPlay
+                duration={2500}
+                loop={false}
+              />
+            </View>
+            <Text style={styles.deleteModalTitle}>Updated!</Text>
+            <Text style={styles.deleteModalMessage}>
+              Employee record has been updated successfully!
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.modalBtn,
+                {backgroundColor: THEME.primary, width: '100%', marginTop: 10},
+              ]}
+              onPress={() => setModalVisible('')}>
+              <Text style={[styles.modalBtnText, {color: 'white'}]}>Ok</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Employee Modal */}
       <Modal
         visible={modalVisible === 'EditEmp'}
         transparent
         animationType="slide">
-        <View style={styles.editEmployeeModalOverlay}>
-          <ScrollView style={styles.editEmployeeModalContainer}>
-            {/* Header */}
-            <View style={styles.editEmployeeHeader}>
-              <Text style={styles.editEmployeeTitle}>Edit Employee</Text>
+        <View style={styles.modalOverlay}>
+          <ScrollView style={styles.editModalContainer}>
+            <View style={styles.editHeader}>
+              <Text style={styles.editTitle}>Edit Employee</Text>
               <TouchableOpacity
                 onPress={() => setModalVisible('')}
-                style={styles.editEmployeeCloseBtn}>
-                <Icon name="close" size={20} color="#144272" />
+                style={styles.closeBtn}>
+                <Icon name="close" size={24} color={THEME.textDark} />
               </TouchableOpacity>
             </View>
 
-            {/* Form */}
-            <View style={styles.editEmployeeForm}>
+            <View style={styles.editForm}>
               {/* Row 1 */}
-              <View style={styles.editEmployeeField}>
-                <Text style={styles.editEmployeeLabel}>Employee Name *</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Employee Name *</Text>
                 <TextInput
-                  style={styles.editEmployeeInput}
+                  style={styles.textInput}
                   value={editForm.emp_name}
                   onChangeText={t => editOnchange('emp_name', t)}
                 />
               </View>
-              <View style={styles.editEmployeeField}>
-                <Text style={styles.editEmployeeLabel}>Father Name</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Father Name</Text>
                 <TextInput
-                  style={styles.editEmployeeInput}
+                  style={styles.textInput}
                   value={editForm.emp_fathername}
                   onChangeText={t => editOnchange('emp_fathername', t)}
                 />
               </View>
 
               {/* Row 2 */}
-              <View style={styles.editEmployeeField}>
-                <Text style={styles.editEmployeeLabel}>Email</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Email</Text>
                 <TextInput
-                  style={styles.editEmployeeInput}
+                  style={styles.textInput}
                   value={editForm.emp_email}
                   onChangeText={t => editOnchange('emp_email', t)}
                   keyboardType="email-address"
                 />
               </View>
-              <View style={styles.editEmployeeField}>
-                <Text style={styles.editEmployeeLabel}>Address</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Address</Text>
                 <TextInput
-                  style={styles.editEmployeeInput}
+                  style={styles.textInput}
                   value={editForm.emp_address}
                   onChangeText={t => editOnchange('emp_address', t)}
                 />
               </View>
 
               {/* Row 3 */}
-              <View style={styles.editEmployeeField}>
-                <Text style={styles.editEmployeeLabel}>Contact</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Contact</Text>
                 <TextInput
-                  style={styles.editEmployeeInput}
+                  style={styles.textInput}
                   value={editForm.emp_contact}
                   maxLength={12}
                   keyboardType="phone-pad"
@@ -540,10 +638,10 @@ const EmployeeDetails = ({navigation, route}: any) => {
                   }}
                 />
               </View>
-              <View style={styles.editEmployeeField}>
-                <Text style={styles.editEmployeeLabel}>CNIC</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>CNIC</Text>
                 <TextInput
-                  style={styles.editEmployeeInput}
+                  style={styles.textInput}
                   value={editForm.emp_cnic}
                   maxLength={15}
                   keyboardType="number-pad"
@@ -561,10 +659,10 @@ const EmployeeDetails = ({navigation, route}: any) => {
               </View>
 
               {/* Row 4 */}
-              <View style={styles.editEmployeeField}>
-                <Text style={styles.editEmployeeLabel}>Contact Person One</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Contact Person One</Text>
                 <TextInput
-                  style={styles.editEmployeeInput}
+                  style={styles.textInput}
                   value={editForm.emp_contact_person_one}
                   maxLength={12}
                   keyboardType="phone-pad"
@@ -577,10 +675,10 @@ const EmployeeDetails = ({navigation, route}: any) => {
                   }}
                 />
               </View>
-              <View style={styles.editEmployeeField}>
-                <Text style={styles.editEmployeeLabel}>Contact</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Contact</Text>
                 <TextInput
-                  style={styles.editEmployeeInput}
+                  style={styles.textInput}
                   value={editForm.emp_sec_contact}
                   maxLength={12}
                   keyboardType="phone-pad"
@@ -594,10 +692,10 @@ const EmployeeDetails = ({navigation, route}: any) => {
                 />
               </View>
 
-              <View style={styles.editEmployeeField}>
-                <Text style={styles.editEmployeeLabel}>Contact Person Two</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Contact Person Two</Text>
                 <TextInput
-                  style={styles.editEmployeeInput}
+                  style={styles.textInput}
                   value={editForm.emp_contact_person_two}
                   maxLength={12}
                   keyboardType="phone-pad"
@@ -610,10 +708,10 @@ const EmployeeDetails = ({navigation, route}: any) => {
                   }}
                 />
               </View>
-              <View style={styles.editEmployeeField}>
-                <Text style={styles.editEmployeeLabel}>Contact</Text>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Contact</Text>
                 <TextInput
-                  style={styles.editEmployeeInput}
+                  style={styles.textInput}
                   value={editForm.emp_third_contact}
                   maxLength={12}
                   keyboardType="phone-pad"
@@ -628,7 +726,7 @@ const EmployeeDetails = ({navigation, route}: any) => {
               </View>
 
               {/* Worker Type */}
-              <Text style={[styles.editEmployeeLabel, {marginLeft: 10}]}>
+              <Text style={[styles.inputLabel, {marginTop: 10}]}>
                 Employee Type *
               </Text>
               <View style={{flexDirection: 'row', marginBottom: 15}}>
@@ -643,12 +741,11 @@ const EmployeeDetails = ({navigation, route}: any) => {
                   <RadioButton
                     value="Worker"
                     status={editWorker === 'Worker' ? 'checked' : 'unchecked'}
-                    color={backgroundColors.primary}
-                    uncheckedColor={backgroundColors.dark}
+                    color={THEME.primary}
+                    uncheckedColor={THEME.textDark}
                     onPress={() => setEditWorker('Worker')}
                   />
-                  <Text
-                    style={{color: backgroundColors.dark, fontWeight: 'bold'}}>
+                  <Text style={{color: THEME.textDark, fontWeight: 'bold'}}>
                     Worker
                   </Text>
                 </TouchableOpacity>
@@ -660,22 +757,21 @@ const EmployeeDetails = ({navigation, route}: any) => {
                   <RadioButton
                     value="other"
                     status={editWorker === 'other' ? 'checked' : 'unchecked'}
-                    color={backgroundColors.primary}
-                    uncheckedColor={backgroundColors.dark}
+                    color={THEME.primary}
+                    uncheckedColor={THEME.textDark}
                     onPress={() => setEditWorker('other')}
                   />
-                  <Text
-                    style={{color: backgroundColors.dark, fontWeight: 'bold'}}>
+                  <Text style={{color: THEME.textDark, fontWeight: 'bold'}}>
                     Other
                   </Text>
                 </TouchableOpacity>
               </View>
 
               {editWorker === 'other' && (
-                <View style={styles.editEmployeeFullRow}>
-                  <Text style={styles.editEmployeeLabel}>Other</Text>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Other</Text>
                   <TextInput
-                    style={styles.editEmployeeInput}
+                    style={styles.textInput}
                     placeholder="Specify type"
                     placeholderTextColor="#999"
                     value={editForm.emp_type}
@@ -685,61 +781,16 @@ const EmployeeDetails = ({navigation, route}: any) => {
               )}
 
               {/* Submit */}
-              <TouchableOpacity
-                style={styles.editEmployeeSubmitBtn}
-                onPress={editEmployee}>
-                <Icon name="account-edit" size={20} color="white" />
-                <Text style={styles.editEmployeeSubmitText}>
-                  Update Employee
-                </Text>
+              <TouchableOpacity style={styles.updateBtn} onPress={editEmployee}>
+                <Icon name="check" size={20} color="white" />
+                <Text style={styles.updateBtnText}>Update Employee</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
           <Toast />
         </View>
       </Modal>
-
-      {/*Success*/}
-      <Modal
-        visible={modalVisible === 'Success'}
-        transparent
-        animationType="fade">
-        <View style={styles.delModalOverlay}>
-          <View style={styles.deleteModalContainer}>
-            <View style={styles.delAnim}>
-              <LottieView
-                style={{flex: 1}}
-                source={require('../../assets/success.json')}
-                autoPlay
-                duration={2500}
-                loop={false}
-              />
-            </View>
-
-            {/* Title */}
-            <Text style={styles.deleteModalTitle}>Updated!</Text>
-
-            {/* Subtitle */}
-            <Text style={styles.deleteModalMessage}>
-              Employee record has been updated successfully!
-            </Text>
-
-            {/* Buttons */}
-            <View style={styles.deleteModalActions}>
-              <TouchableOpacity
-                style={[
-                  styles.deleteModalBtn,
-                  {backgroundColor: backgroundColors.success},
-                ]}
-                onPress={() => {
-                  setModalVisible('');
-                }}>
-                <Text style={styles.deleteModalBtnText}>Ok</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
+      <BottomBar />
     </SafeAreaView>
   );
 };
@@ -749,269 +800,278 @@ export default EmployeeDetails;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+  // --- REFINED HEADER STYLES ---
+  headerGradient: {
+    paddingBottom: 50, // Extra space for overlap
+    borderBottomLeftRadius: 35,
+    borderBottomRightRadius: 35,
+    elevation: 8,
+    shadowColor: THEME.primary,
   },
-  headerCenter: {
-    flex: 1,
-    gap: 10,
-    flexDirection: 'row',
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-
-  // Details container
-  detailsContainer: {
-    flex: 1,
-    paddingHorizontal: '3%',
-  },
-  avatarBox: {
-    marginVertical: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatar: {
-    height: 125,
-    width: 125,
-  },
-  empName: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginTop: 10,
-    color: backgroundColors.primary,
-  },
-
-  // Inner Details
-  innerDetails: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginBottom: 30,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  innerHeader: {
-    width: '100%',
-    height: 50,
-    borderBottomColor: backgroundColors.primary,
-    borderBottomWidth: 1,
+  navBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  headerText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: backgroundColors.dark,
-  },
-  editText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-  },
-  detailsView: {
-    flex: 1,
-  },
-  detailsRow: {
-    alignItems: 'baseline',
-    paddingVertical: 10,
-    borderBottomWidth: 0.6,
-    borderBottomColor: backgroundColors.primary,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.primary,
-  },
-  value: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-  },
-
-  //Delete Modal
-  delModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
     paddingHorizontal: 20,
+    marginBottom: 20,
   },
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
+  navBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  navTitle: {
+    color: THEME.white,
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  profileContent: {
     alignItems: 'center',
+  },
+  avatarContainer: {
+    position: 'relative',
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-    width: '100%',
-    alignSelf: 'center',
+    shadowRadius: 5,
+    elevation: 5,
   },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
+  avatarImage: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    borderWidth: 4,
+    borderColor: THEME.white,
+    backgroundColor: THEME.white,
+  },
+  editIconBtn: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: THEME.white,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+  },
+  profileName: {
+    fontSize: 26,
+    fontWeight: '800',
+    color: THEME.white,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  badgesRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 15,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
+    gap: 6,
+  },
+  badgeText: {
+    color: THEME.white,
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  balanceContainer: {
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  balanceLabel: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: 11,
+    textTransform: 'uppercase',
+    letterSpacing: 1,
+    marginBottom: 2,
+  },
+  balanceValue: {
+    color: THEME.white,
+    fontSize: 18,
+    fontWeight: '700',
+  },
+
+  // --- CONTENT & CARDS ---
+  contentContainer: {
+    paddingHorizontal: 16,
+    marginTop: -30, // Moves card up to overlap header
+  },
+  card: {
+    backgroundColor: THEME.white,
+    borderRadius: 20,
+    marginBottom: 16,
+    padding: 18,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 12,
+    marginBottom: 12,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: THEME.textDark,
+    letterSpacing: 0.3,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F9FAFB',
+  },
+  iconContainer: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  label: {
+    fontSize: 12,
+    color: THEME.textGray,
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  value: {
+    fontSize: 15,
+    color: THEME.textDark,
+    fontWeight: '600',
+  },
+
+  // --- MODALS (Standard Styles) ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  deleteModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
+  },
+  delAnim: {
+    width: 100,
+    height: 100,
     marginBottom: 15,
   },
   deleteModalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#144272',
+    color: THEME.textDark,
     marginBottom: 8,
   },
   deleteModalMessage: {
-    fontSize: 14,
-    color: '#555',
+    fontSize: 15,
+    color: THEME.textGray,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   deleteModalActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     width: '100%',
+    gap: 12,
   },
-  deleteModalBtn: {
+  modalBtn: {
     flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
     alignItems: 'center',
-  },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
-  },
-
-  // Add Modal Styling
-  editEmployeeModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
     justifyContent: 'center',
-    paddingHorizontal: 20,
   },
-  editEmployeeModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
+  modalBtnText: {
+    fontSize: 16,
+    fontWeight: '700',
   },
-  editEmployeeHeader: {
+  // Edit Modal Styles
+  editModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    maxHeight: '85%',
+  },
+  editHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    padding: 14,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#F3F4F6',
   },
-  editEmployeeTitle: {
+  editTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.primary,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  editEmployeeCloseBtn: {
+  closeBtn: {
     padding: 5,
   },
-  editEmployeeForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+  editForm: {
+    padding: 16,
   },
-  editEmployeeField: {
-    flex: 1,
-    marginBottom: 5,
+  inputGroup: {
+    marginBottom: 10,
   },
-  editEmployeeFullRow: {
-    marginBottom: 15,
-  },
-  editEmployeeLabel: {
-    fontSize: 14,
+  inputLabel: {
+    fontSize: 13,
     fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 5,
+    color: '#374151',
+    marginBottom: 6,
   },
-  editEmployeeInput: {
+  textInput: {
+    backgroundColor: '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    height: 45,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderColor: THEME.border,
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
     fontSize: 14,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
+    color: THEME.textDark,
   },
-  editEmployeeRadioText: {
-    color: '#144272',
-    fontSize: 14,
-    marginRight: 15,
-  },
-  editEmployeeDropdownRow: {
-    marginBottom: 15,
-  },
-  editEmployeeDropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    minHeight: 42,
-    zIndex: 999,
-  },
-  editEmployeeDropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    zIndex: 1000,
-    maxHeight: 160,
-  },
-  editEmployeeDropdownText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  editEmployeeDropdownPlaceholder: {
-    color: '#999',
-    fontSize: 14,
-  },
-  editEmployeeSubmitBtn: {
+  updateBtn: {
+    backgroundColor: THEME.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 20,
+    alignItems: 'center',
+    marginTop: 10,
+    gap: 8,
   },
-  editEmployeeSubmitText: {
-    color: 'white',
+  updateBtnText: {
+    color: THEME.white,
     fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    fontWeight: '700',
   },
 });

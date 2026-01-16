@@ -10,6 +10,8 @@ import {
   ScrollView,
   Image,
   BackHandler,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -19,7 +21,27 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import LottieView from 'lottie-react-native';
+import BottomBar from '../../BottomBar';
+
+const {width} = Dimensions.get('window');
+
+// --- THEME (Matching CustomerPeople.tsx) ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+  danger: '#EF4444',
+  shadow: '#000000',
+};
 
 interface SystemUser {
   id: number;
@@ -45,6 +67,14 @@ interface UserForm {
   role: any;
 }
 
+// --- HELPER: Get Initials ---
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  const parts = name.split(' ');
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
+
 const initialUserForm: UserForm = {
   name: '',
   contact: '',
@@ -66,6 +96,7 @@ export default function User({navigation}: any) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredData, setFilteredData] = useState<SystemUser[]>([]);
   const [masterData, setMasterData] = useState<SystemUser[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const transformedRoleDropDown = roleDropDown.map(item => ({
     label: item.role_name,
@@ -79,7 +110,7 @@ export default function User({navigation}: any) {
     }));
   };
 
-  // Pagination for Customer
+  // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
 
@@ -87,7 +118,6 @@ export default function User({navigation}: any) {
   const totalRecords = currentData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
 
-  // Slice data for pagination
   const paginatedData = currentData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
@@ -199,7 +229,6 @@ export default function User({navigation}: any) {
     }
   };
 
-  // Fetch Role DropDown
   const fetchRoleDropDown = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/fetchrolesdropdown`, {
@@ -213,8 +242,8 @@ export default function User({navigation}: any) {
     }
   };
 
-  // Fetch Data
   const handleFetchData = async () => {
+    setLoading(true);
     try {
       const res = await axios.get(`${BASE_URL}/fetchusers`, {
         headers: {
@@ -228,10 +257,11 @@ export default function User({navigation}: any) {
       setMasterData(userData);
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  // Search Filter
   const searchFilter = (text: string) => {
     if (text) {
       const newData = masterData.filter(item => {
@@ -268,302 +298,316 @@ export default function User({navigation}: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Users</Text>
+      {/* --- MODERN HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>System Users</Text>
+            <TouchableOpacity
+              onPress={() => setModalVisible('Add')}
+              style={styles.iconBtn}>
+              <Icon name="plus" size={24} color={THEME.white} />
+            </TouchableOpacity>
           </View>
+        </LinearGradient>
 
-          <TouchableOpacity
-            onPress={() => setModalVisible('Add')}
-            style={[styles.headerBtn]}>
-            <Text style={styles.addBtnText}>Add</Text>
-            <Icon name="plus" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Filter */}
-        <View style={styles.searchFilter}>
-          <Icon name="magnify" size={36} color={backgroundColors.dark} />
+        {/* Floating Search Bar */}
+        <View style={styles.floatingSearchContainer}>
+          <Icon name="magnify" size={22} color={THEME.primary} />
           <TextInput
-            placeholder="Search by supplier name"
-            style={styles.search}
+            placeholder="Search users..."
+            placeholderTextColor={THEME.textGray}
+            style={styles.floatingSearchInput}
             value={searchQuery}
-            onChangeText={text => searchFilter(text)}
+            onChangeText={searchFilter}
           />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => searchFilter('')}>
+              <Icon name="close-circle" size={18} color={THEME.textGray} />
+            </TouchableOpacity>
+          )}
         </View>
+      </View>
 
-        <View style={styles.listContainer}>
-          <FlatList
-            data={paginatedData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <TouchableOpacity
-                style={styles.card}
-                onPress={() => {
-                  navigation.navigate('UserDetails', {
-                    id: item.id,
-                    name: item.name,
-                    contact: item.contact,
-                    cnic: item.cnic,
-                    email: item.email,
-                    role: item.role,
-                  });
-                }}>
-                {/* Avatar + Name + Actions */}
-                <View style={styles.row}>
-                  <View style={styles.avatarBox}>
-                    <Image
-                      source={require('../../../assets/man.png')}
-                      style={styles.avatar}
-                    />
-                  </View>
+      {/* --- CONTENT LIST --- */}
+      <View style={styles.listContainer}>
+        {loading ? (
+          <View style={styles.centerContent}>
+            <LottieView
+              source={require('../../../assets/Loading-Dots.json')}
+              autoPlay
+              loop
+              style={styles.lottie}
+            />
+          </View>
+        ) : (
+          <>
+            <View style={styles.tableHeaderRow}>
+              <Text style={styles.tableHeaderLabel}>USER LIST</Text>
+              <Text style={styles.tableHeaderCount}>{totalRecords} Found</Text>
+            </View>
 
-                  <View style={{flex: 1}}>
-                    <Text style={styles.name}>{item.name}</Text>
-                    {/* small details inline */}
-                    <Text style={styles.subText}>
-                      <Icon name="phone" size={12} color="#666" />{' '}
-                      {item.contact || 'No contact'}
+            <FlatList
+              data={paginatedData}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({item}) => (
+                <TouchableOpacity
+                  activeOpacity={0.75}
+                  style={styles.cardRow}
+                  onPress={() => {
+                    navigation.navigate('UserDetails', {
+                      id: item.id,
+                      name: item.name,
+                      contact: item.contact,
+                      cnic: item.cnic,
+                      email: item.email,
+                      role: item.role,
+                    });
+                  }}>
+                  {/* Avatar Section */}
+                  <View style={styles.avatarContainer}>
+                    <Text style={styles.avatarText}>
+                      {getInitials(item.name)}
                     </Text>
                   </View>
 
-                  {/* Actions on right */}
-                  <View style={styles.actionRow}>
-                    <Icon
-                      name="chevron-right"
-                      size={28}
-                      color={backgroundColors.dark}
-                    />
+                  {/* Info Section */}
+                  <View style={styles.infoContainer}>
+                    <View
+                      style={{
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                        marginBottom: 2,
+                      }}>
+                      <Text style={styles.nameText} numberOfLines={1}>
+                        {item.name}
+                      </Text>
+                      <View style={styles.badgeContainer}>
+                        <View style={styles.areaBadge}>
+                          <Text style={styles.areaBadgeText} numberOfLines={1}>
+                            {item.role || 'User'}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    <View style={styles.iconTextRow}>
+                      <Icon
+                        name="phone-outline"
+                        size={14}
+                        color={THEME.textGray}
+                      />
+                      <Text style={styles.subText}>
+                        {item.contact || 'No Contact'}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              </TouchableOpacity>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-group" size={48} color="#666" />
-                <Text style={styles.emptyText}>No record found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
 
-        {/* Add User Modal */}
-        <Modal
-          visible={modalVisible === 'Add'}
-          transparent
-          animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Add New User</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setUserForm(initialUserForm);
-                    setRoleValue(null);
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color={backgroundColors.dark} />
+                  {/* Arrow */}
+                  <Icon
+                    name="chevron-right"
+                    size={22}
+                    color={THEME.primary}
+                    style={{marginLeft: 6}}
+                  />
                 </TouchableOpacity>
+              )}
+              contentContainerStyle={{paddingBottom: 160}}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.centerContent}>
+                  <Icon name="account-search" size={60} color="#D1D5DB" />
+                  <Text style={styles.emptyText}>No users found</Text>
+                </View>
+              }
+            />
+          </>
+        )}
+      </View>
+
+      {/* --- PAGINATION (Bottom Floating) --- */}
+      {!loading && totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => prev - 1)}
+            style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+            <Icon name="chevron-left" size={24} color={THEME.white} />
+          </TouchableOpacity>
+
+          <Text style={styles.pageText}>
+            Page {currentPage} of {totalPages}
+          </Text>
+
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() => setCurrentPage(prev => prev + 1)}
+            style={[
+              styles.pageBtn,
+              currentPage === totalPages && styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-right" size={24} color={THEME.white} />
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* --- ADD USER MODAL --- */}
+      <Modal
+        visible={modalVisible === 'Add'}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setModalVisible('')}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add New User</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setUserForm(initialUserForm);
+                  setRoleValue(null);
+                }}
+                style={styles.closeBtn}>
+                <Icon name="close" size={24} color={THEME.textDark} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              style={styles.modalBody}
+              showsVerticalScrollIndicator={false}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Role *</Text>
+                <DropDownPicker
+                  items={transformedRoleDropDown}
+                  open={roleOpen}
+                  setOpen={setRoleOpen}
+                  value={roleValue}
+                  setValue={setRoleValue}
+                  placeholder="Select Role"
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  textStyle={styles.inputText}
+                  listMode="SCROLLVIEW"
+                  zIndex={3000}
+                  zIndexInverse={1000}
+                />
               </View>
 
-              <View style={styles.addCustomerForm}>
-                <View style={styles.addCustomerDropdownRow}>
-                  <View style={styles.addCustomerDropdownField}>
-                    <DropDownPicker
-                      items={transformedRoleDropDown}
-                      open={roleOpen}
-                      setOpen={setRoleOpen}
-                      value={roleValue}
-                      setValue={setRoleValue}
-                      placeholder="Select Role *"
-                      placeholderStyle={styles.addCustomerDropdownPlaceholder}
-                      textStyle={styles.addCustomerDropdownText}
-                      ArrowUpIconComponent={() => (
-                        <Icon
-                          name="chevron-up"
-                          size={18}
-                          color={backgroundColors.dark}
-                        />
-                      )}
-                      ArrowDownIconComponent={() => (
-                        <Icon
-                          name="chevron-down"
-                          size={18}
-                          color={backgroundColors.dark}
-                        />
-                      )}
-                      style={styles.addCustomerDropdown}
-                      dropDownContainerStyle={
-                        styles.addCustomerDropdownContainer
-                      }
-                      listMode="SCROLLVIEW"
-                      listItemLabelStyle={{
-                        color: backgroundColors.dark,
-                        fontWeight: '500',
-                      }}
-                      labelStyle={{
-                        color: backgroundColors.dark,
-                        fontSize: 16,
-                      }}
-                      searchable
-                      searchTextInputStyle={{
-                        borderWidth: 0,
-                        width: '100%',
-                      }}
-                      searchContainerStyle={{
-                        borderColor: backgroundColors.gray,
-                      }}
-                    />
-                  </View>
-                </View>
-
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Full Name *</Text>
                 <TextInput
-                  style={styles.addCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="Enter name *"
+                  style={styles.input}
+                  placeholder="Enter full name"
+                  placeholderTextColor={THEME.textGray}
                   value={userForm.name}
                   onChangeText={text => handleUserIputChange('name', text)}
                 />
+              </View>
 
-                <TextInput
-                  style={styles.addCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="Contact *"
-                  keyboardType="phone-pad"
-                  maxLength={12}
-                  value={userForm.contact}
-                  onChangeText={text => {
-                    let cleaned = text.replace(/[^0-9-]/g, '');
-                    cleaned = cleaned.replace(/-/g, '');
-                    if (cleaned.length > 4)
-                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                    handleUserIputChange('contact', cleaned);
-                  }}
-                />
+              <View style={styles.rowInputs}>
+                <View style={[styles.inputGroup, {flex: 1, marginRight: 10}]}>
+                  <Text style={styles.label}>Contact *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0300-1234567"
+                    placeholderTextColor={THEME.textGray}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    value={userForm.contact}
+                    onChangeText={text => {
+                      let cleaned = text.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleUserIputChange('contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={[styles.inputGroup, {flex: 1}]}>
+                  <Text style={styles.label}>CNIC *</Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="CNIC Number"
+                    placeholderTextColor={THEME.textGray}
+                    keyboardType="numeric"
+                    maxLength={15}
+                    value={userForm.cnic}
+                    onChangeText={text => {
+                      let cleaned = text.replace(/[^0-9-]/g, '');
+                      cleaned = cleaned.replace(/-/g, '');
+                      if (cleaned.length > 5)
+                        cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
+                      if (cleaned.length > 13)
+                        cleaned =
+                          cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
+                      if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
+                      handleUserIputChange('cnic', cleaned);
+                    }}
+                  />
+                </View>
+              </View>
 
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Email Address *</Text>
                 <TextInput
-                  style={styles.addCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="CNIC *"
-                  keyboardType="numeric"
-                  maxLength={15}
-                  value={userForm.cnic}
-                  onChangeText={text => {
-                    let cleaned = text.replace(/[^0-9-]/g, '');
-                    cleaned = cleaned.replace(/-/g, '');
-                    if (cleaned.length > 5)
-                      cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                    if (cleaned.length > 13)
-                      cleaned =
-                        cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                    if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                    handleUserIputChange('cnic', cleaned);
-                  }}
-                />
-                <TextInput
-                  style={styles.addCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="Email *"
+                  style={styles.input}
+                  placeholder="user@example.com"
+                  placeholderTextColor={THEME.textGray}
                   keyboardType="email-address"
                   value={userForm.email}
                   onChangeText={text => handleUserIputChange('email', text)}
                 />
+              </View>
 
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Password *</Text>
                 <TextInput
-                  style={styles.addCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="Enter password *"
+                  style={styles.input}
+                  placeholder="Enter password"
+                  placeholderTextColor={THEME.textGray}
                   secureTextEntry
                   value={userForm.password}
                   onChangeText={text => handleUserIputChange('password', text)}
                 />
+              </View>
 
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Confirm Password *</Text>
                 <TextInput
-                  style={styles.addCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="Confirm password *"
+                  style={styles.input}
+                  placeholder="Confirm password"
+                  placeholderTextColor={THEME.textGray}
                   secureTextEntry
                   value={userForm.confirmPassword}
                   onChangeText={text =>
                     handleUserIputChange('confirmPassword', text)
                   }
                 />
-
-                <TouchableOpacity
-                  style={styles.addCustomerSubmitBtn}
-                  onPress={handleAddUser}>
-                  <Icon name="account-plus-outline" size={20} color="white" />
-                  <Text style={styles.addCustomerSubmitText}>Add User</Text>
-                </TouchableOpacity>
               </View>
+
+              <TouchableOpacity
+                style={styles.submitBtn}
+                onPress={handleAddUser}>
+                <Text style={styles.submitBtnText}>Create User</Text>
+              </TouchableOpacity>
+              <View style={{height: 20}} />
             </ScrollView>
-            <Toast />
           </View>
-        </Modal>
-
-        {/* Pagination Controls */}
-        {totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
-            </View>
-
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() =>
-                setCurrentPage(prev => Math.min(prev + 1, totalPages))
-              }
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+        </View>
+        <Toast />
+      </Modal>
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -571,317 +615,297 @@ export default function User({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 20,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 40, // Extra space for floating search
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
+  },
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  // --- Floating Search ---
+  floatingSearchContainer: {
+    position: 'absolute',
+    bottom: -24,
+    left: 12,
+    right: 12,
+    backgroundColor: THEME.white,
+    borderRadius: 10,
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.light,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
+  floatingSearchInput: {
     flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    color: THEME.textDark,
   },
 
-  // Search Filter
-  searchFilter: {
-    width: '94%',
-    alignSelf: 'center',
-    height: 48,
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  search: {
-    height: '100%',
-    fontSize: 14,
-    color: backgroundColors.dark,
-    width: '100%',
-  },
-
-  // FlatList Styling
+  // --- List ---
   listContainer: {
     flex: 1,
-    paddingHorizontal: '3%',
+    paddingTop: 10,
   },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 14,
   },
-  row: {
+  tableHeaderLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textGray,
+    letterSpacing: 0.5,
+  },
+  tableHeaderCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.primary,
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+
+  // --- Card Row ---
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    width: '94%',
+    alignSelf: 'center',
+    marginBottom: 6,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#222',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.19,
+    shadowRadius: 14,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
-  avatarBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  avatarContainer: {
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 15,
-  },
-  avatar: {
-    height: 45,
-    width: 45,
+    marginRight: 14,
   },
   avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
+    fontSize: 20,
+    fontWeight: '800',
+    color: THEME.primary,
+    letterSpacing: 0.5,
   },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    minWidth: 0,
+  },
+  nameText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 0,
+  },
+  iconTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    marginBottom: 2,
   },
   subText: {
     fontSize: 12,
-    color: '#555',
-    marginTop: 2,
+    color: THEME.textGray,
+    marginLeft: 4,
+    flexShrink: 1,
   },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 8,
-    marginLeft: 10,
+  badgeContainer: {
+    marginLeft: 12,
+    marginRight: 8,
+    alignItems: 'flex-end',
+    flex: 0,
   },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+  areaBadge: {
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
+    marginTop: 3,
   },
-  emptyText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+  areaBadgeText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: THEME.textDark,
+    maxWidth: 80,
   },
 
-  // Pagination Styling
+  // --- Pagination (Floating) ---
   paginationContainer: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  pageBtn: {
+    padding: 5,
+  },
+  disabledBtn: {
+    opacity: 0.3,
+  },
+  pageText: {
+    color: THEME.white,
+    fontSize: 13,
+    fontWeight: '600',
+    marginHorizontal: 15,
+  },
+
+  // --- Empty & Loading ---
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 50,
+  },
+  lottie: {
+    width: 150,
+    height: 150,
+  },
+  emptyText: {
+    marginTop: 15,
+    fontSize: 16,
+    color: THEME.textGray,
+    fontWeight: '500',
+  },
+
+  // --- Modal ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContainer: {
+    backgroundColor: THEME.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    height: '85%',
+    padding: 20,
+  },
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.border,
+    paddingBottom: 15,
   },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: THEME.textDark,
   },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
+  closeBtn: {
+    padding: 5,
   },
-  pageButtonText: {
-    color: backgroundColors.light,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    alignItems: 'center',
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
-  },
-
-  // Add Customer Modal Styles
-  addCustomerModalOverlay: {
+  modalBody: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
   },
-  addCustomerModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    maxHeight: '90%',
-    shadowColor: '#000',
+  inputGroup: {
+    marginBottom: 16,
+  },
+  rowInputs: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textDark,
+    marginBottom: 8,
+  },
+  input: {
+    backgroundColor: THEME.background,
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: THEME.textDark,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  dropdown: {
+    backgroundColor: THEME.background,
+    borderColor: THEME.border,
+    borderRadius: 12,
+  },
+  dropdownContainer: {
+    borderColor: THEME.border,
+  },
+  inputText: {
+    fontSize: 14,
+    color: THEME.textDark,
+  },
+  submitBtn: {
+    backgroundColor: THEME.primary,
+    borderRadius: 12,
+    paddingVertical: 15,
+    alignItems: 'center',
+    marginTop: 10,
+    shadowColor: THEME.primary,
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    elevation: 10,
+    elevation: 4,
   },
-  addCustomerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  addCustomerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-  },
-  addCustomerCloseBtn: {
-    padding: 5,
-  },
-  addCustomerForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  addCustomerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  addCustomerField: {
-    flex: 1,
-    marginHorizontal: 5,
-  },
-  addCustomerFullRow: {
-    marginBottom: 15,
-  },
-  addCustomerLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#144272',
-    marginBottom: 5,
-  },
-  addCustomerInput: {
-    borderWidth: 0.6,
-    borderColor: '#00000047',
-    height: 45,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    color: '#333',
-    backgroundColor: backgroundColors.light,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 6,
-    marginBottom: 10,
-  },
-  addCustomerDropdownRow: {
-    marginBottom: 15,
-  },
-  addCustomerDropdownField: {
-    flex: 1,
-  },
-  addCustomerDropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 2,
-    height: 48,
-  },
-  addCustomerDropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    zIndex: 1000,
-    maxHeight: 160,
-  },
-  addCustomerDropdownText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  addCustomerDropdownPlaceholder: {
-    color: '#999',
-    fontSize: 14,
-  },
-  addCustomerSubmitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 20,
-  },
-  addCustomerSubmitText: {
-    color: 'white',
+  submitBtnText: {
+    color: THEME.white,
     fontSize: 16,
     fontWeight: 'bold',
-    marginLeft: 8,
   },
 });

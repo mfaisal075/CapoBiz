@@ -9,6 +9,9 @@ import {
   Image,
   TextInput,
   BackHandler,
+  StatusBar,
+  KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -22,7 +25,27 @@ import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import LottieView from 'lottie-react-native';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+  success: '#10B981',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  shadow: '#000',
+  info: '#3B82F6',
+};
 
 interface EmployeeList {
   id: number;
@@ -52,7 +75,7 @@ const initialAddAttendance: AddAttendance = {
   clockOut: new Date(),
   date: new Date(),
   emp: '',
-  status: '',
+  status: 'Present',
 };
 
 export default function AllEmployeeAttendanceList({navigation}: any) {
@@ -136,7 +159,9 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
 
   // Handle time change
   const onClockInChange = (event: DateTimePickerEvent, selectedDate?: Date) => {
-    setShowClockInPicker(false);
+    if (Platform.OS === 'android') {
+      setShowClockInPicker(false);
+    }
     if (selectedDate) handleEditChange('clockIn', selectedDate);
   };
 
@@ -144,7 +169,9 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
     event: DateTimePickerEvent,
     selectedDate?: Date,
   ) => {
-    setShowClockOutPicker(false);
+    if (Platform.OS === 'android') {
+      setShowClockOutPicker(false);
+    }
     if (selectedDate) handleEditChange('clockOut', selectedDate);
   };
 
@@ -153,7 +180,9 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
     event: DateTimePickerEvent,
     selectedDate?: Date,
   ) => {
-    setShowClockInPickerAdd(false);
+    if (Platform.OS === 'android') {
+      setShowClockInPickerAdd(false);
+    }
     if (selectedDate) handleAddChange('clockIn', selectedDate);
   };
 
@@ -161,7 +190,9 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
     event: DateTimePickerEvent,
     selectedDate?: Date,
   ) => {
-    setShowClockOutPickerAdd(false);
+    if (Platform.OS === 'android') {
+      setShowClockOutPickerAdd(false);
+    }
     if (selectedDate) handleAddChange('clockOut', selectedDate);
   };
 
@@ -174,8 +205,11 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
     selectedDate?: Date,
   ) => {
     const currentDate = selectedDate || startDate;
-    setShowStartDatePicker(false);
+    if (Platform.OS === 'android') {
+      setShowStartDatePicker(false);
+    }
     setStartDate(currentDate);
+    handleAddChange('date', currentDate);
   };
 
   const [showeditDatePicker, setShoweditDatePicker] = useState(false);
@@ -193,6 +227,10 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
   const [editType, seteditType] = useState(false);
 
   const [customereditArea, setcustomereditArea] = useState(false);
+  const [successModal, setSuccessModal] = useState(false);
+  const [warningModal, setWarningModal] = useState(false);
+  const [messageText, setMessageText] = useState('');
+  const [messageTitle, setMessageTitle] = useState('');
 
   // Fetch Empoyee List
   const fetchEmpList = async () => {
@@ -255,22 +293,6 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
     return date;
   };
 
-  const formatTimeForDisplay = (timeString: string) => {
-    if (!timeString) return '—';
-    try {
-      const [hours, minutes] = timeString.split(':').map(Number);
-      const date = new Date();
-      date.setHours(hours, minutes);
-      return date.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: true,
-      });
-    } catch {
-      return timeString;
-    }
-  };
-
   // Update Attendance
   const updateAttendance = async () => {
     try {
@@ -285,22 +307,16 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
       const data = res.data;
 
       if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'Attendance has been Updated successfully',
-          visibilityTime: 1500,
-        });
+        setSuccessModal(true);
+        setMessageTitle('Updated!');
+        setMessageText('Attendance has been Updated successfully');
         setSelectedEmp(null);
         setModal('');
         fetchEmpList();
       } else if (res.status === 200 && data.status === 203) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Clockin time must be greater than clockout time!',
-          visibilityTime: 2000,
-        });
+        setWarningModal(true);
+        setMessageTitle('Warning!');
+        setMessageText('Clockin time must be greater than clockout time!');
       }
     } catch (error) {
       console.log(error);
@@ -316,12 +332,9 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
       !addAttendance.clockOut ||
       !addAttendance.date
     ) {
-      Toast.show({
-        type: 'error',
-        text1: 'Missing Fields',
-        text2: 'Please fill all fields before submitting.',
-        visibilityTime: 1500,
-      });
+      setWarningModal(true);
+      setMessageTitle('Missing Fields');
+      setMessageText('Please fill all fields before submitting.');
       return;
     }
     try {
@@ -342,43 +355,30 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
       const data = res.data;
 
       if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Success',
-          text2: 'Attendance Marked Sucessfully',
-          visibilityTime: 1500,
-        });
+        setSuccessModal(true);
+        setMessageTitle('Success');
+        setMessageText('Attendance Marked Sucessfully');
         setModal('');
         setAddAttendance(initialAddAttendance);
         fetchEmpList();
       } else if (res.status === 200 && data.status === 202) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Attendance already marked!',
-          visibilityTime: 2000,
-        });
+        setWarningModal(true);
+        setMessageTitle('Warning!');
+        setMessageText(
+          'Attendance Already added in the record for this employee.',
+        );
       } else if (res.status === 200 && data.status === 203) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Clockout time must be greater than clockin time!',
-          visibilityTime: 2000,
-        });
+        setWarningModal(true);
+        setMessageTitle('Warning!');
+        setMessageText('Clockout time must be greater than clockin time!');
       } else if (res.status === 200 && data.status === 204) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Please enter the Clockin Time!',
-          visibilityTime: 2000,
-        });
+        setWarningModal(true);
+        setMessageTitle('Warning!');
+        setMessageText('Please enter the Clockin Time!');
       } else if (res.status === 200 && data.status === 205) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'Please enter the Clockout Time!',
-          visibilityTime: 2000,
-        });
+        setWarningModal(true);
+        setMessageTitle('Warning!');
+        setMessageText('Please enter the Clockout Time!');
       }
     } catch (error) {
       console.log(error);
@@ -394,12 +394,9 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
       const data = res.data;
 
       if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Deleted!',
-          text2: 'Employee Attendance has been deleted successfully.',
-          visibilityTime: 1500,
-        });
+        setSuccessModal(true);
+        setMessageTitle('Deleted!');
+        setMessageText('Employee Attendance has been deleted successfully.');
         setModal('');
         fetchEmpList();
         setSelectedEmp(null);
@@ -473,66 +470,73 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Attendance List</Text>
+            <TouchableOpacity
+              onPress={() => setModal('Add')}
+              style={styles.iconBtn}>
+              <Icon name="plus" size={24} color={THEME.white} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        {/* Unified Floating Filter Card */}
+        <View style={styles.floatingFilterCard}>
+          {/* Search Row */}
+          <View style={styles.searchRow}>
+            <Icon name="magnify" size={20} color={THEME.textGray} />
+            <TextInput
+              placeholder="Search by employee name"
+              placeholderTextColor={THEME.textGray}
+              style={styles.searchInput}
+              value={searchQuery}
+              onChangeText={text => searchFilter(text)}
+            />
+            {searchQuery.length > 0 && (
+              <TouchableOpacity onPress={() => searchFilter('')}>
+                <Icon name="close-circle" size={18} color={THEME.textGray} />
+              </TouchableOpacity>
+            )}
           </View>
 
-          <TouchableOpacity
-            onPress={() => setModal('Add')}
-            style={[styles.headerBtn]}>
-            <Text style={styles.addBtnText}>Add</Text>
-            <Icon name="plus" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        {/* Search Filter */}
-        <View style={styles.searchFilter}>
-          <Icon name="magnify" size={36} color={backgroundColors.dark} />
-          <TextInput
-            placeholder="Search by employee name"
-            style={styles.search}
-            value={searchQuery}
-            onChangeText={text => searchFilter(text)}
-          />
-        </View>
-
-        {/* Date Range Section */}
-        <View style={styles.dateSection}>
-          <View style={styles.labelCtr}>
-            <Text style={styles.inputLabel}>From:</Text>
-            <Text style={styles.inputLabel}>To:</Text>
-          </View>
-
-          <View style={styles.dateRow}>
+          {/* Date Filter Row */}
+          <View style={styles.dateFilterRow}>
             <TouchableOpacity
               onPress={() => setShowDatePicker('from')}
               style={styles.dateInput}>
-              <Icon name="calendar" size={20} color={backgroundColors.dark} />
+              <Icon name="calendar" size={18} color={THEME.primary} />
               <Text style={styles.dateText}>
-                {fromDate ? fromDate.toLocaleDateString() : 'From Date'}
+                {fromDate ? fromDate.toLocaleDateString() : 'From'}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => setShowDatePicker('to')}
               style={styles.dateInput}>
-              <Icon name="calendar" size={20} color={backgroundColors.dark} />
+              <Icon name="calendar" size={18} color={THEME.primary} />
               <Text style={styles.dateText}>
-                {toDate ? toDate.toLocaleDateString() : 'To Date'}
+                {toDate ? toDate.toLocaleDateString() : 'To'}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
+      </View>
+
+      <View style={styles.contentContainer}>
+        {/* Filter Card Removed - Integrated into Header */}
 
         {showDatePicker && (
           <DateTimePicker
@@ -556,18 +560,18 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
               <View style={styles.card}>
                 {/* Card Header */}
                 <View style={styles.cardHeader}>
-                  <Text style={styles.employeeName}>{item.emp_name}</Text>
-                  <View style={[styles.dateSection, {flexDirection: 'row'}]}>
-                    <Icon name="calendar-today" size={16} color="#666" />
-                    <Text style={styles.dateTextFooter}>
-                      {new Date(item.empatt_date)
-                        .toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                        .replace(/ /g, '-')}
-                    </Text>
+                  <View style={styles.employeeInfoSection}>
+                    <Text style={styles.employeeName}>{item.emp_name}</Text>
+                    <View style={styles.dateSection}>
+                      <Icon
+                        name="calendar-today"
+                        size={14}
+                        color={THEME.textDark}
+                      />
+                      <Text style={styles.dateText}>
+                        {new Date(item.empatt_date).toLocaleDateString()}
+                      </Text>
+                    </View>
                   </View>
                 </View>
 
@@ -575,14 +579,8 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
                 <View style={styles.cardBody}>
                   {/* Clock In */}
                   <View style={styles.timeCard}>
-                    <View style={styles.timeCardLeft}>
-                      <View
-                        style={[
-                          styles.iconCircle,
-                          {backgroundColor: '#E8F5E9'},
-                        ]}>
-                        <Icon name="clock-in" size={20} color="#2A652B" />
-                      </View>
+                    <View style={styles.timeCardContent}>
+                      <Icon name="clock-in" size={20} color={THEME.primary} />
                       <View style={styles.timeInfo}>
                         <Text style={styles.timeLabel}>Clock In</Text>
                         <Text style={styles.timeValue}>
@@ -594,14 +592,8 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
 
                   {/* Clock Out */}
                   <View style={styles.timeCard}>
-                    <View style={styles.timeCardLeft}>
-                      <View
-                        style={[
-                          styles.iconCircle,
-                          {backgroundColor: '#FFEBEE'},
-                        ]}>
-                        <Icon name="clock-out" size={20} color="#D32F2F" />
-                      </View>
+                    <View style={styles.timeCardContent}>
+                      <Icon name="clock-out" size={20} color={THEME.danger} />
                       <View style={styles.timeInfo}>
                         <Text style={styles.timeLabel}>Clock Out</Text>
                         <Text style={styles.timeValue}>
@@ -619,17 +611,6 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
                       styles.statusBadge,
                       getStatusStyle(item.empatt_att_status),
                     ]}>
-                    <Icon
-                      name={
-                        item.empatt_att_status === 'Present'
-                          ? 'check-circle'
-                          : item.empatt_att_status === 'Absent'
-                          ? 'close-circle'
-                          : 'information'
-                      }
-                      size={14}
-                      color={getStatusTextColor(item.empatt_att_status)}
-                    />
                     <Text
                       style={[
                         styles.statusText,
@@ -645,16 +626,24 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
                         fetchEditData(item.id);
                         setSelectedEmp(item.id);
                       }}
-                      style={styles.editButton}>
-                      <Icon name="pencil" size={16} color="#144272" />
+                      style={styles.changeStatusButton}>
+                      <Text style={styles.changeStatusText}>Edit</Text>
+                      <Icon name="pencil" size={16} color={THEME.primary} />
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => {
                         setModal('Delete');
                         setSelectedEmp(item.id);
                       }}
-                      style={styles.deleteButton}>
-                      <Icon name="delete" size={16} color="#F44336" />
+                      style={[styles.changeStatusButton, {marginLeft: 15}]}>
+                      <Text
+                        style={[
+                          styles.changeStatusText,
+                          {color: THEME.danger},
+                        ]}>
+                        Delete
+                      </Text>
+                      <Icon name="delete" size={16} color={THEME.danger} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -665,7 +654,7 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
                 <Icon
                   name="account-multiple-outline"
                   size={48}
-                  color={backgroundColors.dark}
+                  color={THEME.textGray}
                 />
                 <Text style={styles.emptyText}>
                   No attendance records found.
@@ -675,13 +664,13 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 40}}
+            contentContainerStyle={{paddingBottom: 100}}
             showsVerticalScrollIndicator={false}
           />
         </View>
 
-        {/* Pagination Controls */}
-        {totalRecords > 0 && (
+        {/* Floating Pagination */}
+        {filteredData.length > 0 && (
           <View style={styles.paginationContainer}>
             <TouchableOpacity
               disabled={currentPage === 1}
@@ -690,24 +679,12 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
                 styles.pageButton,
                 currentPage === 1 && styles.pageButtonDisabled,
               ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
+              <Icon name="chevron-left" size={24} color={THEME.white} />
             </TouchableOpacity>
 
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
-            </View>
+            <Text style={styles.pageText}>
+              Page {currentPage} of {totalPages}
+            </Text>
 
             <TouchableOpacity
               disabled={currentPage === totalPages}
@@ -716,20 +693,55 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
                 styles.pageButton,
                 currentPage === totalPages && styles.pageButtonDisabled,
               ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
+              <Icon name="chevron-right" size={24} color={THEME.white} />
             </TouchableOpacity>
           </View>
         )}
 
-        {/*Add Attendance Modal*/}
+        {/* Custom Success Modal */}
+        <Modal isVisible={successModal}>
+          <View style={styles.deleteModalContainer}>
+            <View style={styles.delAnim}>
+              <LottieView
+                style={{flex: 1}}
+                source={require('../../../assets/success.json')}
+                autoPlay
+                loop={false}
+              />
+            </View>
+            <Text style={styles.deleteTitle}>{messageTitle}</Text>
+            <Text style={styles.deleteSubtitle}>{messageText}</Text>
+            <TouchableOpacity
+              onPress={() => setSuccessModal(false)}
+              style={styles.successButton}>
+              <Text style={styles.confirmDeleteText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+
+        {/* Custom Warning Modal */}
+        <Modal isVisible={warningModal}>
+          <View style={styles.deleteModalContainer}>
+            <View style={styles.delAnim}>
+              <LottieView
+                style={{flex: 1}}
+                source={require('../../../assets/warning.json')}
+                autoPlay
+                loop={false}
+              />
+            </View>
+            <Text style={styles.deleteTitle}>{messageTitle}</Text>
+            <Text style={styles.deleteSubtitle}>{messageText}</Text>
+            <TouchableOpacity
+              onPress={() => setWarningModal(false)}
+              style={styles.warningButton}>
+              <Text style={styles.confirmDeleteText}>OK</Text>
+            </TouchableOpacity>
+          </View>
+        </Modal>
+
+        {/* Add Attendance Modal */}
         <Modal isVisible={modal === 'Add'}>
-          <Toast />
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Add New Attendance</Text>
@@ -739,179 +751,135 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
                   setAddAttendance(initialAddAttendance);
                 }}
                 style={styles.closeButton}>
-                <Icon name="close" size={20} color={backgroundColors.dark} />
+                <Icon name="close" size={20} color={THEME.textGray} />
               </TouchableOpacity>
             </View>
 
             <ScrollView
               style={styles.modalContent}
               showsVerticalScrollIndicator={false}>
-              <DropDownPicker
-                items={transformedEmp}
-                open={customerType}
-                setOpen={setcustomerType}
-                value={addAttendance.emp}
-                setValue={callback =>
-                  handleAddChange('emp', callback(addAttendance.emp))
-                }
-                placeholder="Select Employee"
-                placeholderStyle={{color: backgroundColors.dark}}
-                textStyle={{color: backgroundColors.dark}}
-                ArrowUpIconComponent={() => (
-                  <Icon
-                    name="chevron-up"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon
-                    name="chevron-down"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                style={styles.dropdown}
-                dropDownContainerStyle={styles.dropDownContainer}
-                listItemLabelStyle={{
-                  color: backgroundColors.dark,
-                  fontWeight: '500',
-                }}
-                labelStyle={{
-                  color: backgroundColors.dark,
-                  fontSize: 16,
-                }}
-                searchable
-                searchTextInputStyle={{
-                  borderWidth: 0,
-                  width: '100%',
-                }}
-                searchContainerStyle={{
-                  borderColor: backgroundColors.gray,
-                }}
-                listMode="SCROLLVIEW"
-              />
-
-              <DropDownPicker
-                items={customerAreaItem}
-                open={customerArea}
-                setOpen={setcustomerArea}
-                value={addAttendance.status}
-                setValue={callback => {
-                  handleAddChange('status', callback(addAttendance.status));
-                }}
-                placeholder="Select Status"
-                placeholderStyle={{color: backgroundColors.dark}}
-                textStyle={{color: backgroundColors.dark}}
-                ArrowUpIconComponent={() => (
-                  <Icon
-                    name="chevron-up"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon
-                    name="chevron-down"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                style={[styles.dropdown, {zIndex: 999}]}
-                dropDownContainerStyle={styles.dropDownContainer}
-                listItemLabelStyle={{
-                  color: backgroundColors.dark,
-                  fontWeight: '500',
-                }}
-                labelStyle={{
-                  color: backgroundColors.dark,
-                  fontSize: 16,
-                }}
-                listMode="SCROLLVIEW"
-              />
-
-              {/* Clock In/Out - Only enabled when status is Present */}
-
-              <TouchableOpacity
-                style={[
-                  styles.timeInput,
-                  addAttendance.status !== 'Present' &&
-                    styles.disabledTimeInput,
-                ]}
-                onPress={() => {
-                  if (addAttendance.status === 'Present') {
-                    setShowClockInPickerAdd(true);
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Employee</Text>
+                <DropDownPicker
+                  items={transformedEmp}
+                  open={customerType}
+                  setOpen={setcustomerType}
+                  value={addAttendance.emp}
+                  setValue={callback =>
+                    handleAddChange('emp', callback(addAttendance.emp))
                   }
-                }}
-                disabled={addAttendance.status !== 'Present'}>
-                <Text
-                  style={[
-                    styles.timeLabel,
-                    addAttendance.status !== 'Present' && styles.disabledText,
-                  ]}>
-                  Clock In:
-                </Text>
-                <Text
-                  style={[
-                    styles.timeValueModal,
-                    addAttendance.status !== 'Present' && styles.disabledText,
-                  ]}>
-                  {addAttendance.clockIn.toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </Text>
-                {addAttendance.status !== 'Present' && (
-                  <Icon
-                    name="lock"
-                    size={16}
-                    color="#999"
-                    style={{marginLeft: 6}}
-                  />
-                )}
-              </TouchableOpacity>
+                  placeholder="Select Employee"
+                  placeholderStyle={{color: '#999'}}
+                  textStyle={{color: THEME.textDark}}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  zIndex={3000}
+                  zIndexInverse={1000}
+                  searchable
+                />
+              </View>
 
-              <TouchableOpacity
-                style={[
-                  styles.timeInput,
-                  addAttendance.status !== 'Present' &&
-                    styles.disabledTimeInput,
-                ]}
-                onPress={() => {
-                  if (addAttendance.status === 'Present') {
-                    setShowClockOutPickerAdd(true);
-                  }
-                }}
-                disabled={addAttendance.status !== 'Present'}>
-                <Text
-                  style={[
-                    styles.timeLabel,
-                    addAttendance.status !== 'Present' && styles.disabledText,
-                  ]}>
-                  Clock Out:
-                </Text>
-                <Text
-                  style={[
-                    styles.timeValueModal,
-                    addAttendance.status !== 'Present' && styles.disabledText,
-                  ]}>
-                  {addAttendance.clockOut.toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </Text>
-                {addAttendance.status !== 'Present' && (
-                  <Icon
-                    name="lock"
-                    size={16}
-                    color="#999"
-                    style={{marginLeft: 6}}
-                  />
-                )}
-              </TouchableOpacity>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Status</Text>
+                <DropDownPicker
+                  items={customerAreaItem}
+                  open={customerArea}
+                  setOpen={setcustomerArea}
+                  value={addAttendance.status}
+                  setValue={callback => {
+                    handleAddChange('status', callback(addAttendance.status));
+                  }}
+                  placeholder="Select Status"
+                  placeholderStyle={{color: '#999'}}
+                  textStyle={{color: THEME.textDark}}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  zIndex={2000}
+                  zIndexInverse={2000}
+                />
+              </View>
 
-              {/* Only show time pickers when status is Present */}
-              {showClockInPickerAdd && addAttendance.status === 'Present' && (
+              {/* Time Section */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Time</Text>
+                <View style={styles.timeRow}>
+                  {/* Clock In */}
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Clock In</Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.timeInput,
+                        {
+                          opacity:
+                            addAttendance.status === 'Leave' ||
+                            addAttendance.status === 'Absent'
+                              ? 0.5
+                              : 1,
+                        },
+                      ]}
+                      disabled={
+                        addAttendance.status === 'Leave' ||
+                        addAttendance.status === 'Absent'
+                      }
+                      onPress={() => setShowClockInPickerAdd(prev => !prev)}>
+                      <Icon name="clock-in" size={20} color={THEME.primary} />
+                      <Text style={styles.timeText}>
+                        {addAttendance.clockIn.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Clock Out */}
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeInputLabel}>Clock Out</Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.timeInput,
+                        {
+                          opacity:
+                            addAttendance.status === 'Leave' ||
+                            addAttendance.status === 'Absent'
+                              ? 0.5
+                              : 1,
+                        },
+                      ]}
+                      disabled={
+                        addAttendance.status === 'Leave' ||
+                        addAttendance.status === 'Absent'
+                      }
+                      onPress={() => setShowClockOutPickerAdd(prev => !prev)}>
+                      <Icon name="clock-out" size={20} color={THEME.danger} />
+                      <Text style={styles.timeText}>
+                        {addAttendance.clockOut.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Date Section */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Date</Text>
+                <TouchableOpacity
+                  style={styles.dateInput}
+                  onPress={() => setShowStartDatePicker(prev => !prev)}>
+                  <Icon name="calendar" size={20} color={THEME.primary} />
+                  <Text style={styles.dateText}>
+                    {addAttendance.date.toLocaleDateString()}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Time Pickers INSIDE the Modal */}
+              {showClockInPickerAdd && (
                 <DateTimePicker
                   value={addAttendance.clockIn}
                   mode="time"
@@ -920,7 +888,7 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
                   onChange={onClockInChangeAdd}
                 />
               )}
-              {showClockOutPickerAdd && addAttendance.status === 'Present' && (
+              {showClockOutPickerAdd && (
                 <DateTimePicker
                   value={addAttendance.clockOut}
                   mode="time"
@@ -929,17 +897,6 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
                   onChange={onClockOutChangeAdd}
                 />
               )}
-
-              <TouchableOpacity
-                style={styles.datePickerContainer}
-                onPress={() => setShowStartDatePicker(true)}>
-                <Icon name="calendar" size={18} color={backgroundColors.dark} />
-                <Text style={styles.dateLabelModal}>Date:</Text>
-                <Text style={styles.dateValueModal}>
-                  {addAttendance.date.toLocaleDateString()}
-                </Text>
-              </TouchableOpacity>
-
               {showStartDatePicker && (
                 <DateTimePicker
                   testID="startDatePicker"
@@ -954,14 +911,13 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
               <TouchableOpacity
                 onPress={markAttendance}
                 style={styles.submitButton}>
-                <Icon name="check-circle" size={18} color="white" />
                 <Text style={styles.submitButtonText}>Add Attendance</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
         </Modal>
 
-        {/*Edit Attendance Modal*/}
+        {/* Edit Attendance Modal */}
         <Modal isVisible={modal === 'Edit'}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
@@ -969,179 +925,135 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
               <TouchableOpacity
                 onPress={() => setModal('')}
                 style={styles.closeButton}>
-                <Icon name="close" size={20} color={backgroundColors.dark} />
+                <Icon name="close" size={20} color={THEME.textGray} />
               </TouchableOpacity>
             </View>
 
             <ScrollView
               style={styles.modalContent}
               showsVerticalScrollIndicator={false}>
-              <DropDownPicker
-                items={transformedEmp}
-                open={editType}
-                setOpen={seteditType}
-                value={editAttendance.empId}
-                setValue={callback =>
-                  handleEditChange('empId', callback(editAttendance.empId))
-                }
-                placeholder="Select Employee"
-                placeholderStyle={{color: backgroundColors.dark}}
-                textStyle={{color: '#144272'}}
-                ArrowUpIconComponent={() => (
-                  <Icon
-                    name="chevron-up"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon
-                    name="chevron-down"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                style={styles.dropdown}
-                dropDownContainerStyle={styles.dropDownContainer}
-                listItemLabelStyle={{
-                  color: backgroundColors.dark,
-                  fontWeight: '500',
-                }}
-                labelStyle={{
-                  color: backgroundColors.dark,
-                  fontSize: 16,
-                }}
-                searchable
-                searchTextInputStyle={{
-                  borderWidth: 0,
-                  width: '100%',
-                }}
-                searchContainerStyle={{
-                  borderColor: backgroundColors.gray,
-                }}
-                listMode="SCROLLVIEW"
-              />
-
-              <DropDownPicker
-                items={customerAreaItem}
-                open={customereditArea}
-                setOpen={setcustomereditArea}
-                value={editAttendance.status}
-                setValue={callback =>
-                  handleEditChange('status', callback(editAttendance.status))
-                }
-                placeholder="Select Status"
-                placeholderStyle={{color: backgroundColors.dark}}
-                textStyle={{color: '#144272'}}
-                ArrowUpIconComponent={() => (
-                  <Icon
-                    name="chevron-up"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon
-                    name="chevron-down"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                style={[styles.dropdown, {zIndex: 999}]}
-                dropDownContainerStyle={styles.dropDownContainer}
-                listItemLabelStyle={{
-                  color: backgroundColors.dark,
-                  fontWeight: '500',
-                }}
-                labelStyle={{
-                  color: backgroundColors.dark,
-                  fontSize: 16,
-                }}
-                listMode="SCROLLVIEW"
-              />
-
-              {/* Clock In/Out - Only enabled when status is Present */}
-
-              <TouchableOpacity
-                style={[
-                  styles.timeInput,
-                  editAttendance.status !== 'Present' &&
-                    styles.disabledTimeInput,
-                ]}
-                onPress={() => {
-                  if (editAttendance.status === 'Present') {
-                    setShowClockInPicker(true);
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Employee</Text>
+                <DropDownPicker
+                  items={transformedEmp}
+                  open={editType}
+                  setOpen={seteditType}
+                  value={editAttendance.empId}
+                  setValue={callback =>
+                    handleEditChange('empId', callback(editAttendance.empId))
                   }
-                }}
-                disabled={editAttendance.status !== 'Present'}>
-                <Text
-                  style={[
-                    styles.timeLabel,
-                    editAttendance.status !== 'Present' && styles.disabledText,
-                  ]}>
-                  Clock In:
-                </Text>
-                <Text
-                  style={[
-                    styles.timeValueModal,
-                    editAttendance.status !== 'Present' && styles.disabledText,
-                  ]}>
-                  {editAttendance.clockIn.toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </Text>
-                {editAttendance.status !== 'Present' && (
-                  <Icon
-                    name="lock"
-                    size={16}
-                    color="#999"
-                    style={{marginLeft: 6}}
-                  />
-                )}
-              </TouchableOpacity>
+                  placeholder="Select Employee"
+                  placeholderStyle={{color: '#999'}}
+                  textStyle={{color: THEME.textDark}}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  zIndex={3000}
+                  zIndexInverse={1000}
+                  searchable
+                />
+              </View>
 
-              <TouchableOpacity
-                style={[
-                  styles.timeInput,
-                  editAttendance.status !== 'Present' &&
-                    styles.disabledTimeInput,
-                ]}
-                onPress={() => {
-                  if (editAttendance.status === 'Present') {
-                    setShowClockOutPicker(true);
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Status</Text>
+                <DropDownPicker
+                  items={customerAreaItem}
+                  open={customereditArea}
+                  setOpen={setcustomereditArea}
+                  value={editAttendance.status}
+                  setValue={callback =>
+                    handleEditChange('status', callback(editAttendance.status))
                   }
-                }}
-                disabled={editAttendance.status !== 'Present'}>
-                <Text
-                  style={[
-                    styles.timeLabel,
-                    editAttendance.status !== 'Present' && styles.disabledText,
-                  ]}>
-                  Clock Out:
-                </Text>
-                <Text
-                  style={[
-                    styles.timeValueModal,
-                    editAttendance.status !== 'Present' && styles.disabledText,
-                  ]}>
-                  {editAttendance.clockOut.toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </Text>
-                {editAttendance.status !== 'Present' && (
-                  <Icon
-                    name="lock"
-                    size={16}
-                    color="#999"
-                    style={{marginLeft: 6}}
-                  />
-                )}
-              </TouchableOpacity>
+                  placeholder="Select Status"
+                  placeholderStyle={{color: '#999'}}
+                  textStyle={{color: THEME.textDark}}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  zIndex={2000}
+                  zIndexInverse={2000}
+                />
+              </View>
 
-              {/* Only show time pickers when status is Present */}
-              {showClockInPicker && editAttendance.status === 'Present' && (
+              {/* Time Section */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Time</Text>
+                <View style={styles.timeRow}>
+                  {/* Clock In */}
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeLabel}>Clock In</Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.timeInput,
+                        {
+                          opacity:
+                            editAttendance.status === 'Leave' ||
+                            editAttendance.status === 'Absent'
+                              ? 0.5
+                              : 1,
+                        },
+                      ]}
+                      disabled={
+                        editAttendance.status === 'Leave' ||
+                        editAttendance.status === 'Absent'
+                      }
+                      onPress={() => setShowClockInPicker(prev => !prev)}>
+                      <Icon name="clock-in" size={20} color={THEME.primary} />
+                      <Text style={styles.timeText}>
+                        {editAttendance.clockIn.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Clock Out */}
+                  <View style={styles.timeInputContainer}>
+                    <Text style={styles.timeLabel}>Clock Out</Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.timeInput,
+                        {
+                          opacity:
+                            editAttendance.status === 'Leave' ||
+                            editAttendance.status === 'Absent'
+                              ? 0.5
+                              : 1,
+                        },
+                      ]}
+                      disabled={
+                        editAttendance.status === 'Leave' ||
+                        editAttendance.status === 'Absent'
+                      }
+                      onPress={() => setShowClockOutPicker(prev => !prev)}>
+                      <Icon name="clock-out" size={20} color={THEME.danger} />
+                      <Text style={styles.timeText}>
+                        {editAttendance.clockOut.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+
+              {/* Date Section */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Date</Text>
+                <TouchableOpacity
+                  style={styles.dateInput}
+                  onPress={() => setShoweditDatePicker(prev => !prev)}>
+                  <Icon name="calendar" size={20} color={THEME.primary} />
+                  <Text style={styles.dateText}>
+                    {new Date(editAttendance.date).toLocaleDateString()}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Time Pickers INSIDE the Modal */}
+              {showClockInPicker && (
                 <DateTimePicker
                   value={editAttendance.clockIn}
                   mode="time"
@@ -1150,7 +1062,7 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
                   onChange={onClockInChange}
                 />
               )}
-              {showClockOutPicker && editAttendance.status === 'Present' && (
+              {showClockOutPicker && (
                 <DateTimePicker
                   value={editAttendance.clockOut}
                   mode="time"
@@ -1159,25 +1071,15 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
                   onChange={onClockOutChange}
                 />
               )}
-
-              {/* Date Picker */}
-              <TouchableOpacity
-                style={styles.datePickerContainer}
-                onPress={() => setShoweditDatePicker(true)}>
-                <Icon name="calendar" size={18} color={backgroundColors.dark} />
-                <Text style={styles.dateLabelModal}>Date:</Text>
-                <Text style={styles.dateValueModal}>
-                  {new Date(editAttendance.date).toLocaleDateString()}
-                </Text>
-              </TouchableOpacity>
-
               {showeditDatePicker && (
                 <DateTimePicker
                   value={editAttendance.date}
                   mode="date"
                   display="default"
                   onChange={(event, selectedDate) => {
-                    setShoweditDatePicker(false);
+                    if (Platform.OS === 'android') {
+                      setShoweditDatePicker(false);
+                    }
                     if (selectedDate) handleEditChange('date', selectedDate);
                   }}
                 />
@@ -1186,7 +1088,6 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
               <TouchableOpacity
                 onPress={updateAttendance}
                 style={styles.submitButton}>
-                <Icon name="check-circle" size={18} color="white" />
                 <Text style={styles.submitButtonText}>Update Attendance</Text>
               </TouchableOpacity>
             </ScrollView>
@@ -1227,6 +1128,7 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
           </View>
         </Modal>
       </View>
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -1234,530 +1136,438 @@ export default function AllEmployeeAttendanceList({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 0,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 90, // Extended for larger floating card
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.light,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
-  },
-
-  // Search Filter
-  searchFilter: {
-    width: '94%',
-    alignSelf: 'center',
-    height: 48,
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  search: {
-    height: '100%',
-    fontSize: 14,
-    color: backgroundColors.dark,
-    width: '100%',
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
 
-  // Date Filteration
-  dateSection: {
-    gap: 6,
-  },
-  labelCtr: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '60%',
-    paddingHorizontal: '3%',
-  },
-  inputLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-    marginLeft: 3,
-  },
-  dateRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: '3%',
-    marginBottom: 10,
-  },
-  dateInput: {
-    width: '48%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
+  // --- Unified Floating Filter Card ---
+  floatingFilterCard: {
+    position: 'absolute',
+    bottom: -60,
+    left: 20,
+    right: 20,
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 15,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 10,
-    height: 48,
+    elevation: 8,
+    gap: 12,
+  },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 45,
+    borderWidth: 1,
+    borderColor: THEME.border,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 10,
+    color: THEME.textDark,
+    fontSize: 14,
+  },
+  dateFilterRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  dateInput: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 45,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    gap: 8,
   },
   dateText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    marginLeft: 8,
+    fontSize: 13,
+    color: THEME.textDark,
+    fontWeight: '500',
+  },
+  timeText: {
+    fontSize: 13,
+    color: THEME.textDark,
+    fontWeight: '500',
+  },
+  timeRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  timeInputContainer: {
+    flex: 1,
+    gap: 5,
+  },
+  timeInputLabel: {
+    fontSize: 12,
+    color: THEME.textGray,
+    fontWeight: '500',
+  },
+  timeInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    height: 45,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    gap: 8,
   },
 
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 70, // Space for floating card overlap
   },
+
+  // --- Deprecated Filter Styles ---
+  filterCard: {
+    display: 'none',
+  },
+  searchContainer: {
+    display: 'none',
+  },
+  floatingSearchContainer: {
+    display: 'none',
+  },
+  floatingSearchInput: {
+    display: 'none',
+  },
+  dateRow: {
+    display: 'none',
+  },
+
+  // --- List ---
   listContainer: {
     flex: 1,
-    paddingHorizontal: 12,
   },
-
-  // Card Style
   card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 20,
-    marginVertical: 8,
-    shadowColor: backgroundColors.dark,
-    shadowOpacity: 0.12,
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    marginBottom: 10,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
     shadowRadius: 6,
-    shadowOffset: {width: 0, height: 4},
-    elevation: 8,
-    overflow: 'hidden',
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#E8F5E9',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   cardHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
+    paddingBottom: 6,
+    marginBottom: 6,
+  },
+  employeeInfoSection: {
+    flex: 1,
+    flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#FAFFFE',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E8F5E9',
   },
   employeeName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 4,
-    letterSpacing: 0.3,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  cnicText: {
-    fontSize: 13,
-    color: '#666',
-    fontWeight: '500',
-  },
-  statusBadge: {
+  dateSection: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1.5,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.3,
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
 
+  // --- Time Cards (Compact) ---
   cardBody: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
   },
   timeCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FAFAFA',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  timeCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
     flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
+  timeCardContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 12,
+    gap: 8,
   },
   timeInfo: {
     flex: 1,
   },
   timeLabel: {
-    fontSize: 12,
-    color: '#666',
+    fontSize: 10,
+    color: THEME.textGray,
     fontWeight: '600',
-    marginBottom: 3,
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
   },
   timeValue: {
-    fontSize: 16,
-    color: '#1A1A1A',
+    fontSize: 14,
     fontWeight: '700',
-    letterSpacing: 0.3,
+    color: THEME.textDark,
   },
 
+  // --- Card Footer ---
   cardFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#FAFFFE',
+    paddingTop: 4,
+    marginTop: 4,
     borderTopWidth: 1,
-    borderTopColor: '#E8F5E9',
+    borderTopColor: '#F3F4F6',
   },
-  dateTextFooter: {
-    fontSize: 13,
-    color: '#666',
-    fontWeight: '600',
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  statusText: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   actionButtons: {
     flexDirection: 'row',
+    gap: 10,
     alignItems: 'center',
-    gap: 8,
   },
-  editButton: {
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: '#E3F2FD',
+  changeStatusButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 6,
   },
-  deleteButton: {
-    padding: 8,
-    borderRadius: 10,
-    backgroundColor: '#FFEBEE',
+  changeStatusText: {
+    fontSize: 12,
+    color: THEME.primary,
+    fontWeight: '600',
+    marginRight: 4,
   },
 
+  // --- Empty State ---
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 50,
-    paddingVertical: 50,
-    paddingHorizontal: 20,
+    padding: 40,
+    marginTop: 20,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
   },
   emptyText: {
-    color: '#555',
-    fontSize: 17,
-    marginTop: 12,
-    fontWeight: '600',
+    marginTop: 15,
+    color: THEME.textDark,
+    fontSize: 16,
+    fontWeight: '700',
   },
   emptySubText: {
-    color: '#888',
+    marginTop: 5,
+    color: THEME.textGray,
     fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
-    lineHeight: 20,
-    fontWeight: '500',
   },
 
+  // --- Pagination (Floating) ---
   paginationContainer: {
+    position: 'absolute',
+    bottom: 20,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
   },
   pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
+    padding: 5,
   },
   pageButtonDisabled: {
-    backgroundColor: '#ddd',
+    opacity: 0.3,
   },
-  pageButtonText: {
-    color: backgroundColors.light,
+  pageText: {
+    color: THEME.white,
+    fontSize: 13,
     fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    alignItems: 'center',
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
+    marginHorizontal: 15,
   },
 
-  // Modal Styles
+  // --- Modal ---
   modalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    maxHeight: '80%',
-    marginHorizontal: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: {width: 0, height: 5},
-    elevation: 10,
+    backgroundColor: '#fff',
+    borderRadius: 24,
+    padding: 24,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-  },
-  closeButton: {
-    padding: 4,
-    borderRadius: 15,
-    backgroundColor: '#f5f5f5',
-  },
-  modalContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-    marginBottom: 16,
-    zIndex: 2999,
-  },
-  dropDownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
-    zIndex: 3000,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-    width: '100%',
-  },
-  timeInput: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-    marginBottom: 16,
-  },
-  timeValueModal: {
-    color: backgroundColors.dark,
-    marginLeft: 'auto',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  datePickerContainer: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
     marginBottom: 20,
   },
-  dateLabelModal: {
-    color: backgroundColors.dark,
-    marginLeft: 8,
-    fontSize: 14,
-    fontWeight: '500',
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: THEME.textDark,
   },
-  dateValueModal: {
-    color: backgroundColors.dark,
-    marginLeft: 'auto',
-    fontSize: 14,
+  closeButton: {
+    padding: 5,
+  },
+  modalContent: {
+    maxHeight: 500,
+  },
+  inputGroup: {
+    marginBottom: 15,
+  },
+  label: {
+    fontSize: 13,
     fontWeight: '600',
+    color: THEME.textGray,
+    marginBottom: 5,
+  },
+  dropdown: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    height: 48,
+  },
+  dropdownContainer: {
+    backgroundColor: '#fff',
+    borderColor: '#E5E7EB',
   },
   submitButton: {
-    backgroundColor: backgroundColors.primary,
-    paddingVertical: 14,
-    borderRadius: 10,
-    flexDirection: 'row',
+    backgroundColor: THEME.primary,
+    borderRadius: 12,
+    paddingVertical: 15,
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 5,
+    marginTop: 10,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   submitButtonText: {
-    color: 'white',
-    fontWeight: '700',
+    color: THEME.white,
     fontSize: 16,
-    marginLeft: 8,
-  },
-  disabledTimeInput: {
-    opacity: 0.7,
-    backgroundColor: '#f5f5f5',
-  },
-  disabledText: {
-    color: '#111',
+    fontWeight: '700',
   },
 
-  // Delete Modal Styles
+  // --- Delete Modal ---
   deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    paddingHorizontal: 20,
-    paddingVertical: 30,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 10,
-    shadowOffset: {width: 0, height: 5},
-    elevation: 10,
+  },
+  delAnim: {
+    width: 100,
+    height: 100,
+    marginBottom: 15,
   },
   deleteTitle: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: THEME.textDark,
     marginBottom: 10,
-    textAlign: 'center',
   },
   deleteSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: THEME.textGray,
     textAlign: 'center',
-    marginBottom: 25,
-    lineHeight: 20,
+    marginBottom: 20,
   },
   deleteButtonContainer: {
     flexDirection: 'row',
-    justifyContent: 'center',
     gap: 15,
+    width: '100%',
   },
   cancelButton: {
-    backgroundColor: '#f5f5f5',
+    flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#ddd',
+    borderRadius: 12,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
   },
   cancelButtonText: {
-    color: '#666',
+    color: THEME.textDark,
     fontWeight: '600',
-    fontSize: 14,
   },
   confirmDeleteButton: {
-    backgroundColor: '#F44336',
+    flex: 1,
     paddingVertical: 12,
-    paddingHorizontal: 25,
-    borderRadius: 10,
-    shadowColor: '#F44336',
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 5,
+    borderRadius: 12,
+    backgroundColor: THEME.danger,
+    alignItems: 'center',
   },
   confirmDeleteText: {
-    color: 'white',
-    fontWeight: '700',
-    fontSize: 14,
+    color: THEME.white,
+    fontWeight: '600',
+  },
+  successButton: {
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: THEME.primary,
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  warningButton: {
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: THEME.warning,
+    alignItems: 'center',
+    marginTop: 10,
   },
 });

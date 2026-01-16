@@ -2,20 +2,48 @@ import {
   StyleSheet,
   Text,
   View,
-  SafeAreaView,
   TouchableOpacity,
   FlatList,
-  Image,
   TextInput,
   BackHandler,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
+import {SafeAreaView} from 'react-native-safe-area-context';
 import {useDrawer} from '../../DrawerContext';
 import DropDownPicker from 'react-native-dropdown-picker';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import LottieView from 'lottie-react-native';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  danger: '#EF4444',
+  success: '#10B981',
+  warning: '#F59E0B',
+};
+
+// --- HELPER: Get Initials ---
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  const parts = name.split(' ');
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 type Product = {
   pcat_name: string;
@@ -33,25 +61,24 @@ interface Categories {
 
 export default function ExpiredProductStock({navigation}: any) {
   const {openDrawer} = useDrawer();
-  const [category, setCategory] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [currentCategory, setCurrentCategory] = useState<string | null>('');
   const [categories, setCategories] = useState<Categories[]>([]);
-  const transformedCat = categories.map(cat => ({
-    label: cat.pcat_name,
-    value: cat.id.toString(),
-  }));
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredData, setFilteredData] = useState<Product[]>([]);
   const [masterData, setMasterData] = useState<Product[]>([]);
 
+  const transformedCat = categories.map(cat => ({
+    label: cat.pcat_name,
+    value: cat.id.toString(),
+  }));
+
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
-
   const totalRecords = filteredData.length;
   const totalPages = Math.ceil(totalRecords / recordsPerPage);
-
-  // Slice data for pagination
   const currentData = filteredData.slice(
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
@@ -69,36 +96,37 @@ export default function ExpiredProductStock({navigation}: any) {
 
   // Fetch Products
   const fetchExpireProd = async () => {
+    setLoading(true);
     try {
       const res = await axios.post(`${BASE_URL}/loadexpired`, {
-        cat_id: currentCategory,
+        cat_id: currentCategory || '',
       });
 
       const exProdData = res.data.stock;
-
       setFilteredData(exProdData);
       setMasterData(exProdData);
+      setCurrentPage(1);
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Search Filter
   const searchFilter = (text: string) => {
+    setSearchQuery(text);
     if (text) {
       const newData = masterData.filter(item => {
-        const itemData = item.prod_name
-          ? item.prod_name.toLocaleUpperCase()
-          : ''.toLocaleLowerCase();
-        const textData = text.toLocaleUpperCase();
+        const itemData = item.prod_name ? item.prod_name.toUpperCase() : '';
+        const textData = text.toUpperCase();
         return itemData.indexOf(textData) > -1;
       });
       setFilteredData(newData);
-      setSearchQuery(text);
     } else {
       setFilteredData(masterData);
-      setSearchQuery(text);
     }
+    setCurrentPage(1);
   };
 
   useEffect(() => {
@@ -109,171 +137,203 @@ export default function ExpiredProductStock({navigation}: any) {
       navigation.navigate('Dashboard');
       return true;
     };
-
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
       backKey,
     );
-
     return () => backHandler.remove();
   }, [currentCategory]);
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Icon name="menu" size={24} color="white" />
-          </TouchableOpacity>
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Expired Products</Text>
-          </View>
-          <View style={[styles.headerBtn, {backgroundColor: 'transparent'}]}>
-            <Icon name="mail" size={24} color="transparent" />
-          </View>
+  const renderItem = ({item}: {item: Product}) => {
+    return (
+      <View style={styles.cardRow}>
+        {/* Avatar */}
+        <View style={styles.avatarContainer}>
+          <Text style={styles.avatarText}>{getInitials(item.prod_name)}</Text>
         </View>
 
-        {/* Dropdown */}
-        <View style={{width: '94%', alignSelf: 'center'}}>
-          <DropDownPicker
-            items={transformedCat}
-            open={category}
-            setOpen={setCategory}
-            value={currentCategory}
-            setValue={setCurrentCategory}
-            placeholder="Select Category"
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
-            ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color="#144272" />
-            )}
-            ArrowDownIconComponent={() => (
-              <Icon name="chevron-down" size={18} color="#144272" />
-            )}
-            style={styles.dropdown}
-            dropDownContainerStyle={styles.dropDownContainer}
-            searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
-            searchContainerStyle={{
-              borderColor: backgroundColors.gray,
-            }}
-          />
-        </View>
+        {/* Info */}
+        <View style={styles.infoContainer}>
+          <Text style={styles.nameText} numberOfLines={1}>
+            {item.prod_name}
+          </Text>
 
-        {/* Search Filter */}
-        <View style={styles.searchFilter}>
-          <Icon name="magnify" size={36} color={backgroundColors.dark} />
-          <TextInput
-            placeholder="Search by product name"
-            style={styles.search}
-            value={searchQuery}
-            onChangeText={text => searchFilter(text)}
-          />
-        </View>
-
-        <View style={styles.listContainer}>
-          <FlatList
-            data={currentData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <View style={styles.card}>
-                {/* Avatar + Name + Actions */}
-                <View style={styles.row}>
-                  <View style={styles.avatarBox}>
-                    <Image
-                      source={require('../../../assets/expired-product.png')}
-                      style={styles.avatar}
-                    />
-                  </View>
-
-                  <View style={{flex: 1}}>
-                    <Text style={styles.name}>{item.prod_name}</Text>
-                    {/* Category */}
-                    <Text style={styles.subText}>
-                      {`${item.pcat_name ?? 'No Category'} | ${
-                        item.prod_qty ?? '0'
-                      } PC`}{' '}
-                      |{' '}
-                      <Text
-                        style={[
-                          styles.subText,
-                          {fontWeight: 'bold', color: backgroundColors.danger},
-                        ]}>
-                        {new Date(item.prod_expirydate)
-                          .toLocaleDateString('en-GB', {
-                            day: '2-digit',
-                            month: 'short',
-                            year: 'numeric',
-                          })
-                          .replace(/ /g, '-')}
-                      </Text>
-                    </Text>
-                  </View>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-group" size={48} color="#666" />
-                <Text style={styles.emptyText}>No record found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-
-        {/* Pagination Controls */}
-        {totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => prev - 1)}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
+          {/* Row 1: Expiry | Quantity */}
+          <View style={styles.detailRow}>
+            <View style={styles.detailItem}>
+              <Icon name="calendar-remove" size={14} color={THEME.danger} />
               <Text
                 style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
+                  styles.detailText,
+                  {color: THEME.danger, fontWeight: 'bold'},
                 ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
+                Exp:{' '}
+                {new Date(item.prod_expirydate).toLocaleDateString('en-GB')}
               </Text>
             </View>
-
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() => setCurrentPage(prev => prev + 1)}
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
+            <View style={styles.detailSeparator} />
+            <View style={styles.detailItem}>
+              <Icon name="package-variant" size={14} color={THEME.textDark} />
+              <Text style={[styles.detailText, {fontWeight: 'bold'}]}>
+                Qty: {item.prod_qty}
               </Text>
-            </TouchableOpacity>
+            </View>
           </View>
+
+          {/* Row 2: Category | Cost | Retail */}
+          <View style={styles.detailRow}>
+            <View style={[styles.detailItem, {maxWidth: '30%'}]}>
+              <Icon name="shape-outline" size={14} color={THEME.textLight} />
+              <Text style={styles.subText} numberOfLines={1}>
+                {item.pcat_name || 'General'}
+              </Text>
+            </View>
+            <View style={styles.detailSeparator} />
+            <View style={styles.detailItem}>
+              <Text style={[styles.subText, {marginLeft: 0}]}>
+                Cost: {item.prod_costprice}
+              </Text>
+            </View>
+            <View style={styles.detailSeparator} />
+            <View style={styles.detailItem}>
+              <Text
+                style={[styles.subText, {marginLeft: 0, color: THEME.primary}]}>
+                Retail: {item.prod_fretailprice}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
+
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Expired Products</Text>
+            <View style={{width: 40}} />
+          </View>
+        </LinearGradient>
+
+        {/* Floating Search */}
+        <View style={styles.floatingSearchContainer}>
+          <Icon name="magnify" size={22} color={THEME.primary} />
+          <TextInput
+            placeholder="Search products..."
+            placeholderTextColor={THEME.textLight}
+            style={styles.floatingSearchInput}
+            value={searchQuery}
+            onChangeText={searchFilter}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => searchFilter('')}>
+              <Icon name="close-circle" size={18} color={THEME.textLight} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* Category Filter */}
+      <View
+        style={{
+          zIndex: 2000,
+          width: '94%',
+          alignSelf: 'center',
+          marginTop: 10,
+          marginBottom: 5,
+        }}>
+        <DropDownPicker
+          items={transformedCat}
+          open={categoryOpen}
+          setOpen={setCategoryOpen}
+          value={currentCategory}
+          setValue={setCurrentCategory}
+          placeholder="Filter by Category"
+          placeholderStyle={{color: THEME.textGray}}
+          style={styles.dropdown}
+          dropDownContainerStyle={styles.dropdownContainer}
+          listMode="SCROLLVIEW"
+          searchable
+          searchTextInputStyle={styles.dropdownSearchInput}
+          searchContainerStyle={styles.dropdownSearchContainer}
+        />
+      </View>
+
+      {/* --- CONTENT --- */}
+      <View style={styles.listContainer}>
+        {loading ? (
+          <View style={styles.centerContent}>
+            <LottieView
+              source={require('../../../assets/Loading-Dots.json')}
+              autoPlay
+              loop
+              style={styles.lottie}
+            />
+          </View>
+        ) : (
+          <>
+            <View style={styles.tableHeaderRow}>
+              <Text style={styles.tableHeaderLabel}>PRODUCT LIST</Text>
+              <Text style={styles.tableHeaderCount}>{totalRecords} Found</Text>
+            </View>
+
+            <FlatList
+              data={currentData}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={renderItem}
+              contentContainerStyle={{paddingBottom: 160}}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.centerContent}>
+                  <Icon name="package-variant" size={60} color="#D1D5DB" />
+                  <Text style={styles.emptyText}>
+                    No expired products found
+                  </Text>
+                </View>
+              }
+            />
+          </>
         )}
       </View>
+
+      {/* --- PAGINATION --- */}
+      {!loading && totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => prev - 1)}
+            style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+            <Icon name="chevron-left" size={24} color={THEME.white} />
+          </TouchableOpacity>
+          <Text style={styles.pageText}>
+            Page {currentPage} of {totalPages}
+          </Text>
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() => setCurrentPage(prev => prev + 1)}
+            style={[
+              styles.pageBtn,
+              currentPage === totalPages && styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-right" size={24} color={THEME.white} />
+          </TouchableOpacity>
+        </View>
+      )}
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -281,210 +341,216 @@ export default function ExpiredProductStock({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 20,
+    zIndex: 1,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
+  headerContainer: {
+    paddingTop: 10,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.light,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
-  },
-
-  // Search Filter
-  searchFilter: {
-    width: '94%',
-    alignSelf: 'center',
-    height: 48,
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  search: {
-    height: '100%',
-    fontSize: 14,
-    color: backgroundColors.dark,
-    width: '100%',
-  },
-
-  // Dropdown
-  dropdown: {
-    borderWidth: 0,
-    minHeight: 48,
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    backgroundColor: '#fff',
-    marginTop: 10,
-  },
-  dropDownContainer: {
-    backgroundColor: '#fff',
-    borderColor: 'transparent',
-    borderTopWidth: 1,
-    marginTop: 5,
-  },
-
-  // FlatList Styling
-  listContainer: {
-    flex: 1,
-    paddingHorizontal: '3%',
-  },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  avatar: {
-    height: 40,
-    width: 40,
-  },
-  avatarText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  subText: {
-    fontSize: 12,
-    color: '#555',
-    marginTop: 2,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'center',
-    gap: 8,
-    marginLeft: 10,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
-  },
-  emptyText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-
-  // Pagination Component
-  paginationContainer: {
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
   },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    paddingHorizontal: 10,
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
+  headerTitle: {
+    fontSize: 20,
     fontWeight: '700',
-    color: '#FFD166',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  totalText: {
-    color: '#fff',
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  // --- Floating Search ---
+  floatingSearchContainer: {
+    position: 'absolute',
+    bottom: -24,
+    left: 12,
+    right: 12,
+    backgroundColor: THEME.white,
+    borderRadius: 10,
+    height: 50,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  floatingSearchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    color: THEME.textDark,
+  },
+  // --- List & Cards ---
+  listContainer: {
+    flex: 1,
+    paddingTop: 10,
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 14,
+  },
+  tableHeaderLabel: {
     fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textGray,
+    letterSpacing: 0.5,
+  },
+  tableHeaderCount: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.primary,
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    width: '94%',
+    alignSelf: 'center',
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#222',
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  avatarContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: THEME.primary,
+    letterSpacing: 0.5,
+  },
+  infoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 2,
-    opacity: 0.8,
+  },
+  detailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailText: {
+    fontSize: 13,
+    color: THEME.textDark,
+    marginLeft: 4,
+  },
+  subText: {
+    fontSize: 12,
+    color: THEME.textGray,
+    marginLeft: 4,
+  },
+  detailSeparator: {
+    width: 1,
+    height: 12,
+    backgroundColor: THEME.border,
+    marginHorizontal: 8,
+  },
+  // --- Pagination ---
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 80,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  pageBtn: {
+    padding: 8,
+  },
+  disabledBtn: {
+    opacity: 0.3,
+  },
+  pageText: {
+    color: THEME.white,
+    fontSize: 14,
+    fontWeight: '600',
+    marginHorizontal: 15,
+  },
+  // --- Dropdown ---
+  dropdown: {
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 12,
+    minHeight: 48,
+  },
+  dropdownContainer: {
+    borderColor: THEME.border,
+    borderRadius: 12,
+  },
+  dropdownSearchInput: {
+    borderWidth: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  dropdownSearchContainer: {
+    borderBottomColor: '#transparent',
+  },
+  // Common
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  lottie: {
+    width: 100,
+    height: 100,
+  },
+  emptyText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: THEME.textGray,
   },
 });

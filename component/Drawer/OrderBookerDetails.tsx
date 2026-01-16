@@ -2,23 +2,44 @@ import {
   BackHandler,
   Image,
   Modal,
-  SafeAreaView,
-  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
+  ScrollView,
+  StatusBar,
+  Platform,
 } from 'react-native';
-import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import React, {useEffect, useState} from 'react';
-import backgroundColors from '../Colors';
-import {useUser} from '../CTX/UserContext';
-import BASE_URL from '../BASE_URL';
+import {SafeAreaView} from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import axios from 'axios';
+import BASE_URL from '../BASE_URL';
+import {useUser} from '../CTX/UserContext';
 import LottieView from 'lottie-react-native';
 import Toast from 'react-native-toast-message';
 import DropDownPicker from 'react-native-dropdown-picker';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  danger: '#EF4444',
+  dangerLight: '#FEE2E2',
+  success: '#10B981',
+};
 
 interface OrderBooker {
   booker: {
@@ -53,11 +74,35 @@ interface AreaDropDown {
   area_name: string;
 }
 
+// --- HELPER COMPONENT: Detail Row ---
+const DetailRow = ({
+  label,
+  value,
+  icon,
+  isLast,
+}: {
+  label: string;
+  value: string;
+  icon: string;
+  isLast?: boolean;
+}) => (
+  <View style={[styles.detailRow, isLast && {borderBottomWidth: 0}]}>
+    <View style={styles.iconBox}>
+      <Icon name={icon} size={20} color={THEME.primary} />
+    </View>
+    <View style={styles.detailTextContainer}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value || '--'}</Text>
+    </View>
+  </View>
+);
+
 const OrderBookerDetails = ({navigation, route}: any) => {
   const {id} = route.params;
   const {token} = useUser();
   const [modalVisible, setModalVisible] = useState('');
   const [orderBooker, setOrderBooker] = useState<OrderBooker | null>(null);
+  const [loading, setLoading] = useState(true);
   const [editForm, setEditForm] = useState<EditForm>(initialEditForm);
   const [areaDropdown, setAreaDropdown] = useState<AreaDropDown[] | []>([]);
   const [areaOpen, setAreaOpen] = useState(false);
@@ -78,6 +123,7 @@ const OrderBookerDetails = ({navigation, route}: any) => {
 
   // Fetch Order Booker Details
   const fetchObDetails = async () => {
+    setLoading(true);
     try {
       const res = await axios.get(
         `${BASE_URL}/vieworderbooker?id=${id}&_token=${token}`,
@@ -91,6 +137,8 @@ const OrderBookerDetails = ({navigation, route}: any) => {
       setOrderBooker(res.data);
     } catch (error) {
       console.log(error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -159,6 +207,7 @@ const OrderBookerDetails = ({navigation, route}: any) => {
         cnic: booker.cnic || '',
         areas: parsedAreas,
       });
+      setModalVisible('Edit');
     } catch (error) {
       console.log(error);
     }
@@ -182,7 +231,7 @@ const OrderBookerDetails = ({navigation, route}: any) => {
       Toast.show({
         type: 'error',
         text1: 'Invalid Name',
-        text2: 'Customer name should only contain letters and spaces.',
+        text2: 'Name should only contain letters and spaces.',
         visibilityTime: 2000,
       });
       return;
@@ -203,8 +252,6 @@ const OrderBookerDetails = ({navigation, route}: any) => {
         });
       }
 
-      console.log('Areas: ', formData);
-
       const res = await axios.post(`${BASE_URL}/updateorderbooker`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -214,16 +261,12 @@ const OrderBookerDetails = ({navigation, route}: any) => {
       const data = res.data;
 
       if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Updated!',
-          text2: 'OrderBooker has been Updated successfully!',
-          visibilityTime: 2000,
-        });
-
         setEditForm(initialEditForm);
         setModalVisible('');
         fetchObDetails();
+        setTimeout(() => {
+          setModalVisible('Success');
+        }, 500);
       } else if (res.status === 200 && data.status === 404) {
         Toast.show({
           type: 'error',
@@ -262,268 +305,304 @@ const OrderBookerDetails = ({navigation, route}: any) => {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerCenter}>
-          <TouchableOpacity
-            onPress={() => {
-              navigation.navigate('Order Booker');
-            }}>
-            <Icon
-              name="chevron-left"
-              size={28}
-              color={backgroundColors.light}
-            />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Order Booker Details</Text>
-        </View>
+    <View style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-        <TouchableOpacity
-          style={[styles.headerBtn]}
-          onPress={() => setModalVisible('Delete')}>
-          <Icon name="delete" size={28} color="#fff" />
-        </TouchableOpacity>
-      </View>
-
-      {/* Details */}
       <ScrollView
-        style={styles.detailsContainer}
-        showsVerticalScrollIndicator={false}>
-        {/* Avatar */}
-        <View style={styles.avatarBox}>
-          <Image
-            source={require('../../assets/man.png')}
-            style={styles.avatar}
-          />
-          <Text style={styles.custName}>{orderBooker?.booker?.name}</Text>
-        </View>
-
-        {/* Inner Details */}
-        <View style={styles.innerDetails}>
-          <View style={styles.innerHeader}>
-            <Text style={styles.headerText}>Order Booker Details</Text>
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{paddingBottom: 100}}>
+        {/* --- HEADER BACKGROUND --- */}
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          {/* Nav Bar */}
+          <SafeAreaView style={styles.navBar}>
             <TouchableOpacity
-              style={{flexDirection: 'row', gap: 5}}
-              onPress={() => {
-                getEditData();
-                setModalVisible('Edit');
-              }}>
-              <Text style={styles.editText}>Edit</Text>
-              <Icon
-                name="square-edit-outline"
-                size={18}
-                color={backgroundColors.dark}
-              />
+              onPress={() => navigation.navigate('Order Booker')}
+              style={styles.navBtn}>
+              <Icon name="arrow-left" size={24} color={THEME.white} />
             </TouchableOpacity>
+            <Text style={styles.navTitle}>Order Booker Details</Text>
+            <TouchableOpacity
+              onPress={() => setModalVisible('Delete')}
+              style={[styles.navBtn]}>
+              <Icon name="trash-can-outline" size={22} color={THEME.white} />
+            </TouchableOpacity>
+          </SafeAreaView>
+
+          {/* Profile Section */}
+          <View style={styles.profileSection}>
+            <View style={styles.avatarWrapper}>
+              <Image
+                source={require('../../assets/man.png')}
+                style={styles.avatar}
+              />
+              <TouchableOpacity
+                style={styles.editBadge}
+                activeOpacity={0.8}
+                onPress={() => getEditData()}>
+                <Icon name="pencil" size={16} color={THEME.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.profileName}>
+              {orderBooker?.booker?.name || 'Loading...'}
+            </Text>
+
+            {/* Badge Row */}
+            <View style={styles.badgeRow}>
+              <View style={styles.capsuleBadge}>
+                <Icon
+                  name="card-account-details-outline"
+                  size={14}
+                  color={THEME.white}
+                />
+                <Text style={styles.capsuleText}>Order Booker</Text>
+              </View>
+              <View style={styles.capsuleBadge}>
+                <Icon name="map-marker-outline" size={14} color={THEME.white} />
+                <Text style={styles.capsuleText}>
+                  {orderBooker?.areas.length
+                    ? `${orderBooker.areas.length} Areas`
+                    : 'No Area'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Note: Balance card omitted as per data structure but style maintained */}
+          </View>
+        </LinearGradient>
+
+        {/* --- CONTENT CARDS --- */}
+        <View style={styles.contentContainer}>
+          {/* Personal Info */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Personal Information</Text>
+            </View>
+            <DetailRow
+              icon="account"
+              label="Full Name"
+              value={orderBooker?.booker?.name!}
+            />
+            <DetailRow
+              icon="email-outline"
+              label="Email Address"
+              value={orderBooker?.booker?.email!}
+            />
+            <DetailRow
+              icon="card-account-details-outline"
+              label="CNIC"
+              value={orderBooker?.booker?.cnic!}
+            />
+            <DetailRow
+              icon="map-marker-radius-outline"
+              label="Assigned Areas"
+              value={orderBooker?.areas.join(', ')!}
+              isLast
+            />
           </View>
 
-          {/* Details */}
-          <View style={styles.detailsView}>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Name</Text>
-              <Text style={styles.value}>
-                {orderBooker?.booker?.name ?? '--'}
-              </Text>
+          {/* Contact Info */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Contact Details</Text>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>CNIC</Text>
-              <Text style={styles.value}>
-                {orderBooker?.booker?.cnic ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>
-                {orderBooker?.booker?.email ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact</Text>
-              <Text style={styles.value}>
-                {orderBooker?.booker?.contact ?? '--'}
-              </Text>
-            </View>
-            <View style={[styles.detailsRow, {borderBottomWidth: 0}]}>
-              <Text style={styles.label}>Area</Text>
-              <Text style={styles.value}>{orderBooker?.areas.join(', ') ?? '--'}</Text>
-            </View>
+            <DetailRow
+              icon="phone"
+              label="Phone Number"
+              value={orderBooker?.booker?.contact!}
+              isLast
+            />
           </View>
         </View>
       </ScrollView>
 
-      {/*Delete*/}
+      {/* --- DELETE CONFIRMATION MODAL --- */}
       <Modal
         visible={modalVisible === 'Delete'}
         transparent
         animationType="fade">
         <View style={styles.modalOverlay}>
           <View style={styles.deleteModalContainer}>
-            <View style={styles.delAnim}>
+            <View style={styles.lottieContainer}>
               <LottieView
-                style={{flex: 1}}
                 source={require('../../assets/warning.json')}
                 autoPlay
                 loop={false}
+                style={{width: '100%', height: '100%'}}
               />
             </View>
-
-            {/* Title */}
-            <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-
-            {/* Subtitle */}
-            <Text style={styles.deleteModalMessage}>
-              You won’t be able to revert this record!
+            <Text style={styles.modalTitle}>Delete Order Booker?</Text>
+            <Text style={styles.modalText}>
+              This action cannot be undone. All data associated with this record
+              will be lost.
             </Text>
-
-            {/* Buttons */}
-            <View style={styles.deleteModalActions}>
+            <View style={styles.modalBtnRow}>
               <TouchableOpacity
-                style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
+                style={styles.btnCancel}
                 onPress={() => setModalVisible('')}>
-                <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
-                  Cancel
-                </Text>
+                <Text style={styles.btnCancelText}>Cancel</Text>
               </TouchableOpacity>
-
               <TouchableOpacity
-                style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
+                style={styles.btnDelete}
                 onPress={handleDeleteOB}>
-                <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
+                <Text style={styles.btnDeleteText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/*Edit Modal*/}
+      {/* --- SUCCESS MODAL --- */}
+      <Modal
+        visible={modalVisible === 'Success'}
+        transparent
+        animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.deleteModalContainer}>
+            <View style={styles.lottieContainer}>
+              <LottieView
+                source={require('../../assets/success.json')}
+                autoPlay
+                loop={false}
+                style={{width: '100%', height: '100%'}}
+              />
+            </View>
+            <Text style={styles.modalTitle}>Success</Text>
+            <Text style={styles.modalText}>
+              Order Booker record updated successfully.
+            </Text>
+            <TouchableOpacity
+              style={[styles.btnPrimary, {width: '100%', marginTop: 15}]}
+              onPress={() => setModalVisible('')}>
+              <Text style={styles.btnPrimaryText}>OK, Great</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* --- EDIT MODAL --- */}
       <Modal
         visible={modalVisible === 'Edit'}
         transparent
         animationType="slide">
-        <View style={styles.editOBModalOverlay}>
-          <ScrollView style={styles.editOBModalContainer}>
-            {/* Header */}
-            <View style={styles.editOBHeader}>
-              <Text style={styles.editOBTitle}>Edit Order Booker</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.editModalContainer}>
+            <View style={styles.editModalHeader}>
+              <Text style={styles.editModalTitle}>Edit Order Booker</Text>
               <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('');
-                  setEditForm(initialEditForm);
-                }}
-                style={styles.editOBCloseBtn}>
-                <Icon name="close" size={20} color="#144272" />
+                onPress={() => setModalVisible('')}
+                style={styles.closeModalBtn}>
+                <Icon name="close" size={22} color={THEME.textDark} />
               </TouchableOpacity>
             </View>
 
-            {/* Form */}
-            <View style={styles.editOBForm}>
-              <View style={styles.editOBField}>
-                <Text style={styles.editOBLabel}>Name *</Text>
+            <ScrollView
+              style={styles.editModalBody}
+              contentContainerStyle={{paddingBottom: 30}}>
+              {/* Form Fields */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Full Name *</Text>
                 <TextInput
-                  style={styles.editOBInput}
+                  style={styles.input}
                   value={editForm.name}
                   onChangeText={t => handleEditInputChange('name', t)}
                 />
               </View>
-              <View style={styles.editOBField}>
-                <Text style={styles.editOBLabel}>Email</Text>
+
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Email Address</Text>
                 <TextInput
-                  style={[styles.editOBInput, {backgroundColor: '#9e9e9e6a'}]}
+                  style={styles.input}
                   value={editForm.email}
                   keyboardType="email-address"
-                  editable={false}
                   onChangeText={t => handleEditInputChange('email', t)}
+                  editable={false} // Matches previous logic where email might not be editable or needed check
                 />
               </View>
 
-              <View style={styles.editOBField}>
-                <Text style={styles.editOBLabel}>Contact</Text>
-                <TextInput
-                  style={styles.editOBInput}
-                  value={editForm.contact}
-                  keyboardType="phone-pad"
-                  maxLength={12}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                    if (cleaned.length > 4)
-                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                    handleEditInputChange('contact', cleaned);
-                  }}
-                />
-              </View>
-              <View style={styles.editOBField}>
-                <Text style={styles.editOBLabel}>CNIC</Text>
-                <TextInput
-                  style={styles.editOBInput}
-                  value={editForm.cnic}
-                  keyboardType="numeric"
-                  maxLength={15}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
-                    if (cleaned.length > 5)
-                      cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
-                    if (cleaned.length > 13)
-                      cleaned =
-                        cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
-                    if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
-                    handleEditInputChange('cnic', cleaned);
-                  }}
-                />
+              <View style={styles.rowInputs}>
+                <View style={{flex: 1, marginRight: 10}}>
+                  <Text style={styles.label}>Contact</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.contact}
+                    keyboardType="phone-pad"
+                    maxLength={12}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
+                      if (cleaned.length > 4)
+                        cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
+                      if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
+                      handleEditInputChange('contact', cleaned);
+                    }}
+                  />
+                </View>
+                <View style={{flex: 1}}>
+                  <Text style={styles.label}>CNIC</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.cnic}
+                    keyboardType="numeric"
+                    maxLength={15}
+                    onChangeText={t => {
+                      let cleaned = t.replace(/[^0-9-]/g, '').replace(/-/g, '');
+                      if (cleaned.length > 5)
+                        cleaned = cleaned.slice(0, 5) + '-' + cleaned.slice(5);
+                      if (cleaned.length > 13)
+                        cleaned =
+                          cleaned.slice(0, 13) + '-' + cleaned.slice(13, 14);
+                      if (cleaned.length > 15) cleaned = cleaned.slice(0, 15);
+                      handleEditInputChange('cnic', cleaned);
+                    }}
+                  />
+                </View>
               </View>
 
-              {/* Dropdown for Area */}
-              <View style={styles.editOBDropdownRow}>
-                <Text style={styles.editOBLabel}>Order Booker Area</Text>
+              <View style={[styles.formGroup, {zIndex: 1000}]}>
+                <Text style={styles.label}>Assigned Areas</Text>
                 <DropDownPicker
                   items={transformedAreas}
                   open={areaOpen}
                   setOpen={setAreaOpen}
-                  value={editForm.areas} // e.g. [3, 2]
+                  value={editForm.areas}
                   setValue={callback => {
                     const newVal = callback(editForm.areas || []);
                     handleEditInputChange('areas', newVal || []);
                   }}
                   multiple={true}
                   mode="BADGE"
-                  badgeDotColors={['green']}
-                  placeholder="Select area"
-                  style={styles.editOBDropdown}
-                  dropDownContainerStyle={styles.editOBDropdownContainer}
-                  textStyle={styles.editOBDropdownText}
-                  placeholderStyle={styles.editOBDropdownPlaceholder}
+                  badgeDotColors={[THEME.primary]}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
                   listMode="SCROLLVIEW"
-                  ArrowUpIconComponent={() => (
-                    <Icon name="chevron-up" size={18} color="#144272" />
-                  )}
-                  ArrowDownIconComponent={() => (
-                    <Icon name="chevron-down" size={18} color="#144272" />
-                  )}
-                  searchable
-                  searchTextInputStyle={{
-                    borderWidth: 0,
-                    width: '100%',
-                  }}
-                  searchContainerStyle={{
-                    borderColor: backgroundColors.gray,
-                  }}
+                  placeholder="Select Area"
                 />
               </View>
 
-              {/* Update Button */}
               <TouchableOpacity
-                style={styles.editOBSubmitBtn}
+                style={styles.btnPrimary}
                 onPress={handleUpdateOB}>
-                <Icon name="account-edit" size={20} color="white" />
-                <Text style={styles.editOBSubmitText}>Update Order Booker</Text>
+                <Icon
+                  name="check-circle-outline"
+                  size={20}
+                  color="white"
+                  style={{marginRight: 8}}
+                />
+                <Text style={styles.btnPrimaryText}>Update Changes</Text>
               </TouchableOpacity>
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
           <Toast />
         </View>
       </Modal>
-    </SafeAreaView>
+      <BottomBar />
+    </View>
   );
 };
 
@@ -532,259 +611,298 @@ export default OrderBookerDetails;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerCenter: {
-    flex: 1,
-    gap: 10,
-    flexDirection: 'row',
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
+    backgroundColor: THEME.background,
   },
 
-  // Details container
-  detailsContainer: {
-    flex: 1,
-    paddingHorizontal: '3%',
+  // --- HEADER & PROFILE ---
+  headerContainer: {
+    paddingBottom: 40,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  avatarBox: {
-    marginVertical: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatar: {
-    height: 125,
-    width: 125,
-  },
-  custName: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginTop: 10,
-    color: backgroundColors.primary,
-  },
-
-  // Inner Details
-  innerDetails: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginBottom: 30,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  innerHeader: {
-    width: '100%',
-    height: 50,
-    borderBottomColor: backgroundColors.primary,
-    borderBottomWidth: 1,
+  navBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-  },
-  headerText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: backgroundColors.dark,
-  },
-  editText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-  },
-  detailsView: {
-    flex: 1,
-  },
-  detailsRow: {
-    alignItems: 'baseline',
-    paddingVertical: 10,
-    borderBottomWidth: 0.6,
-    borderBottomColor: backgroundColors.primary,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.primary,
-  },
-  value: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-  },
-
-  //Delete Modal
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
     paddingHorizontal: 20,
+    marginTop: Platform.OS === 'android' ? 30 : 0,
+    marginBottom: 10,
   },
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
+  navBtn: {
+    width: 40,
+    height: 40,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+    justifyContent: 'center',
     alignItems: 'center',
+  },
+  navTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
+  },
+  profileSection: {
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  avatarWrapper: {
+    marginBottom: 12,
+    position: 'relative',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-    width: '100%',
-    alignSelf: 'center',
+    shadowRadius: 5,
+    elevation: 8,
   },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: THEME.white,
+    backgroundColor: THEME.white,
   },
-  deleteModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 8,
-  },
-  deleteModalMessage: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  deleteModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  deleteModalBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: THEME.white,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
     alignItems: 'center',
+    elevation: 4,
   },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
+  profileName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: THEME.white,
+    marginBottom: 4,
+    textAlign: 'center',
   },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 8, // Reduced from 10
+    marginBottom: 12, // Reduced from 16
+  },
+  capsuleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    gap: 4,
+  },
+  capsuleText: {
+    color: THEME.white,
+    fontSize: 12,
+    fontWeight: '600',
   },
 
-  // Edit Modal Styling
-  editOBModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
+  // --- CONTENT SECTION ---
+  contentContainer: {
+    marginTop: -24, // Pulls content up to overlap header
+    paddingHorizontal: 12,
+    gap: 10,
   },
-  editOBModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
+  sectionCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 12, // Slightly tighter radius
+    padding: 12, // Reduced padding
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.08, // Slightly more visible shadow
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  cardHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 8, // Reduced
+    marginBottom: 8, // Reduced
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5, // Reduced from 6
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6', // Slightly darker than F9FAFB for better separator visibility
+  },
+  iconBox: {
+    width: 32, // Reduced from 36
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10, // Reduced from 12
+  },
+  detailTextContainer: {
+    flex: 1,
+  },
+  detailLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    marginBottom: 0,
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: THEME.textDark,
+    fontWeight: '600',
+  },
+
+  // --- MODALS ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  deleteModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
+  },
+  lottieContainer: {
+    width: 100,
+    height: 100,
+    marginBottom: 15,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: THEME.textDark,
+    marginBottom: 8,
+  },
+  modalText: {
+    fontSize: 14,
+    color: THEME.textGray,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+    width: '100%',
+  },
+  btnCancel: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  btnCancelText: {
+    color: THEME.textDark,
+    fontWeight: '700',
+  },
+  btnDelete: {
+    flex: 1,
+    backgroundColor: THEME.danger,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  btnDeleteText: {
+    color: THEME.white,
+    fontWeight: '700',
+  },
+
+  // --- EDIT MODAL STYLES ---
+  editModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
     maxHeight: '90%',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    shadowOpacity: 0.2,
+    shadowRadius: 10,
     elevation: 10,
   },
-  editOBHeader: {
+  editModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#F3F4F6',
   },
-  editOBTitle: {
+  editModalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.primary,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  editOBCloseBtn: {
+  closeModalBtn: {
     padding: 5,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
   },
-  editOBForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+  editModalBody: {
+    padding: 20,
   },
-  editOBField: {
-    flex: 1,
-    marginBottom: 5,
+  formGroup: {
+    marginBottom: 16,
   },
-  editOBLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 5,
-  },
-  editOBInput: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    height: 45,
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    fontSize: 14,
-    color: '#333',
-    backgroundColor: '#f9f9f9',
-  },
-  editOBDropdownRow: {
-    marginBottom: 15,
-  },
-  editOBDropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    minHeight: 42,
-  },
-  editOBDropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    maxHeight: 160,
-  },
-  editOBDropdownText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  editOBDropdownPlaceholder: {
-    color: '#999',
-    fontSize: 14,
-  },
-  editOBSubmitBtn: {
+  rowInputs: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 20,
+    marginBottom: 16,
   },
-  editOBSubmitText: {
-    color: 'white',
+  label: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+    marginBottom: 6,
+  },
+  input: {
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: THEME.textDark,
+  },
+  dropdown: {
+    backgroundColor: '#F9FAFB',
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    minHeight: 45,
+  },
+  dropdownContainer: {
+    borderColor: '#E5E7EB',
+  },
+  btnPrimary: {
+    backgroundColor: THEME.primary,
+    borderRadius: 12,
+    paddingVertical: 15,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  btnPrimaryText: {
+    color: THEME.white,
     fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    fontWeight: '700',
   },
 });

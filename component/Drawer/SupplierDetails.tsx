@@ -7,19 +7,61 @@ import {
   TextInput,
   TouchableOpacity,
   View,
+  ScrollView,
+  StatusBar,
+  Dimensions,
+  Platform,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {SafeAreaView} from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import backgroundColors from '../Colors';
 import BASE_URL from '../BASE_URL';
 import axios from 'axios';
 import {useUser} from '../CTX/UserContext';
-import {ScrollView} from 'react-native-gesture-handler';
 import LottieView from 'lottie-react-native';
 import Toast from 'react-native-toast-message';
 import {Checkbox} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  danger: '#EF4444',
+  border: '#E5E7EB',
+};
+
+// --- HELPER COMPONENT: Detail Row ---
+const DetailRow = ({
+  label,
+  value,
+  icon,
+  isLast,
+}: {
+  label: string;
+  value: string;
+  icon: string;
+  isLast?: boolean;
+}) => (
+  <View style={[styles.detailRow, isLast && {borderBottomWidth: 0}]}>
+    <View style={styles.iconBox}>
+      <Icon name={icon} size={20} color={THEME.primary} />
+    </View>
+    <View style={styles.detailTextContainer}>
+      <Text style={styles.detailLabel}>{label}</Text>
+      <Text style={styles.detailValue}>{value || '--'}</Text>
+    </View>
+  </View>
+);
 
 interface SupplierDetails {
   supp: {
@@ -176,11 +218,15 @@ const SupplierDetails = ({navigation, route}: any) => {
   const handleUpdateSupplier = async () => {
     const nameRegex = /^[A-Za-z ]+$/;
 
-    if (!editForm.sup_address || !editForm.sup_name) {
+    if (
+      !editForm.sup_address ||
+      !editForm.sup_name ||
+      !editForm.sup_company_name
+    ) {
       Toast.show({
         type: 'error',
         text1: 'Missing Fields',
-        text2: 'Please fill all fields and select a role before updating.',
+        text2: 'Please fill all mandatory fields (*).',
         visibilityTime: 1500,
       });
       return;
@@ -288,211 +334,224 @@ const SupplierDetails = ({navigation, route}: any) => {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerCenter}>
-          <TouchableOpacity
-            onPress={() => {
-              navigation.navigate('Suppliers');
-            }}>
-            <Icon
-              name="chevron-left"
-              size={28}
-              color={backgroundColors.light}
-            />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Supplier Details</Text>
-        </View>
-
-        <TouchableOpacity
-          style={[styles.headerBtn]}
-          onPress={() => {
-            setModalVisible('Delete');
-          }}>
-          <Icon name="delete" size={28} color={backgroundColors.light} />
-        </TouchableOpacity>
-      </View>
+    <View style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
       <ScrollView
-        style={styles.detailsContainer}
-        showsVerticalScrollIndicator={false}>
-        {/* Avatar */}
-        <View style={styles.avatarBox}>
-          <Image
-            source={require('../../assets/man.png')}
-            style={styles.avatar}
-          />
-          <Text style={styles.custName}>
-            {supplier?.supp?.sup_name ?? '--'}
-          </Text>
-        </View>
-
-        {/* Inner Details */}
-        <View style={styles.innerDetails}>
-          <View style={styles.innerHeader}>
-            <Text style={styles.headerText}>Supplier Details</Text>
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{paddingBottom: 100}}>
+        {/* --- HEADER BACKGROUND --- */}
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          {/* Nav Bar */}
+          <SafeAreaView style={styles.navBar}>
             <TouchableOpacity
-              style={{flexDirection: 'row', gap: 5}}
-              onPress={() => {
-                setModalVisible('Edit');
-                getEditData();
-              }}>
-              <Text style={styles.editText}>Edit</Text>
-              <Icon
-                name="square-edit-outline"
-                size={18}
-                color={backgroundColors.dark}
-              />
+              onPress={() => navigation.goBack()}
+              style={styles.navBtn}>
+              <Icon name="arrow-left" size={24} color={THEME.white} />
             </TouchableOpacity>
+            <Text style={styles.navTitle}>Supplier Profile</Text>
+            <TouchableOpacity
+              onPress={() => setModalVisible('Delete')}
+              style={styles.navBtn}>
+              <Icon name="trash-can-outline" size={22} color={THEME.white} />
+            </TouchableOpacity>
+          </SafeAreaView>
+
+          {/* Profile Section */}
+          <View style={styles.profileSection}>
+            <View style={styles.avatarWrapper}>
+              <Image
+                source={require('../../assets/man.png')} // Replace with customer image if available
+                style={styles.avatar}
+              />
+              <TouchableOpacity
+                style={styles.editBadge}
+                activeOpacity={0.8}
+                onPress={() => {
+                  getEditData();
+                  setModalVisible('Edit');
+                }}>
+                <Icon name="pencil" size={16} color={THEME.primary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.profileName}>
+              {supplier?.supp?.sup_name || 'Loading...'}
+            </Text>
+
+            <View style={styles.badgeRow}>
+              <View style={styles.capsuleBadge}>
+                <Icon name="domain" size={14} color={THEME.white} />
+                <Text style={styles.capsuleText}>
+                  {supplier?.supp?.sup_company_name || 'Company'}
+                </Text>
+              </View>
+              <View style={styles.capsuleBadge}>
+                <Icon name="map-marker-outline" size={14} color={THEME.white} />
+                <Text style={styles.capsuleText}>
+                  {supplier?.area?.area_name || 'General'}
+                </Text>
+              </View>
+            </View>
+
+            {/* Main Balance Card (Floating) */}
+            <View style={styles.balanceCard}>
+              <View>
+                <Text style={styles.balanceLabel}>Opening Balance</Text>
+                <Text style={styles.balanceAmount}>
+                  Rs. {supplier?.supp?.sup_opening_balance || '0.00'}
+                </Text>
+              </View>
+              <View style={styles.balanceIcon}>
+                <Icon name="wallet-outline" size={24} color={THEME.white} />
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+
+        {/* --- CONTENT CARDS --- */}
+        <View style={styles.contentContainer}>
+          {/* Company Info */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Company Information</Text>
+            </View>
+            <DetailRow
+              icon="domain"
+              label="Company Name"
+              value={supplier?.supp?.sup_company_name!}
+            />
+            <DetailRow
+              icon="office-building"
+              label="Agency Name"
+              value={supplier?.supp?.sup_agancy_name!}
+            />
+            <DetailRow
+              icon="email-outline"
+              label="Email"
+              value={supplier?.supp?.sup_email!}
+            />
+            <DetailRow
+              icon="map-marker-radius-outline"
+              label="Address"
+              value={supplier?.supp?.sup_address!}
+              isLast
+            />
           </View>
 
-          {/* Details */}
-          <View style={styles.detailsView}>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Name</Text>
-              <Text style={styles.value}>
-                {supplier?.supp?.sup_name ?? '--'}
-              </Text>
+          {/* Contact Info */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Contact Details</Text>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Company Name</Text>
-              <Text style={styles.value}>
-                {supplier?.supp?.sup_company_name ?? '--'}
-              </Text>
+            <DetailRow
+              icon="phone"
+              label="Primary Phone"
+              value={supplier?.supp?.sup_contact!}
+            />
+            <DetailRow
+              icon="phone-classic"
+              label="Secondary Phone"
+              value={supplier?.supp?.sup_sec_contact!}
+            />
+            <DetailRow
+              icon="phone-classic"
+              label="Third Phone"
+              value={supplier?.supp?.sup_third_contact!}
+              isLast
+            />
+          </View>
+
+          {/* Financials Info */}
+          <View style={styles.sectionCard}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>Financial Setup</Text>
             </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Agency Name</Text>
-              <Text style={styles.value}>
-                {supplier?.supp?.sup_agancy_name ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact 1</Text>
-              <Text style={styles.value}>
-                {supplier?.supp?.sup_contact ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact 2</Text>
-              <Text style={styles.value}>
-                {supplier?.supp?.sup_sec_contact ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Contact 3</Text>
-              <Text style={styles.value}>
-                {supplier?.supp?.sup_third_contact ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Email</Text>
-              <Text style={styles.value}>
-                {supplier?.supp?.sup_email ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Supplier Area</Text>
-              <Text style={styles.value}>
-                {supplier?.area?.area_name ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Address</Text>
-              <Text style={styles.value}>
-                {supplier?.supp?.sup_address ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Opening Balance</Text>
-              <Text style={styles.value}>
-                {supplier?.supp?.sup_opening_balance ?? '--'}
-              </Text>
-            </View>
-            <View style={styles.detailsRow}>
-              <Text style={styles.label}>Payment Type</Text>
-              <Text style={styles.value}>
-                {supplier?.supp?.sup_payment_type ?? '--'}
-              </Text>
-            </View>
-            <View style={[styles.detailsRow, {borderBottomWidth: 0}]}>
-              <Text style={styles.label}>Transaction Type</Text>
-              <Text style={styles.value}>
-                {supplier?.supp?.sup_transaction_type ?? '--'}
-              </Text>
-            </View>
+            <DetailRow
+              icon="cash-multiple"
+              label="Payment Type"
+              value={supplier?.supp?.sup_payment_type!}
+            />
+            <DetailRow
+              icon="bank-transfer"
+              label="Transaction Type"
+              value={supplier?.supp?.sup_transaction_type!}
+              isLast
+            />
           </View>
         </View>
       </ScrollView>
 
-      {/*Delete*/}
+      {/*Delete Modal*/}
       <Modal
         visible={modalVisible === 'Delete'}
         transparent
         animationType="fade">
-        <View style={styles.delModalOverlay}>
+        <View style={styles.modalOverlay}>
           <View style={styles.deleteModalContainer}>
-            <View style={styles.delAnim}>
+            <View style={styles.lottieContainer}>
               <LottieView
-                style={{flex: 1}}
                 source={require('../../assets/warning.json')}
                 autoPlay
                 loop={false}
+                style={{width: '100%', height: '100%'}}
               />
             </View>
 
             {/* Title */}
-            <Text style={styles.deleteModalTitle}>Are you sure?</Text>
+            <Text style={styles.modalTitle}>Delete Supplier?</Text>
 
             {/* Subtitle */}
-            <Text style={styles.deleteModalMessage}>
-              You won’t be able to revert this record!
+            <Text style={styles.modalText}>
+              This action cannot be undone. All data associated with this
+              supplier will be lost.
             </Text>
 
             {/* Buttons */}
-            <View style={styles.deleteModalActions}>
+            <View style={styles.modalBtnRow}>
               <TouchableOpacity
-                style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
+                style={styles.btnCancel}
                 onPress={() => setModalVisible('')}>
-                <Text style={[styles.deleteModalBtnText, {color: '#144272'}]}>
-                  Cancel
-                </Text>
+                <Text style={styles.btnCancelText}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
+                style={styles.btnDelete}
                 onPress={handleDeleteSupplier}>
-                <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
+                <Text style={styles.btnDeleteText}>Delete</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
       </Modal>
 
-      {/* Edit Supplier Modal */}
+      {/* --- EDIT SUPPLIER MODAL --- */}
       <Modal
         visible={modalVisible === 'Edit'}
         transparent
         animationType="slide">
-        <View style={styles.editCustomerModalOverlay}>
-          <ScrollView style={styles.editCustomerModalContainer}>
-            {/* Header */}
-            <View style={styles.editCustomerHeader}>
-              <Text style={styles.editCustomerTitle}>Edit Supplier</Text>
+        <View style={styles.modalOverlay}>
+          <View style={styles.editModalContainer}>
+            <View style={styles.editModalHeader}>
+              <Text style={styles.editModalTitle}>Edit Supplier</Text>
               <TouchableOpacity
-                onPress={() => {
-                  setModalVisible('');
-                  setEditForm(initialEditSupplier);
-                  setAreaOpen(false);
-                }}
-                style={styles.editCustomerCloseBtn}>
-                <Icon name="close" size={20} color="#144272" />
+                onPress={() => setModalVisible('')}
+                style={styles.closeModalBtn}>
+                <Icon name="close" size={22} color={THEME.textDark} />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.editCustomerForm}>
+            <ScrollView
+              style={styles.editModalBody}
+              contentContainerStyle={{paddingBottom: 30}}>
               {/* Also a Customer */}
-              <View style={{marginBottom: 15}}>
+              <View style={{marginBottom: 15, zIndex: 3000}}>
                 <TouchableOpacity
                   style={{flexDirection: 'row', alignItems: 'center'}}
                   activeOpacity={0.7}
@@ -506,38 +565,28 @@ const SupplierDetails = ({navigation, route}: any) => {
                     status={
                       selectedOptions.includes('on') ? 'checked' : 'unchecked'
                     }
-                    color={backgroundColors.primary}
-                    uncheckedColor={backgroundColors.dark}
+                    color={THEME.primary}
+                    uncheckedColor={THEME.textDark}
                   />
-                  <Text
-                    style={[
-                      styles.editCustomerLabel,
-                      {marginLeft: 8, marginBottom: 0},
-                    ]}>
-                    Also a Customer
-                  </Text>
+                  <Text style={styles.label}>Also a Customer</Text>
                 </TouchableOpacity>
               </View>
 
               {/* Company + Agency */}
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Company Name *</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Company Name *</Text>
                 <TextInput
-                  style={styles.editCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="Enter company name"
+                  style={styles.input}
                   value={editForm.sup_company_name}
                   onChangeText={text =>
                     handleEditInputChange('sup_company_name', text)
                   }
                 />
               </View>
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Agency Name</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Agency Name</Text>
                 <TextInput
-                  style={styles.editCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="Enter agency name"
+                  style={styles.input}
                   value={editForm.sup_agancy_name}
                   onChangeText={text =>
                     handleEditInputChange('sup_agancy_name', text)
@@ -545,23 +594,19 @@ const SupplierDetails = ({navigation, route}: any) => {
                 />
               </View>
 
-              {/* Name + Contact 1 */}
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Supplier Name *</Text>
+              {/* Name + Email */}
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Supplier Name *</Text>
                 <TextInput
-                  style={styles.editCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="Supplier Name"
+                  style={styles.input}
                   value={editForm.sup_name}
                   onChangeText={text => handleEditInputChange('sup_name', text)}
                 />
               </View>
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Email</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Email</Text>
                 <TextInput
-                  style={styles.editCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="supplier@example.com"
+                  style={styles.input}
                   value={editForm.sup_email}
                   keyboardType="email-address"
                   onChangeText={text =>
@@ -570,71 +615,48 @@ const SupplierDetails = ({navigation, route}: any) => {
                 />
               </View>
 
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Contact</Text>
-                <TextInput
-                  style={styles.editCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="Enter contact"
-                  keyboardType="phone-pad"
-                  value={editForm.sup_contact}
-                  maxLength={12}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '');
-                    cleaned = cleaned.replace(/-/g, '');
-                    if (cleaned.length > 4)
-                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                    handleEditInputChange('sup_contact', cleaned);
-                  }}
-                />
+              {/* Contacts */}
+              <View style={styles.rowInputs}>
+                <View style={{flex: 1, marginRight: 10}}>
+                  <Text style={styles.label}>Contact 1</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.sup_contact}
+                    maxLength={12}
+                    keyboardType="phone-pad"
+                    onChangeText={t => handleEditInputChange('sup_contact', t)}
+                  />
+                </View>
+                <View style={{flex: 1}}>
+                  <Text style={styles.label}>Contact 2</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={editForm.sup_sec_contact}
+                    maxLength={12}
+                    keyboardType="phone-pad"
+                    onChangeText={t =>
+                      handleEditInputChange('sup_sec_contact', t)
+                    }
+                  />
+                </View>
               </View>
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Contact 2</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Contact 3</Text>
                 <TextInput
-                  style={styles.editCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="Enter contact"
-                  keyboardType="phone-pad"
-                  value={editForm.sup_sec_contact}
+                  style={styles.input}
+                  value={editForm.sup_third_contact}
                   maxLength={12}
-                  onChangeText={t => {
-                    let cleaned = t.replace(/[^0-9-]/g, '');
-                    cleaned = cleaned.replace(/-/g, '');
-                    if (cleaned.length > 4)
-                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                    handleEditInputChange('sup_sec_contact', cleaned);
-                  }}
+                  keyboardType="phone-pad"
+                  onChangeText={t =>
+                    handleEditInputChange('sup_third_contact', t)
+                  }
                 />
               </View>
 
-              {/* Contact 2 + Contact 3 */}
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Contact 3</Text>
+              <View style={styles.formGroup}>
+                <Text style={styles.label}>Address *</Text>
                 <TextInput
-                  style={styles.editCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="Enter contact"
-                  keyboardType="phone-pad"
-                  value={editForm.sup_third_contact}
-                  maxLength={12}
-                  onChangeText={text => {
-                    let cleaned = text.replace(/[^0-9-]/g, '');
-                    cleaned = cleaned.replace(/-/g, '');
-                    if (cleaned.length > 4)
-                      cleaned = cleaned.slice(0, 4) + '-' + cleaned.slice(4);
-                    if (cleaned.length > 12) cleaned = cleaned.slice(0, 12);
-                    handleEditInputChange('sup_third_contact', cleaned);
-                  }}
-                />
-              </View>
-              <View style={styles.editCustomerField}>
-                <Text style={styles.editCustomerLabel}>Address</Text>
-                <TextInput
-                  style={styles.editCustomerInput}
-                  placeholderTextColor="#999"
-                  placeholder="Enter address"
+                  style={styles.input}
                   value={editForm.sup_address}
                   onChangeText={text =>
                     handleEditInputChange('sup_address', text)
@@ -642,51 +664,39 @@ const SupplierDetails = ({navigation, route}: any) => {
                 />
               </View>
 
-              {/* Supplier Area */}
-              <View style={styles.editCustomerDropdownRow}>
-                <View style={styles.editCustomerDropdownField}>
-                  <Text style={styles.editCustomerLabel}>Supplier Area</Text>
-                  <DropDownPicker
-                    items={transformedAreas}
-                    open={areaOpen}
-                    setOpen={setAreaOpen}
-                    value={areaValue}
-                    setValue={setAreaValue}
-                    placeholder="Select supplier area"
-                    style={styles.editCustomerDropdown}
-                    dropDownContainerStyle={
-                      styles.editCustomerDropdownContainer
-                    }
-                    textStyle={styles.editCustomerDropdownText}
-                    placeholderStyle={styles.editCustomerDropdownPlaceholder}
-                    listMode="SCROLLVIEW"
-                    searchable
-                    searchTextInputStyle={{
-                      borderWidth: 0,
-                      width: '100%',
-                    }}
-                    searchContainerStyle={{
-                      borderColor: backgroundColors.gray,
-                    }}
-                  />
-                </View>
+              {/* Area Dropdown */}
+              <View style={[styles.formGroup, {zIndex: 1000}]}>
+                <Text style={styles.label}>Supplier Area</Text>
+                <DropDownPicker
+                  items={transformedAreas}
+                  open={areaOpen}
+                  setOpen={setAreaOpen}
+                  value={areaValue}
+                  setValue={setAreaValue}
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                />
               </View>
 
-              {/* Submit */}
               <TouchableOpacity
-                style={styles.editCustomerSubmitBtn}
+                style={styles.btnPrimary}
                 onPress={handleUpdateSupplier}>
-                <Icon name="content-save-edit" size={20} color="white" />
-                <Text style={styles.editCustomerSubmitText}>
-                  Update Supplier
-                </Text>
+                <Icon
+                  name="check-circle-outline"
+                  size={20}
+                  color="white"
+                  style={{marginRight: 8}}
+                />
+                <Text style={styles.btnPrimaryText}>Update Changes</Text>
               </TouchableOpacity>
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </View>
           <Toast />
         </View>
       </Modal>
-    </SafeAreaView>
+      <BottomBar />
+    </View>
   );
 };
 
@@ -695,273 +705,341 @@ export default SupplierDetails;
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+  // --- Header ---
+  // --- HEADER & PROFILE ---
+  headerContainer: {
+    paddingBottom: 30, // Reduced from 40
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  headerCenter: {
-    flex: 1,
-    gap: 10,
-    flexDirection: 'row',
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-
-  // Details container
-  detailsContainer: {
-    flex: 1,
-    paddingHorizontal: '3%',
-  },
-  avatarBox: {
-    marginVertical: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  avatar: {
-    height: 125,
-    width: 125,
-  },
-  custName: {
-    fontSize: 22,
-    fontWeight: '600',
-    marginTop: 10,
-    color: backgroundColors.primary,
-  },
-
-  // Inner Details
-  innerDetails: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    marginBottom: 30,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  innerHeader: {
-    width: '100%',
-    height: 50,
-    borderBottomColor: backgroundColors.primary,
-    borderBottomWidth: 1,
+  navBar: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: Platform.OS === 'android' ? 30 : 0,
+    marginBottom: 10,
   },
-  headerText: {
-    fontSize: 16,
+  navBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  navTitle: {
+    fontSize: 18,
     fontWeight: '700',
-    color: backgroundColors.dark,
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  editText: {
-    fontSize: 14,
+  profileSection: {
+    alignItems: 'center',
+    paddingHorizontal: 12,
+  },
+  avatarWrapper: {
+    marginBottom: 12,
+    position: 'relative',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
+  },
+  avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    borderWidth: 3,
+    borderColor: THEME.white,
+    backgroundColor: THEME.white,
+  },
+  editBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    backgroundColor: THEME.white,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+  },
+  profileName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: THEME.white,
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    gap: 8, // Reduced from 10
+    marginBottom: 12, // Reduced from 16
+  },
+  capsuleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.25)',
+    gap: 4,
+  },
+  capsuleText: {
+    color: THEME.white,
+    fontSize: 12,
     fontWeight: '600',
-    color: backgroundColors.dark,
   },
-  detailsView: {
+  balanceCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    width: '100%',
+    padding: 12, // Reduced from 16
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
+  },
+  balanceLabel: {
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  balanceAmount: {
+    color: THEME.white,
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  balanceIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+
+  // --- Content ---
+  contentContainer: {
+    marginTop: -24, // Pulls content up to overlap header
+    paddingHorizontal: 12,
+    gap: 10,
+  },
+  sectionCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 12, // Slightly tighter radius
+    padding: 12, // Reduced padding
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.08, // Slightly more visible shadow
+    shadowRadius: 4,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  cardHeader: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 8, // Reduced
+    marginBottom: 8, // Reduced
+  },
+  cardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5, // Reduced from 6
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6', // Slightly darker than F9FAFB for better separator visibility
+  },
+  iconBox: {
+    width: 32, // Reduced from 36
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10, // Reduced from 12
+  },
+  detailTextContainer: {
     flex: 1,
   },
-  detailsRow: {
-    alignItems: 'baseline',
-    paddingVertical: 10,
-    borderBottomWidth: 0.6,
-    borderBottomColor: backgroundColors.primary,
+  detailLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    marginBottom: 0,
+    fontWeight: '500',
+  },
+  detailValue: {
+    fontSize: 14,
+    color: THEME.textDark,
+    fontWeight: '600',
+  },
+
+  // --- Modals ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  deleteModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
+  },
+  lottieContainer: {
+    width: 100,
+    height: 100,
+    marginBottom: 10,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: THEME.textDark,
+    marginBottom: 8,
+  },
+  modalText: {
+    fontSize: 14,
+    color: THEME.textGray,
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    width: '100%',
+    gap: 12,
+  },
+  btnCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F3F4F6',
+  },
+  btnCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textDark,
+  },
+  btnDelete: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: THEME.danger,
+  },
+  btnDeleteText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.white,
+  },
+
+  // Edit Modal
+  editModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 20,
+    flex: 1,
+    marginBottom: 20,
+    marginTop: 40,
+  },
+  editModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
+  },
+  editModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  closeModalBtn: {
+    padding: 5,
+  },
+  editModalBody: {
+    padding: 20,
+  },
+  formGroup: {
+    marginBottom: 15,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: backgroundColors.primary,
-  },
-  value: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-  },
-
-  //Delete Modal
-  delModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-    width: '100%',
-    alignSelf: 'center',
-  },
-  deleteModalIcon: {
-    width: 60,
-    height: 60,
-    tintColor: '#144272',
-    marginBottom: 15,
-  },
-  deleteModalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#144272',
-    marginBottom: 8,
-  },
-  deleteModalMessage: {
-    fontSize: 14,
-    color: '#555',
-    textAlign: 'center',
-    marginBottom: 20,
-  },
-  deleteModalActions: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-  },
-  deleteModalBtn: {
-    flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  deleteModalBtnText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: 'bold',
-  },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
-  },
-
-  // Edit Customer Modal Styles
-  editCustomerModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  editCustomerModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    maxHeight: '90%',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
-  },
-  editCustomerHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  editCustomerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.primary,
-  },
-  editCustomerCloseBtn: {
-    padding: 5,
-  },
-  editCustomerForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  editCustomerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  editCustomerField: {
-    flex: 1,
+    color: '#333',
     marginBottom: 5,
   },
-  editCustomerFullRow: {
-    marginBottom: 15,
-  },
-  editCustomerLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 5,
-  },
-  editCustomerInput: {
+  input: {
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    height: 45,
+    borderColor: '#DDD',
     borderRadius: 8,
-    paddingHorizontal: 12,
+    paddingHorizontal: 15,
     paddingVertical: 10,
     fontSize: 14,
     color: '#333',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#FAFAFA',
   },
-  editCustomerDropdownRow: {
+  rowInputs: {
+    flexDirection: 'row',
     marginBottom: 15,
   },
-  editCustomerDropdownField: {
-    flex: 1,
+  sectionHeader: {
+    marginVertical: 10,
+    paddingBottom: 5,
+    borderBottomWidth: 1,
+    borderBottomColor: '#EEE',
   },
-  editCustomerDropdown: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    backgroundColor: '#f9f9f9',
-    minHeight: 42,
-    zIndex: 999,
-  },
-  editCustomerDropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    zIndex: 1000,
-    maxHeight: 160,
-  },
-  editCustomerDropdownText: {
-    color: '#333',
-    fontSize: 14,
-  },
-  editCustomerDropdownPlaceholder: {
-    color: '#999',
-    fontSize: 14,
-  },
-  editCustomerSubmitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 20,
-  },
-  editCustomerSubmitText: {
-    color: 'white',
+  sectionHeaderText: {
     fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  dropdown: {
+    borderColor: '#DDD',
+    borderRadius: 8,
+    backgroundColor: '#FAFAFA',
+  },
+  dropdownContainer: {
+    borderColor: '#DDD',
+    backgroundColor: THEME.white,
+  },
+  btnPrimary: {
+    backgroundColor: THEME.primary,
+    borderRadius: 12,
+    paddingVertical: 15,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 10,
+    marginBottom: 30,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  btnPrimaryText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

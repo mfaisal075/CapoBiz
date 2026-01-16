@@ -5,9 +5,10 @@ import {
   FlatList,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
-  Image,
   BackHandler,
+  StatusBar,
+  Modal,
+  Alert,
 } from 'react-native';
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -17,7 +18,26 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+  success: '#10B981',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  shadow: '#000',
+};
 
 interface AttendanceCart {
   emp_id: number;
@@ -43,6 +63,25 @@ export default function AllEmployeeAttendance({navigation}: any) {
   );
   const [secId, setSecId] = useState<number | null>(null);
 
+  // Custom Message Modal State
+  const [msgModalVisible, setMsgModalVisible] = useState(false);
+  const [msgType, setMsgType] = useState<'success' | 'warning' | 'error'>(
+    'success',
+  );
+  const [msgTitle, setMsgTitle] = useState('');
+  const [msgBody, setMsgBody] = useState('');
+
+  const showModalMessage = (
+    type: 'success' | 'warning' | 'error',
+    title: string,
+    body: string,
+  ) => {
+    setMsgType(type);
+    setMsgTitle(title);
+    setMsgBody(body);
+    setMsgModalVisible(true);
+  };
+
   // Add Employee to Attendance cart
   const addToEmpAttendanceCart = async () => {
     try {
@@ -57,7 +96,6 @@ export default function AllEmployeeAttendance({navigation}: any) {
     try {
       await addToEmpAttendanceCart();
       const res = await axios.get(`${BASE_URL}/loadcartemp`);
-      console.log('📥 LOADED EMPLOYEE DATA:', res.data.carsession);
       setAttCart(res.data.carsession);
     } catch (error) {
       console.log(error);
@@ -70,30 +108,27 @@ export default function AllEmployeeAttendance({navigation}: any) {
       const res = await axios.post(`${BASE_URL}/clearEmployeescart`);
 
       if (res.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Reset Successful',
-          text2: 'Attendance cart has been cleared',
-          visibilityTime: 1500,
-        });
+        showModalMessage(
+          'success',
+          'Reset Successful',
+          'Attendance cart has been cleared',
+        );
 
         setAttCart([]);
       } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Reset Failed',
-          text2: res.data.message || 'Could not reset cart',
-          visibilityTime: 1500,
-        });
+        showModalMessage(
+          'error',
+          'Reset Failed',
+          res.data.message || 'Could not reset cart',
+        );
       }
     } catch (error) {
       console.log(error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Something went wrong while resetting',
-        visibilityTime: 1500,
-      });
+      showModalMessage(
+        'error',
+        'Error',
+        'Something went wrong while resetting',
+      );
     }
   };
 
@@ -168,6 +203,11 @@ export default function AllEmployeeAttendance({navigation}: any) {
       console.log(`✅ Clock in updated for employee ${emp_id}: ${timeString}`);
     } catch (error) {
       console.log('❌ Error updating clock in:', error);
+      showModalMessage(
+        'error',
+        'Update Failed',
+        'Could not update clock-in time on server.',
+      );
     }
   };
 
@@ -203,6 +243,11 @@ export default function AllEmployeeAttendance({navigation}: any) {
       console.log('Employee Id:', emp_id);
     } catch (error) {
       console.log('Error updating clock in:', error);
+      showModalMessage(
+        'error',
+        'Update Failed',
+        'Could not update clock-out time on server.',
+      );
     }
   };
 
@@ -266,12 +311,11 @@ export default function AllEmployeeAttendance({navigation}: any) {
       console.log(`Status updated for employee ${emp_id}: ${status}`);
     } catch (error) {
       console.log('Error updating status:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error',
-        text2: 'Could not update status',
-        visibilityTime: 1500,
-      });
+      showModalMessage(
+        'error',
+        'Update Failed',
+        'Could not update status on server.',
+      );
     }
   };
 
@@ -281,39 +325,42 @@ export default function AllEmployeeAttendance({navigation}: any) {
       const res = await axios.post(`${BASE_URL}/empcompleteattendance`);
 
       const data = res.data;
-      console.log('Response: ', data);
+      console.log(res.data);
 
       if (res.status === 200 && data.status === 200) {
         await axios.get(`${BASE_URL}/emptyattendancecart`);
         handleReset();
 
-        Toast.show({
-          type: 'success',
-          text1: 'Success!',
-          text2: 'Attendance has been marked successfully!',
-          visibilityTime: 1500,
-        });
+        showModalMessage(
+          'success',
+          'Success!',
+          'Attendance has been marked successfully!',
+        );
       } else if (res.status === 200 && data.status === 203) {
-        Toast.show({
-          type: 'info',
-          text1: 'Warning!',
-          text2: 'Clock out time must be greater than clock in time.',
-          visibilityTime: 1500,
-        });
+        const errorList =
+          data.errors && Array.isArray(data.errors)
+            ? data.errors.join('\n')
+            : '';
+        const message =
+          data.message || 'Clock out time must be greater than clock in time.';
+
+        showModalMessage(
+          'warning',
+          'Validation Error',
+          `${message}\n\n${errorList}`,
+        );
       } else if (res.status === 200 && data.status === 201) {
-        Toast.show({
-          type: 'info',
-          text1: 'Warning!',
-          text2: 'Please Load the Employees First!',
-          visibilityTime: 1500,
-        });
+        showModalMessage(
+          'warning',
+          'Warning!',
+          'Please Load the Employees First!',
+        );
       } else if (res.status === 200 && data.status === 202) {
-        Toast.show({
-          type: 'error',
-          text1: 'Warning!',
-          text2: 'You Have Already Marked Attendance!',
-          visibilityTime: 1500,
-        });
+        showModalMessage(
+          'error',
+          'Warning!',
+          'You Have Already Marked Attendance!',
+        );
       }
     } catch (error) {
       console.log(error);
@@ -362,48 +409,47 @@ export default function AllEmployeeAttendance({navigation}: any) {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+    <View style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>All Employees Attendance</Text>
+            <View style={{width: 24}} />
           </View>
-        </View>
+        </LinearGradient>
+      </View>
 
+      <View style={styles.contentContainer}>
         {/* Filter/Action Section */}
-        <View style={styles.buttonContainer}>
+        <View style={styles.actionRow}>
           <TouchableOpacity
-            style={styles.actionButton}
+            style={[styles.actionBtn, {backgroundColor: THEME.primary}]}
             onPress={() => {
               fetchData();
             }}>
-            <Icon
-              name="account-multiple"
-              size={18}
-              color={backgroundColors.light}
-            />
-            <Text style={styles.buttonText}>Load Employees</Text>
+            <Icon name="account-arrow-right" size={20} color={THEME.white} />
+            <Text style={styles.actionBtnText}>Load Employees</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[
-              styles.actionButton,
-              {backgroundColor: backgroundColors.danger},
-            ]}
+            style={[styles.actionBtn, {backgroundColor: THEME.danger}]}
             onPress={() => {
               handleReset();
             }}>
-            <Icon name="refresh" size={18} color={backgroundColors.light} />
-            <Text style={styles.buttonText}>Reset</Text>
+            <Icon name="refresh" size={20} color={THEME.white} />
+            <Text style={styles.actionBtnText}>Reset</Text>
           </TouchableOpacity>
         </View>
 
@@ -414,18 +460,14 @@ export default function AllEmployeeAttendance({navigation}: any) {
             keyExtractor={item => item.emp_id.toString()}
             renderItem={({item, index}) => (
               <View style={styles.card}>
-                {/* Card Header with Gradient Effect */}
+                {/* Card Header */}
                 <View style={styles.cardHeader}>
                   <View style={styles.employeeInfoSection}>
-                    <View style={styles.nameSection}>
-                      <Text style={styles.employeeName}>{item.name}</Text>
-                      <View style={styles.cnicRow}>
-                        <Text style={styles.cnicText}>{item.cnic ?? '--'}</Text>
-                      </View>
-                    </View>
+                    <Text style={styles.employeeName}>{item.name}</Text>
+                    <Text style={styles.cnicText}>{item.cnic ?? '--'}</Text>
                   </View>
                   <View style={styles.dateSection}>
-                    <Icon name="calendar-today" size={16} color="#666" />
+                    <Icon name="calendar" size={16} color={THEME.textGray} />
                     <Text style={styles.dateText}>{item.date}</Text>
                   </View>
                 </View>
@@ -444,52 +486,24 @@ export default function AllEmployeeAttendance({navigation}: any) {
                       styles.timeCard,
                       item.att_status !== 'Present' && styles.disabledTimeCard,
                     ]}>
-                    <View style={styles.timeCardLeft}>
-                      <View
-                        style={[
-                          styles.iconCircle,
-                          {
-                            backgroundColor:
-                              item.att_status === 'Present'
-                                ? '#E8F5E9'
-                                : '#F5F5F5',
-                          },
-                        ]}>
-                        <Icon
-                          name="clock-in"
-                          size={20}
-                          color={
-                            item.att_status === 'Present' ? '#2A652B' : '#999'
-                          }
-                        />
-                      </View>
+                    <View style={styles.timeCardContent}>
+                      <Icon
+                        name="clock-in"
+                        size={20}
+                        color={
+                          item.att_status === 'Present'
+                            ? THEME.primary
+                            : THEME.textGray
+                        }
+                      />
                       <View style={styles.timeInfo}>
-                        <Text
-                          style={[
-                            styles.timeLabel,
-                            item.att_status !== 'Present' &&
-                              styles.disabledText,
-                          ]}>
-                          Clock In
-                        </Text>
-                        <Text
-                          style={[
-                            styles.timeValue,
-                            item.att_status !== 'Present' &&
-                              styles.disabledText,
-                          ]}>
+                        <Text style={styles.timeLabel}>Clock In</Text>
+                        <Text style={styles.timeValue}>
                           {item.clockin
                             ? formatTimeForDisplay(item.clockin)
-                            : '—'}
+                            : '--:--'}
                         </Text>
                       </View>
-                    </View>
-                    <View style={styles.editIndicator}>
-                      {item.att_status === 'Present' ? (
-                        <Icon name="pencil-circle" size={22} color="#2A652B" />
-                      ) : (
-                        <Icon name="lock" size={18} color="#999" />
-                      )}
                     </View>
                   </TouchableOpacity>
 
@@ -505,52 +519,24 @@ export default function AllEmployeeAttendance({navigation}: any) {
                       styles.timeCard,
                       item.att_status !== 'Present' && styles.disabledTimeCard,
                     ]}>
-                    <View style={styles.timeCardLeft}>
-                      <View
-                        style={[
-                          styles.iconCircle,
-                          {
-                            backgroundColor:
-                              item.att_status === 'Present'
-                                ? '#FFEBEE'
-                                : '#F5F5F5',
-                          },
-                        ]}>
-                        <Icon
-                          name="clock-out"
-                          size={20}
-                          color={
-                            item.att_status === 'Present' ? '#D32F2F' : '#999'
-                          }
-                        />
-                      </View>
+                    <View style={styles.timeCardContent}>
+                      <Icon
+                        name="clock-out"
+                        size={20}
+                        color={
+                          item.att_status === 'Present'
+                            ? THEME.danger
+                            : THEME.textGray
+                        }
+                      />
                       <View style={styles.timeInfo}>
-                        <Text
-                          style={[
-                            styles.timeLabel,
-                            item.att_status !== 'Present' &&
-                              styles.disabledText,
-                          ]}>
-                          Clock Out
-                        </Text>
-                        <Text
-                          style={[
-                            styles.timeValue,
-                            item.att_status !== 'Present' &&
-                              styles.disabledText,
-                          ]}>
+                        <Text style={styles.timeLabel}>Clock Out</Text>
+                        <Text style={styles.timeValue}>
                           {item.clockout
                             ? formatTimeForDisplay(item.clockout)
-                            : '—'}
+                            : '--:--'}
                         </Text>
                       </View>
-                    </View>
-                    <View style={styles.editIndicator}>
-                      {item.att_status === 'Present' ? (
-                        <Icon name="pencil-circle" size={22} color="#D32F2F" />
-                      ) : (
-                        <Icon name="lock" size={18} color="#999" />
-                      )}
                     </View>
                   </TouchableOpacity>
                 </View>
@@ -564,25 +550,18 @@ export default function AllEmployeeAttendance({navigation}: any) {
                       setSecId(item.emp_id);
                     }}
                     style={styles.changeStatusButton}>
-                    <Text style={styles.changeStatusText}>Change Status</Text>
-                    <Icon name="chevron-right" size={16} color="#2A652B" />
+                    <Text style={styles.changeStatusText}>Update Status</Text>
+                    <Icon
+                      name="chevron-right"
+                      size={16}
+                      color={THEME.primary}
+                    />
                   </TouchableOpacity>
                   <View
                     style={[
                       styles.statusBadge,
                       getStatusStyle(item.att_status),
                     ]}>
-                    <Icon
-                      name={
-                        item.att_status === 'Present'
-                          ? 'check-circle'
-                          : item.att_status === 'Absent'
-                          ? 'close-circle'
-                          : 'information'
-                      }
-                      size={14}
-                      color={getStatusTextColor(item.att_status)}
-                    />
                     <Text
                       style={[
                         styles.statusText,
@@ -635,14 +614,14 @@ export default function AllEmployeeAttendance({navigation}: any) {
             )}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Icon name="account-multiple-outline" size={48} color="#666" />
+                <Icon name="account-group" size={48} color={THEME.textGray} />
                 <Text style={styles.emptyText}>No employees found.</Text>
                 <Text style={styles.emptySubText}>
-                  Load employees to start marking attendance.
+                  Tap "Load Employees" to start.
                 </Text>
               </View>
             }
-            contentContainerStyle={{paddingBottom: 20}}
+            contentContainerStyle={{paddingBottom: 100}}
             showsVerticalScrollIndicator={false}
           />
         </View>
@@ -653,415 +632,472 @@ export default function AllEmployeeAttendance({navigation}: any) {
             <TouchableOpacity
               style={styles.submitButton}
               onPress={compAttendance}>
-              <Icon name="check-circle" size={20} color="white" />
+              <Icon name="check-circle-outline" size={24} color="white" />
               <Text style={styles.submitText}>Submit Attendance</Text>
             </TouchableOpacity>
           </View>
         )}
-
-        {/* Status Modal */}
-        {statusModalVisible && (
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalTitle}>Select Status</Text>
-
-              {['Present', 'Absent', 'Leave'].map(status => (
-                <TouchableOpacity
-                  key={status}
-                  onPress={() => {
-                    if (selectedEmployeeId !== null && secId !== null) {
-                      updateAttendanceStatus(selectedEmployeeId, status, secId);
-                    }
-                  }}
-                  style={styles.modalOption}>
-                  <Icon
-                    name={
-                      status === 'Present'
-                        ? 'check-circle'
-                        : status === 'Absent'
-                        ? 'close-circle'
-                        : 'information'
-                    }
-                    size={20}
-                    color={getStatusTextColor(status)}
-                  />
-                  <Text
-                    style={[
-                      styles.modalOptionText,
-                      {color: getStatusTextColor(status)},
-                    ]}>
-                    {status}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-
-              <TouchableOpacity
-                onPress={() => setStatusModalVisible(false)}
-                style={styles.modalCancelButton}>
-                <Text style={styles.modalCancelText}>Cancel</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        <Toast />
       </View>
-    </SafeAreaView>
+
+      {/* Status Modal */}
+      <Modal
+        visible={statusModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setStatusModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Select Status</Text>
+
+            {['Present', 'Absent', 'Leave'].map(status => (
+              <TouchableOpacity
+                key={status}
+                onPress={() => {
+                  if (selectedEmployeeId !== null && secId !== null) {
+                    updateAttendanceStatus(selectedEmployeeId, status, secId);
+                  }
+                }}
+                style={styles.modalOption}>
+                <Icon
+                  name={
+                    status === 'Present'
+                      ? 'check-circle'
+                      : status === 'Absent'
+                      ? 'close-circle'
+                      : 'information'
+                  }
+                  size={24}
+                  color={getStatusTextColor(status)}
+                />
+                <Text
+                  style={[
+                    styles.modalOptionText,
+                    {color: getStatusTextColor(status)},
+                  ]}>
+                  {status}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              onPress={() => setStatusModalVisible(false)}
+              style={styles.modalCancelButton}>
+              <Text style={styles.modalCancelText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Custom Message Modal */}
+      <Modal
+        visible={msgModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setMsgModalVisible(false)}>
+        <View style={styles.msgModalOverlay}>
+          <View style={styles.msgModalContent}>
+            <View
+              style={[
+                styles.msgIconContainer,
+                msgType === 'success'
+                  ? styles.msgIconSuccess
+                  : msgType === 'error'
+                  ? styles.msgIconError
+                  : styles.msgIconWarning,
+              ]}>
+              <Icon
+                name={
+                  msgType === 'success'
+                    ? 'check'
+                    : msgType === 'error'
+                    ? 'close'
+                    : 'alert-outline'
+                }
+                size={32}
+                color={
+                  msgType === 'success'
+                    ? '#10B981'
+                    : msgType === 'error'
+                    ? '#EF4444'
+                    : '#F59E0B'
+                }
+              />
+            </View>
+            <Text style={styles.msgTitle}>{msgTitle}</Text>
+            <Text style={styles.msgBody}>{msgBody}</Text>
+            <TouchableOpacity
+              style={[
+                styles.msgButton,
+                msgType === 'success'
+                  ? styles.msgButtonSuccess
+                  : msgType === 'error'
+                  ? styles.msgButtonError
+                  : styles.msgButtonWarning,
+              ]}
+              onPress={() => setMsgModalVisible(false)}>
+              <Text style={styles.msgButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      <Toast />
+      <BottomBar />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 0,
+    zIndex: 1,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
   },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
-  },
-  buttonContainer: {
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 10,
-    marginVertical: 10,
-  },
-  actionButton: {
-    width: '48%',
-    flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: backgroundColors.primary,
-    paddingHorizontal: 20,
-    paddingVertical: 13,
-    borderRadius: 10,
-    borderWidth: 0.5,
-    borderColor: backgroundColors.dark,
-    justifyContent: 'center',
-    shadowColor: backgroundColors.dark,
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 4,
   },
-  buttonText: {
-    color: backgroundColors.light,
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
     fontWeight: '700',
-    marginLeft: 8,
-    fontSize: 14,
-  },
-  listContainer: {
-    flex: 1,
-    paddingHorizontal: 12,
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
 
-  // NEW ENHANCED CARD STYLES
+  contentContainer: {
+    flex: 1,
+    paddingTop: 10,
+  },
+
+  // --- Action Buttons ---
+  actionRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 15,
+    marginBottom: 15,
+    paddingHorizontal: 15,
+  },
+  actionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 16,
+    elevation: 2,
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  actionBtnText: {
+    color: THEME.white,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  // --- List & Cards ---
+  listContainer: {
+    flex: 1,
+    paddingHorizontal: 15,
+  },
   card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 20,
-    marginVertical: 8,
-    shadowColor: backgroundColors.dark,
-    shadowOpacity: 0.12,
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    marginBottom: 16,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
     shadowRadius: 6,
-    shadowOffset: {width: 0, height: 4},
-    elevation: 8,
-    overflow: 'hidden',
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#E8F5E9',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: '#FAFFFE',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E8F5E9',
+    alignItems: 'flex-start',
+    paddingBottom: 6,
   },
   employeeInfoSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  avatarBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  avatar: {
-    height: 50,
-    width: 50,
-  },
-  nameSection: {
-    marginLeft: 14,
     flex: 1,
   },
   employeeName: {
     fontSize: 16,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 2,
-    letterSpacing: 0.3,
-  },
-  cnicRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
   cnicText: {
-    fontSize: 13,
-    color: '#666',
-    fontWeight: '500',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1.5,
-  },
-  statusText: {
     fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-
-  cardBody: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    gap: 10,
-  },
-  timeCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    backgroundColor: '#FAFAFA',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-  },
-  disabledTimeCard: {
-    backgroundColor: '#F5F5F5',
-    opacity: 0.6,
-  },
-  timeCardLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  iconCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  timeInfo: {
-    flex: 1,
-  },
-  timeLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
-    marginBottom: 3,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  timeValue: {
-    fontSize: 16,
-    color: '#1A1A1A',
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  editIndicator: {
-    marginLeft: 8,
-  },
-  disabledText: {
-    color: '#999',
-  },
-
-  cardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#FAFFFE',
-    borderTopWidth: 1,
-    borderTopColor: '#E8F5E9',
+    color: THEME.textGray,
+    marginTop: 2,
   },
   dateSection: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
   dateText: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 12,
+    color: THEME.textDark,
+    fontWeight: '500',
+  },
+
+  // --- Time Input Cards ---
+  cardBody: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 6,
+  },
+  timeCard: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  disabledTimeCard: {
+    opacity: 0.5,
+    backgroundColor: '#F3F4F6',
+  },
+  timeCardContent: {
+    flexDirection: 'row',
+    alignItems: 'center', // Align icon and text vertically centered
+    gap: 8,
+  },
+  timeInfo: {
+    flex: 1,
+  },
+  timeLabel: {
+    fontSize: 10,
+    color: THEME.textGray,
     fontWeight: '600',
+    textTransform: 'uppercase',
+  },
+  timeValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+
+  // --- Card Footer ---
+  cardFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 4,
   },
   changeStatusButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
     paddingVertical: 6,
-    backgroundColor: '#E8F5E9',
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
+    paddingHorizontal: 0,
   },
   changeStatusText: {
-    fontSize: 13,
-    color: '#2A652B',
+    fontSize: 12,
+    color: THEME.primary,
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+  },
+  statusText: {
+    fontSize: 11,
     fontWeight: '700',
+    textTransform: 'uppercase',
   },
 
+  // --- Empty State ---
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 50,
-    paddingVertical: 50,
-    paddingHorizontal: 20,
+    padding: 40,
+    marginTop: 20,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    borderStyle: 'dashed',
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
   },
   emptyText: {
-    color: '#555',
-    fontSize: 17,
-    marginTop: 12,
-    fontWeight: '600',
+    marginTop: 15,
+    color: THEME.textDark,
+    fontSize: 16,
+    fontWeight: '700',
   },
   emptySubText: {
-    color: '#888',
+    marginTop: 5,
+    color: THEME.textGray,
     fontSize: 14,
-    marginTop: 8,
-    textAlign: 'center',
-    lineHeight: 20,
-    fontWeight: '500',
   },
+
+  // --- Submit Button ---
   submitContainer: {
-    paddingHorizontal: 15,
-    paddingVertical: 12,
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    elevation: 10,
   },
   submitButton: {
-    backgroundColor: '#2A652B',
-    paddingVertical: 16,
-    borderRadius: 16,
+    backgroundColor: THEME.primary,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#2A652B',
+    paddingVertical: 16,
+    borderRadius: 20,
+    gap: 10,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 8,
-    shadowOffset: {width: 0, height: 4},
-    elevation: 8,
+    elevation: 5,
   },
   submitText: {
-    color: 'white',
-    fontWeight: '800',
+    color: THEME.white,
     fontSize: 16,
-    marginLeft: 10,
+    fontWeight: '700',
     letterSpacing: 0.5,
   },
+
+  // --- Modal ---
   modalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    justifyContent: 'flex-end',
-    alignItems: 'center',
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: 20,
   },
   modalContent: {
-    backgroundColor: 'white',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 34,
-    width: '100%',
-    maxWidth: 400,
-    shadowColor: '#000',
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    shadowOffset: {width: 0, height: -8},
-    elevation: 12,
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    padding: 24,
+    elevation: 10,
   },
   modalTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    marginBottom: 24,
-    color: '#2A652B',
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 20,
     textAlign: 'center',
-    letterSpacing: 0.3,
   },
   modalOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: '#FAFAFA',
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    gap: 15,
   },
   modalOptionText: {
     fontSize: 16,
-    marginLeft: 14,
     fontWeight: '600',
-    letterSpacing: 0.2,
   },
   modalCancelButton: {
-    marginTop: 12,
+    marginTop: 20,
+    paddingVertical: 12,
     alignItems: 'center',
-    paddingVertical: 14,
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#F3F4F6',
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
   },
   modalCancelText: {
-    color: '#666',
-    fontWeight: '700',
     fontSize: 16,
-    letterSpacing: 0.3,
+    color: THEME.textGray,
+    fontWeight: '600',
+  },
+
+  // --- Message Modal ---
+  msgModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  msgModalContent: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 24,
+    width: '100%',
+    alignItems: 'center',
+    elevation: 10,
+  },
+  msgIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  msgIconSuccess: {
+    backgroundColor: '#D1FAE5',
+  },
+  msgIconError: {
+    backgroundColor: '#FEE2E2',
+  },
+  msgIconWarning: {
+    backgroundColor: '#FEF3C7',
+  },
+  msgTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  msgBody: {
+    fontSize: 16,
+    color: THEME.textGray,
+    textAlign: 'center',
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  msgButton: {
+    width: '100%',
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  msgButtonSuccess: {
+    backgroundColor: '#10B981',
+  },
+  msgButtonError: {
+    backgroundColor: '#EF4444',
+  },
+  msgButtonWarning: {
+    backgroundColor: '#F59E0B',
+  },
+  msgButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
   },
 });

@@ -7,6 +7,8 @@ import {
   FlatList,
   Image,
   BackHandler,
+  StatusBar,
+  ScrollView,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -18,7 +20,28 @@ import {RadioButton} from 'react-native-paper';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  danger: '#EF4444',
+  success: '#10B981',
+  info: '#3B82F6',
+  warning: '#F59E0B',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 type TabType = 'receivables' | 'payables' | 'balances';
 
@@ -346,44 +369,139 @@ export default function CustomerBalances({navigation}: any) {
     }
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+  // Helper: Get Initials
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Customer Balances</Text>
+  const renderCard = (item: any, index: number) => {
+    const isAll = selectionMode === 'allCustomers';
+    let name, subtitle, balance, line1Label, line1Value, line2Label, line2Value;
+
+    if (isAll) {
+      const rowItem = item as AllCustomersReceivable;
+      name = rowItem.cust_name;
+      subtitle = rowItem.cust_contact || 'No Contact';
+      balance =
+        selectedTab === 'receivables'
+          ? rowItem.custac_balance
+          : rowItem.Balance;
+
+      line1Label = 'Address:';
+      line1Value = rowItem.cust_address || 'N/A';
+      line2Label = 'Contact2:';
+      line2Value = rowItem.cust_sec_contact || 'N/A';
+    } else {
+      const rowItem = item as SingleCustomersReceivable;
+      name = rowItem.cust_name;
+      subtitle = 'Single Customer Record';
+      balance = rowItem.custac_balance;
+
+      line1Label = 'Total Bill:';
+      line1Value = formatNumber(rowItem.custac_total_bill_amount);
+      line2Label = 'Paid:';
+      line2Value = formatNumber(rowItem.custac_paid_amount);
+    }
+
+    return (
+      <View style={styles.cardRow}>
+        {/* Left Side: Avatar + Name */}
+        <View style={styles.leftContent}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>{getInitials(name)}</Text>
           </View>
 
-          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.infoWrapper}>
+            <Text style={styles.nameText} numberOfLines={1}>
+              {name}
+            </Text>
+            <View style={styles.detailRow}>
+              <Icon name="phone" size={12} color={THEME.textGray} />
+              <Text style={styles.detailText} numberOfLines={1}>
+                {subtitle}
+              </Text>
+            </View>
+            {isAll && (
+              <View style={[styles.detailRow, {marginTop: 2}]}>
+                <Icon
+                  name="map-marker-outline"
+                  size={12}
+                  color={THEME.textGray}
+                />
+                <Text style={styles.detailText} numberOfLines={1}>
+                  {line1Value}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
-        {/* Filter Section */}
+        {/* Right Side: Balance & Details */}
+        <View style={styles.rightContent}>
+          <View style={[styles.balanceBadge, {marginTop: 22}]}>
+            <Text style={styles.balanceLabel}>Balance</Text>
+            <Text style={styles.balanceValue}>{formatNumber(balance)}</Text>
+          </View>
+
+          {!isAll && (
+            <View style={styles.miniDetailRow}>
+              <Text style={styles.miniLabel}>{line1Label} </Text>
+              <Text style={styles.miniValue} numberOfLines={1}>
+                {line1Value}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
+
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Customer Balances</Text>
+            <TouchableOpacity onPress={handlePrint} style={styles.iconBtn}>
+              <Icon name="printer" size={24} color={THEME.white} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* --- CONTENT --- */}
+      <View style={{flex: 1}}>
+        {/* FILTER SECTION (Floating) */}
         <View style={styles.filterContainer}>
-          {/* Toggle Tabs */}
-          <View style={styles.toggleRow}>
+          {/* TABS */}
+          <View style={styles.tabContainer}>
             {(['receivables', 'payables', 'balances'] as TabType[]).map(tab => (
               <TouchableOpacity
                 key={tab}
                 onPress={() => setSelectedTab(tab)}
                 style={[
-                  styles.toggleButton,
-                  selectedTab === tab && styles.activeButton,
+                  styles.tabBtn,
+                  selectedTab === tab && styles.tabBtnActive,
                 ]}>
                 <Text
                   style={[
-                    styles.toggleText,
-                    selectedTab === tab && styles.activeText,
+                    styles.tabText,
+                    selectedTab === tab && styles.tabTextActive,
                   ]}>
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </Text>
@@ -391,21 +509,24 @@ export default function CustomerBalances({navigation}: any) {
             ))}
           </View>
 
-          {/* Radio Buttons */}
-          <View style={styles.radioContainer}>
+          {/* RADIO MODE */}
+          <View style={styles.radioRow}>
             <TouchableOpacity
               style={styles.radioButton}
               onPress={() => {
                 setSelectionMode('allCustomers');
                 setCustValue('');
               }}>
-              <RadioButton
+              <RadioButton.Android
                 value="allCustomers"
                 status={
                   selectionMode === 'allCustomers' ? 'checked' : 'unchecked'
                 }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
+                color={THEME.primary}
+                onPress={() => {
+                  setSelectionMode('allCustomers');
+                  setCustValue('');
+                }}
               />
               <Text style={styles.radioText}>All Customers</Text>
             </TouchableOpacity>
@@ -416,275 +537,129 @@ export default function CustomerBalances({navigation}: any) {
                 setSelectionMode('singleCustomer');
                 setAreaValue('');
               }}>
-              <RadioButton
+              <RadioButton.Android
                 value="singleCustomer"
                 status={
                   selectionMode === 'singleCustomer' ? 'checked' : 'unchecked'
                 }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
+                color={THEME.primary}
+                onPress={() => {
+                  setSelectionMode('singleCustomer');
+                  setAreaValue('');
+                }}
               />
               <Text style={styles.radioText}>Single Customer</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Dropdowns */}
+          {/* DROPDOWNS */}
+          <View style={{marginBottom: 12}}>
+            <Text style={styles.inputLabel}>Select Customer</Text>
+            <DropDownPicker
+              items={transformedCustomer}
+              open={custOpen}
+              setOpen={setCustOpen}
+              value={custValue}
+              setValue={setCustValue}
+              placeholder="Select Customer"
+              disabled={selectionMode === 'allCustomers'}
+              style={[
+                styles.dropdown,
+                selectionMode === 'allCustomers' && styles.dropdownDisabled,
+              ]}
+              dropDownContainerStyle={styles.dropdownContainer}
+              listMode="SCROLLVIEW"
+              theme="LIGHT"
+            />
+          </View>
 
-          <DropDownPicker
-            items={transformedCustomer}
-            open={custOpen}
-            setOpen={setCustOpen}
-            value={custValue}
-            setValue={setCustValue}
-            placeholder="Select Customer"
-            disabled={selectionMode === 'allCustomers'}
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
-            ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
-            )}
-            ArrowDownIconComponent={() => (
-              <Icon
-                name="chevron-down"
-                size={18}
-                color={backgroundColors.dark}
-              />
-            )}
-            style={[
-              styles.dropdown,
-              selectionMode === 'allCustomers' && styles.dropdownDisabled,
-            ]}
-            dropDownContainerStyle={styles.dropDownContainer}
-            zIndex={3000}
-            zIndexInverse={1000}
-            listMode="MODAL"
-            listItemLabelStyle={{
-              color: backgroundColors.dark,
-              fontWeight: '500',
-            }}
-            labelStyle={{
-              color: backgroundColors.dark,
-              fontSize: 16,
-            }}
-            searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
-            searchContainerStyle={{
-              borderColor: backgroundColors.gray,
-            }}
-          />
-
-          <DropDownPicker
-            items={transformedAreas}
-            open={areaOpen}
-            setOpen={setAreaOpen}
-            value={areaValue}
-            setValue={setAreaValue}
-            placeholder="Select Area"
-            disabled={selectionMode === 'singleCustomer'}
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
-            ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
-            )}
-            ArrowDownIconComponent={() => (
-              <Icon
-                name="chevron-down"
-                size={18}
-                color={backgroundColors.dark}
-              />
-            )}
-            style={[
-              styles.dropdown,
-              selectionMode === 'singleCustomer' && styles.dropdownDisabled,
-            ]}
-            dropDownContainerStyle={styles.dropDownContainer}
-            zIndex={2000}
-            zIndexInverse={2000}
-            listMode="MODAL"
-            listItemLabelStyle={{
-              color: backgroundColors.dark,
-              fontWeight: '500',
-            }}
-            labelStyle={{
-              color: backgroundColors.dark,
-              fontSize: 16,
-            }}
-            searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
-            searchContainerStyle={{
-              borderColor: backgroundColors.gray,
-            }}
-          />
+          <View style={{zIndex: 2000}}>
+            <Text style={styles.inputLabel}>Select Area</Text>
+            <DropDownPicker
+              items={transformedAreas}
+              open={areaOpen}
+              setOpen={setAreaOpen}
+              value={areaValue}
+              setValue={setAreaValue}
+              placeholder="Select Area"
+              disabled={selectionMode === 'singleCustomer'}
+              style={[
+                styles.dropdown,
+                selectionMode === 'singleCustomer' && styles.dropdownDisabled,
+              ]}
+              dropDownContainerStyle={styles.dropdownContainer}
+              listMode="SCROLLVIEW"
+              theme="LIGHT"
+            />
+          </View>
         </View>
 
-        <View style={styles.listContainer}>
-          {/* Summary Cards */}
+        <ScrollView
+          contentContainerStyle={{paddingBottom: 160}}
+          showsVerticalScrollIndicator={false}>
+          {/* --- SUMMARY --- */}
           {selectionMode === 'allCustomers' &&
             selectedTab === 'receivables' && (
-              <View style={styles.summaryContainer}>
-                <View style={styles.innerSummaryCtx}>
-                  <Text style={styles.summaryLabel}>
-                    Total{' '}
-                    {selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)}
-                    :{' '}
-                  </Text>
-                  <Text style={styles.summaryValue}>
-                    {formatNumber(totals.totalReceivable)}
-                  </Text>
-                </View>
+              <View style={styles.summaryCard}>
+                <Text style={styles.summaryLabel}>Total Receivables</Text>
+                <Text style={styles.summaryValue}>
+                  {formatNumber(totals.totalReceivable)}
+                </Text>
               </View>
             )}
 
-          <FlatList<AllCustomersReceivable | SingleCustomersReceivable>
-            data={paginatedData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => {
-              const isAllCustomers = selectionMode === 'allCustomers';
-              const allCustomerItem = item as AllCustomersReceivable;
-              const singleCustomerItem = item as SingleCustomersReceivable;
+          {/* --- LIST --- */}
+          <View style={styles.listContainer}>
+            <View style={styles.tableHeaderRow}>
+              <Text style={styles.tableHeaderLabel}>CUSTOMER LIST</Text>
+              <Text style={styles.tableHeaderCount}>{totalRecords} Found</Text>
+            </View>
 
-              return (
-                <View style={styles.card}>
-                  {/* Avatar + Name + Actions */}
-                  <View style={styles.row}>
-                    <View>
-                      <Text style={styles.name}>
-                        {isAllCustomers
-                          ? allCustomerItem.cust_name
-                          : singleCustomerItem.cust_name}
-                      </Text>
-                    </View>
-                    <View>
-                      <Text
-                        style={[
-                          styles.subText,
-                          {
-                            fontSize: 16,
-                            fontWeight: '600',
-                            color: backgroundColors.danger,
-                          },
-                        ]}>
-                        {selectedTab === 'receivables'
-                          ? formatNumber(allCustomerItem.custac_balance) ||
-                            '0.00'
-                          : formatNumber(allCustomerItem.Balance) || '0.00'}
-                      </Text>
-                    </View>
-                  </View>
-                  {isAllCustomers ? (
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        marginTop: 4,
-                      }}>
-                      <Image
-                        source={require('../../../assets/telephone.png')}
-                        style={styles.contactPng}
-                        tintColor={backgroundColors.primary}
-                      />
-                      <Text style={styles.subText}>
-                        {allCustomerItem.cust_contact || 'N/A'}
-                      </Text>
-                    </View>
-                  ) : (
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        width: '100%',
-                        marginTop: 4,
-                        justifyContent: 'space-between',
-                      }}>
-                      <View style={{flexDirection: 'row'}}>
-                        <Text style={{fontWeight: '600'}}>
-                          Total Bill Amount:{' '}
-                        </Text>
-                        <Text style={styles.subText}>
-                          {formatNumber(
-                            singleCustomerItem.custac_total_bill_amount,
-                          ) || '0.00'}
-                        </Text>
-                      </View>
-                      <View style={{flexDirection: 'row'}}>
-                        <Text style={{fontWeight: '600'}}>Paid Amount: </Text>
-                        <Text style={styles.subText}>
-                          {formatNumber(
-                            singleCustomerItem.custac_paid_amount,
-                          ) || '0.00'}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
+            <FlatList<AllCustomersReceivable | SingleCustomersReceivable>
+              data={paginatedData}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({item, index}) => renderCard(item, index)}
+              scrollEnabled={false}
+              ListEmptyComponent={
+                <View style={styles.centerContent}>
+                  <Icon name="scale-balance" size={60} color="#D1D5DB" />
+                  <Text style={styles.emptyText}>No balances found.</Text>
                 </View>
-              );
-            }}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-group" size={48} color="#666" />
-                <Text style={styles.emptyText}>No customers found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
+              }
+            />
+          </View>
+        </ScrollView>
 
-        {/* Pagination Controls */}
+        {/* --- PAGINATION (Bottom Floating) --- */}
         {totalRecords > 0 && (
           <View style={styles.paginationContainer}>
             <TouchableOpacity
               disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => prev - 1)}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
+              onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+              <Icon name="chevron-left" size={24} color={THEME.white} />
             </TouchableOpacity>
 
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
-            </View>
+            <Text style={styles.pageText}>
+              Page {currentPage} of {totalPages}
+            </Text>
 
             <TouchableOpacity
               disabled={currentPage === totalPages}
-              onPress={() => setCurrentPage(prev => prev + 1)}
+              onPress={() =>
+                setCurrentPage(prev => Math.min(prev + 1, totalPages))
+              }
               style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
+                styles.pageBtn,
+                currentPage === totalPages && styles.disabledBtn,
               ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
+              <Icon name="chevron-right" size={24} color={THEME.white} />
             </TouchableOpacity>
           </View>
         )}
-
-        <Toast />
       </View>
+      <BottomBar />
+      <Toast />
     </SafeAreaView>
   );
 }
@@ -692,262 +667,302 @@ export default function CustomerBalances({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.primary,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER ---
+  headerWrapper: {
+    zIndex: 999,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 90, // allow overlap
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: THEME.primary,
+  },
+  headerTop: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
   },
 
-  // Filter Container
+  // --- FILTER CONTAINER ---
   filterContainer: {
-    backgroundColor: backgroundColors.light,
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
+    paddingVertical: 15,
     paddingHorizontal: 15,
-    marginTop: 10,
-    marginBottom: 4,
-    marginHorizontal: 12,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+    marginTop: -70,
+    marginHorizontal: 16,
+    marginBottom: 0,
+    elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+    shadowOffset: {width: 0, height: 2},
+    zIndex: 1000,
   },
-  toggleRow: {
+  tabContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 12,
-  },
-  toggleButton: {
-    flex: 1,
-    padding: 8,
-    borderColor: backgroundColors.gray,
-    borderWidth: 1,
-    marginHorizontal: 4,
-    borderRadius: 8,
-    backgroundColor: '#fff',
-  },
-  activeButton: {
-    backgroundColor: backgroundColors.primary,
-  },
-  toggleText: {
-    textAlign: 'center',
-    color: backgroundColors.dark,
-    fontWeight: '600',
-  },
-  activeText: {
-    color: '#fff',
-  },
-  radioContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '70%',
+    backgroundColor: THEME.background,
+    borderRadius: 12,
     marginBottom: 6,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  tabBtnActive: {
+    backgroundColor: THEME.white,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textGray,
+  },
+  tabTextActive: {
+    color: THEME.primary,
+  },
+  radioRow: {
+    flexDirection: 'row',
+    marginBottom: 10,
+    justifyContent: 'space-around',
   },
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   radioText: {
-    color: backgroundColors.dark,
-    marginLeft: -5,
+    color: THEME.textDark,
+    marginLeft: -2,
     fontWeight: '500',
+    fontSize: 14,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.textGray,
+    marginBottom: 6,
+    textTransform: 'uppercase',
   },
   dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
-    height: 48,
-    marginBottom: 10,
+    borderColor: THEME.border,
+    borderRadius: 8,
+    minHeight: 44,
   },
   dropdownDisabled: {
-    backgroundColor: '#dfdfdfff',
-    borderColor: '#ccc',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
   },
-  dropDownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
+  dropdownContainer: {
+    borderColor: THEME.border,
   },
 
-  // Summary Container
-  summaryContainer: {
-    borderRadius: 14,
-    marginVertical: 5,
-    padding: 10,
-  },
-  innerSummaryCtx: {
+  // --- SUMMARY ---
+  // --- SUMMARY ---
+  summaryCard: {
     flexDirection: 'row',
-    width: '100%',
-    alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: backgroundColors.dark,
-    fontWeight: '600',
+    alignItems: 'center',
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
   },
   summaryValue: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.primary,
   },
-
-  // Flat List Styling
-  listContainer: {
-    flex: 1,
-    marginTop: 10,
-    backgroundColor: backgroundColors.gray,
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-  },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  name: {
+  summaryLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#144272',
+    color: THEME.textDark,
   },
-  subText: {
+
+  // --- LIST / CARD ---
+  listContainer: {
+    flex: 1,
+    marginTop: 16,
+    paddingHorizontal: 16,
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 5,
+  },
+  tableHeaderLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: THEME.textGray,
+    letterSpacing: 1,
+  },
+  tableHeaderCount: {
     fontSize: 12,
-    color: backgroundColors.dark,
-    marginTop: 2,
+    color: THEME.primary,
+    fontWeight: '700',
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
-  contactPng: {
-    height: 16,
-    width: 16,
-    marginRight: 4,
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
   },
-  emptyContainer: {
+  leftContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  avatarContainer: {
+    width: 45,
+    height: 45,
+    borderRadius: 23,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(42, 101, 43, 0.1)',
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.primary,
+  },
+  infoWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  detailText: {
+    fontSize: 12,
+    color: THEME.textGray,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  rightContent: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  balanceBadge: {
+    alignItems: 'flex-end',
+    marginBottom: 6,
+  },
+  balanceLabel: {
+    fontSize: 10,
+    color: THEME.textGray,
+    textTransform: 'uppercase',
+  },
+  balanceValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.danger, // usually red for balance/due
+  },
+  miniDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  miniLabel: {
+    fontSize: 11,
+    color: THEME.textLight,
+  },
+  miniValue: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: THEME.textDark,
+    maxWidth: 100,
+  },
+
+  centerContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
+    paddingVertical: 50,
   },
   emptyText: {
     marginTop: 10,
+    color: THEME.textGray,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
   },
 
-  // Pagination Styling
+  // --- PAGINATION ---
   paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
     position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
-  },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: backgroundColors.light,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
+    bottom: 100,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
     alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
+  pageBtn: {
+    padding: 5,
   },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
+  disabledBtn: {
+    opacity: 0.3,
   },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
+  pageText: {
+    color: THEME.white,
+    fontWeight: '600',
+    marginHorizontal: 15,
+    fontSize: 13,
   },
 });

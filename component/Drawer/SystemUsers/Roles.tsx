@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   TextInput,
@@ -11,6 +10,8 @@ import {
   ScrollView,
   Image,
   BackHandler,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -20,13 +21,40 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import LottieView from 'lottie-react-native';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+const {width} = Dimensions.get('window');
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  danger: '#EF4444',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 interface RolesInterface {
   id: number;
   role_name: string;
   role_status: string;
 }
+
+// --- HELPER: Get Initials ---
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  const parts = name.split(' ');
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+};
 
 export default function Roles({navigation}: any) {
   const {openDrawer} = useDrawer();
@@ -78,7 +106,6 @@ export default function Roles({navigation}: any) {
       );
 
       const data = res.data;
-      console.log(res.data);
 
       if (res.status === 200 && data.status === 200) {
         Toast.show({
@@ -284,250 +311,259 @@ export default function Roles({navigation}: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
+
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Roles</Text>
+            <TouchableOpacity
+              onPress={() => setModalVisible('Add')}
+              style={styles.iconBtn}>
+              <Icon name="plus" size={24} color={THEME.white} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+
+        {/* Floating Search Bar */}
+        <View style={styles.floatingSearchContainer}>
+          <Icon name="magnify" size={22} color={THEME.primary} />
+          <TextInput
+            placeholder="Search roles..."
+            placeholderTextColor={THEME.textGray}
+            style={styles.floatingSearchInput}
+            value={searchQuery}
+            onChangeText={searchFilter}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => searchFilter('')}>
+              <Icon name="close-circle" size={18} color={THEME.textGray} />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
+      {/* --- CONTENT LIST --- */}
+      <View style={styles.listContainer}>
+        <View style={styles.tableHeaderRow}>
+          <Text style={styles.tableHeaderLabel}>ROLE LIST</Text>
+          <Text style={styles.tableHeaderCount}>{totalRecords} Found</Text>
+        </View>
+
+        <FlatList
+          data={paginatedData}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <View style={styles.cardRow}>
+              {/* Avatar/Icon Section */}
+              <View style={styles.avatarContainer}>
+                <Text style={styles.avatarText}>
+                  {getInitials(item.role_name)}
+                </Text>
+              </View>
+
+              {/* Info Section */}
+              <View style={styles.infoContainer}>
+                <Text style={styles.nameText} numberOfLines={1}>
+                  {item.role_name}
+                </Text>
+              </View>
+
+              {/* Actions */}
+              <View style={styles.actionRow}>
+                <TouchableOpacity
+                  style={[styles.actionBtn, {backgroundColor: '#E3F2FD'}]}
+                  onPress={() => toggleedit(item.id)}>
+                  <Icon name="pencil" size={16} color="#1976D2" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.actionBtn, {backgroundColor: '#FFEBEE'}]}
+                  onPress={() => tglModal(item.id)}>
+                  <Icon name="delete" size={16} color={THEME.danger} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          contentContainerStyle={{paddingBottom: 160}}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.centerContent}>
+              <Icon name="shield-account-outline" size={60} color="#D1D5DB" />
+              <Text style={styles.emptyText}>No roles found</Text>
+            </View>
+          }
+        />
+      </View>
+
+      {/* --- PAGINATION (Bottom Floating) --- */}
+      {totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+            <Icon name="chevron-left" size={24} color={THEME.white} />
           </TouchableOpacity>
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Roles</Text>
-          </View>
+          <Text style={styles.pageText}>
+            Page {currentPage} of {totalPages}
+          </Text>
 
           <TouchableOpacity
-            onPress={() => setModalVisible('Add')}
-            style={[styles.headerBtn]}>
-            <Text style={styles.addBtnText}>Add</Text>
-            <Icon name="plus" size={24} color="#fff" />
+            disabled={currentPage === totalPages}
+            onPress={() =>
+              setCurrentPage(prev => Math.min(prev + 1, totalPages))
+            }
+            style={[
+              styles.pageBtn,
+              currentPage === totalPages && styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-right" size={24} color={THEME.white} />
           </TouchableOpacity>
         </View>
+      )}
 
-        {/* Search Filter */}
-        <View style={styles.searchFilter}>
-          <Icon name="magnify" size={36} color={backgroundColors.dark} />
-          <TextInput
-            placeholder="Search by role name"
-            style={styles.search}
-            value={searchQuery}
-            onChangeText={text => searchFilter(text)}
-          />
-        </View>
+      {/* Add Role Modal */}
+      <Modal visible={modalVisible === 'Add'} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add New Role</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setModalVisible('');
+                  setRole('');
+                }}
+                style={styles.closeBtn}>
+                <Icon name="close" size={24} color={THEME.textDark} />
+              </TouchableOpacity>
+            </View>
 
-        <View style={styles.listContainer}>
-          <FlatList
-            data={paginatedData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <View style={styles.card}>
-                {/* Header Row */}
-                <View style={styles.headerRow}>
-                  <View style={styles.headerTxtContainer}>
-                    <View style={{flex: 1}}>
-                      <Text style={styles.roleName}>{item.role_name}</Text>
-                    </View>
-                  </View>
-                  <View style={styles.actionContainer}>
-                    <TouchableOpacity
-                      style={styles.acctionBtn}
-                      onPress={() => toggleedit(item.id)}>
-                      <Icon name="pencil" size={20} color={'#144272'} />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.acctionBtn}
-                      onPress={() => tglModal(item.id)}>
-                      <Icon name="delete" size={20} color={'red'} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-cog" size={48} color="#666" />
-                <Text style={styles.emptyText}>No roles found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-
-        {/* Add Role Modal */}
-        <Modal
-          visible={modalVisible === 'Add'}
-          transparent
-          animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Add New Role</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setRole('');
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color={backgroundColors.dark} />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.addCustomerForm}>
-                <View style={styles.addCustomerFullRow}>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor={backgroundColors.dark}
-                    placeholder="Enter role name *"
-                    value={role}
-                    onChangeText={text => setRole(text)}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={styles.addCustomerSubmitBtn}
-                  onPress={handleAddRole}>
-                  <Icon name="account-plus-outline" size={20} color="white" />
-                  <Text style={styles.addCustomerSubmitText}>Add Role</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/* Delete Role Modal */}
-        <Modal visible={isModalV} transparent animationType="fade">
-          <View style={styles.addCustomerModalOverlay}>
-            <View style={styles.deleteModalContainer}>
-              <View style={styles.delAnim}>
-                <LottieView
-                  style={{flex: 1}}
-                  source={require('../../../assets/warning.json')}
-                  autoPlay
-                  loop={false}
+            <View style={styles.modalBody}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Role Name *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter role name"
+                  placeholderTextColor={THEME.textGray}
+                  value={role}
+                  onChangeText={text => setRole(text)}
                 />
               </View>
 
-              <Text style={styles.deleteModalTitle}>Are you sure?</Text>
-              <Text style={styles.deleteModalMessage}>
-                You won't be able to revert this record!
-              </Text>
-
-              <View style={styles.deleteModalActions}>
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#e0e0e0'}]}
-                  onPress={() => setModalV(!isModalV)}>
-                  <Text
-                    style={[
-                      styles.deleteModalBtnText,
-                      {color: backgroundColors.dark},
-                    ]}>
-                    Cancel
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={[styles.deleteModalBtn, {backgroundColor: '#d9534f'}]}
-                  onPress={handleDeleteRole}>
-                  <Text style={styles.deleteModalBtnText}>Yes, Delete</Text>
-                </TouchableOpacity>
-              </View>
+              <TouchableOpacity
+                style={styles.submitBtn}
+                onPress={handleAddRole}
+                activeOpacity={0.8}>
+                <LinearGradient
+                  colors={[THEME.gradientStart, THEME.gradientEnd]}
+                  style={styles.submitBtnGradient}>
+                  <Icon name="check-circle-outline" size={20} color="white" />
+                  <Text style={styles.submitBtnText}>Add Role</Text>
+                </LinearGradient>
+              </TouchableOpacity>
             </View>
-            <Toast />
           </View>
-        </Modal>
+        </View>
+        <Toast />
+      </Modal>
 
-        {/* Edit Role Modal */}
-        <Modal visible={edit} transparent animationType="slide">
-          <View style={styles.addCustomerModalOverlay}>
-            <ScrollView style={styles.addCustomerModalContainer}>
-              <View style={styles.addCustomerHeader}>
-                <Text style={styles.addCustomerTitle}>Edit Role</Text>
-                <TouchableOpacity
-                  onPress={() => {
-                    setedit(!edit);
-                    setEditRole('');
-                    setSelectedRole(null);
-                  }}
-                  style={styles.addCustomerCloseBtn}>
-                  <Icon name="close" size={20} color="#144272" />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.addCustomerForm}>
-                <View style={styles.addCustomerFullRow}>
-                  <TextInput
-                    style={styles.addCustomerInput}
-                    placeholderTextColor="#999"
-                    placeholder="Enter role name"
-                    value={editRole}
-                    onChangeText={t => setEditRole(t)}
-                  />
-                </View>
-
-                <TouchableOpacity
-                  style={styles.addCustomerSubmitBtn}
-                  onPress={handleUpdateRole}>
-                  <Icon name="account-edit" size={20} color="white" />
-                  <Text style={styles.addCustomerSubmitText}>Update Role</Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-            <Toast />
-          </View>
-        </Modal>
-
-        {/* Pagination Controls */}
-        {totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>Total: {totalRecords} roles</Text>
+      {/* Delete Role Modal */}
+      <Modal visible={isModalV} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.deleteModalContainer}>
+            <View style={styles.delAnim}>
+              <LottieView
+                style={{flex: 1}}
+                source={require('../../../assets/warning.json')}
+                autoPlay
+                loop={false}
+              />
             </View>
 
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() =>
-                setCurrentPage(prev => Math.min(prev + 1, totalPages))
-              }
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
+            <Text style={styles.deleteModalTitle}>Are you sure?</Text>
+            <Text style={styles.deleteModalMessage}>
+              You won't be able to revert this!
+            </Text>
+
+            <View style={styles.deleteModalActions}>
+              <TouchableOpacity
+                style={[styles.modalBtn, {backgroundColor: '#F3F4F6'}]}
+                onPress={() => setModalV(!isModalV)}>
+                <Text style={[styles.modalBtnText, {color: THEME.textDark}]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.modalBtn, {backgroundColor: THEME.danger}]}
+                onPress={handleDeleteRole}>
+                <Text style={[styles.modalBtnText, {color: 'white'}]}>
+                  Yes, Delete
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        )}
-      </View>
+          <Toast />
+        </View>
+      </Modal>
+
+      {/* Edit Role Modal */}
+      <Modal visible={edit} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Role</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setedit(!edit);
+                  setEditRole('');
+                  setSelectedRole(null);
+                }}
+                style={styles.closeBtn}>
+                <Icon name="close" size={24} color={THEME.textDark} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalBody}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.inputLabel}>Role Name *</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Enter role name"
+                  placeholderTextColor={THEME.textGray}
+                  value={editRole}
+                  onChangeText={t => setEditRole(t)}
+                />
+              </View>
+
+              <TouchableOpacity
+                style={styles.submitBtn}
+                onPress={handleUpdateRole}
+                activeOpacity={0.8}>
+                <LinearGradient
+                  colors={[THEME.gradientStart, THEME.gradientEnd]}
+                  style={styles.submitBtnGradient}>
+                  <Icon name="check-circle-outline" size={20} color="white" />
+                  <Text style={styles.submitBtnText}>Update Role</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <Toast />
+        </View>
+      </Modal>
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -535,320 +571,306 @@ export default function Roles({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER ---
+  headerWrapper: {
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 40,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
+  },
+  floatingSearchContainer: {
+    position: 'absolute',
+    bottom: -24,
+    left: 12,
+    right: 12,
+    backgroundColor: THEME.white,
+    borderRadius: 10,
+    height: 50,
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.light,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
+  floatingSearchInput: {
     flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
-  },
-  headerTitle: {
-    color: 'white',
-    fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
+    marginHorizontal: 10,
+    fontSize: 15,
+    color: THEME.textDark,
   },
 
-  // Search Filter
-  searchFilter: {
-    width: '94%',
-    alignSelf: 'center',
-    height: 48,
-    marginVertical: 10,
-    paddingHorizontal: 10,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  search: {
-    height: '100%',
-    fontSize: 14,
-    color: backgroundColors.dark,
-    width: '100%',
-  },
-
-  // FlatList Styling
+  // --- LIST & CARDS ---
   listContainer: {
     flex: 1,
-    paddingHorizontal: '3%',
+    marginTop: 40, // Space for floating search
+    paddingHorizontal: 15,
   },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingHorizontal: 5,
   },
-  row: {
+  tableHeaderLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: THEME.textGray,
+    letterSpacing: 1,
+  },
+  tableHeaderCount: {
+    fontSize: 12,
+    color: THEME.primary,
+    fontWeight: '700',
+  },
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
   },
-  avatarBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+  avatarContainer: {
+    width: 45,
+    height: 45,
+    borderRadius: 23,
+    backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 15,
+    borderWidth: 1,
+    borderColor: 'rgba(42, 101, 43, 0.1)',
   },
-  emptyContainer: {
+  avatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.primary,
+  },
+  infoContainer: {
+    flex: 1,
+  },
+  nameText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 4,
+  },
+  iconTextRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  subText: {
+    fontSize: 13,
+    color: THEME.textGray,
+    fontWeight: '500',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginLeft: 10,
+  },
+  actionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  centerContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
+    paddingVertical: 50,
   },
   emptyText: {
     marginTop: 10,
+    color: THEME.textGray,
     fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerTxtContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '50%',
-  },
-  roleName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: backgroundColors.dark,
-    flexWrap: 'wrap',
-  },
-  actionContainer: {
-    flexDirection: 'row',
-    gap: 10,
-    justifyContent: 'space-between',
-  },
-  acctionBtn: {
-    padding: 8,
-    backgroundColor: '#14417212',
-    borderRadius: 8,
   },
 
-  // Pagination Styling
+  // --- PAGINATION ---
   paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
     position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
-  },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: backgroundColors.light,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
+    bottom: 100,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
-  },
-
-  // Add Role Modal Styles
-  addCustomerModalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-  },
-  addCustomerModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    maxHeight: '30%',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 10,
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  addCustomerHeader: {
+  pageBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabledBtn: {
+    opacity: 0.3,
+  },
+  pageText: {
+    color: THEME.white,
+    fontWeight: '700',
+    marginHorizontal: 15,
+    fontSize: 14,
+  },
+
+  // --- MODALS ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    elevation: 10,
+    maxHeight: '80%',
+  },
+  modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+    padding: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#F3F4F6',
   },
-  addCustomerTitle: {
+  modalTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
+    fontWeight: '800',
+    color: THEME.textDark,
   },
-  addCustomerCloseBtn: {
+  closeBtn: {
     padding: 5,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
   },
-  addCustomerForm: {
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-  },
-  addCustomerFullRow: {
-    marginBottom: 15,
-  },
-  addCustomerLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-    marginBottom: 5,
-  },
-  addCustomerInput: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-  },
-  addCustomerSubmitBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 20,
-  },
-  addCustomerSubmitText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-
-  //Delete Modal
-  deleteModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
+  modalBody: {
     padding: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: THEME.textGray,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  textInput: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    paddingHorizontal: 15,
+    paddingVertical: 12,
+    fontSize: 15,
+    color: THEME.textDark,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  submitBtn: {
+    marginTop: 10,
+    shadowColor: THEME.primary,
     shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    elevation: 4,
+  },
+  submitBtnGradient: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 15,
+    borderRadius: 12,
+    gap: 8,
+  },
+  submitBtnText: {
+    color: THEME.white,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+
+  // Delete Modal
+  deleteModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    padding: 24,
+    alignItems: 'center',
     elevation: 10,
     width: '100%',
-    alignSelf: 'center',
+  },
+  delAnim: {
+    width: 100,
+    height: 100,
+    marginBottom: 15,
   },
   deleteModalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
+    fontWeight: '800',
+    color: THEME.textDark,
     marginBottom: 8,
   },
   deleteModalMessage: {
     fontSize: 14,
-    color: '#555',
+    color: THEME.textGray,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   deleteModalActions: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 12,
     width: '100%',
   },
-  deleteModalBtn: {
+  modalBtn: {
     flex: 1,
-    marginHorizontal: 5,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: 'center',
   },
-  deleteModalBtnText: {
-    color: 'white',
+  modalBtnText: {
     fontSize: 15,
-    fontWeight: 'bold',
-  },
-  delAnim: {
-    width: 120,
-    height: 120,
-    marginBottom: 15,
+    fontWeight: '700',
   },
 });

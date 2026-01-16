@@ -11,6 +11,8 @@ import {
   Animated,
   Image,
   ToastAndroid,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import React, {useEffect, useRef, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -21,9 +23,33 @@ import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
 import {useUser} from '../../CTX/UserContext';
-import Icon from 'react-native-vector-icons/MaterialIcons';
-import backgroundColors from '../../Colors';
+import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
+import LinearGradient from 'react-native-linear-gradient';
 import {BackHandler} from 'react-native';
+import LottieView from 'lottie-react-native';
+import BottomBar from '../../BottomBar';
+
+const {width} = Dimensions.get('window');
+
+// THEME - Updated to match PurchaseOrder
+const THEME = {
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  white: '#FFFFFF',
+  background: '#F8F9FA',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  success: '#10B981',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  shadow: 'rgba(0, 0, 0, 0.1)',
+  primaryDark: '#143D15',
+  rowHover: '#F9FAFB', // Kept for logic compatibility if needed
+};
 
 interface Supplier {
   id: number;
@@ -44,6 +70,7 @@ interface InvoiceListWith {
   prod_purchase_qty: string;
   prod_return_qty: number;
   prod_price: string;
+  total: string;
   cart_id?: number;
 }
 
@@ -55,6 +82,7 @@ interface InvoiceListWithout {
   prod_return_qty: number;
   prod_price: string;
   prod_fretail_price: string;
+  total: string;
   cart_id?: number;
 }
 
@@ -78,15 +106,17 @@ export default function PurchaseReturn({navigation}: any) {
     'with',
   );
   const [supData, setSupData] = useState<SupplierData | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
+
+  // Search State
+  const [searchTerm, setSearchTerm] = useState(''); // Shared search term for visual input
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [showResults, setShowResults] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<any>(null);
-  const [searchTermWithout, setSearchTermWithout] = useState('');
-  const [searchResultsWithout, setSearchResultsWithout] = useState<any[]>([]);
-  const [showResultsWithout, setShowResultsWithout] = useState(false);
+
+  // Product Selection (Without Invoice)
   const [selectedProductWithout, setSelectedProductWithout] =
     useState<any>(null);
+
+  // Functionality States
   const [quantity, setQuantity] = useState('');
   const [supplierItems, setSupplierItems] = useState<Supplier[]>([]);
   const transformedSupplier = supplierItems.map(sup => ({
@@ -127,7 +157,6 @@ export default function PurchaseReturn({navigation}: any) {
     setexpireDate(currentDate);
   };
 
-  // Cart animation effect
   const animateCartIcon = () => {
     Animated.sequence([
       Animated.timing(bounceAnim, {
@@ -143,12 +172,25 @@ export default function PurchaseReturn({navigation}: any) {
     ]).start();
   };
 
-  // Handle Search With
-  const handleSearch = async (text: string) => {
+  // Enhanced Search Handler
+  const handleSearchInput = async (text: string) => {
     setSearchTerm(text);
+    if (selectedOption === 'with') {
+      // Just update text for 'with invoice' mode, actual search triggers on enter/button
+    } else {
+      // Auto-search for products in 'without invoice' mode
+      if (text.length > 0) {
+        handleSearchWithout(text);
+      } else {
+        setShowResults(false);
+      }
+    }
+  };
+
+  const handleSearchWithout = async (text: string) => {
     if (text.length > 0) {
       try {
-        const response = await axios.post(`${BASE_URL}/prinvautocomplete`, {
+        const response = await axios.post(`${BASE_URL}/autocomplete`, {
           term: text,
         });
         setSearchResults(response.data);
@@ -162,50 +204,20 @@ export default function PurchaseReturn({navigation}: any) {
     }
   };
 
-  // Handle Search Without
-  const handleSearchWithout = async (text: string) => {
-    setSearchTermWithout(text);
-    if (text.length > 0) {
-      try {
-        const response = await axios.post(`${BASE_URL}/autocomplete`, {
-          term: text,
-        });
-        setSearchResultsWithout(response.data);
-        setShowResultsWithout(true);
-      } catch (error) {
-        console.error('Search failed:', error);
-        setShowResultsWithout(false);
-      }
-    } else {
-      setShowResultsWithout(false);
-    }
-  };
-
-  // Add Invoice to Cart
+  // Logic from original file
   const addInvoice = async () => {
-    if (!selectedProduct) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please select a product first',
-      });
+    // For 'With Invoice', searchTerm is the invoice number
+    if (!searchTerm) {
+      Toast.show({type: 'error', text1: 'Please enter Invoice Number'});
       return;
     }
-
     try {
       const res = await axios.post(
         `${BASE_URL}/addtopinvoicecart`,
-        {
-          search_invoice: searchTerm,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        {search_invoice: searchTerm},
+        {headers: {Authorization: `Bearer ${token}`}},
       );
-
       const data = res.data;
-
       if (res.status === 200 && data.status) {
         Toast.show({
           type: 'success',
@@ -213,45 +225,32 @@ export default function PurchaseReturn({navigation}: any) {
         });
         fetchInvcWith();
         setSearchTerm('');
-        setShowResults(false);
         animateCartIcon();
       }
     } catch (error) {
       console.error('Error adding invoice:', error);
+      Toast.show({type: 'error', text1: 'Failed to find invoice or add items'});
     }
   };
 
-  // Add Invoice to Cart Without
   const addInvoiceWithout = async () => {
     if (!selectedProductWithout) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please select a product first',
-      });
+      Toast.show({type: 'error', text1: 'Please select a product first'});
       return;
     }
-
     if (!quantity) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please enter quantity',
-      });
+      Toast.show({type: 'error', text1: 'Please enter quantity'});
       return;
     }
-
     try {
       const res = await axios.post(
         `${BASE_URL}/addtopurchreturncart`,
         {
           preturn_prod_id: selectedProductWithout.prod_id,
-          purchase_return_prod_name: searchTermWithout,
+          purchase_return_prod_name: selectedProductWithout.value, // Changed from searchTerm to selectedProductWithout.value to be safe
           purch_return_qty: quantity,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        {headers: {Authorization: `Bearer ${token}`}},
       );
       const data = res.data;
       if (res.status === 200 && data.status == 200) {
@@ -259,9 +258,10 @@ export default function PurchaseReturn({navigation}: any) {
           type: 'success',
           text1: 'Product added to cart successfully!',
         });
-        setSearchTermWithout('');
-        setShowResultsWithout(false);
+        setSearchTerm('');
+        setShowResults(false);
         setQuantity('');
+        setSelectedProductWithout(null);
         fetchInvcWithout();
         animateCartIcon();
       } else if (res.status === 200 && data.status === 202) {
@@ -276,13 +276,10 @@ export default function PurchaseReturn({navigation}: any) {
     }
   };
 
-  // Fetch Supplier Dropdown Data
   const fetchSupplierData = async () => {
     try {
       const response = await axios.get(`${BASE_URL}/loadsuppliers`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: {Authorization: `Bearer ${token}`},
       });
       setSupplierItems(response.data);
     } catch (error) {
@@ -291,53 +288,43 @@ export default function PurchaseReturn({navigation}: any) {
     }
   };
 
-  // Fetch Supplier Data
   const fetchSupData = async () => {
     try {
       const res = await axios.post(`${BASE_URL}/fetchsuppdata`, {
         id: currentpsupplier,
       });
-
       setSupData(res.data.supplier);
     } catch (error) {
       console.log(error);
     }
   };
 
-  // Fetch Return Purchase with invoice
   const fetchInvcWith = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/loadpinvoicereturncart`);
-
       if (res.data.cartsession) {
         const cartItems = Object.values(res.data.cartsession).map(
           (item: any) => ({
             ...item,
-            cart_id: item.id, // Ensure cart_id is set
+            cart_id: item.id,
             total: (
               item.prod_return_qty * parseFloat(item.prod_price)
             ).toString(),
           }),
         );
-
         setWithInvcList(cartItems);
-
-        if (res.data.order_total) {
-          setOrderTotal(res.data.order_total);
-        }
+        if (res.data.order_total) setOrderTotal(res.data.order_total);
       }
     } catch (error) {
       console.log(error);
     }
   };
 
-  // Update Quantity API Call
   const updateQuantity = async (
     id: number,
     qty: number,
     type: 'with' | 'without',
   ) => {
-    // For "with" type, check if return qty > purchase qty
     if (type === 'with') {
       const item = withInvcList.find(i => (i.cart_id || i.prod_id) === id);
       if (item && qty > parseInt(item.prod_purchase_qty)) {
@@ -349,68 +336,35 @@ export default function PurchaseReturn({navigation}: any) {
         return false;
       }
     }
-
     try {
       const res = await axios.post(
         `${BASE_URL}/inlinepurinvoicechange`,
-        {
-          id: id,
-          qty: qty,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        {id: id, qty: qty},
+        {headers: {Authorization: `Bearer ${token}`}},
       );
-
       if (res.status === 200 && res.data.status) {
-        Toast.show({
-          type: 'success',
-          text1: 'Quantity updated successfully!',
-        });
-
-        // Refresh the appropriate list based on type
-        if (type === 'with') {
-          fetchInvcWith();
-        } else {
-          fetchInvcWithout();
-        }
-
+        Toast.show({type: 'success', text1: 'Quantity updated successfully!'});
+        if (type === 'with') fetchInvcWith();
+        else fetchInvcWithout();
         return true;
       } else {
-        Toast.show({
-          type: 'error',
-          text1: 'Failed to update quantity',
-        });
+        Toast.show({type: 'error', text1: 'Failed to update quantity'});
         return false;
       }
     } catch (error) {
       console.error('Error updating quantity:', error);
-      Toast.show({
-        type: 'error',
-        text1: 'Error updating quantity',
-      });
+      Toast.show({type: 'error', text1: 'Error updating quantity'});
       return false;
     }
   };
 
-  // Delete Cart Item (With Invoice)
   const delCartItem = async (id: any) => {
     try {
       const res = await axios.get(
         `${BASE_URL}/removepurinvoicereturn?id=${id}&_token=${token}`,
       );
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Cart item removed successfully!',
-          visibilityTime: 1500,
-        });
-
+      if (res.status === 200 && res.data.status === 200) {
+        Toast.show({type: 'success', text1: 'Cart item removed successfully!'});
         fetchInvcWith();
         setOrderTotal(0);
       }
@@ -419,22 +373,13 @@ export default function PurchaseReturn({navigation}: any) {
     }
   };
 
-  // Delete Cart Item (Without Invoice)
   const delCartItemWithout = async (id: any) => {
     try {
       const res = await axios.get(
         `${BASE_URL}/removepurchasereturn?id=${id}&_token=${token}`,
       );
-
-      const data = res.data;
-
-      if (res.status === 200 && data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Cart item removed successfully!',
-          visibilityTime: 1500,
-        });
-
+      if (res.status === 200 && res.data.status === 200) {
+        Toast.show({type: 'success', text1: 'Cart item removed successfully!'});
         fetchInvcWithout();
         setOrderTotalWithout(0);
       }
@@ -443,34 +388,27 @@ export default function PurchaseReturn({navigation}: any) {
     }
   };
 
-  // Fetch Return Purchase without invoice
   const fetchInvcWithout = async () => {
     try {
       const res = await axios.get(`${BASE_URL}/loadpurchasereturncart`);
-
       if (res.data.cartsession) {
         const cartItems = Object.values(res.data.cartsession).map(
           (item: any) => ({
             ...item,
-            cart_id: item.id, // Ensure cart_id is set
+            cart_id: item.id,
             total: (
               item.prod_return_qty * parseFloat(item.prod_price)
             ).toString(),
           }),
         );
-
         setWithoutInvcList(cartItems);
-
-        if (res.data.order_total) {
-          setOrderTotalWithout(res.data.order_total);
-        }
+        if (res.data.order_total) setOrderTotalWithout(res.data.order_total);
       }
     } catch (error) {
       console.log(error);
     }
   };
 
-  // Empty cart with invoice
   const emptyCartWithInvc = async () => {
     try {
       await axios.get(`${BASE_URL}/emptypurchaseinvreturncart`);
@@ -479,7 +417,6 @@ export default function PurchaseReturn({navigation}: any) {
     }
   };
 
-  // Empty cart without invoice
   const emptyCartWithoutInvc = async () => {
     try {
       await axios.get(`${BASE_URL}/emptypurchasereturncart`);
@@ -488,32 +425,19 @@ export default function PurchaseReturn({navigation}: any) {
     }
   };
 
-  // Complete Order With Invoice
   const compOrder = async () => {
     if (!withInvcList.length) {
-      Toast.show({
-        type: 'error',
-        text1: 'No items in cart to complete order',
-      });
+      Toast.show({type: 'error', text1: 'No items in cart to complete order'});
       return;
     }
     try {
       const res = await axios.post(
         `${BASE_URL}/purchaseinvoicereturn`,
-        {
-          invoice_no: withInvcList[0]?.invoice_no,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
+        {invoice_no: withInvcList[0]?.invoice_no},
+        {headers: {Authorization: `Bearer ${token}`}},
       );
       if (res.status === 200 && res.data.status === 200) {
-        Toast.show({
-          type: 'success',
-          text1: 'Order completed successfully!',
-        });
+        Toast.show({type: 'success', text1: 'Order completed successfully!'});
         setWithInvcList([]);
         setOrderTotal(0);
         emptyCartWithInvc();
@@ -522,51 +446,39 @@ export default function PurchaseReturn({navigation}: any) {
           type: 'error',
           text1: 'Warning!',
           text2: "The return quantity can't be available in stock!",
-          visibilityTime: 2000,
         });
       } else {
         Toast.show({
           type: 'error',
           text1: 'Warning!',
           text2: 'Failed to complete order',
-          visibilityTime: 2000,
         });
       }
     } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error completing order',
-      });
+      Toast.show({type: 'error', text1: 'Error completing order'});
     }
   };
 
-  // Complete Order Without Invoice
   const compOrderWithoutInvc = async () => {
     if (!withoutInvcList.length) {
-      ToastAndroid.show('No items in cart to complete order', 4000);
-      Toast.show({
-        type: 'error',
-        text1: 'No items in cart to complete order',
-      });
+      Toast.show({type: 'error', text1: 'No items in cart to complete order'});
       return;
     }
-
+    if (!currentpsupplier) {
+      Toast.show({type: 'error', text1: 'Please select a supplier'});
+      return;
+    }
     try {
       const res = await axios.post(`${BASE_URL}/completepurchasereturn`, {
         supp_id: currentpsupplier,
         refrence_no: ref,
         date: expireDate.toISOString().split('T')[0],
       });
-
       const data = res.data;
-
       if (res.status === 200 && data.status === 200) {
         setInvcData(data.return_detail[0]);
         setInvcDetails(res.data.return_detail);
-        Toast.show({
-          type: 'success',
-          text1: 'Order completed successfully!',
-        });
+        Toast.show({type: 'success', text1: 'Order completed successfully!'});
         setWithoutInvcList([]);
         setOrderTotalWithout(0);
         emptyCartWithoutInvc();
@@ -578,57 +490,40 @@ export default function PurchaseReturn({navigation}: any) {
           type: 'error',
           text1: 'Warning!',
           text2: 'Please Select Supplier!',
-          visibilityTime: 2000,
         });
-        ToastAndroid.show('Please Select Supplier!', 4500);
       }
     } catch (error) {
-      Toast.show({
-        type: 'error',
-        text1: 'Error completing order',
-      });
+      Toast.show({type: 'error', text1: 'Error completing order'});
     }
   };
 
-  // Start editing quantity
   const startEditing = (item: any, type: 'with' | 'without') => {
     setEditingItemId(item.cart_id || item.prod_id);
     setEditingQuantity(item.prod_return_qty.toString());
     setEditingType(type);
   };
 
-  // Cancel editing
   const cancelEditing = () => {
     setEditingItemId(null);
     setEditingQuantity('');
   };
 
-  // Save edited quantity
   const saveQuantity = async () => {
     if (!editingItemId || !editingQuantity) return;
-
     const qty = parseInt(editingQuantity);
     if (isNaN(qty) || qty <= 0) {
-      Toast.show({
-        type: 'error',
-        text1: 'Please enter a valid quantity',
-      });
+      Toast.show({type: 'error', text1: 'Please enter a valid quantity'});
       return;
     }
-
     const success = await updateQuantity(editingItemId, qty, editingType);
-    if (success) {
-      cancelEditing();
-    }
+    if (success) cancelEditing();
   };
 
-  // Increase quantity
   const increaseQuantity = async (item: any, type: 'with' | 'without') => {
     const newQty = item.prod_return_qty + 1;
     await updateQuantity(item.cart_id || item.prod_id, newQty, type);
   };
 
-  // Decrease quantity
   const decreaseQuantity = async (item: any, type: 'with' | 'without') => {
     if (item.prod_return_qty <= 1) return;
     const newQty = item.prod_return_qty - 1;
@@ -636,27 +531,22 @@ export default function PurchaseReturn({navigation}: any) {
   };
 
   useEffect(() => {
-    if (currentpsupplier) {
-      fetchSupData();
-    }
+    if (currentpsupplier) fetchSupData();
     fetchSupplierData();
     fetchInvcWith();
     fetchInvcWithout();
-
     const backKey = () => {
       navigation.navigate('Dashboard');
       return true;
     };
-
     const backHandler = BackHandler.addEventListener(
       'hardwareBackPress',
       backKey,
     );
-
     return () => backHandler.remove();
   }, [currentpsupplier]);
 
-  // Render editable quantity component for "With Invoice" items
+  // Render Helpers
   const renderQuantityWithInvoice = (item: InvoiceListWith) => {
     if (
       editingItemId === (item.cart_id || item.prod_id) &&
@@ -681,344 +571,375 @@ export default function PurchaseReturn({navigation}: any) {
         </View>
       );
     }
-
     return (
       <View style={styles.quantityContainer}>
         <TouchableOpacity
           onPress={() => decreaseQuantity(item, 'with')}
           style={styles.quantityButton}>
-          <Icon name="remove" size={16} color="white" />
+          <Icon name="minus" size={16} color="white" />
         </TouchableOpacity>
-
         <TouchableOpacity
           onPress={() => startEditing(item, 'with')}
           style={styles.quantityDisplay}>
-          <Text style={[styles.quantityText, {color: backgroundColors.dark}]}>
-            {item.prod_return_qty}
-          </Text>
+          <Text style={styles.quantityText}>{item.prod_return_qty}</Text>
         </TouchableOpacity>
-
         <TouchableOpacity
           onPress={() => increaseQuantity(item, 'with')}
           style={styles.quantityButton}>
-          <Icon name="add" size={16} color="white" />
+          <Icon name="plus" size={16} color="white" />
         </TouchableOpacity>
       </View>
     );
   };
 
-  // Render cart item for modal
-  const renderCartItem = ({item}: {item: InvoiceListWithout}) => (
-    <View style={styles.cartItemContainer}>
-      <View style={styles.cartItemHeader}>
-        <Text style={styles.cartProductName} numberOfLines={2}>
-          {item.prod_name}
-        </Text>
-        <TouchableOpacity
-          onPress={() => delCartItemWithout(item.cart_id || item.prod_id)}>
-          <Icon name="delete" size={20} color="#FF5252" />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.cartItemDetails}>
-        <View style={styles.cartDetailRow}>
-          <Text style={[styles.detailLabel, {color: '#144272'}]}>Barcode:</Text>
-          <Text style={[styles.detailValue, {color: '#144272'}]}>
-            {item.prod_upc_ean}
-          </Text>
-        </View>
-        <View style={styles.cartDetailRow}>
-          <Text style={[styles.detailLabel, {color: '#144272'}]}>Price:</Text>
-          <Text style={[styles.detailValue, {color: '#144272'}]}>
-            PKR {item.prod_price}
-          </Text>
-        </View>
-        <View style={styles.cartDetailRow}>
-          <Text style={[styles.detailLabel, {color: '#144272'}]}>
-            Quantity:
-          </Text>
-          <Text style={[styles.detailLabel, {color: '#144272'}]}>
-            {item.prod_return_qty}
-          </Text>
-        </View>
-        <View style={styles.cartDetailRow}>
-          <Text style={[styles.detailLabel, {color: '#144272'}]}>Total:</Text>
-          <Text style={styles.detailValuePrice}>
-            PKR{' '}
-            {(item.prod_return_qty * parseFloat(item.prod_price)).toFixed(2)}
-          </Text>
-        </View>
-      </View>
-    </View>
-  );
-
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Purchase Return</Text>
-          </View>
-
-          {selectedOption === 'without' && (
-            <TouchableOpacity
-              onPress={() => setModalVisible('Cart')}
-              style={[styles.headerBtn]}>
-              <Icon name="add-shopping-cart" size={26} color="#fff" />
-              {withoutInvcList.length > 0 && (
-                <View style={styles.cartBadge}>
-                  <Text style={styles.cartBadgeText}>
-                    {withoutInvcList.length}
-                  </Text>
-                </View>
-              )}
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
             </TouchableOpacity>
+            <Text style={styles.headerTitle}>Purchase Return</Text>
+            <View style={{width: 24}} />
+          </View>
+        </LinearGradient>
+
+        {/* Floating Search */}
+        <View style={styles.floatingSearchContainer}>
+          <Icon name="magnify" size={22} color={THEME.primary} />
+          <TextInput
+            placeholder={
+              selectedOption === 'with'
+                ? 'Search by Invoice Number...'
+                : 'Search Product by name...'
+            }
+            placeholderTextColor={THEME.textLight}
+            style={styles.floatingSearchInput}
+            value={searchTerm}
+            onChangeText={handleSearchInput}
+            onSubmitEditing={() => selectedOption === 'with' && addInvoice()}
+          />
+          {searchTerm.length > 0 ? (
+            <TouchableOpacity
+              onPress={() => {
+                setSearchTerm('');
+                setShowResults(false);
+              }}>
+              <Icon name="close-circle" size={18} color={THEME.textLight} />
+            </TouchableOpacity>
+          ) : (
+            selectedOption === 'with' && (
+              <TouchableOpacity onPress={addInvoice}>
+                <Icon name="plus-circle" size={24} color={THEME.primary} />
+              </TouchableOpacity>
+            )
           )}
         </View>
+      </View>
 
-        <ScrollView
-          style={styles.scrollContainer}
-          showsVerticalScrollIndicator={false}
-          nestedScrollEnabled>
-          {/* Toggle Section */}
-          <View style={styles.toggleContainer}>
-            <TouchableOpacity
+      {/* Main Content */}
+      <ScrollView
+        style={styles.mainContent}
+        contentContainerStyle={{paddingBottom: 160}}
+        showsVerticalScrollIndicator={false}>
+        {/* Segmented Control */}
+        <View style={styles.segmentContainer}>
+          <TouchableOpacity
+            style={[
+              styles.segmentButton,
+              selectedOption === 'with' && styles.segmentButtonActive,
+            ]}
+            onPress={() => {
+              setSelectedOption('with');
+              setSearchTerm('');
+              setShowResults(false);
+            }}>
+            <Text
               style={[
-                styles.toggleButton,
-                selectedOption === 'with' && styles.toggleButtonActive,
-              ]}
-              onPress={() => setSelectedOption('with')}>
-              <Text
-                style={[
-                  styles.toggleButtonText,
-                  selectedOption === 'with' && styles.toggleButtonTextActive,
-                ]}>
-                Return With Invoice
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
+                styles.segmentText,
+                selectedOption === 'with' && styles.segmentTextActive,
+              ]}>
+              With Invoice
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.segmentButton,
+              selectedOption === 'without' && styles.segmentButtonActive,
+            ]}
+            onPress={() => {
+              setSelectedOption('without');
+              setSearchTerm('');
+              setShowResults(false);
+            }}>
+            <Text
               style={[
-                styles.toggleButton,
-                selectedOption === 'without' && styles.toggleButtonActive,
-              ]}
-              onPress={() => setSelectedOption('without')}>
-              <Text
-                style={[
-                  styles.toggleButtonText,
-                  selectedOption === 'without' && styles.toggleButtonTextActive,
-                ]}>
-                Return Without Invoice
-              </Text>
-            </TouchableOpacity>
-          </View>
+                styles.segmentText,
+                selectedOption === 'without' && styles.segmentTextActive,
+              ]}>
+              Without Invoice
+            </Text>
+          </TouchableOpacity>
+        </View>
 
-          {selectedOption === 'with' ? (
-            <View>
-              {/* Search Section */}
-              <View style={styles.searchContainer}>
-                <View style={styles.searchInputWrapper}>
-                  <Icon
-                    name="search"
-                    size={20}
-                    color={backgroundColors.dark}
-                    style={styles.searchIcon}
-                  />
-                  <TextInput
-                    style={styles.searchInput}
-                    placeholderTextColor="rgba(0,0,0,0.7)"
-                    placeholder="Search Invoice..."
-                    value={searchTerm}
-                    onChangeText={handleSearch}
-                  />
-                  <TouchableOpacity onPress={addInvoice}>
-                    <Icon name="add" size={24} color={backgroundColors.dark} />
-                  </TouchableOpacity>
+        {/* --- WITH INVOICE MODE --- */}
+        {selectedOption === 'with' && (
+          <View>
+            {withInvcList.length > 0 && (
+              <View style={styles.cartPreviewCard}>
+                <View style={styles.cartPreviewHeader}>
+                  <Text style={styles.cartPreviewTitle}>
+                    Items from Invoice: {withInvcList[0]?.invoice_no}
+                  </Text>
                 </View>
-              </View>
 
-              {/* Cart Items */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Return Items</Text>
-
-                {withInvcList.length === 0 ? (
-                  <View style={styles.emptyContainer}>
-                    <Icon name="receipt" size={40} color="rgba(0,0,0,0.5)" />
-                    <Text style={styles.emptyText}>
-                      No items added for return
-                    </Text>
-                  </View>
-                ) : (
-                  <FlatList
-                    data={withInvcList}
-                    keyExtractor={(item, index) => index.toString()}
-                    scrollEnabled={false}
-                    renderItem={({item}) => (
-                      <View style={styles.withCartItemContainer}>
-                        <View style={styles.withCartItemHeader}>
-                          <Text
-                            style={styles.withCartProductName}
-                            numberOfLines={2}>
-                            {item.prod_name}
+                {withInvcList.map((item, index) => (
+                  <View key={index} style={styles.itemCard}>
+                    {/* Top Section: Name & Info */}
+                    <View style={styles.itemCardHeader}>
+                      <View style={{flex: 1, marginRight: 12}}>
+                        <Text style={styles.itemName} numberOfLines={2}>
+                          {item.prod_name}
+                        </Text>
+                        <View style={styles.itemBadge}>
+                          <Text style={styles.itemBadgeText}>
+                            In Invoice: {item.prod_purchase_qty}
                           </Text>
-                          <TouchableOpacity
-                            onPress={() =>
-                              delCartItem(item.cart_id || item.prod_id)
-                            }>
-                            <Icon name="delete" size={24} color="#FF5252" />
-                          </TouchableOpacity>
-                        </View>
-
-                        <View style={styles.withCartItemDetails}>
-                          <View style={styles.withDetailRow}>
-                            <Text style={styles.withDetailLabel}>
-                              Purchase Qty:
-                            </Text>
-                            <Text style={styles.detailValue}>
-                              {item.prod_purchase_qty}
-                            </Text>
-                          </View>
-                          <View style={styles.withDetailRow}>
-                            <Text style={styles.withDetailLabel}>
-                              Return Qty:
-                            </Text>
-                            {renderQuantityWithInvoice(item)}
-                          </View>
-                          <View style={styles.withDetailRow}>
-                            <Text style={styles.withDetailLabel}>Price:</Text>
-                            <Text style={styles.detailValue}>
-                              {item.prod_price}
-                            </Text>
-                          </View>
-                          <View style={styles.withDetailRow}>
-                            <Text style={styles.withDetailLabel}>Total:</Text>
-                            <Text style={styles.detailValue}>
-                              {(
-                                item.prod_return_qty *
-                                parseFloat(item.prod_price)
-                              ).toFixed(2)}
-                            </Text>
-                          </View>
                         </View>
                       </View>
-                    )}
-                  />
-                )}
+                      <TouchableOpacity
+                        onPress={() =>
+                          delCartItem(item.cart_id || item.prod_id)
+                        }
+                        style={styles.itemDeleteBtn}>
+                        <Icon
+                          name="delete-outline"
+                          size={20}
+                          color={THEME.danger}
+                        />
+                      </TouchableOpacity>
+                    </View>
 
-                {withInvcList.length > 0 && (
-                  <View style={styles.totalContainer}>
-                    <Text style={styles.totalLabel}>Total:</Text>
-                    <Text style={styles.totalValue}>
-                      {orderTotal.toFixed(2)}
-                    </Text>
+                    {/* Divider */}
+                    <View style={styles.itemDivider} />
+
+                    {/* Bottom Section: Controls & Pricing */}
+                    <View style={styles.itemCardFooter}>
+                      <View style={styles.priceContainer}>
+                        <Text style={styles.itemLabel}>Price</Text>
+                        <Text style={styles.itemValue}>{item.prod_price}</Text>
+                      </View>
+
+                      {/* Quantity Control */}
+                      <View style={styles.qtyWrapper}>
+                        {renderQuantityWithInvoice(item)}
+                      </View>
+
+                      <View style={styles.totalContainer}>
+                        <Text style={[styles.itemLabel, {textAlign: 'right'}]}>
+                          Total
+                        </Text>
+                        <Text style={styles.itemTotalValue}>
+                          {parseFloat(item.total).toFixed(2)}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
-                )}
+                ))}
+                <View style={[styles.summaryRow, {padding: 15}]}>
+                  <Text style={styles.summaryLabel}>Total Refund Amount:</Text>
+                  <Text style={styles.summaryValue}>
+                    {orderTotal.toFixed(2)}
+                  </Text>
+                </View>
               </View>
-
-              {/* Complete Button */}
-              <TouchableOpacity
-                style={[
-                  styles.checkoutBtn,
-                  withInvcList.length === 0 && styles.checkoutBtnDisabled,
-                ]}
-                onPress={compOrder}
-                disabled={withInvcList.length === 0}>
+            )}
+            {withInvcList.length === 0 && (
+              <View style={styles.emptyState}>
                 <Icon
-                  name="shopping-cart-checkout"
-                  size={20}
-                  color={
-                    withInvcList.length === 0
-                      ? backgroundColors.dark
-                      : backgroundColors.light
-                  }
+                  name="file-document-outline"
+                  size={48}
+                  color={THEME.textLight}
                 />
-                <Text
-                  style={[
-                    styles.checkoutBtnText,
-                    withInvcList.length === 0 && styles.checkoutDisableBtnText,
-                  ]}>
-                  Complete Return
+                <Text style={styles.emptyText}>
+                  Enter an Invoice Number above to start return
                 </Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View>
-              {/* Search Section Without Invoice */}
-              <View style={styles.section}>
-                <View style={styles.searchContainer}>
-                  <View style={styles.searchInputWrapper}>
-                    <Icon
-                      name="search"
-                      size={20}
-                      color={backgroundColors.dark}
-                      style={styles.searchIcon}
-                    />
-                    <TextInput
-                      style={styles.searchInput}
-                      placeholderTextColor="rgba(0,0,0,0.7)"
-                      placeholder="Search Product..."
-                      value={searchTermWithout}
-                      onChangeText={handleSearchWithout}
-                    />
-                  </View>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* --- WITHOUT INVOICE MODE --- */}
+        {selectedOption === 'without' && (
+          <View>
+            {/* Product Form Card (Only when product selected) */}
+            {selectedProductWithout ? (
+              <View style={styles.formCard}>
+                <View
+                  style={{
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                  }}>
+                  <Text style={styles.cardTitle}>Selected Product</Text>
+                  <TouchableOpacity
+                    onPress={() => setSelectedProductWithout(null)}>
+                    <Icon name="close" size={20} color={THEME.textGray} />
+                  </TouchableOpacity>
                 </View>
 
-                <View style={styles.formRow}>
-                  <View style={[styles.inputGroup]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholderTextColor="rgba(0,0,0,0.7)"
-                      placeholder="Enter quantity"
-                      value={quantity}
-                      onChangeText={setQuantity}
-                      keyboardType="numeric"
-                      maxLength={6}
-                    />
-                  </View>
+                <Text style={styles.selectedProdName}>
+                  {selectedProductWithout.value}
+                </Text>
+                <Text style={styles.selectedProdPrice}>
+                  Price: {selectedProductWithout.prod_price}
+                </Text>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.label}>
+                    Return Quantity <Text style={{color: THEME.danger}}>*</Text>
+                  </Text>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="0"
+                    placeholderTextColor={THEME.textLight}
+                    maxLength={6}
+                    value={quantity}
+                    onChangeText={setQuantity}
+                    keyboardType="numeric"
+                  />
                 </View>
 
                 <TouchableOpacity
-                  style={styles.addToCartButton}
+                  style={styles.addToCartBtn}
+                  activeOpacity={0.8}
                   onPress={addInvoiceWithout}>
-                  <Icon
-                    name="add"
-                    size={20}
-                    color={backgroundColors.light}
-                    style={{marginRight: 8}}
-                  />
-                  <Text style={styles.addToCartText}>Add Product</Text>
+                  <LinearGradient
+                    colors={[THEME.primary, '#1e4620']}
+                    start={{x: 0, y: 0}}
+                    end={{x: 1, y: 0}}
+                    style={styles.gradientBtn}>
+                    <Icon
+                      name="cart-plus"
+                      size={22}
+                      color={THEME.white}
+                      style={{marginRight: 8}}
+                    />
+                    <Text style={styles.btnText}>ADD TO RETURN LIST</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
-            </View>
-          )}
+            ) : null}
 
-          <View style={{height: 60}} />
-        </ScrollView>
+            {/* Added Items List */}
+            {withoutInvcList.length > 0 ? (
+              <View style={styles.cartPreviewCard}>
+                <View style={styles.cartPreviewHeader}>
+                  <Text style={styles.cartPreviewTitle}>
+                    Return Items ({withoutInvcList.length})
+                  </Text>
+                </View>
+                {withoutInvcList.map((item, index) => (
+                  <View key={index} style={styles.itemCard}>
+                    {/* Top: Name & Delete */}
+                    <View style={styles.itemCardHeader}>
+                      <View style={{flex: 1, marginRight: 12}}>
+                        <Text style={styles.itemName} numberOfLines={2}>
+                          {item.prod_name}
+                        </Text>
+                        <View
+                          style={[
+                            styles.itemBadge,
+                            {backgroundColor: '#f3f4f6'},
+                          ]}>
+                          <Text
+                            style={[
+                              styles.itemBadgeText,
+                              {color: THEME.textGray},
+                            ]}>
+                            Qty: {item.prod_return_qty}
+                          </Text>
+                        </View>
+                      </View>
+                      <TouchableOpacity
+                        onPress={() =>
+                          delCartItemWithout(item.cart_id || item.prod_id)
+                        }
+                        style={styles.itemDeleteBtn}>
+                        <Icon
+                          name="delete-outline"
+                          size={20}
+                          color={THEME.danger}
+                        />
+                      </TouchableOpacity>
+                    </View>
 
-        {/* Search Results Overlay */}
-        {searchTerm.length > 0 && showResults && searchResults.length > 0 && (
+                    {/* Divider */}
+                    <View style={styles.itemDivider} />
+
+                    {/* Bottom: Totals */}
+                    <View style={styles.itemCardFooter}>
+                      <View>
+                        <Text style={styles.itemLabel}>Return Qty</Text>
+                        <Text style={styles.itemValue}>
+                          {item.prod_return_qty}
+                        </Text>
+                      </View>
+
+                      <View style={styles.totalContainer}>
+                        <Text style={[styles.itemLabel, {textAlign: 'right'}]}>
+                          Subtotal
+                        </Text>
+                        <Text style={styles.itemTotalValue}>
+                          {parseFloat(item.total || '0').toFixed(2)}
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              !selectedProductWithout && (
+                <View style={styles.emptyState}>
+                  <Icon name="cart-outline" size={48} color={THEME.textLight} />
+                  <Text style={styles.emptyText}>
+                    Search product to add to return list
+                  </Text>
+                </View>
+              )
+            )}
+          </View>
+        )}
+
+        <View style={{height: 100}} />
+      </ScrollView>
+
+      {/* --- FLOATING SEARCH RESULTS --- */}
+      {showResults &&
+        searchResults.length > 0 &&
+        selectedOption === 'without' && (
           <View style={styles.searchResultsOverlay}>
             <FlatList
               data={searchResults}
               keyExtractor={(item, index) => index.toString()}
               renderItem={({item}) => (
                 <TouchableOpacity
-                  key={item.prod_id}
                   style={styles.resultItem}
                   onPress={() => {
                     setSearchTerm(item.value);
-                    setSelectedProduct(item);
+                    setSelectedProductWithout(item);
+                    setQuantity('');
                     setShowResults(false);
-                    fetchInvcWith();
                   }}>
                   <Text style={styles.resultText}>
                     {item.label.replace(/\n/g, ' ')}
@@ -1029,460 +950,175 @@ export default function PurchaseReturn({navigation}: any) {
           </View>
         )}
 
-        {/* Search Results Overlay Without */}
-        {searchTermWithout.length > 0 &&
-          showResultsWithout &&
-          searchResultsWithout.length > 0 && (
-            <View style={styles.searchResultsOverlay}>
-              <FlatList
-                data={searchResultsWithout}
-                keyExtractor={(item, index) => index.toString()}
-                renderItem={({item}) => (
-                  <TouchableOpacity
-                    key={item.prod_id}
-                    style={styles.resultItem}
-                    onPress={() => {
-                      setSearchTermWithout(item.value);
-                      setSelectedProductWithout(item);
-                      setShowResultsWithout(false);
-                    }}>
-                    <Text style={styles.resultText}>
-                      {item.label.replace(/\n/g, ' ')}
-                    </Text>
-                  </TouchableOpacity>
-                )}
+      {/* --- PROCEED BUTTONS --- */}
+      {((selectedOption === 'with' && withInvcList.length > 0) ||
+        (selectedOption === 'without' && withoutInvcList.length > 0)) && (
+        <TouchableOpacity
+          style={styles.floatingBillingBtn}
+          onPress={() => {
+            if (selectedOption === 'with') {
+              compOrder();
+            } else {
+              setModalVisible('Checkout');
+            }
+          }}>
+          <LinearGradient
+            colors={[THEME.gradientStart, THEME.gradientEnd]}
+            style={styles.floatingBtnGradient}
+            start={{x: 0, y: 0}}
+            end={{x: 1, y: 0}}>
+            <View style={styles.floatingBtnContent}>
+              <Icon
+                name={
+                  selectedOption === 'with'
+                    ? 'check-circle'
+                    : 'arrow-right-circle'
+                }
+                size={24}
+                color={THEME.white}
               />
-            </View>
-          )}
-
-        {/* Cart Modal */}
-        <Modal
-          visible={modalVisible === 'Cart'}
-          animationType="fade"
-          transparent={false}>
-          <SafeAreaView style={styles.cartModalContainer}>
-            {/* Header */}
-            <View style={styles.cartModalHeader}>
-              <TouchableOpacity
-                onPress={() => setModalVisible('')}
-                style={styles.cartModalCloseBtn}>
-                <Icon
-                  name="arrow-back"
-                  size={24}
-                  color={backgroundColors.dark}
-                />
-              </TouchableOpacity>
-              <Text style={styles.cartModalTitle}>Shopping Cart</Text>
-              <Text style={styles.cartItemCount}>
-                {withoutInvcList.length} items
-              </Text>
-            </View>
-
-            {/* Empty Cart */}
-            {withoutInvcList.length === 0 ? (
-              <View style={styles.emptyCartContainer}>
-                <Icon name="shopping-cart" size={80} color="#ccc" />
-                <Text style={styles.emptyCartText}>Your cart is empty</Text>
-                <Text style={styles.emptyCartSubtext}>
-                  Add some products to get started
+              <View style={styles.floatingBtnTextContainer}>
+                <Text style={styles.floatingBtnTitle}>
+                  {selectedOption === 'with'
+                    ? 'Complete Return'
+                    : 'Proceed Details'}
+                </Text>
+                <Text style={styles.floatingBtnSubtitle}>
+                  Avg Total:{' '}
+                  {selectedOption === 'with'
+                    ? orderTotal.toFixed(2)
+                    : orderTotalWithout.toFixed(2)}
                 </Text>
               </View>
-            ) : (
-              <>
-                {/* Cart List */}
-                <FlatList
-                  data={withoutInvcList}
-                  keyExtractor={item =>
-                    (item.cart_id || item.prod_id).toString()
-                  }
-                  style={styles.cartList}
-                  contentContainerStyle={styles.cartListContent}
-                  renderItem={renderCartItem}
-                />
+              <Icon name="chevron-right" size={24} color={THEME.white} />
+            </View>
+          </LinearGradient>
+        </TouchableOpacity>
+      )}
 
-                {/* Summary Footer */}
-                <View style={styles.cartSummaryContainer}>
-                  <View style={styles.cartTotalRow}>
-                    <Text style={styles.cartTotalLabel}>Total Amount:</Text>
-                    <Text style={styles.cartTotalValue}>
-                      {orderTotalWithout.toFixed(2)}
-                    </Text>
-                  </View>
-                  <TouchableOpacity
-                    style={styles.proceedBtn}
-                    onPress={() => {
-                      setModalVisible('Checkout');
-                    }}>
-                    <Text style={styles.proceedBtnText}>
-                      Proceed to Checkout
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            )}
-
-            <Toast />
-          </SafeAreaView>
-        </Modal>
-
-        {/* Checkout Modal */}
-        <Modal
-          visible={modalVisible === 'Checkout'}
-          animationType="fade"
-          transparent={false}>
-          <SafeAreaView style={styles.container}>
+      {/* --- CHECKOUT MODAL (For Without Invoice) --- */}
+      <Modal
+        visible={modalVisible === 'Checkout'}
+        animationType="slide"
+        transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.checkoutModalContainer}>
             <View style={styles.checkoutModalHeader}>
               <TouchableOpacity
-                onPress={() => setModalVisible('Cart')}
-                style={styles.headerBtn}>
-                <Icon
-                  name="arrow-back"
-                  size={24}
-                  color={backgroundColors.dark}
-                />
+                onPress={() => setModalVisible('')}
+                style={{padding: 5}}>
+                <Icon name="arrow-left" size={24} color={THEME.textDark} />
               </TouchableOpacity>
-              <Text style={styles.checkoutModalTitle}>Checkout</Text>
+              <Text style={styles.checkoutModalTitle}>Return Details</Text>
+              <View style={{width: 30}} />
             </View>
 
-            <ScrollView
-              style={styles.checkoutScrollView}
-              contentContainerStyle={{paddingBottom: 100}}>
-              {/* Return Date */}
-              <View style={styles.checkoutSection}>
-                <Text style={styles.checkoutSectionTitle}>Return date</Text>
+            <ScrollView contentContainerStyle={{padding: 20}}>
+              {/* Supplier Select */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>
+                  Supplier <Text style={{color: THEME.danger}}>*</Text>
+                </Text>
+                <DropDownPicker
+                  items={transformedSupplier}
+                  open={psupplier}
+                  setOpen={setpsupplier}
+                  value={currentpsupplier}
+                  setValue={setCurrentpsupplier}
+                  placeholder="Select Supplier"
+                  style={styles.dropdown}
+                  dropDownContainerStyle={styles.dropdownContainer}
+                  listMode="SCROLLVIEW"
+                  searchable={true}
+                  zIndex={3000}
+                />
+              </View>
+
+              {/* Reference No */}
+              <View style={[styles.inputGroup, {zIndex: 1000, marginTop: 15}]}>
+                <Text style={styles.label}>Reference No</Text>
+                <TextInput
+                  style={styles.input}
+                  value={ref}
+                  onChangeText={setRef}
+                  placeholder="Optional"
+                />
+              </View>
+
+              {/* Date */}
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Date</Text>
                 <TouchableOpacity
                   onPress={() => setShowexpireDatePicker(true)}
                   style={styles.dateInput}>
-                  <Icon name="event" size={20} color={backgroundColors.dark} />
                   <Text style={styles.dateText}>
                     {expireDate.toLocaleDateString()}
                   </Text>
-                  <Icon
-                    name="keyboard-arrow-down"
-                    size={20}
-                    color={backgroundColors.dark}
-                  />
+                  <Icon name="calendar" size={20} color={THEME.textGray} />
                 </TouchableOpacity>
-
                 {showexpireDatePicker && (
                   <DateTimePicker
-                    testID="expireDatePicker"
                     value={expireDate}
                     mode="date"
-                    is24Hour={true}
                     display="default"
                     onChange={onexpireDateChange}
                   />
                 )}
               </View>
-              <View style={styles.checkoutSection}>
-                <Text style={styles.checkoutSectionTitle}>Supplier *</Text>
-                <View style={styles.inputGroup}>
-                  <Icon
-                    name="person"
-                    size={28}
-                    color={backgroundColors.dark}
-                    style={styles.personIcon}
-                  />
-                  <DropDownPicker
-                    items={transformedSupplier}
-                    open={psupplier}
-                    setOpen={setpsupplier}
-                    value={currentpsupplier}
-                    setValue={setCurrentpsupplier}
-                    placeholder="Select Supplier"
-                    placeholderStyle={{
-                      color: 'rgba(0,0,0,0.7)',
-                      marginLeft: 30,
-                      fontSize: 16,
-                    }}
-                    textStyle={{color: 'white'}}
-                    ArrowUpIconComponent={() => (
-                      <Icon
-                        name="keyboard-arrow-up"
-                        size={18}
-                        color={backgroundColors.dark}
-                      />
-                    )}
-                    ArrowDownIconComponent={() => (
-                      <Icon
-                        name="keyboard-arrow-down"
-                        size={18}
-                        color={backgroundColors.dark}
-                      />
-                    )}
-                    style={styles.dropdown}
-                    dropDownContainerStyle={styles.dropdownContainer}
-                    labelStyle={{
-                      color: backgroundColors.dark,
-                      marginLeft: 30,
-                      fontSize: 16,
-                    }}
-                    listItemLabelStyle={{color: '#144272'}}
-                    listMode="MODAL"
-                    searchable
-                    searchTextInputStyle={{
-                      borderWidth: 0,
-                      width: '100%',
-                    }}
-                    searchContainerStyle={{
-                      borderColor: backgroundColors.gray,
-                    }}
-                  />
-                </View>
-              </View>
 
-              {/* Supplier Details */}
-              {supData && (
-                <View style={styles.checkoutSection}>
-                  <View style={styles.checkoutCard}>
-                    <Image
-                      source={require('../../../assets/man.png')}
-                      style={styles.avatar}
-                    />
-                    <View style={{flex: 1}}>
-                      <Text style={styles.supplierName}>
-                        {supData?.sup_name}
-                      </Text>
-                      <Text style={styles.supplierPhone}>
-                        {supData?.sup_company_name} | {supData?.sup_address}
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-              )}
-
-              {/* Amount to Pay */}
-              <View style={styles.checkoutSection}>
-                <Text style={styles.checkoutSectionTitle}>Total Amount</Text>
-                <View style={styles.amountContainer}>
-                  <Text style={styles.amountValue}>
-                    {orderTotalWithout.toFixed(2)}
-                  </Text>
-                </View>
-              </View>
-            </ScrollView>
-
-            <View style={styles.checkoutFooter}>
               <TouchableOpacity
-                style={styles.completePurchaseBtn}
+                style={[styles.addToCartBtn, {marginTop: 30}]}
                 onPress={compOrderWithoutInvc}>
-                <Text style={styles.completePurchaseBtnText}>
-                  Complete Purchase
-                </Text>
+                <LinearGradient
+                  colors={[THEME.primary, '#1e4620']}
+                  style={styles.gradientBtn}>
+                  <Text style={styles.btnText}>CONFIRM RETURN</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* --- INVOICE MODAL (Success) --- */}
+      <Modal
+        visible={modalVisible === 'Invc'}
+        animationType="fade"
+        transparent={true}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.checkoutModalContainer, {maxHeight: '60%'}]}>
+            <View style={{alignItems: 'center', padding: 20}}>
+              <LottieView
+                source={require('../../../assets/CheckMark.json')}
+                autoPlay
+                loop={false}
+                style={{width: 150, height: 150}}
+              />
+              <Text style={[styles.cardTitle, {marginTop: 10}]}>
+                Return Success!
+              </Text>
+              <Text
+                style={{
+                  color: THEME.textGray,
+                  textAlign: 'center',
+                  marginTop: 10,
+                }}>
+                Return has been processed successfully.
+              </Text>
+              <TouchableOpacity
+                style={[styles.addToCartBtn, {marginTop: 30, width: '100%'}]}
+                onPress={() => setModalVisible('')}>
+                <LinearGradient
+                  colors={[THEME.primary, '#1e4620']}
+                  style={styles.gradientBtn}>
+                  <Text style={styles.btnText}>CLOSE</Text>
+                </LinearGradient>
               </TouchableOpacity>
             </View>
-          </SafeAreaView>
-        </Modal>
-
-        {/* Invoice Modal */}
-        <Modal
-          visible={modalVisible === 'Invc'}
-          animationType="slide"
-          transparent
-          presentationStyle="overFullScreen">
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalContainer}>
-              {/* Modal Handle */}
-              <View style={styles.modalHandle} />
-
-              {/* Header */}
-              <View style={styles.modalHeader}>
-                <View style={styles.headerLeft}>
-                  <View style={styles.invoiceIconContainer}>
-                    <Icon name="receipt" size={24} color="#144272" />
-                  </View>
-                  <View>
-                    <Text style={styles.modalTitle}>
-                      Purchase Return Invoice
-                    </Text>
-                    <Text style={styles.modalSubtitle}>Return Details</Text>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    setModalVisible('');
-                    setInvcData(null);
-                    // setInvcDetails([]);
-                  }}
-                  style={styles.closeButton}>
-                  <Icon name="close" size={24} color="#666" />
-                </TouchableOpacity>
-              </View>
-
-              <ScrollView
-                style={styles.modalContent}
-                showsVerticalScrollIndicator={false}>
-                {/* Company Info Card */}
-                <View style={styles.companyCard}>
-                  <View style={styles.companyHeader}>
-                    <Text style={styles.companyName}>{bussName || 'N/A'}</Text>
-                  </View>
-                  <Text style={styles.companyAddress}>
-                    {bussAddress || 'N/A'}
-                  </Text>
-                  <Text style={styles.companyContact}>
-                    {bussContact || 'Contact: N/A'}
-                  </Text>
-                </View>
-
-                {/* Order Info Grid */}
-                <View style={styles.orderInfoGrid}>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Invoice Date</Text>
-                    <Text style={styles.infoValue}>
-                      {invcData?.created_at
-                        ? new Date(invcData.created_at)
-                            .toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                            .replace(/ /g, '-')
-                        : 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Supplier Name:</Text>
-                    <Text style={styles.infoValue}>
-                      {invcData?.sup_name ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Company:</Text>
-                    <Text style={styles.infoValue}>
-                      {invcData?.sup_company_name ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Contact</Text>
-                    <Text style={styles.infoValue}>
-                      {invcData?.sup_company_name ?? 'N/A'}
-                    </Text>
-                  </View>
-                  <View style={styles.infoCard}>
-                    <Text style={styles.infoLabel}>Address: </Text>
-                    <Text style={styles.infoValue}>
-                      {invcData?.sup_address ?? 'N/A'}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Order Table Section */}
-                <View style={styles.tableSection}>
-                  <Text style={styles.sectionTitle}>Invoice Items</Text>
-
-                  {/* Table Container */}
-                  <View style={styles.tableContainer}>
-                    {/* Table Header */}
-                    <View style={styles.tableHeader}>
-                      <Text style={[styles.tableHeaderText, styles.col1]}>
-                        Sr#
-                      </Text>
-                      <Text style={[styles.tableHeaderText, styles.col2]}>
-                        Product
-                      </Text>
-                      <Text style={[styles.tableHeaderText, styles.col3]}>
-                        Return QTY
-                      </Text>
-                      <Text style={[styles.tableHeaderText, styles.col4]}>
-                        Unit Price
-                      </Text>
-                      <Text style={[styles.tableHeaderText, styles.col5]}>
-                        Total Price
-                      </Text>
-                    </View>
-
-                    {/* Table Rows */}
-                    <FlatList
-                      data={invcDetails}
-                      keyExtractor={index => index.toString()}
-                      renderItem={({item, index}) => (
-                        <View style={[styles.tableRow]}>
-                          <Text
-                            style={[styles.tableCell, styles.col1]}
-                            numberOfLines={2}>
-                            {index + 1}
-                          </Text>
-                          <Text style={[styles.tableCell, styles.col2]}>
-                            {item.prod_name}
-                          </Text>
-                          <Text style={[styles.tableCell, styles.col3]}>
-                            {item.prchrd_return_qty}
-                          </Text>
-                          <Text style={[styles.tableCell, styles.col4]}>
-                            {Number(item.prchrd_price).toLocaleString()}
-                          </Text>
-                          <Text style={[styles.tableCell, styles.col5]}>
-                            {Number(item.prchrd_total_price).toLocaleString()}
-                          </Text>
-                        </View>
-                      )}
-                      scrollEnabled={false}
-                      ListFooterComponent={
-                        <View
-                          style={{
-                            borderTopWidth: 1.5,
-                            borderTopColor: backgroundColors.dark,
-                            flexDirection: 'row',
-                            paddingVertical: 2.5,
-                          }}>
-                          <Text
-                            style={[
-                              styles.tableHeaderText,
-                              {flex: 0.33, textAlign: 'left'},
-                            ]}>
-                            Totals
-                          </Text>
-                          <Text
-                            style={[
-                              styles.tableCell,
-                              {flex: 0.22, fontWeight: '600'},
-                            ]}>
-                            {invcDetails?.reduce(
-                              (sum, item) => sum + item.prchrd_return_qty,
-                              0,
-                            ) ?? 0}
-                          </Text>
-                          <Text
-                            style={[
-                              styles.tableCell,
-                              {
-                                flex: 0.34,
-                                textAlign: 'right',
-                                fontWeight: '600',
-                              },
-                            ]}>
-                            {invcDetails?.reduce(
-                              (sum, item) => sum + item.prchrd_total_price,
-                              0,
-                            ) ?? 0}
-                          </Text>
-                        </View>
-                      }
-                    />
-                  </View>
-                </View>
-
-                {/* Footer */}
-                <View style={styles.modalFooter}>
-                  <Text style={styles.thankYou}>Thank you for your visit</Text>
-                  <View style={styles.developerInfo}>
-                    <Text style={styles.developerText}>
-                      Software Developed with ❤️ by
-                    </Text>
-                    <Text style={styles.companyContact}>
-                      Technic Mentors | +923111122144
-                    </Text>
-                  </View>
-                </View>
-              </ScrollView>
-            </View>
           </View>
-        </Modal>
-
-        <Toast />
-      </View>
+        </View>
+      </Modal>
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -1490,868 +1126,456 @@ export default function PurchaseReturn({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  headerWrapper: {
+    marginBottom: 20, // Space for floating search
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingHorizontal: 20,
+    paddingBottom: 40, // Extra padding for floating element
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
+    justifyContent: 'space-between',
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
+  iconBtn: {
+    padding: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.2)',
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
-  },
-
-  scrollContainer: {
-    flex: 1,
-    paddingHorizontal: 12,
-  },
-  section: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    marginVertical: 8,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.primary,
-    marginBottom: 16,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 10,
-  },
-  toggleButton: {
-    width: '48%',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    borderWidth: 1,
-    backgroundColor: backgroundColors.light,
-    borderColor: backgroundColors.gray,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  toggleButtonActive: {
-    backgroundColor: backgroundColors.primary,
-  },
-  toggleButtonText: {
-    color: backgroundColors.dark,
-    fontWeight: 'bold',
-  },
-  toggleButtonTextActive: {
-    color: backgroundColors.light,
-  },
-
-  searchContainer: {
-    marginBottom: 10,
-    position: 'relative',
-  },
-  searchInputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    paddingHorizontal: 12,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-    height: 48,
-  },
-  searchIcon: {
-    marginRight: 8,
-  },
-  searchInput: {
-    flex: 1,
-    color: backgroundColors.dark,
-    fontSize: 16,
-    paddingVertical: 12,
-  },
-
-  formRow: {
-    marginBottom: 12,
-  },
-  inputGroup: {
-    width: '100%',
-    marginBottom: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 8,
-    height: 48,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-  },
-  input: {
-    paddingVertical: 10,
-    color: backgroundColors.dark,
-    fontSize: 16,
-    paddingHorizontal: 12,
-  },
-
-  dateInput: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-  },
-  dateText: {
-    flex: 1,
-    color: backgroundColors.dark,
-    fontSize: 16,
-    marginLeft: 8,
-  },
-  addToCartButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-  },
-  addToCartText: {
-    color: backgroundColors.light,
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-    marginBottom: 4,
-  },
-  dropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
-  },
-  supplierInfo: {
-    marginBottom: 15,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderWidth: 0.5,
-    borderColor: 'rgba(255,255,255,0.15)',
-    borderRadius: 8,
-  },
-  supplierCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: 8,
-  },
-  supplierLabel: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  supplierValue: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '300',
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  detailLabel: {
-    color: 'rgba(255,255,255,0.7)',
-    fontSize: 14,
-  },
-  detailValue: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  totalContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.2)',
-  },
-  totalLabel: {
-    color: backgroundColors.dark,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  totalValue: {
-    color: backgroundColors.dark,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 40,
-  },
-  emptyText: {
-    color: 'rgba(0,0,0,0.7)',
-    fontSize: 16,
-    marginTop: 10,
-  },
-  checkoutBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 12,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    marginVertical: 16,
-    shadowColor: backgroundColors.dark,
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  checkoutBtnDisabled: {
-    backgroundColor: backgroundColors.gray,
-  },
-  checkoutBtnText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  checkoutDisableBtnText: {
-    color: backgroundColors.dark,
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  resultItem: {
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-  },
-  resultText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  searchResultsOverlay: {
+  floatingSearchContainer: {
     position: 'absolute',
-    top: 220,
-    left: 10,
-    backgroundColor: 'white',
-    borderRadius: 10,
-    zIndex: 1000,
-    elevation: 10,
-    maxHeight: 200,
+    bottom: -25, // Half overlap
+    left: 20,
+    right: 20,
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 15,
+    height: 50,
+    elevation: 4,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.25,
-    shadowRadius: 5,
-    width: '95%',
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
-  cartBadge: {
-    position: 'absolute',
-    top: -3,
-    right: -3,
-    backgroundColor: '#FF5252',
+  floatingSearchInput: {
+    flex: 1,
+    marginLeft: 10,
+    fontSize: 15,
+    color: THEME.textDark,
+  },
+  mainContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingTop: 20, // Offset for floating search
+  },
+  segmentContainer: {
+    flexDirection: 'row',
+    backgroundColor: THEME.white,
     borderRadius: 12,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: 'white',
+    padding: 4,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: THEME.border,
   },
-  cartBadgeText: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
+  segmentButton: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  segmentButtonActive: {
+    backgroundColor: THEME.primary,
+  },
+  segmentText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textGray,
+  },
+  segmentTextActive: {
+    color: THEME.white,
   },
 
-  // Cart Modal
-  cartModalContainer: {
-    flex: 1,
-    backgroundColor: backgroundColors.gray,
-  },
-  cartModalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  cartModalCloseBtn: {
-    padding: 5,
-  },
-  cartModalTitle: {
-    flex: 1,
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    textAlign: 'center',
-  },
-  cartItemCount: {
-    fontSize: 14,
-    color: '#666',
-  },
-  cartItemContainer: {
-    backgroundColor: '#fff',
-    marginHorizontal: 15,
-    marginVertical: 8,
-    borderRadius: 10,
-    padding: 12,
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
+  // Card Styles
+  formCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
     elevation: 2,
+    shadowColor: THEME.shadow,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: THEME.border,
   },
-  cartItemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  selectedProdName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: THEME.primary,
     marginBottom: 5,
   },
-  cartProductName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
-    flex: 1,
-  },
-  cartItemDetails: {
-    marginTop: 4,
-  },
-  cartDetailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  detailValuePrice: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  emptyCartContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  emptyCartText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
-    marginTop: 10,
-  },
-  emptyCartSubtext: {
-    fontSize: 14,
-    color: '#777',
-    marginTop: 4,
-  },
-  cartSummaryContainer: {
-    padding: 20,
-    backgroundColor: backgroundColors.light,
-    borderTopWidth: 1,
-    borderTopRightRadius: 15,
-    borderTopLeftRadius: 15,
-    borderTopColor: '#e0e0e0',
-  },
-  cartTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  selectedProdPrice: {
+    fontSize: 13,
+    color: THEME.textGray,
     marginBottom: 15,
   },
-  cartTotalLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#144272',
+
+  // Input Styles
+  inputGroup: {
+    marginBottom: 15,
   },
-  cartTotalValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#4CAF50',
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textDark,
+    marginBottom: 6,
   },
-  proceedBtn: {
-    backgroundColor: backgroundColors.primary,
-    paddingVertical: 12,
-    borderRadius: 8,
+  input: {
+    backgroundColor: THEME.background,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 48,
+    color: THEME.textDark,
+    fontSize: 14,
+  },
+  // Date Input
+  dateInput: {
+    backgroundColor: THEME.background,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    height: 48,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
   },
-  proceedBtnText: {
-    color: '#fff',
+  dateText: {
+    color: THEME.textDark,
+  },
+
+  // Button Styles
+  addToCartBtn: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 8,
+  },
+  gradientBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+  },
+  btnText: {
+    color: THEME.white,
+    fontSize: 15,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+
+  // Cart List Styles
+  cartPreviewCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: THEME.border,
+    marginBottom: 20,
+  },
+  cartPreviewHeader: {
+    marginBottom: 12,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.border,
+  },
+  cartPreviewTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  // Item Card Styles (New)
+  itemCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    elevation: 3,
+    shadowColor: THEME.shadow,
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  itemCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  itemName: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 6,
+    lineHeight: 22,
   },
-  cartList: {
+  itemBadge: {
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    alignSelf: 'flex-start',
+  },
+  itemBadgeText: {
+    fontSize: 12,
+    color: THEME.primary,
+    fontWeight: '600',
+  },
+  itemDeleteBtn: {
+    padding: 10,
+    backgroundColor: '#FFF1F2',
+    borderRadius: 10,
+  },
+  itemDivider: {
+    height: 1,
+    backgroundColor: '#F3F4F6',
+    marginVertical: 12,
+  },
+  itemCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  priceContainer: {
+    minWidth: 60,
+  },
+  itemLabel: {
+    fontSize: 11,
+    color: THEME.textGray,
+    marginBottom: 2,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  itemValue: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: THEME.textDark,
+  },
+  qtyWrapper: {
     flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 10,
   },
-  cartListContent: {
-    paddingBottom: 20,
+  totalContainer: {
+    minWidth: 80,
+    alignItems: 'flex-end',
   },
+  itemTotalValue: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: THEME.primary,
+  },
+
+  // Quantity Control Styles (Integrated)
   quantityContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(20, 66, 114, 0.1)',
+    backgroundColor: THEME.white,
     borderRadius: 8,
-    padding: 4,
+    borderWidth: 1,
+    borderColor: THEME.border,
   },
   quantityButton: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#144272',
-    alignItems: 'center',
+    backgroundColor: THEME.primary,
+    width: 28,
+    height: 28,
     justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 6,
   },
   quantityDisplay: {
+    paddingHorizontal: 12,
     minWidth: 40,
     alignItems: 'center',
-    paddingHorizontal: 8,
   },
   quantityText: {
-    color: '#144272',
-    fontWeight: 'bold',
     fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textDark,
   },
   quantityEditorContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   quantityInput: {
-    width: 60,
-    backgroundColor: 'white',
+    width: 50,
+    height: 30,
+    borderWidth: 1,
+    borderColor: THEME.primary,
     borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    color: backgroundColors.dark,
-    fontSize: 14,
-    marginRight: 8,
+    textAlign: 'center',
+    padding: 0,
+    marginRight: 5,
+    color: THEME.textDark,
   },
   saveButton: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: THEME.success,
     borderRadius: 4,
     padding: 4,
-    marginLeft: 4,
+    marginRight: 4,
   },
   cancelButton: {
-    backgroundColor: '#FF5252',
+    backgroundColor: THEME.danger,
     borderRadius: 4,
     padding: 4,
-    marginLeft: 4,
-  },
-  withCartItemContainer: {
-    backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
-  },
-  withCartItemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  withCartProductName: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: 'bold',
-    flex: 1,
-    marginRight: 10,
-  },
-  withCartItemDetails: {
-    marginTop: 8,
-  },
-  withDetailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  withDetailLabel: {
-    color: 'rgba(0,0,0,0.7)',
-    fontSize: 14,
   },
 
-  // ================= NEW CHECKOUT MODAL STYLES =================
+  // Logic from Original: Search Overlay
+  searchResultsOverlay: {
+    position: 'absolute',
+    top: 130, // Adjusted based on header height
+    left: 20,
+    right: 20,
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    maxHeight: 250,
+    zIndex: 9999,
+  },
+  resultItem: {
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.border,
+  },
+  resultText: {
+    fontSize: 14,
+    color: THEME.textDark,
+  },
+
+  // Logic from Original: Floating Button
+  floatingBillingBtn: {
+    position: 'absolute',
+    bottom: 90,
+    left: 20,
+    right: 20,
+    elevation: 5,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+  },
+  floatingBtnGradient: {
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+  },
+  floatingBtnContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  floatingBtnTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  floatingBtnTitle: {
+    color: THEME.white,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  floatingBtnSubtitle: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 12,
+  },
+
+  // Logic from Original: Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkoutModalContainer: {
+    width: '90%',
+    backgroundColor: THEME.white,
+    borderRadius: 20,
+    maxHeight: '80%',
+    overflow: 'hidden',
+  },
   checkoutModalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 5,
-    paddingVertical: 8,
-    backgroundColor: backgroundColors.light,
+    justifyContent: 'space-between',
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.border,
+    backgroundColor: THEME.background,
   },
   checkoutModalTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    textAlign: 'center',
-    flex: 1,
-    marginRight: 24, // Adjust for the back button
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  checkoutScrollView: {
-    flex: 1,
-    paddingHorizontal: 20,
+  dropdown: {
+    borderColor: THEME.border,
+    borderRadius: 10,
+  },
+  dropdownContainer: {
+    borderColor: THEME.border,
+  },
+  emptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    color: THEME.textGray,
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: THEME.border,
+    marginTop: 10,
     paddingTop: 10,
   },
-  checkoutSection: {
-    marginBottom: 5,
-  },
-  checkoutSectionTitle: {
-    fontSize: 14,
-    color: backgroundColors.dark,
-    marginBottom: 8,
-    fontWeight: '500',
-  },
-  checkoutCard: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    padding: 15,
-    flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  checkoutCardText: {
+  summaryLabel: {
     fontSize: 16,
-    color: backgroundColors.dark,
-    marginLeft: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 15,
-  },
-  supplierName: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-  },
-  supplierPhone: {
-    fontSize: 14,
-    color: 'gray',
-  },
-  amountContainer: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 12,
-    paddingVertical: 15,
-    paddingHorizontal: 20,
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  amountValue: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#4CAF50',
-  },
-  amountCurrency: {
-    fontSize: 16,
-    color: 'gray',
-  },
-  checkoutFooter: {
-    padding: 20,
-    backgroundColor: backgroundColors.light,
-    borderTopWidth: 1,
-    borderColor: '#eee',
-  },
-  completePurchaseBtn: {
-    backgroundColor: backgroundColors.primary,
-    paddingVertical: 15,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  completePurchaseBtnText: {
-    color: backgroundColors.light,
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  personIcon: {
-    position: 'absolute',
-    zIndex: 10000,
-    top: 7,
-    left: 6,
-  },
-
-  // Modal Receipt stying
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    justifyContent: 'flex-end',
-  },
-  modalContainer: {
-    backgroundColor: '#FAFBFC',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    height: '80%',
-    paddingBottom: 20,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#DDD',
-    borderRadius: 2,
-    alignSelf: 'center',
-    marginTop: 12,
-    marginBottom: 8,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0F0F0',
-  },
-  headerLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  invoiceIconContainer: {
-    width: 48,
-    height: 48,
-    backgroundColor: '#2a652b24',
-    borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  modalTitle: {
+  summaryValue: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#1A1A1A',
-    marginBottom: 2,
-  },
-  modalSubtitle: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '500',
-  },
-  closeButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 20,
-    backgroundColor: backgroundColors.gray,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-
-  // Company Card
-  companyCard: {
-    marginHorizontal: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginTop: 10,
-    paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: backgroundColors.dark,
-    borderStyle: 'dotted',
-  },
-  companyHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  companyName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#144272',
-  },
-  companyAddress: {
-    fontSize: 14,
-    color: '#666',
-    fontWeight: '400',
-  },
-
-  // Info Grid
-  orderInfoGrid: {
-    marginTop: 10,
-    borderBottomColor: backgroundColors.dark,
-    borderBottomWidth: 2,
-    borderStyle: 'dotted',
-    marginHorizontal: 20,
-  },
-  infoCard: {
-    width: '60%',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-    borderRadius: 8,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: backgroundColors.dark,
-    fontWeight: '700',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  infoValue: {
-    fontSize: 14,
-    color: backgroundColors.dark,
-    fontWeight: '400',
-  },
-
-  // Totals Section
-  totalsSection: {
-    marginHorizontal: 20,
-    paddingVertical: 10,
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-  },
-
-  // Footer
-  modalFooter: {
-    paddingHorizontal: 20,
-    borderTopWidth: 1,
-    borderTopColor: '#F0F0F0',
-    marginTop: 4,
-  },
-  thankYou: {
-    fontSize: 16,
-    color: '#144272',
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 16,
-  },
-  developerInfo: {
-    alignItems: 'center',
-  },
-  developerText: {
-    fontSize: 12,
-    color: '#888',
-    fontWeight: '500',
-    textAlign: 'center',
-    marginBottom: 4,
-  },
-  companyContact: {
-    fontSize: 12,
-    color: '#144272',
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  modalContent: {
-    flex: 1,
-  },
-
-  // Table Section
-  tableSection: {
-    marginTop: 20,
-    marginHorizontal: 20,
-    borderBottomWidth: 2,
-    borderColor: backgroundColors.dark,
-    borderStyle: 'dotted',
-  },
-  tableContainer: {
-    overflow: 'hidden',
-  },
-  tableHeader: {
-    flexDirection: 'row',
-    borderBottomColor: backgroundColors.dark,
-    borderBottomWidth: 1.5,
-    paddingBottom: 5,
-  },
-  tableHeaderText: {
-    color: backgroundColors.dark,
-    fontWeight: '600',
-    fontSize: 14,
-    textAlign: 'center',
-  },
-  tableRow: {
-    flexDirection: 'row',
-    paddingVertical: 6,
-    alignItems: 'center',
-  },
-  tableCell: {
-    fontSize: 12,
-    color: backgroundColors.dark,
-    textAlign: 'center',
-  },
-
-  // Column widths
-  col1: {
-    flex: 0.1,
-  },
-  col2: {
-    flex: 0.22, // Product
-  },
-  col3: {
-    flex: 0.23, // Qty
-  },
-  col4: {
-    flex: 0.2, // Price
-  },
-  col5: {
-    flex: 0.2, // Total
+    color: THEME.primary,
   },
 });

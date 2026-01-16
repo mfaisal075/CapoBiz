@@ -5,8 +5,8 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
-  Image,
   BackHandler,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -18,7 +18,26 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  danger: '#EF4444',
+  success: '#10B981',
+  info: '#3B82F6',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 interface ProfitLoss {
   expences: string;
@@ -161,7 +180,11 @@ export default function ProfitLossReport({navigation}: any) {
       </html>
     `;
 
-    await RNPrint.print({html});
+    try {
+      await RNPrint.print({html});
+    } catch (error) {
+      console.log('Print error:', error);
+    }
   };
 
   useEffect(() => {
@@ -190,144 +213,121 @@ export default function ProfitLossReport({navigation}: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
+
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Profit Loss Report</Text>
+            <TouchableOpacity onPress={handlePrint} style={styles.iconBtn}>
+              <Icon name="printer" size={24} color={THEME.white} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* --- FILTER SECTION --- */}
+      <View style={styles.filterSection}>
+        <View style={styles.filterRow}>
+          {/* Start Date */}
+          <TouchableOpacity
+            style={styles.dateInput}
+            onPress={() => setShowStartDatePicker(true)}>
+            <Icon name="calendar" size={20} color={THEME.primary} />
+            <Text style={styles.dateText}>
+              {startDate.toLocaleDateString('en-GB')}
+            </Text>
           </TouchableOpacity>
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Profit Loss Report</Text>
-          </View>
+          <Text style={styles.dateSeparator}>to</Text>
 
-          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="#fff" />
+          {/* End Date */}
+          <TouchableOpacity
+            style={styles.dateInput}
+            onPress={() => setShowEndDatePicker(true)}>
+            <Icon name="calendar" size={20} color={THEME.primary} />
+            <Text style={styles.dateText}>
+              {endDate.toLocaleDateString('en-GB')}
+            </Text>
           </TouchableOpacity>
         </View>
 
-        <ScrollView style={styles.scrollContainer}>
-          {/* Filter Section */}
-          <View style={styles.filterContainer}>
-            {/* Date Pickers */}
-            <View style={styles.dateContainer}>
-              <View style={styles.datePicker}>
-                <Text style={styles.dateLabel}>From:</Text>
-                <TouchableOpacity
-                  style={styles.dateButton}
-                  onPress={() => setShowStartDatePicker(true)}>
-                  <Text style={styles.dateText}>
-                    {startDate.toLocaleDateString()}
-                  </Text>
-                  <Icon
-                    name="calendar"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                </TouchableOpacity>
-                {showStartDatePicker && (
-                  <DateTimePicker
-                    testID="startDatePicker"
-                    value={startDate}
-                    mode="date"
-                    is24Hour={true}
-                    display="default"
-                    onChange={onStartDateChange}
-                  />
-                )}
-              </View>
+        {showStartDatePicker && (
+          <DateTimePicker
+            value={startDate}
+            mode="date"
+            display="default"
+            onChange={onStartDateChange}
+          />
+        )}
 
-              <View style={styles.datePicker}>
-                <Text style={styles.dateLabel}>To:</Text>
-                <TouchableOpacity
-                  style={styles.dateButton}
-                  onPress={() => setShowEndDatePicker(true)}>
-                  <Text style={styles.dateText}>
-                    {endDate.toLocaleDateString()}
-                  </Text>
-                  <Icon
-                    name="calendar"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                </TouchableOpacity>
-                {showEndDatePicker && (
-                  <DateTimePicker
-                    testID="endDatePicker"
-                    value={endDate}
-                    mode="date"
-                    is24Hour={true}
-                    display="default"
-                    onChange={onEndDateChange}
-                  />
-                )}
-              </View>
+        {showEndDatePicker && (
+          <DateTimePicker
+            value={endDate}
+            mode="date"
+            display="default"
+            onChange={onEndDateChange}
+          />
+        )}
+      </View>
+
+      <ScrollView contentContainerStyle={{paddingBottom: 100}}>
+        {/* --- REPORT SUMMARY SURFACE --- */}
+        <View style={styles.reportSurface}>
+          <Text style={styles.sectionTitle}>Summary</Text>
+
+          <View style={styles.summaryTable}>
+            {/* Header */}
+            <View style={styles.tableHeader}>
+              <Text style={styles.thText}>HEADS</Text>
+              <Text style={[styles.thText, {textAlign: 'right'}]}>AMOUNT</Text>
             </View>
-          </View>
 
-          {/* Profit Loss Summary Cards */}
-          <View style={styles.summaryContainer}>
-            <Text style={styles.summaryTitle}>Profit & Loss Report</Text>
-
-            <Image
-              source={require('../../../assets/profit_loss.png')}
-              resizeMode="contain"
-              style={styles.profitLossPng}
-            />
-
-            <View style={styles.summaryCard}>
-              <Text style={styles.cardTitle}>HEADS</Text>
-              <Text style={styles.cardTitle}>AMOUNT</Text>
-            </View>
-            <View style={styles.summaryInnerCard}>
-              <Text style={styles.innerCardTitle}>Sale Profit</Text>
-              <Text
-                style={[styles.innerCardTitle, {color: backgroundColors.info}]}>
+            {/* Rows */}
+            <View style={styles.tableRow}>
+              <Text style={styles.tdText}>Sale Profit</Text>
+              <Text style={[styles.tdTextBold, {color: THEME.info}]}>
                 {saleProfit.toFixed(2)}
               </Text>
             </View>
-            <View style={styles.summaryInnerCard}>
-              <Text style={styles.innerCardTitle}>Sale Return Profit</Text>
-              <Text
-                style={[styles.innerCardTitle, {color: backgroundColors.info}]}>
+
+            <View style={[styles.tableRow, styles.tableRowAlt]}>
+              <Text style={styles.tdText}>Sale Return Profit</Text>
+              <Text style={[styles.tdTextBold, {color: THEME.info}]}>
                 {saleReturnProfit.toFixed(2)}
               </Text>
             </View>
-            <View style={styles.summaryInnerCard}>
-              <Text style={styles.innerCardTitle}>Expenses</Text>
-              <Text
-                style={[
-                  styles.innerCardTitle,
-                  {color: backgroundColors.danger},
-                ]}>
-                {expenses.toFixed(2)}
+
+            <View style={styles.tableRow}>
+              <Text style={styles.tdText}>Expenses</Text>
+              <Text style={[styles.tdTextBold, {color: THEME.danger}]}>
+                -{expenses.toFixed(2)}
               </Text>
             </View>
-            <View
-              style={[
-                styles.summaryInnerCard,
-                {borderBottomWidth: 0, marginBottom: 50},
-              ]}>
-              <Text style={styles.innerCardTitle}>Net Profit</Text>
-              <Text
-                style={[
-                  styles.innerCardTitle,
-                  {color: backgroundColors.success},
-                ]}>
+
+            {/* Net Profit Row */}
+            <View style={styles.netProfitRow}>
+              <Text style={styles.netProfitLabel}>Net Profit</Text>
+              <Text style={[styles.netProfitValue, {color: THEME.success}]}>
                 {netProfit.toFixed(2)}
               </Text>
             </View>
           </View>
+        </View>
+      </ScrollView>
 
-          <View style={{height: 50}} />
-        </ScrollView>
-
-        <Toast />
-      </View>
+      <BottomBar />
+      <Toast />
     </SafeAreaView>
   );
 }
@@ -335,151 +335,161 @@ export default function ProfitLossReport({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER ---
+  headerWrapper: {
+    zIndex: 999,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 60,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: THEME.primary,
+  },
+  headerContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
+  iconBtn: {
+    padding: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
   },
 
-  scrollContainer: {
-    flex: 1,
-    paddingHorizontal: 12,
-  },
-
-  // Filter Container
-  filterContainer: {
-    backgroundColor: backgroundColors.light,
+  // --- FILTER SECTION ---
+  filterSection: {
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
-    paddingHorizontal: 15,
-    marginTop: 10,
-    marginBottom: 4,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+    padding: 10,
+    marginTop: -40,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+    shadowOffset: {width: 0, height: 2},
+    zIndex: 1000,
   },
-  dateContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  datePicker: {
-    width: '48%',
-  },
-  dateLabel: {
-    color: backgroundColors.dark,
-    fontWeight: '600',
-    marginBottom: 5,
+  sectionTitle: {
     fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  dateButton: {
+  filterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    paddingHorizontal: 12,
+  },
+  dateInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: THEME.white,
     paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
+    paddingHorizontal: 15,
+    borderRadius: 12,
+    flex: 1,
+    justifyContent: 'center',
+    elevation: 2,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-    height: 48,
-  },
-  dateText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-
-  // Summary Container
-  summaryContainer: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 14,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-    marginBottom: 4,
   },
-  summaryTitle: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    textAlign: 'center',
-  },
-  profitLossPng: {
-    width: 250,
-    height: 250,
-
-    alignSelf: 'center',
-  },
-  summaryCard: {
-    backgroundColor: 'rgba(0,0,0,0.15)',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    marginBottom: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  summaryInnerCard: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderBottomWidth: 0.6,
-    borderBottomColor: '#999',
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-  },
-  innerCardTitle: {
+  dateText: {
     fontSize: 14,
+    color: THEME.textDark,
+    marginLeft: 8,
     fontWeight: '600',
-    color: backgroundColors.dark,
+  },
+  dateSeparator: {
+    marginHorizontal: 10,
+    color: THEME.textGray,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  // --- REPORT SURFACE ---
+  reportSurface: {
+    backgroundColor: THEME.white,
+    marginHorizontal: 16,
+    marginTop: 10,
+    borderRadius: 16,
+    padding: 10,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    shadowOffset: {width: 0, height: 2},
+    overflow: 'hidden',
+  },
+  summaryTable: {
+    borderRadius: 8,
+    overflow: 'hidden',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: THEME.rowHover,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  thText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textGray,
+    letterSpacing: 0.5,
+  },
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    alignItems: 'center',
+  },
+  tableRowAlt: {
+    backgroundColor: '#FAFAFA',
+  },
+  tdText: {
+    fontSize: 14,
+    color: THEME.textDark,
+  },
+  tdTextBold: {
+    fontSize: 14,
+    fontWeight: '700',
+    textAlign: 'right',
+  },
+  netProfitRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: '#F0FDF4', // Light green bg for net profit
+    alignItems: 'center',
+  },
+  netProfitLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.primary,
+  },
+  netProfitValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });

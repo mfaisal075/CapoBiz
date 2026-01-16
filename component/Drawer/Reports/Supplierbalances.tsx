@@ -3,11 +3,12 @@ import {
   Text,
   View,
   SafeAreaView,
-  ImageBackground,
   TouchableOpacity,
   FlatList,
   Image,
   BackHandler,
+  StatusBar,
+  ScrollView,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -19,7 +20,28 @@ import {RadioButton} from 'react-native-paper';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  danger: '#EF4444',
+  success: '#10B981',
+  info: '#3B82F6',
+  warning: '#F59E0B',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 type TabType = 'receivables' | 'payables' | 'balances';
 
@@ -304,44 +326,135 @@ export default function SupplierBalances({navigation}: any) {
     }
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+  // Helper: Get Initials
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Customer Balances</Text>
+  const renderCard = (item: any, index: number) => {
+    const isAll = selectionMode === 'allSuppliers';
+    let name, subtitle, balance, line1Label, line1Value, line2Label, line2Value;
+
+    if (isAll) {
+      const rowItem = item as AllSupplierData;
+      name = rowItem.sup_name;
+      subtitle = rowItem.sup_contact || 'No Contact';
+      balance =
+        selectedTab === 'receivables' ? rowItem.supac_balance : rowItem.Balance;
+
+      line1Label = 'Address:';
+      line1Value = rowItem.sup_address || 'N/A';
+    } else {
+      const rowItem = item as SingleSupplierData;
+      name = rowItem.sup_name;
+      subtitle = 'Single Supplier Record';
+      balance = rowItem.Balance;
+
+      line1Label = 'Total Bill:';
+      line1Value = formatNumber(rowItem.supac_total_bill_amount);
+      line2Label = 'Paid:';
+      line2Value = formatNumber(rowItem.supac_paid_amount);
+    }
+
+    return (
+      <View style={styles.cardRow}>
+        {/* Left Side: Avatar + Name */}
+        <View style={styles.leftContent}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>{getInitials(name)}</Text>
           </View>
 
-          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.infoWrapper}>
+            <Text style={styles.nameText} numberOfLines={1}>
+              {name}
+            </Text>
+            <View style={styles.detailRow}>
+              <Icon name="phone" size={12} color={THEME.textGray} />
+              <Text style={styles.detailText} numberOfLines={1}>
+                {subtitle}
+              </Text>
+            </View>
+            {isAll && (
+              <View style={[styles.detailRow, {marginTop: 2}]}>
+                <Icon
+                  name="map-marker-outline"
+                  size={12}
+                  color={THEME.textGray}
+                />
+                <Text style={styles.detailText} numberOfLines={1}>
+                  {line1Value}
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
-        {/* Filter Section */}
+        {/* Right Side: Balance & Details */}
+        <View style={styles.rightContent}>
+          <View style={[styles.balanceBadge, {marginTop: 22}]}>
+            <Text style={styles.balanceLabel}>Balance</Text>
+            <Text style={styles.balanceValue}>{formatNumber(balance)}</Text>
+          </View>
+
+          {!isAll && (
+            <View style={styles.miniDetailRow}>
+              <Text style={styles.miniLabel}>{line1Label} </Text>
+              <Text style={styles.miniValue} numberOfLines={1}>
+                {line1Value}
+              </Text>
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
+
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Supplier Balances</Text>
+            <TouchableOpacity onPress={handlePrint} style={styles.iconBtn}>
+              <Icon name="printer" size={24} color={THEME.white} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* --- CONTENT --- */}
+      <View style={{flex: 1}}>
+        {/* --- FILTER SURFACE --- */}
         <View style={styles.filterContainer}>
-          {/* Toggle Tabs */}
-          <View style={styles.toggleRow}>
+          {/* TABS */}
+          <View style={styles.tabContainer}>
             {(['receivables', 'payables', 'balances'] as TabType[]).map(tab => (
               <TouchableOpacity
                 key={tab}
                 onPress={() => setSelectedTab(tab)}
                 style={[
-                  styles.toggleButton,
-                  selectedTab === tab && styles.activeButton,
+                  styles.tabBtn,
+                  selectedTab === tab && styles.tabBtnActive,
                 ]}>
                 <Text
                   style={[
-                    styles.toggleText,
-                    selectedTab === tab && styles.activeText,
+                    styles.tabText,
+                    selectedTab === tab && styles.tabTextActive,
                   ]}>
                   {tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </Text>
@@ -349,21 +462,24 @@ export default function SupplierBalances({navigation}: any) {
             ))}
           </View>
 
-          {/* Radio Buttons */}
-          <View style={styles.radioContainer}>
+          {/* RADIO MODE */}
+          <View style={styles.radioRow}>
             <TouchableOpacity
               style={styles.radioButton}
               onPress={() => {
                 setSelectionMode('allSuppliers');
                 setSuppValue('');
               }}>
-              <RadioButton
+              <RadioButton.Android
                 value="allSuppliers"
                 status={
                   selectionMode === 'allSuppliers' ? 'checked' : 'unchecked'
                 }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
+                color={THEME.primary}
+                onPress={() => {
+                  setSelectionMode('allSuppliers');
+                  setSuppValue('');
+                }}
               />
               <Text style={styles.radioText}>All Suppliers</Text>
             </TouchableOpacity>
@@ -373,223 +489,111 @@ export default function SupplierBalances({navigation}: any) {
               onPress={() => {
                 setSelectionMode('singleSupplier');
               }}>
-              <RadioButton
+              <RadioButton.Android
                 value="singleSupplier"
                 status={
                   selectionMode === 'singleSupplier' ? 'checked' : 'unchecked'
                 }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
+                color={THEME.primary}
+                onPress={() => {
+                  setSelectionMode('singleSupplier');
+                }}
               />
               <Text style={styles.radioText}>Single Supplier</Text>
             </TouchableOpacity>
           </View>
 
-          {/* Dropdown */}
-          <DropDownPicker
-            items={transformedSuppliers}
-            open={suppOpen}
-            setOpen={setSuppOpen}
-            value={suppValue}
-            setValue={setSuppValue}
-            placeholder="Select Supplier"
-            disabled={selectionMode === 'allSuppliers'}
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
-            ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
-            )}
-            ArrowDownIconComponent={() => (
-              <Icon
-                name="chevron-down"
-                size={18}
-                color={backgroundColors.dark}
-              />
-            )}
-            style={[
-              styles.dropdown,
-              selectionMode === 'allSuppliers' && styles.dropdownDisabled,
-            ]}
-            dropDownContainerStyle={styles.dropDownContainer}
-            zIndex={3000}
-            zIndexInverse={1000}
-            listMode="MODAL"
-            listItemLabelStyle={{
-              color: backgroundColors.dark,
-              fontWeight: '500',
-            }}
-            labelStyle={{
-              color: backgroundColors.dark,
-              fontSize: 16,
-            }}
-            searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
-            searchContainerStyle={{
-              borderColor: backgroundColors.gray,
-            }}
-          />
+          {/* DROPDOWNS */}
+          <View style={{zIndex: 3000, marginBottom: 12}}>
+            <Text style={styles.inputLabel}>Select Supplier</Text>
+            <DropDownPicker
+              items={transformedSuppliers}
+              open={suppOpen}
+              setOpen={setSuppOpen}
+              value={suppValue}
+              setValue={setSuppValue}
+              placeholder="Select Supplier"
+              disabled={selectionMode === 'allSuppliers'}
+              style={[
+                styles.dropdown,
+                selectionMode === 'allSuppliers' && styles.dropdownDisabled,
+              ]}
+              dropDownContainerStyle={styles.dropdownContainer}
+              listMode="SCROLLVIEW"
+              theme="LIGHT"
+            />
+          </View>
         </View>
 
-        <View style={styles.listContainer}>
-          {/* Summary Cards */}
+        <ScrollView
+          contentContainerStyle={{paddingBottom: 160}}
+          showsVerticalScrollIndicator={false}>
+          {/* --- SUMMARY --- */}
           {selectionMode === 'allSuppliers' && (
-            <View style={styles.summaryContainer}>
-              <View style={styles.innerSummaryCtx}>
-                <Text style={styles.summaryLabel}>
-                  Total{' '}
-                  {selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)}:
-                </Text>
-                <Text style={styles.summaryValue}>{totals.totalAmount}</Text>
-              </View>
+            <View style={styles.summaryCard}>
+              <Text style={styles.summaryLabel}>
+                Total{' '}
+                {selectedTab.charAt(0).toUpperCase() + selectedTab.slice(1)}
+              </Text>
+              <Text style={styles.summaryValue}>{totals.totalAmount}</Text>
             </View>
           )}
 
-          <FlatList<AllSupplierData | SingleSupplierData>
-            data={paginatedData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => {
-              const isAllSuppliers = selectionMode === 'allSuppliers';
-              const allSupplierItem = item as AllSupplierData;
-              const singleSupplierItem = item as SingleSupplierData;
+          {/* --- LIST --- */}
+          <View style={styles.listContainer}>
+            <View style={styles.tableHeaderRow}>
+              <Text style={styles.tableHeaderLabel}>SUPPLIER LIST</Text>
+              <Text style={styles.tableHeaderCount}>{totalRecords} Found</Text>
+            </View>
 
-              return (
-                <View style={styles.card}>
-                  {/* Avatar + Name + Actions */}
-                  <View style={styles.row}>
-                    <View>
-                      <Text style={styles.name}>
-                        {isAllSuppliers
-                          ? allSupplierItem.sup_name
-                          : singleSupplierItem.sup_name}
-                      </Text>
-                    </View>
-                    <View>
-                      <Text
-                        style={[
-                          styles.subText,
-                          {
-                            fontSize: 16,
-                            fontWeight: '600',
-                            color: backgroundColors.danger,
-                          },
-                        ]}>
-                        {isAllSuppliers
-                          ? formatNumber(allSupplierItem.supac_balance) ||
-                            '0.00'
-                          : formatNumber(allSupplierItem.Balance) || '0.00'}
-                      </Text>
-                    </View>
-                  </View>
-                  {isAllSuppliers ? (
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        marginTop: 4,
-                      }}>
-                      <Image
-                        source={require('../../../assets/telephone.png')}
-                        style={styles.contactPng}
-                        tintColor={backgroundColors.primary}
-                      />
-                      <Text style={styles.subText}>
-                        {allSupplierItem.sup_contact || 'N/A'}
-                      </Text>
-                    </View>
-                  ) : (
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        width: '100%',
-                        marginTop: 4,
-                        justifyContent: 'space-between',
-                      }}>
-                      <View style={{flexDirection: 'row'}}>
-                        <Text style={{fontWeight: '600'}}>
-                          Total Bill Amount:{' '}
-                        </Text>
-                        <Text style={styles.subText}>
-                          {formatNumber(
-                            singleSupplierItem.supac_total_bill_amount,
-                          ) || '0.00'}
-                        </Text>
-                      </View>
-                      <View style={{flexDirection: 'row'}}>
-                        <Text style={{fontWeight: '600'}}>Paid Amount: </Text>
-                        <Text style={styles.subText}>
-                          {formatNumber(singleSupplierItem.supac_paid_amount) ||
-                            '0.00'}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
+            <FlatList<AllSupplierData | SingleSupplierData>
+              data={paginatedData}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({item, index}) => renderCard(item, index)}
+              scrollEnabled={false}
+              ListEmptyComponent={
+                <View style={styles.centerContent}>
+                  <Icon
+                    name="account-off-outline"
+                    size={50}
+                    color={THEME.textGray}
+                  />
+                  <Text style={styles.emptyText}>No records found.</Text>
                 </View>
-              );
-            }}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-hard-hat" size={48} color="#666" />
-                <Text style={styles.emptyText}>No suppliers found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
+              }
+            />
+          </View>
+        </ScrollView>
 
-        {/* Pagination Controls */}
+        {/* --- PAGINATION FOOTER --- */}
         {totalRecords > 0 && (
           <View style={styles.paginationContainer}>
             <TouchableOpacity
               disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => prev - 1)}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
+              onPress={() => setCurrentPage(p => p - 1)}
+              style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+              <Icon name="chevron-left" size={24} color={THEME.white} />
             </TouchableOpacity>
 
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
-            </View>
+            <Text style={styles.pageText}>
+              Page {currentPage} of {totalPages}
+            </Text>
 
             <TouchableOpacity
               disabled={currentPage === totalPages}
-              onPress={() => setCurrentPage(prev => prev + 1)}
+              onPress={() => setCurrentPage(p => p + 1)}
               style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
+                styles.pageBtn,
+                currentPage === totalPages && styles.disabledBtn,
               ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
+              <Icon name="chevron-right" size={24} color={THEME.white} />
             </TouchableOpacity>
           </View>
         )}
-
-        <Toast />
       </View>
+
+      <BottomBar />
+      <Toast />
     </SafeAreaView>
   );
 }
@@ -597,262 +601,296 @@ export default function SupplierBalances({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.primary,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER ---
+  headerWrapper: {
+    zIndex: 999,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 90, // allow overlap
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: THEME.primary,
+  },
+  headerTop: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
   },
 
-  // Filter Container
+  // --- FILTER CONTAINER ---
   filterContainer: {
-    backgroundColor: backgroundColors.light,
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
+    paddingVertical: 15,
     paddingHorizontal: 15,
-    marginTop: 10,
-    marginBottom: 4,
-    marginHorizontal: 12,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+    marginTop: -70,
+    marginHorizontal: 16,
+    marginBottom: 0,
+    elevation: 10,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+    shadowOffset: {width: 0, height: 2},
+    zIndex: 1000,
   },
-  toggleRow: {
+  tabContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    marginBottom: 12,
-  },
-  toggleButton: {
-    flex: 1,
-    padding: 8,
-    borderColor: backgroundColors.gray,
-    borderWidth: 1,
-    marginHorizontal: 4,
-    borderRadius: 8,
-    backgroundColor: '#fff',
-  },
-  activeButton: {
-    backgroundColor: backgroundColors.primary,
-  },
-  toggleText: {
-    textAlign: 'center',
-    color: backgroundColors.dark,
-    fontWeight: '600',
-  },
-  activeText: {
-    color: '#fff',
-  },
-  radioContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '70%',
+    backgroundColor: THEME.background,
+    borderRadius: 12,
     marginBottom: 6,
+  },
+  tabBtn: {
+    flex: 1,
+    paddingVertical: 8,
+    alignItems: 'center',
+    borderRadius: 12,
+  },
+  tabBtnActive: {
+    backgroundColor: THEME.white,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+  },
+  tabText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textGray,
+  },
+  tabTextActive: {
+    color: THEME.primary,
+  },
+  radioRow: {
+    flexDirection: 'row',
+    marginBottom: 10,
+    justifyContent: 'space-around',
   },
   radioButton: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   radioText: {
-    color: backgroundColors.dark,
-    marginLeft: -5,
+    color: THEME.textDark,
+    marginLeft: -2,
     fontWeight: '500',
+    fontSize: 14,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.textGray,
+    marginBottom: 6,
+    textTransform: 'uppercase',
   },
   dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
-    height: 48,
-    marginBottom: 10,
+    borderColor: THEME.border,
+    borderRadius: 8,
+    minHeight: 44,
   },
   dropdownDisabled: {
-    backgroundColor: '#dfdfdfff',
-    borderColor: '#ccc',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
   },
-  dropDownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
+  dropdownContainer: {
+    borderColor: THEME.border,
   },
 
-  // Summary Container
-  summaryContainer: {
-    borderRadius: 14,
-    marginVertical: 5,
-    padding: 10,
-  },
-  innerSummaryCtx: {
+  // --- SUMMARY ---
+  summaryCard: {
     flexDirection: 'row',
-    width: '100%',
-    alignItems: 'center',
     justifyContent: 'space-between',
-  },
-  summaryLabel: {
-    fontSize: 14,
-    color: backgroundColors.dark,
-    fontWeight: '600',
+    alignItems: 'center',
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
   },
   summaryValue: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-    fontWeight: 'bold',
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.primary,
   },
-
-  // Flat List Styling
-  listContainer: {
-    flex: 1,
-    marginTop: 10,
-    backgroundColor: backgroundColors.gray,
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
-    paddingHorizontal: 12,
-    paddingTop: 10,
-  },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  name: {
+  summaryLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#144272',
+    color: THEME.textDark,
   },
-  subText: {
+
+  // --- LIST / CARD ---
+  listContainer: {
+    flex: 1,
+    marginTop: 8,
+    paddingHorizontal: 16,
+  },
+  tableHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingHorizontal: 5,
+  },
+  tableHeaderLabel: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: THEME.textGray,
+    letterSpacing: 1,
+  },
+  tableHeaderCount: {
     fontSize: 12,
-    color: backgroundColors.dark,
+    color: THEME.primary,
+    fontWeight: '700',
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start', // Top alignment for balance push
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  leftContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  infoWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 2,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 1,
+  },
+  detailText: {
+    fontSize: 12,
+    color: THEME.textGray,
+    marginLeft: 4,
+  },
+  rightContent: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  balanceBadge: {
+    alignItems: 'flex-end',
+    marginBottom: 6,
+  },
+  balanceLabel: {
+    fontSize: 10,
+    color: THEME.textGray,
+    textTransform: 'uppercase',
+  },
+  balanceValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: THEME.danger,
+  },
+  miniDetailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 2,
   },
-  contactPng: {
-    height: 16,
-    width: 16,
-    marginRight: 4,
+  miniLabel: {
+    fontSize: 11,
+    color: THEME.textLight,
   },
-  emptyContainer: {
+  miniValue: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: THEME.textGray,
+  },
+
+  // --- EMPTY / PAGINATION ---
+  centerContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
+    paddingVertical: 40,
   },
   emptyText: {
     marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
+    fontSize: 14,
+    color: THEME.textGray,
   },
-
-  // Pagination Styling
   paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
     position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
-  },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
+    bottom: 100,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 8,
     paddingHorizontal: 16,
-    borderRadius: 20,
+    borderRadius: 30,
+    elevation: 10,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
   },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
+  pageBtn: {
+    padding: 5,
   },
-  pageButtonText: {
-    color: backgroundColors.light,
+  disabledBtn: {
+    opacity: 0.5,
+  },
+  pageText: {
+    color: THEME.white,
+    fontSize: 14,
     fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    alignItems: 'center',
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
+    marginHorizontal: 15,
   },
 });

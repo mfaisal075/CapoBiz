@@ -10,6 +10,7 @@ import {
   Image,
   BackHandler,
   Modal,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import DropDownPicker from 'react-native-dropdown-picker';
@@ -19,8 +20,27 @@ import {useDrawer} from '../../DrawerContext';
 import axios from 'axios';
 import BASE_URL from '../../BASE_URL';
 import Toast from 'react-native-toast-message';
-import backgroundColors from '../../Colors';
 import RNPrint from 'react-native-print';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+  success: '#10B981',
+  danger: '#EF4444',
+  warning: '#F59E0B',
+  shadow: '#000',
+};
 
 interface Labour {
   id: string;
@@ -41,22 +61,9 @@ const initialLabourAddFrom: LabourAddForm = {
   note: '',
 };
 
-interface ChequeAddFrom {
-  amount: string;
-  note: string;
-  date: Date;
-  chequeNumber: string;
-}
-
-const initialChequeAddForm: ChequeAddFrom = {
-  amount: '',
-  chequeNumber: '',
-  date: new Date(),
-  note: '',
-};
-
 const LabourAddPayment = ({navigation}: any) => {
   const {openDrawer} = useDrawer();
+  const [selectedTab, setSelectedTab] = useState('Cash');
   const [labourDropdown, setLabourDropdown] = useState<Labour[]>([]);
   const transformedLabr = labourDropdown.map(lab => ({
     label: lab.labr_name,
@@ -67,11 +74,7 @@ const LabourAddPayment = ({navigation}: any) => {
   const [labourValue, setLabourValue] = useState<string | ''>('');
   const [cashAddFrom, setCashAddForm] =
     useState<LabourAddForm>(initialLabourAddFrom);
-  const [showDatePicker, setShowDatePicker] = useState<
-    'cash' | 'cheque' | null
-  >(null);
-  const [chequeAddFrom, setChequeAddForm] =
-    useState<ChequeAddFrom>(initialChequeAddForm);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [cashType, setCashType] = useState('');
   const [cashTypeOpen, setCashTypeOpen] = useState(false);
   const [receipt, setReceipt] = useState<any | null>(null);
@@ -84,29 +87,17 @@ const LabourAddPayment = ({navigation}: any) => {
     }));
   };
 
-  // Cheque Payment Add Form OnChange
-  const chequeOnChange = (field: keyof ChequeAddFrom, value: string | Date) => {
-    setChequeAddForm(prev => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
   // Date OnChange
   const handleDateChange = (event: any, selectedDate?: Date) => {
     if (event.type === 'dismissed') {
-      setShowDatePicker(null);
+      setShowDatePicker(false);
       return;
     }
 
     if (selectedDate) {
-      if (showDatePicker === 'cash') {
-        cashOnChange('date', selectedDate);
-      } else if (showDatePicker === 'cheque') {
-        chequeOnChange('date', selectedDate);
-      }
+      cashOnChange('date', selectedDate);
     }
-    setShowDatePicker(null);
+    setShowDatePicker(false);
   };
 
   // Payment Type
@@ -347,208 +338,141 @@ const LabourAddPayment = ({navigation}: any) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.headerContainer}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={openDrawer} style={styles.menuBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Add Labour Payment</Text>
+            <View style={{width: 24}} />
           </View>
-        </View>
+        </LinearGradient>
+      </View>
 
-        <ScrollView style={styles.scrollContainer} nestedScrollEnabled>
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Payment Information</Text>
+      <ScrollView
+        style={styles.scrollContainer}
+        contentContainerStyle={{paddingBottom: 100}}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.formCard}>
+          <Text style={styles.cardTitle}>Payment Details</Text>
 
-            {/* Labour Selection */}
-            <View style={styles.dropdownRow}>
-              <Icon
-                name="person"
-                size={28}
-                color={backgroundColors.dark}
-                style={styles.personIcon}
-              />
-              <DropDownPicker
-                items={transformedLabr}
-                open={Open}
-                value={labourValue}
-                setValue={setLabourValue}
-                setOpen={setOpen}
-                placeholder="Choose labour..."
-                placeholderStyle={styles.dropdownPlaceholder}
-                textStyle={styles.dropdownText}
-                style={styles.dropdown}
-                dropDownContainerStyle={styles.dropdownContainer}
-                ArrowUpIconComponent={() => (
-                  <Icon
-                    name="keyboard-arrow-up"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                ArrowDownIconComponent={() => (
-                  <Icon
-                    name="keyboard-arrow-down"
-                    size={18}
-                    color={backgroundColors.dark}
-                  />
-                )}
-                listMode="SCROLLVIEW"
-                listItemLabelStyle={{
-                  color: backgroundColors.dark,
-                  fontWeight: '500',
-                }}
-                labelStyle={{
-                  color: backgroundColors.dark,
-                  marginLeft: 30,
-                  fontSize: 16,
-                }}
-                searchable
-                searchTextInputStyle={{
-                  borderWidth: 0,
-                  width: '100%',
-                }}
-                searchContainerStyle={{
-                  borderColor: backgroundColors.gray,
-                }}
-              />
+          {/* Labour Selection */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Select Labour</Text>
+            <DropDownPicker
+              items={transformedLabr}
+              open={Open}
+              value={labourValue}
+              setValue={setLabourValue}
+              setOpen={setOpen}
+              placeholder="Choose labour..."
+              placeholderStyle={{color: '#999'}}
+              textStyle={{color: THEME.textDark}}
+              style={styles.dropdown}
+              dropDownContainerStyle={styles.dropdownContainer}
+              listMode="SCROLLVIEW"
+              zIndex={3000}
+              zIndexInverse={1000}
+              searchable
+            />
+          </View>
+
+          {labourData && (
+            <View style={styles.customerInfoBox}>
+              <Text style={styles.custInfoTitle}>{labourData.labr_name}</Text>
+              <Text style={styles.custInfoSub}>
+                {labourData.labr_cnic} | {labourData.labr_address}
+              </Text>
             </View>
+          )}
 
-            {labourData && (
-              <View style={styles.labourInfo}>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Labour Name:</Text>
-                  <Text style={styles.infoValue}>{labourData.labr_name}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>CNIC:</Text>
-                  <Text style={styles.infoValue}>{labourData.labr_cnic}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Address:</Text>
-                  <Text style={styles.infoValue}>
-                    {labourData.labr_address}
-                  </Text>
-                </View>
-              </View>
-            )}
+          {/* Cash Payment Form */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Amount</Text>
+            <TextInput
+              style={styles.input}
+              value={cashAddFrom.amount}
+              placeholder="Enter amount"
+              placeholderTextColor={'#999'}
+              keyboardType="number-pad"
+              onChangeText={t => cashOnChange('amount', t)}
+              maxLength={9}
+            />
+          </View>
 
-            {/* Cash Payment Form */}
-            <View style={styles.inputRow}>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={styles.input}
-                  value={cashAddFrom.amount}
-                  placeholder="Enter amount *"
-                  placeholderTextColor={'rgba(0,0,0,0.7)'}
-                  keyboardType="number-pad"
-                  onChangeText={t => cashOnChange('amount', t)}
-                  maxLength={9}
-                />
-              </View>
-            </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Note</Text>
+            <TextInput
+              style={[styles.input, styles.textArea]}
+              value={cashAddFrom.note}
+              placeholder="Add note"
+              placeholderTextColor={'#999'}
+              onChangeText={t => cashOnChange('note', t)}
+              numberOfLines={3}
+              multiline
+            />
+          </View>
 
-            <View style={styles.inputRow}>
-              <View style={styles.inputContainer}>
-                <TextInput
-                  style={[styles.input, styles.textArea]}
-                  value={cashAddFrom.note}
-                  placeholder="Add note *"
-                  placeholderTextColor={'rgba(0,0,0,0.7)'}
-                  onChangeText={t => cashOnChange('note', t)}
-                  numberOfLines={3}
-                  multiline
-                />
-              </View>
-            </View>
-
-            <View style={styles.inputRow}>
-              <View style={styles.inputContainer}>
-                <TouchableOpacity
-                  onPress={() => setShowDatePicker('cash')}
-                  style={styles.dateInput}>
-                  <Icon name="event" size={20} color={backgroundColors.dark} />
-                  <Text style={styles.dateText}>
-                    {cashAddFrom.date
-                      ? cashAddFrom.date.toLocaleDateString()
-                      : 'Select Date'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View style={styles.inputRow}>
-              <View style={styles.inputContainer}>
-                <DropDownPicker
-                  items={paymentType}
-                  open={cashTypeOpen}
-                  value={cashType}
-                  setValue={setCashType}
-                  setOpen={setCashTypeOpen}
-                  placeholder="Select Type *"
-                  placeholderStyle={[
-                    styles.dropdownPlaceholder,
-                    {marginLeft: 10},
-                  ]}
-                  textStyle={styles.dropdownText}
-                  style={styles.dropdown}
-                  dropDownContainerStyle={styles.dropdownContainer}
-                  ArrowUpIconComponent={() => (
-                    <Icon
-                      name="keyboard-arrow-up"
-                      size={18}
-                      color={backgroundColors.dark}
-                    />
-                  )}
-                  ArrowDownIconComponent={() => (
-                    <Icon
-                      name="keyboard-arrow-down"
-                      size={18}
-                      color={backgroundColors.dark}
-                    />
-                  )}
-                  listMode="SCROLLVIEW"
-                  listItemLabelStyle={{
-                    color: backgroundColors.dark,
-                    fontWeight: '500',
-                  }}
-                  labelStyle={{
-                    color: backgroundColors.dark,
-                    marginLeft: 10,
-                    fontSize: 16,
-                  }}
-                />
-              </View>
-            </View>
-
-            <TouchableOpacity style={styles.submitBtn} onPress={addCashPayment}>
-              <Text style={styles.submitBtnText}>Submit Payment</Text>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Date</Text>
+            <TouchableOpacity
+              onPress={() => setShowDatePicker(true)}
+              style={styles.dateInput}>
+              <Icon name="event" size={20} color={THEME.primary} />
+              <Text style={styles.dateText}>
+                {cashAddFrom.date
+                  ? cashAddFrom.date.toLocaleDateString()
+                  : 'Select Date'}
+              </Text>
             </TouchableOpacity>
           </View>
-        </ScrollView>
 
-        {/* Date Picker */}
-        {showDatePicker && (
-          <DateTimePicker
-            value={
-              showDatePicker === 'cash'
-                ? cashAddFrom.date ?? new Date()
-                : chequeAddFrom.date ?? new Date()
-            }
-            mode="date"
-            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-            onChange={handleDateChange}
-            themeVariant="dark"
-          />
-        )}
-      </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Payment Type</Text>
+            <DropDownPicker
+              items={paymentType}
+              open={cashTypeOpen}
+              value={cashType}
+              setValue={setCashType}
+              setOpen={setCashTypeOpen}
+              placeholder="Select Type"
+              placeholderStyle={{color: '#999'}}
+              textStyle={{color: THEME.textDark}}
+              style={styles.dropdown}
+              dropDownContainerStyle={styles.dropdownContainer}
+              listMode="SCROLLVIEW"
+              zIndex={2000}
+              zIndexInverse={2000}
+            />
+          </View>
+
+          <TouchableOpacity style={styles.submitBtn} onPress={addCashPayment}>
+            <Text style={styles.submitBtnText}>Submit Payment</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+
+      {/* Date Picker */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={cashAddFrom.date}
+          mode="date"
+          display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+          onChange={handleDateChange}
+        />
+      )}
 
       {/* Cash Payment Receipt Modal */}
       <Modal
@@ -556,9 +480,20 @@ const LabourAddPayment = ({navigation}: any) => {
         animationType="fade"
         transparent={true}
         onRequestClose={() => setReceipt(null)}>
-        <View style={styles.modalContainer}>
+        <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <Text style={styles.modalTitle}>Payment Receipt</Text>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Payment Receipt</Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setCashType('');
+                  setReceipt(null);
+                }}
+                style={styles.closeBtn}>
+                <Icon name="close" size={20} color={THEME.textDark} />
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.modalDetails}>
               <View style={styles.modalRow}>
@@ -567,7 +502,7 @@ const LabourAddPayment = ({navigation}: any) => {
               </View>
               <View style={styles.modalRow}>
                 <Text style={styles.modalLabel}>Labour Name:</Text>
-                <Text style={[styles.modalValue]}>{receipt?.labour_name}</Text>
+                <Text style={styles.modalValue}>{receipt?.labour_name}</Text>
               </View>
               <View style={styles.modalRow}>
                 <Text style={styles.modalLabel}>Payment:</Text>
@@ -592,7 +527,7 @@ const LabourAddPayment = ({navigation}: any) => {
               </View>
               <View style={styles.modalRow}>
                 <Text style={styles.modalLabel}>Payment Method:</Text>
-                <Text style={[styles.modalValue]}>By Cash</Text>
+                <Text style={styles.modalValue}>By Cash</Text>
               </View>
             </View>
 
@@ -602,13 +537,14 @@ const LabourAddPayment = ({navigation}: any) => {
                 setCashType('');
                 setReceipt(null);
               }}
-              style={styles.modalButton}>
-              <Icon name="print" size={20} color={backgroundColors.light} />
-              <Text style={styles.modalButtonText}>Print</Text>
+              style={styles.printBtn}>
+              <Icon name="print" size={20} color={THEME.white} />
+              <Text style={styles.printBtnText}>Print Receipt</Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
+      <BottomBar />
       <Toast />
     </SafeAreaView>
   );
@@ -617,192 +553,150 @@ const LabourAddPayment = ({navigation}: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 0,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerTop: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
   },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
+  menuBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
-    fontWeight: 'bold',
-  },
-  gradientBackground: {
-    flex: 1,
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
 
   scrollContainer: {
     flex: 1,
-    paddingHorizontal: 12,
-  },
-  section: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 16,
-    paddingVertical: 20,
     paddingHorizontal: 15,
-    marginVertical: 8,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+    marginTop: 15,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    marginBottom: 16,
-  },
-  dropdownRow: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    color: 'rgba(0,0,0,0.8)',
-    fontSize: 14,
-    marginBottom: 6,
-    fontWeight: '500',
-  },
-  dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
-    marginBottom: 4,
-  },
-  dropdownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    maxHeight: 200,
-  },
-  dropdownText: {
-    color: 'white',
-    fontSize: 14,
-  },
-  dropdownPlaceholder: {
-    color: 'rgba(0,0,0,0.7)',
-    marginLeft: 30,
-    fontSize: 16,
-  },
-  personIcon: {
-    position: 'absolute',
-    zIndex: 10000,
-    top: 7,
-    left: 6,
-  },
-  labourInfo: {
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    borderRadius: 8,
-    padding: 12,
+
+  // --- Form Card ---
+  formCard: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: 'rgba(0,0,0,0.03)',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 8,
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 20,
   },
-  infoLabel: {
-    color: backgroundColors.dark,
-    fontSize: 14,
+  inputGroup: {
+    marginBottom: 15,
   },
-  infoValue: {
-    color: backgroundColors.dark,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  inputRow: {
-    marginBottom: 16,
-  },
-  inputContainer: {
-    width: '100%',
+  label: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: THEME.textGray,
+    marginBottom: 5,
   },
   input: {
-    backgroundColor: backgroundColors.light,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: THEME.border,
     borderRadius: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 15,
     paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
+    fontSize: 14,
+    color: THEME.textDark,
     height: 48,
-    color: backgroundColors.dark,
   },
   textArea: {
     height: 80,
     textAlignVertical: 'top',
   },
+  dropdown: {
+    backgroundColor: '#F9FAFB',
+    borderColor: THEME.border,
+    borderRadius: 10,
+    height: 48,
+  },
+  dropdownContainer: {
+    backgroundColor: '#fff',
+    borderColor: THEME.border,
+  },
   dateInput: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: backgroundColors.light,
+    backgroundColor: '#F9FAFB',
+    borderWidth: 1,
+    borderColor: THEME.border,
     borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
+    paddingHorizontal: 15,
     height: 48,
+    gap: 10,
   },
   dateText: {
-    fontWeight: '600',
-    color: backgroundColors.dark,
     fontSize: 14,
-    marginLeft: 8,
+    color: THEME.textDark,
+  },
+  customerInfoBox: {
+    backgroundColor: THEME.primaryLight,
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 20,
+    borderLeftWidth: 4,
+    borderLeftColor: THEME.primary,
+  },
+  custInfoTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  custInfoSub: {
+    fontSize: 13,
+    color: THEME.textGray,
+    marginTop: 2,
   },
   submitBtn: {
-    backgroundColor: backgroundColors.primary,
+    backgroundColor: THEME.primary,
     borderRadius: 12,
-    paddingVertical: 14,
+    paddingVertical: 15,
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: 10,
+    shadowColor: THEME.primary,
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   submitBtnText: {
-    color: 'white',
+    color: THEME.white,
     fontSize: 16,
-    fontWeight: '600',
+    fontWeight: '700',
   },
-  // Receipt Modal
-  modalContainer: {
+
+  // --- Modal ---
+  modalOverlay: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
@@ -814,41 +708,63 @@ const styles = StyleSheet.create({
     width: '100%',
     borderRadius: 16,
     padding: 20,
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    textAlign: 'center',
-    marginBottom: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  closeBtn: {
+    padding: 5,
+    backgroundColor: '#F3F4F6',
+    borderRadius: 20,
   },
   modalDetails: {
-    marginBottom: 15,
+    marginBottom: 20,
   },
   modalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 8,
   },
   modalLabel: {
+    fontSize: 14,
     fontWeight: '600',
-    color: '#333',
+    color: THEME.textGray,
   },
   modalValue: {
-    fontWeight: '400',
+    fontSize: 14,
+    fontWeight: '600',
+    color: THEME.textDark,
+    maxWidth: '60%',
+    textAlign: 'right',
   },
-  modalButton: {
+  printBtn: {
+    backgroundColor: THEME.primary,
     flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 10,
-    alignSelf: 'center',
-    backgroundColor: backgroundColors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
+    gap: 8,
   },
-  modalButtonText: {
-    color: '#fff',
-    textAlign: 'center',
+  printBtnText: {
+    color: THEME.white,
+    fontSize: 15,
     fontWeight: '600',
   },
 });

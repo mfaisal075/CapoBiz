@@ -9,6 +9,8 @@ import {
   ScrollView,
   Image,
   BackHandler,
+  StatusBar,
+  Dimensions,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import React, {useEffect, useState} from 'react';
@@ -18,7 +20,28 @@ import Toast from 'react-native-toast-message';
 import {useNavigation} from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LottieView from 'lottie-react-native';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+const {width} = Dimensions.get('window');
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  danger: '#EF4444',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 interface ResetPassword {
   oldPassword: string;
@@ -112,145 +135,176 @@ export default function PasswordReset() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Password Reset</Text>
+            <View style={{width: 40}} />
           </View>
-        </View>
+        </LinearGradient>
+      </View>
 
-        <ScrollView style={styles.listContainer}>
-          <View style={styles.card}>
-            {/* Header Section */}
-            <View style={styles.headerRow}>
-              <View style={styles.avatarBox}>
-                <Icon name="lock-reset" size={24} color="white" />
-              </View>
-              <View style={styles.headerTxtContainer}>
-                <Text style={styles.productName}>Reset Your Password</Text>
-                <Text style={styles.subText}>
-                  Enter your current and new password
-                </Text>
-              </View>
+      <ScrollView
+        style={styles.listContainer}
+        contentContainerStyle={{paddingBottom: 100}}
+        showsVerticalScrollIndicator={false}>
+        <View style={styles.card}>
+          {/* Header Section */}
+          <View style={styles.headerRow}>
+            <View style={styles.avatarBox}>
+              <Icon name="lock-reset" size={28} color={THEME.primary} />
             </View>
+            <View style={styles.headerTxtContainer}>
+              <Text style={styles.productName}>Reset Your Password</Text>
+              <Text style={styles.subText}>
+                Enter your current and new password
+              </Text>
+            </View>
+          </View>
 
-            {/* Form Section */}
-            <View style={styles.infoBox}>
-              <View style={styles.inputContainer}>
-                <View style={styles.labelRow}>
-                  <Icon
-                    name="lock-outline"
-                    size={18}
-                    color={backgroundColors.dark}
-                    style={styles.infoIcon}
-                  />
-                  <Text style={styles.labelText}>Current Password</Text>
-                </View>
+          {/* Form Section */}
+          <View style={styles.infoBox}>
+            <View style={styles.inputContainer}>
+              <Text style={styles.labelText}>Current Password</Text>
+              <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.input}
-                  placeholderTextColor="#999"
+                  placeholderTextColor={THEME.textLight}
                   placeholder="Enter current password"
                   secureTextEntry
                   value={from.oldPassword}
                   onChangeText={text => onChange('oldPassword', text)}
                 />
+                <Icon
+                  name="lock-outline"
+                  size={20}
+                  color={THEME.textGray}
+                  style={styles.inputIcon}
+                />
               </View>
+            </View>
 
-              <View style={styles.inputContainer}>
-                <View style={styles.labelRow}>
-                  <Icon
-                    name="lock-plus"
-                    size={18}
-                    color={backgroundColors.dark}
-                    style={styles.infoIcon}
-                  />
-                  <Text style={styles.labelText}>New Password</Text>
-                </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.labelText}>New Password</Text>
+              <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.input}
-                  placeholderTextColor="#999"
+                  placeholderTextColor={THEME.textLight}
                   placeholder="Enter new password"
                   secureTextEntry
                   value={from.newPassword}
                   onChangeText={text => onChange('newPassword', text)}
                 />
+                <Icon
+                  name="lock-plus"
+                  size={20}
+                  color={THEME.textGray}
+                  style={styles.inputIcon}
+                />
               </View>
+            </View>
 
-              <View style={styles.inputContainer}>
-                <View style={styles.labelRow}>
-                  <Icon
-                    name="lock-check"
-                    size={18}
-                    color={backgroundColors.dark}
-                    style={styles.infoIcon}
-                  />
-                  <Text style={styles.labelText}>Confirm Password</Text>
-                </View>
+            <View style={styles.inputContainer}>
+              <Text style={styles.labelText}>Confirm Password</Text>
+              <View style={styles.inputWrapper}>
                 <TextInput
                   style={styles.input}
-                  placeholderTextColor="#999"
+                  placeholderTextColor={THEME.textLight}
                   placeholder="Confirm new password"
                   secureTextEntry
                   value={from.confirmPassword}
                   onChangeText={text => onChange('confirmPassword', text)}
                 />
+                <Icon
+                  name="lock-check"
+                  size={20}
+                  color={THEME.textGray}
+                  style={styles.inputIcon}
+                />
               </View>
+            </View>
 
-              <TouchableOpacity
-                style={styles.submitBtn}
-                onPress={handleResetPassword}>
+            <TouchableOpacity
+              style={styles.submitBtn}
+              onPress={handleResetPassword}>
+              <LinearGradient
+                colors={[THEME.gradientStart, THEME.gradientEnd]}
+                style={styles.submitBtnGradient}>
                 <Icon name="key-change" size={20} color="white" />
                 <Text style={styles.submitText}>Update Password</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Success Modal */}
+      <Modal visible={isModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.successModalContainer}>
+            <View style={styles.animContainer}>
+              <LottieView
+                style={{flex: 1}}
+                source={require('../../../assets/success.json')}
+                autoPlay
+                loop={false}
+              />
+            </View>
+
+            <Text style={styles.successModalTitle}>Password Updated!</Text>
+            <Text style={styles.successModalMessage}>
+              Your password has been updated successfully
+            </Text>
+
+            <View style={styles.successModalActions}>
+              <TouchableOpacity
+                style={[styles.successModalBtn, {backgroundColor: '#F3F4F6'}]}
+                onPress={() => {
+                  setTimeout(() => {
+                    setIsModalVisible(false);
+                    navigation.navigate('Login' as never);
+                  }, 500);
+                }}>
+                <Text
+                  style={[styles.successModalBtnText, {color: THEME.textDark}]}>
+                  Close
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.successModalBtn,
+                  {backgroundColor: THEME.primary},
+                ]}
+                onPress={() => {
+                  setTimeout(() => {
+                    setIsModalVisible(false);
+                    navigation.navigate('Login' as never);
+                  }, 500);
+                }}>
+                <Text style={[styles.successModalBtnText, {color: 'white'}]}>
+                  Login Now
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
-        </ScrollView>
+        </View>
+      </Modal>
 
-        {/* Success Modal */}
-        <Modal visible={isModalVisible} transparent animationType="fade">
-          <View style={styles.modalOverlay}>
-            <View style={styles.successModalContainer}>
-              <View style={styles.animContainer}>
-                <LottieView
-                  style={{flex: 1}}
-                  source={require('../../../assets/success.json')} // You can use any success animation
-                  autoPlay
-                  loop={false}
-                />
-              </View>
-
-              <Text style={styles.successModalTitle}>Password Updated!</Text>
-              <Text style={styles.successModalMessage}>
-                Your password has been updated successfully
-              </Text>
-
-              <View style={styles.successModalActions}>
-                <TouchableOpacity
-                  style={styles.successModalBtn}
-                  onPress={() => {
-                    setTimeout(() => {
-                      setIsModalVisible(false);
-                      navigation.navigate('Login' as never);
-                    }, 2000);
-                  }}>
-                  <Text style={styles.successModalBtnText}>Ok</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </View>
-        </Modal>
-
-        <Toast />
-      </View>
+      <Toast />
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -258,143 +312,142 @@ export default function PasswordReset() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- Header ---
+  headerWrapper: {
+    marginBottom: 10,
+    zIndex: 1,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 25,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+  },
+  headerContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  addBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: backgroundColors.light,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
   },
 
   // List Container
   listContainer: {
     flex: 1,
-    paddingHorizontal: 12,
-    paddingTop: 20,
+    paddingHorizontal: 16,
+    paddingTop: 10,
   },
 
   // Card Styling
   card: {
-    backgroundColor: '#ffffffde',
+    backgroundColor: THEME.white,
     borderRadius: 16,
     marginVertical: 8,
     shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 6,
-    shadowOffset: {width: 0, height: 3},
-    elevation: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 2},
+    elevation: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 25,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
   },
   headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingBottom: 20,
   },
   avatarBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    backgroundColor: backgroundColors.dark,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 15,
   },
   headerTxtContainer: {
     flex: 1,
   },
   productName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
-    color: backgroundColors.dark,
+    color: THEME.textDark,
   },
   subText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 2,
+    fontSize: 13,
+    color: THEME.textGray,
+    marginTop: 4,
   },
 
   // Info Box Styling
   infoBox: {
-    backgroundColor: '#F6F9FC',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: THEME.white,
   },
   inputContainer: {
-    marginBottom: 20,
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  infoIcon: {
-    marginRight: 6,
+    marginBottom: 10,
   },
   labelText: {
     fontSize: 14,
-    color: backgroundColors.dark,
+    color: THEME.textDark,
     fontWeight: '600',
+    marginBottom: 8,
+    marginLeft: 4,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 12,
+    backgroundColor: THEME.background,
+    paddingHorizontal: 12,
   },
   input: {
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-    borderRadius: 8,
-    padding: 12,
+    flex: 1,
+    paddingVertical: 12,
     fontSize: 14,
-    color: '#333',
-    backgroundColor: 'white',
+    color: THEME.textDark,
+  },
+  inputIcon: {
+    marginLeft: 8,
   },
 
   // Submit Button
   submitBtn: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 10,
+    shadowColor: THEME.primary,
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 4},
+    elevation: 4,
+  },
+  submitBtnGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: backgroundColors.primary,
-    borderRadius: 10,
-    paddingVertical: 15,
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 3,
+    paddingVertical: 16,
   },
   submitText: {
-    color: 'white',
+    color: THEME.white,
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
@@ -408,9 +461,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   successModalContainer: {
-    backgroundColor: 'white',
-    borderRadius: 15,
-    padding: 20,
+    backgroundColor: THEME.white,
+    borderRadius: 20,
+    padding: 25,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 4},
@@ -426,29 +479,31 @@ const styles = StyleSheet.create({
   successModalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#144272',
+    color: THEME.textDark,
     marginBottom: 8,
     textAlign: 'center',
   },
   successModalMessage: {
     fontSize: 14,
-    color: '#555',
+    color: THEME.textGray,
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 25,
     lineHeight: 20,
   },
   successModalActions: {
     width: '100%',
+    flexDirection: 'row',
+    gap: 15,
   },
   successModalBtn: {
-    backgroundColor: '#ebd1267f',
+    flex: 1,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 10,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   successModalBtnText: {
-    color: '#144272',
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: 'bold',
   },
 });

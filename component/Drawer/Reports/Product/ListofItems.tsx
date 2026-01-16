@@ -7,6 +7,9 @@ import {
   FlatList,
   Image,
   BackHandler,
+  StatusBar,
+  Dimensions,
+  TextInput,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../../DrawerContext';
@@ -18,7 +21,28 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import Toast from 'react-native-toast-message';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../../CTX/UserContext';
-import backgroundColors from '../../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../../BottomBar';
+
+const {width} = Dimensions.get('window');
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F8F9FA',
+  white: '#FFFFFF',
+  textDark: '#1F2937',
+  textGray: '#6B7280',
+  textLight: '#9CA3AF',
+  border: '#E5E7EB',
+  danger: '#EF4444',
+  rowHover: '#F9FAFB',
+};
 
 interface AllProductList {
   id: number;
@@ -73,6 +97,14 @@ export default function ListofItems({navigation}: any) {
     (currentPage - 1) * recordsPerPage,
     currentPage * recordsPerPage,
   );
+
+  // Helper: Get Initials
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
 
   // Handle Print (All Products)
   const handlePrint = async () => {
@@ -138,7 +170,7 @@ export default function ListofItems({navigation}: any) {
                 <html>
                   <head>
                     <meta charset="utf-8">
-                    <title>Customer Report</title>
+                    <title>Product Report</title>
                   </head>
                   <body style="font-family: Arial, sans-serif; padding:20px;">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
@@ -208,6 +240,7 @@ export default function ListofItems({navigation}: any) {
           category: catValue,
         });
         setCategoryWiseList(res.data.products);
+        setCurrentPage(1); // Reset to first page on category change
       } catch (error) {
         console.log(error);
       }
@@ -217,6 +250,9 @@ export default function ListofItems({navigation}: any) {
   useEffect(() => {
     fetchAllProdList();
     fetchCatDropdown();
+  }, []);
+
+  useEffect(() => {
     fetchCatWiseList();
   }, [catValue]);
 
@@ -238,215 +274,212 @@ export default function ListofItems({navigation}: any) {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={openDrawer}>
+              <Icon name="menu" size={28} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>List of Items</Text>
+            <TouchableOpacity onPress={handlePrint} style={styles.printBtn}>
+              <Icon name="printer" size={24} color={THEME.white} />
+            </TouchableOpacity>
           </View>
+        </LinearGradient>
+      </View>
 
-          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="#fff" />
+      {/* Filter Section (Reverted to Previous Style) */}
+      <View style={styles.filterContainer}>
+        {/* Radio Buttons */}
+        <View style={styles.radioContainer}>
+          <TouchableOpacity
+            style={styles.radioButton}
+            onPress={() => {
+              setSelectionMode('allproducts');
+              setCatValue('');
+            }}>
+            <RadioButton
+              value="allproducts"
+              status={selectionMode === 'allproducts' ? 'checked' : 'unchecked'}
+              color={THEME.primary}
+              uncheckedColor={THEME.textGray}
+            />
+            <Text style={styles.radioText}>All Products</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.radioButton}
+            onPress={() => {
+              setSelectionMode('categorywiseproduct');
+              setCatValue('');
+            }}>
+            <RadioButton
+              value="categorywiseproduct"
+              status={
+                selectionMode === 'categorywiseproduct'
+                  ? 'checked'
+                  : 'unchecked'
+              }
+              color={THEME.primary}
+              uncheckedColor={THEME.textGray}
+            />
+            <Text style={styles.radioText}>Category Wise</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Filter Section */}
-        <View style={styles.filterContainer}>
-          {/* Radio Buttons */}
-          <View style={styles.radioContainer}>
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('allproducts');
-                setCatValue('');
-              }}>
-              <RadioButton
-                value="allproducts"
-                status={
-                  selectionMode === 'allproducts' ? 'checked' : 'unchecked'
-                }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
-              />
-              <Text style={styles.radioText}>All Products</Text>
-            </TouchableOpacity>
+        {/* Dropdown */}
+        <DropDownPicker
+          items={transformedCategory}
+          open={catOpen}
+          setOpen={setCatOpen}
+          value={catValue}
+          setValue={setCatValue}
+          placeholder="Select Category"
+          disabled={selectionMode === 'allproducts'}
+          placeholderStyle={{color: THEME.textGray}}
+          textStyle={{color: THEME.textDark}}
+          ArrowUpIconComponent={() => (
+            <Icon name="chevron-up" size={18} color={THEME.textDark} />
+          )}
+          ArrowDownIconComponent={() => (
+            <Icon name="chevron-down" size={18} color={THEME.textDark} />
+          )}
+          style={[
+            styles.dropdown,
+            selectionMode === 'allproducts' && styles.dropdownDisabled,
+          ]}
+          dropDownContainerStyle={styles.dropDownContainer}
+          listMode="FLATLIST"
+          flatListProps={{
+            nestedScrollEnabled: true,
+          }}
+          maxHeight={200}
+          listItemLabelStyle={{
+            color: THEME.textDark,
+            fontWeight: '500',
+          }}
+          labelStyle={{
+            color: THEME.textDark,
+            fontSize: 14,
+          }}
+          searchable
+          searchTextInputStyle={{
+            borderWidth: 0,
+            width: '100%',
+            color: THEME.textDark,
+          }}
+          searchContainerStyle={{
+            borderColor: THEME.border,
+          }}
+        />
+      </View>
 
-            <TouchableOpacity
-              style={styles.radioButton}
-              onPress={() => {
-                setSelectionMode('categorywiseproduct');
-                setCatValue('');
-              }}>
-              <RadioButton
-                value="categorywiseproduct"
-                status={
-                  selectionMode === 'categorywiseproduct'
-                    ? 'checked'
-                    : 'unchecked'
-                }
-                color={backgroundColors.primary}
-                uncheckedColor={backgroundColors.dark}
-              />
-              <Text style={styles.radioText}>Category Wise</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Dropdown */}
-          <DropDownPicker
-            items={transformedCategory}
-            open={catOpen}
-            setOpen={setCatOpen}
-            value={catValue}
-            setValue={setCatValue}
-            placeholder="Select Category"
-            disabled={selectionMode === 'allproducts'}
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
-            ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
-            )}
-            ArrowDownIconComponent={() => (
-              <Icon
-                name="chevron-down"
-                size={18}
-                color={backgroundColors.dark}
-              />
-            )}
-            style={[
-              styles.dropdown,
-              selectionMode === 'allproducts' && styles.dropdownDisabled,
-            ]}
-            dropDownContainerStyle={styles.dropDownContainer}
-            listMode="MODAL"
-            listItemLabelStyle={{
-              color: backgroundColors.dark,
-              fontWeight: '500',
-            }}
-            labelStyle={{
-              color: backgroundColors.dark,
-              fontSize: 16,
-            }}
-            searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
-            searchContainerStyle={{
-              borderColor: backgroundColors.gray,
-            }}
-          />
+      {/* --- CONTENT LIST --- */}
+      <View style={styles.listContainer}>
+        <View style={styles.tableHeaderRow}>
+          <Text style={styles.tableHeaderLabel}>PRODUCT LIST</Text>
+          <Text style={styles.tableHeaderCount}>{totalRecords} Found</Text>
         </View>
 
-        {/* Product List */}
-        <View style={styles.listContainer}>
-          <FlatList
-            data={paginatedData}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({item}) => (
-              <View style={styles.card}>
-                {/* Avatar + Name + Actions */}
-                <View style={styles.row}>
-                  <View style={styles.avatarBox}>
-                    <Image
-                      source={require('../../../../assets/product.png')}
-                      style={styles.avatar}
-                    />
-                  </View>
+        <FlatList
+          data={paginatedData}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={({item}) => (
+            <View style={styles.cardRow}>
+              {/* Left Side: Avatar + Name + Subtitle */}
+              <View style={styles.leftContent}>
+                <View style={styles.avatarContainer}>
+                  <Text style={styles.avatarText}>
+                    {getInitials(item.prod_name)}
+                  </Text>
+                </View>
 
-                  <View style={{flex: 1}}>
-                    <View
-                      style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                      }}>
-                      <Text style={styles.name}>{item.prod_name}</Text>
-                      <View style={styles.catBadge}>
-                        <Text style={styles.badgeText}>{item.pcat_name}</Text>
-                      </View>
-                    </View>
-                    {/* small details inline */}
-                    <Text style={styles.subText}>
-                      <Text style={styles.label}>Cost Price: </Text>
-                      {item.prod_costprice} |{' '}
-                      <Text style={styles.label}>Retail Price: </Text>
-                      {item.prod_retailprice}
-                    </Text>
-                    <Text style={styles.subText}>
-                      <Text style={styles.label}>QTY: </Text>
-                      {item.prod_sub_qty
-                        ? `${item.prod_qty} - ${item.prod_sub_qty}`
-                        : item.prod_qty}
+                <View style={styles.infoWrapper}>
+                  <Text style={styles.nameText} numberOfLines={1}>
+                    {item.prod_name}
+                  </Text>
+
+                  <View style={styles.detailRow}>
+                    <Icon name="barcode" size={12} color={THEME.textGray} />
+                    <Text style={styles.detailText} numberOfLines={1}>
+                      {item.prod_UPC_EAN || 'N/A'}
                     </Text>
                   </View>
                 </View>
               </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="package-variant" size={48} color="#666" />
-                <Text style={styles.emptyText}>No products found.</Text>
+
+              {/* Right Side: Badges & Price */}
+              <View style={styles.rightContent}>
+                <View style={styles.categoryBadge}>
+                  <Text style={styles.categoryBadgeText} numberOfLines={1}>
+                    {item.pcat_name || 'General'}
+                  </Text>
+                </View>
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>Price: </Text>
+                  <Text style={styles.priceValue}>{item.prod_retailprice}</Text>
+                </View>
+                <View style={styles.qtyRow}>
+                  <Text style={styles.qtyLabel}>Qty: </Text>
+                  <Text
+                    style={[
+                      styles.qtyValue,
+                      parseInt(item.prod_qty) < 10 && {color: THEME.danger},
+                    ]}>
+                    {item.prod_qty}
+                  </Text>
+                </View>
               </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
-
-        {/* Pagination Controls */}
-        {totalRecords > 0 && (
-          <View style={styles.paginationContainer}>
-            <TouchableOpacity
-              disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => prev - 1)}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
-            </TouchableOpacity>
-
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} products
-              </Text>
             </View>
-
-            <TouchableOpacity
-              disabled={currentPage === totalPages}
-              onPress={() => setCurrentPage(prev => prev + 1)}
-              style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
+          )}
+          contentContainerStyle={{paddingBottom: 160}}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.centerContent}>
+              <Icon name="package-variant" size={60} color="#D1D5DB" />
+              <Text style={styles.emptyText}>No records found!</Text>
+            </View>
+          }
+        />
       </View>
+
+      {/* --- PAGINATION (Bottom Floating) --- */}
+      {totalRecords > 0 && (
+        <View style={styles.paginationContainer}>
+          <TouchableOpacity
+            disabled={currentPage === 1}
+            onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+            <Icon name="chevron-left" size={24} color={THEME.white} />
+          </TouchableOpacity>
+
+          <Text style={styles.pageText}>
+            Page {currentPage} of {totalPages}
+          </Text>
+
+          <TouchableOpacity
+            disabled={currentPage === totalPages}
+            onPress={() =>
+              setCurrentPage(prev => Math.min(prev + 1, totalPages))
+            }
+            style={[
+              styles.pageBtn,
+              currentPage === totalPages && styles.disabledBtn,
+            ]}>
+            <Icon name="chevron-right" size={24} color={THEME.white} />
+          </TouchableOpacity>
+        </View>
+      )}
+      <BottomBar />
     </SafeAreaView>
   );
 }
@@ -454,61 +487,56 @@ export default function ListofItems({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER ---
+  headerWrapper: {
+    zIndex: 999,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 90, // Reverted to 90 to allow overlap
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30, // Reverted radius
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: THEME.primary,
+  },
+  headerTop: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
+    marginBottom: 0,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
+  printBtn: {
+    padding: 5,
   },
 
-  // Filter Container
+  // --- FILTER SECTION (Reverted Styles) ---
   filterContainer: {
-    backgroundColor: backgroundColors.light,
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
+    paddingVertical: 15,
     paddingHorizontal: 15,
-    marginTop: 10,
-    marginHorizontal: 12,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+    marginTop: -70,
+    marginHorizontal: 16,
+    marginBottom: 10,
+    elevation: 4,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+    shadowOffset: {width: 0, height: 2},
+    zIndex: 1000,
   },
   radioContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    width: '70%',
+    justifyContent: 'space-around',
     marginBottom: 10,
   },
   radioButton: {
@@ -516,172 +544,201 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   radioText: {
-    color: backgroundColors.dark,
-    marginLeft: -5,
+    color: THEME.textDark,
+    marginLeft: -2,
     fontWeight: '500',
+    fontSize: 14,
   },
-
-  // Dropdown
   dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: THEME.white,
+    borderWidth: 1,
+    borderColor: THEME.border,
     borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 10,
-    height: 48,
+    height: 45,
   },
   dropdownDisabled: {
-    backgroundColor: '#dfdfdfff',
-    borderColor: '#ccc',
+    backgroundColor: '#F3F4F6',
+    borderColor: '#E5E7EB',
+    opacity: 0.7,
   },
   dropDownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: THEME.white,
+    borderColor: THEME.border,
     borderRadius: 10,
-    maxHeight: 200,
   },
 
-  // FlatList Styling
+  // --- LIST & CARDS ---
   listContainer: {
     flex: 1,
-    paddingHorizontal: '3%',
     marginTop: 10,
+    paddingHorizontal: 15,
   },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarBox: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 15,
-  },
-  avatar: {
-    height: 45,
-    width: 45,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#144272',
-  },
-  catBadge: {
-    backgroundColor: '#e8f0fe',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: backgroundColors.primary,
-  },
-  badgeText: {
-    fontSize: 12,
-    color: backgroundColors.primary,
-    fontWeight: '500',
-  },
-  subText: {
-    fontSize: 12,
-    color: '#555',
-    marginTop: 2,
-  },
-  label: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: backgroundColors.dark,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
-  },
-  emptyText: {
-    marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-
-  // Pagination Styling
-  paginationContainer: {
+  tableHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
+    marginBottom: 10,
+    paddingHorizontal: 5,
   },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
-    elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: '#fff',
-    fontWeight: '600',
+  tableHeaderLabel: {
     fontSize: 14,
+    fontWeight: '800',
+    color: THEME.textGray,
+    letterSpacing: 1,
   },
-  pageButtonTextDisabled: {
-    color: '#777',
+  tableHeaderCount: {
+    fontSize: 12,
+    color: THEME.primary,
+    fontWeight: '700',
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
-  pageIndicator: {
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 10,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  leftContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: 8,
+  },
+  avatarContainer: {
+    width: 45,
+    height: 45,
+    borderRadius: 23,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(42, 101, 43, 0.1)',
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: THEME.primary,
+  },
+  infoWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
+  detailText: {
     fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
+    color: THEME.textGray,
+    fontWeight: '500',
+    marginLeft: 4,
+  },
+  rightContent: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+  },
+  categoryBadge: {
+    backgroundColor: THEME.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginBottom: 4,
+  },
+  categoryBadgeText: {
+    fontSize: 10,
+    color: THEME.primary,
+    fontWeight: '700',
+  },
+  priceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  priceLabel: {
+    fontSize: 11,
+    color: THEME.textLight,
+  },
+  priceValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  qtyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  qtyLabel: {
+    fontSize: 11,
+    color: THEME.textLight,
+  },
+  qtyValue: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+
+  centerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 50,
+  },
+  emptyText: {
+    marginTop: 10,
+    color: THEME.textGray,
+    fontSize: 16,
+  },
+
+  // --- PAGINATION ---
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  pageBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  disabledBtn: {
+    opacity: 0.3,
+  },
+  pageText: {
+    color: THEME.white,
+    fontWeight: '700',
+    marginHorizontal: 15,
+    fontSize: 14,
   },
 });

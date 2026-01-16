@@ -7,6 +7,8 @@ import {
   FlatList,
   Image,
   BackHandler,
+  StatusBar,
+  ScrollView,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -19,7 +21,27 @@ import BASE_URL from '../../BASE_URL';
 import {useUser} from '../../CTX/UserContext';
 import RNPrint from 'react-native-print';
 import Toast from 'react-native-toast-message';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  danger: '#EF4444',
+  success: '#10B981',
+  info: '#3B82F6',
+  warning: '#F59E0B',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 interface Users {
   id: number;
@@ -285,41 +307,104 @@ export default function CashRegister({navigation}: any) {
     }
   }
 
-  return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+  // Helper for Initials
+  const getInitials = (name: string) => {
+    if (!name) return '??';
+    const parts = name.split(' ');
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
 
-          <View style={styles.headerCenter}>
-            <Text style={styles.headerTitle}>Cash Register</Text>
+  // --- RENDER HELPERS ---
+  const renderCard = ({item}: {item: CashRegisterData}) => {
+    return (
+      <View style={styles.cardRow}>
+        {/* Left: Avatar & Name */}
+        <View style={styles.leftContent}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>{getInitials(item.name)}</Text>
           </View>
-
-          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="#fff" />
-          </TouchableOpacity>
+          <View style={styles.infoWrapper}>
+            <Text style={styles.nameText}>{item.name}</Text>
+            <View style={styles.detailRow}>
+              <Icon name="calendar-clock" size={14} color={THEME.textGray} />
+              <Text style={styles.detailText}>
+                Open: {new Date(item.creg_opening_date).toLocaleDateString()}
+              </Text>
+            </View>
+            <View style={styles.detailRow}>
+              <Icon name="calendar-check" size={14} color={THEME.textGray} />
+              <Text style={styles.detailText}>
+                Close:{' '}
+                {item.creg_closing_date
+                  ? new Date(item.creg_closing_date).toLocaleDateString()
+                  : 'Active'}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {/* Filter Section */}
+        {/* Right: Amounts */}
+        <View style={styles.rightContent}>
+          <View style={styles.balanceBadge}>
+            <Text style={styles.balanceLabel}>Opening</Text>
+            <Text style={[styles.balanceValue, {color: THEME.textDark}]}>
+              {formatNumber(item.creg_cash_in_hand)}
+            </Text>
+          </View>
+          <View style={styles.balanceBadge}>
+            <Text style={styles.balanceLabel}>Closing</Text>
+            <Text style={styles.balanceValue}>
+              {formatNumber(item.creg_closing_amount)}
+            </Text>
+          </View>
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
+
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.headerContainer}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Cash Register</Text>
+            <TouchableOpacity onPress={handlePrint} style={styles.iconBtn}>
+              <Icon name="printer" size={24} color={THEME.white} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* --- CONTENT --- */}
+      <View style={{flex: 1}}>
+        {/* --- FILTER CONTAINER --- */}
         <View style={styles.filterContainer}>
-          {/* Date Pickers */}
-          <View style={styles.dateContainer}>
-            <View style={styles.datePicker}>
-              <Text style={styles.dateLabel}>From:</Text>
+          <View style={styles.dateRow}>
+            {/* FROM DATE */}
+            <View style={styles.dateCol}>
+              <Text style={styles.inputLabel}>From Date</Text>
               <TouchableOpacity
-                style={styles.dateButton}
+                style={styles.dateBtn}
                 onPress={() => setShowStartDatePicker(true)}>
                 <Text style={styles.dateText}>
                   {startDate.toLocaleDateString()}
                 </Text>
-                <Icon name="calendar" size={18} color={backgroundColors.dark} />
+                <Icon name="calendar" size={18} color={THEME.textGray} />
               </TouchableOpacity>
               {showStartDatePicker && (
                 <DateTimePicker
@@ -333,15 +418,16 @@ export default function CashRegister({navigation}: any) {
               )}
             </View>
 
-            <View style={styles.datePicker}>
-              <Text style={styles.dateLabel}>To:</Text>
+            {/* TO DATE */}
+            <View style={styles.dateCol}>
+              <Text style={styles.inputLabel}>To Date</Text>
               <TouchableOpacity
-                style={styles.dateButton}
+                style={styles.dateBtn}
                 onPress={() => setShowEndDatePicker(true)}>
                 <Text style={styles.dateText}>
                   {endDate.toLocaleDateString()}
                 </Text>
-                <Icon name="calendar" size={18} color={backgroundColors.dark} />
+                <Icon name="calendar" size={18} color={THEME.textGray} />
               </TouchableOpacity>
               {showEndDatePicker && (
                 <DateTimePicker
@@ -356,177 +442,101 @@ export default function CashRegister({navigation}: any) {
             </View>
           </View>
 
-          {/* Dropdown */}
-          <DropDownPicker
-            items={transformedUsers}
-            open={userOpen}
-            setOpen={setUserOpen}
-            value={userValue}
-            setValue={setUserValue}
-            placeholder="Select User"
-            placeholderStyle={{color: '#666'}}
-            textStyle={{color: '#144272'}}
-            ArrowUpIconComponent={() => (
-              <Icon name="chevron-up" size={18} color={backgroundColors.dark} />
-            )}
-            ArrowDownIconComponent={() => (
-              <Icon
-                name="chevron-down"
-                size={18}
-                color={backgroundColors.dark}
-              />
-            )}
-            style={[styles.dropdown]}
-            dropDownContainerStyle={styles.dropDownContainer}
-            listMode="MODAL"
-            listItemLabelStyle={{
-              color: backgroundColors.dark,
-              fontWeight: '500',
-            }}
-            labelStyle={{
-              color: backgroundColors.dark,
-              fontSize: 16,
-            }}
-            searchable
-            searchTextInputStyle={{
-              borderWidth: 0,
-              width: '100%',
-            }}
-            searchContainerStyle={{
-              borderColor: backgroundColors.gray,
-            }}
-          />
-        </View>
-
-        {/* Summary Cards */}
-        <View style={styles.summaryContainer}>
-          <View style={styles.innerSummaryCtx}>
-            <Text style={styles.summaryLabel}>Total Opening Amount: </Text>
-            <Text style={styles.summaryValue}>
-              {formatNumber(totals.totalOpenAmount)}
-            </Text>
-          </View>
-          <View style={styles.innerSummaryCtx}>
-            <Text style={styles.summaryLabel}>Total Closing Amount: </Text>
-            <Text style={styles.summaryValue}>
-              {formatNumber(totals.totalClosingAmount)}
-            </Text>
+          {/* USER SELECT */}
+          <View style={styles.dropdownWrapper}>
+            <Text style={styles.inputLabel}>Select User</Text>
+            <DropDownPicker
+              items={transformedUsers}
+              open={userOpen}
+              setOpen={setUserOpen}
+              value={userValue}
+              setValue={setUserValue}
+              placeholder="Select User"
+              style={styles.dropdown}
+              dropDownContainerStyle={styles.dropdownContainer}
+              listMode="MODAL"
+              theme="LIGHT"
+            />
           </View>
         </View>
 
-        <View style={styles.listContainer}>
-          <FlatList
-            data={paginatedData}
-            keyExtractor={(item, index) => index.toString()}
-            style={{marginTop: 10}}
-            renderItem={({item}) => (
-              <View style={styles.card}>
-                {/* Avatar + Name + Actions */}
-                <View style={styles.row}>
-                  <View>
-                    <Text style={styles.name}>{item.name}</Text>
-                    <Text style={styles.subText}>
-                      <Text style={{fontWeight: '600'}}>Opening Date: </Text>
-                      {new Date(item.creg_opening_date)
-                        .toLocaleDateString('en-GB', {
-                          day: 'numeric',
-                          month: 'short',
-                          year: 'numeric',
-                        })
-                        .replace(/ /g, '-')}
-                    </Text>
-                  </View>
+        <ScrollView
+          contentContainerStyle={{paddingBottom: 160}}
+          showsVerticalScrollIndicator={false}>
+          {/* --- SUMMARY --- */}
+          <View style={[styles.summaryCard, {flexDirection: 'column', gap: 6}]}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                width: '100%',
+              }}>
+              <Text style={styles.summaryLabel}>Total Opening</Text>
+              <Text style={[styles.summaryValue, {color: THEME.success}]}>
+                {formatNumber(totals.totalOpenAmount)}
+              </Text>
+            </View>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                width: '100%',
+              }}>
+              <Text style={styles.summaryLabel}>Total Closing</Text>
+              <Text style={[styles.summaryValue, {color: THEME.danger}]}>
+                {formatNumber(totals.totalClosingAmount)}
+              </Text>
+            </View>
+          </View>
 
-                  <View style={[{alignSelf: 'flex-start', marginTop: 22}]}>
-                    <Text style={[styles.subText, {verticalAlign: 'top'}]}>
-                      <Text style={{fontWeight: '600'}}>Closing Date: </Text>
-                      {item.creg_closing_date
-                        ? new Date(item.creg_closing_date)
-                            .toLocaleDateString('en-GB', {
-                              day: '2-digit',
-                              month: 'short',
-                              year: 'numeric',
-                            })
-                            .replace(/ /g, '-')
-                        : 'Not Cleared'}
-                    </Text>
-                  </View>
+          {/* --- LIST --- */}
+          <View style={styles.listContainer}>
+            <FlatList
+              data={paginatedData}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={renderCard}
+              scrollEnabled={false}
+              ListEmptyComponent={
+                <View style={styles.centerContent}>
+                  <Icon name="cash-register" size={60} color="#D1D5DB" />
+                  <Text style={styles.emptyText}>No records found.</Text>
                 </View>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    marginTop: 5,
-                  }}>
-                  <Text style={styles.subText}>
-                    <Text style={{fontWeight: '600'}}>Opening Amount: </Text>
-                    {formatNumber(item.creg_cash_in_hand) ?? '0'}
-                  </Text>
-                  <Text style={styles.subText}>
-                    <Text style={{fontWeight: '600'}}>Closing Amount: </Text>
-                    {formatNumber(item.creg_closing_amount) ?? '0'}
-                  </Text>
-                </View>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Icon name="account-group" size={48} color="#666" />
-                <Text style={styles.emptyText}>No record found.</Text>
-              </View>
-            }
-            contentContainerStyle={{paddingBottom: 90}}
-            showsVerticalScrollIndicator={false}
-          />
-        </View>
+              }
+            />
+          </View>
+        </ScrollView>
 
-        {/* Pagination Controls */}
+        {/* --- PAGINATION (Bottom Floating) --- */}
         {totalRecords > 0 && (
           <View style={styles.paginationContainer}>
             <TouchableOpacity
               disabled={currentPage === 1}
-              onPress={() => setCurrentPage(prev => prev - 1)}
-              style={[
-                styles.pageButton,
-                currentPage === 1 && styles.pageButtonDisabled,
-              ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === 1 && styles.pageButtonTextDisabled,
-                ]}>
-                Prev
-              </Text>
+              onPress={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              style={[styles.pageBtn, currentPage === 1 && styles.disabledBtn]}>
+              <Icon name="chevron-left" size={24} color={THEME.white} />
             </TouchableOpacity>
 
-            <View style={styles.pageIndicator}>
-              <Text style={styles.pageIndicatorText}>
-                Page <Text style={styles.pageCurrent}>{currentPage}</Text> of{' '}
-                {totalPages}
-              </Text>
-              <Text style={styles.totalText}>
-                Total: {totalRecords} records
-              </Text>
-            </View>
+            <Text style={styles.pageText}>
+              Page {currentPage} of {totalPages}
+            </Text>
 
             <TouchableOpacity
               disabled={currentPage === totalPages}
-              onPress={() => setCurrentPage(prev => prev + 1)}
+              onPress={() =>
+                setCurrentPage(prev => Math.min(prev + 1, totalPages))
+              }
               style={[
-                styles.pageButton,
-                currentPage === totalPages && styles.pageButtonDisabled,
+                styles.pageBtn,
+                currentPage === totalPages && styles.disabledBtn,
               ]}>
-              <Text
-                style={[
-                  styles.pageButtonText,
-                  currentPage === totalPages && styles.pageButtonTextDisabled,
-                ]}>
-                Next
-              </Text>
+              <Icon name="chevron-right" size={24} color={THEME.white} />
             </TouchableOpacity>
           </View>
         )}
+        <BottomBar />
       </View>
+
+      <Toast />
     </SafeAreaView>
   );
 }
@@ -534,257 +544,244 @@ export default function CashRegister({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER ---
+  headerWrapper: {
+    zIndex: 999,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 90, // allow overlap
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: THEME.primary,
+  },
+  headerTop: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 12,
   },
 
-  // Filter Container
+  // --- FILTER CONTAINER ---
   filterContainer: {
-    backgroundColor: backgroundColors.light,
+    backgroundColor: THEME.white,
     borderRadius: 16,
-    paddingVertical: 20,
+    paddingVertical: 15,
     paddingHorizontal: 15,
-    marginTop: 10,
-    marginHorizontal: 12,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+    marginTop: -80,
+    marginHorizontal: 16,
+    marginBottom: 0,
+    elevation: 10,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+    shadowOffset: {width: 0, height: 2},
+    zIndex: 1000,
   },
-  dateContainer: {
+  dateRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 12,
+    gap: 10,
   },
-  datePicker: {
-    width: '48%',
+  dateCol: {
+    flex: 1,
   },
-  dateLabel: {
-    color: backgroundColors.dark,
+  inputLabel: {
+    fontSize: 12,
     fontWeight: '600',
-    marginBottom: 5,
-    fontSize: 14,
+    color: THEME.textGray,
+    marginBottom: 6,
+    textTransform: 'uppercase',
   },
-  dateButton: {
+  dateBtn: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-    height: 48,
+    backgroundColor: THEME.background,
   },
   dateText: {
-    color: backgroundColors.dark,
-    fontSize: 14,
+    fontSize: 13,
+    color: THEME.textDark,
     fontWeight: '500',
+  },
+  dropdownWrapper: {
+    zIndex: 2000,
   },
   dropdown: {
-    backgroundColor: backgroundColors.light,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.3)',
-    borderRadius: 10,
-    minHeight: 48,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 4,
-    height: 48,
-    marginBottom: 10,
+    borderColor: THEME.border,
+    borderRadius: 8,
+    minHeight: 44,
   },
-  dropdownDisabled: {
-    backgroundColor: '#dfdfdfff',
-    borderColor: '#ccc',
-  },
-  dropDownContainer: {
-    backgroundColor: 'white',
-    borderColor: 'rgba(0,0,0,0.3)',
-    borderRadius: 10,
-    maxHeight: 75,
+  dropdownContainer: {
+    borderColor: THEME.border,
   },
 
-  // Pagination Styling
-  paginationContainer: {
+  // --- SUMMARY ---
+  summaryCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    backgroundColor: backgroundColors.primary,
-    borderTopLeftRadius: 16,
-    borderTopRightRadius: 16,
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    shadowOffset: {width: 0, height: -2},
-    elevation: 6,
-  },
-  pageButton: {
-    backgroundColor: backgroundColors.info,
-    paddingVertical: 8,
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    marginHorizontal: 16,
+    marginTop: 12,
+    paddingVertical: 10,
     paddingHorizontal: 16,
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    shadowOffset: {width: 0, height: 2},
     elevation: 2,
-  },
-  pageButtonDisabled: {
-    backgroundColor: '#ddd',
-  },
-  pageButtonText: {
-    color: backgroundColors.light,
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  pageButtonTextDisabled: {
-    color: '#777',
-  },
-  pageIndicator: {
-    alignItems: 'center',
-  },
-  pageIndicatorText: {
-    color: '#fff',
-    fontWeight: '500',
-    fontSize: 14,
-  },
-  pageCurrent: {
-    fontWeight: '700',
-    color: '#FFD166',
-  },
-  totalText: {
-    color: '#fff',
-    fontSize: 12,
-    marginTop: 2,
-    opacity: 0.8,
-  },
-
-  // FlatList Styling
-  listContainer: {
-    flex: 1,
-    paddingHorizontal: '3%',
-  },
-  card: {
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
     shadowColor: '#000',
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
+    shadowOffset: {width: 0, height: 2},
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  summaryValue: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.primary,
   },
-  name: {
+  summaryLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#144272',
+    color: THEME.textDark,
   },
-  subText: {
-    fontSize: 12,
-    color: backgroundColors.dark,
+
+  // --- LIST / CARD ---
+  listContainer: {
+    flex: 1,
+    marginTop: 16,
+    paddingHorizontal: 16,
+  },
+  cardRow: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  leftContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  avatarContainer: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: THEME.primaryLight,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+  },
+  avatarText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.primary,
+  },
+  infoWrapper: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  nameText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 4,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 2,
   },
-  emptyContainer: {
+  detailText: {
+    fontSize: 12,
+    color: THEME.textGray,
+    marginLeft: 4,
+  },
+  rightContent: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    paddingLeft: 8,
+  },
+  balanceBadge: {
+    alignItems: 'flex-end',
+    marginBottom: 6,
+  },
+  balanceLabel: {
+    fontSize: 10,
+    color: THEME.textGray,
+    textTransform: 'uppercase',
+    marginBottom: 1,
+  },
+  balanceValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.danger, // default color
+  },
+
+  // --- EMPTY / PAGINATION ---
+  centerContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 15,
-    width: '96%',
-    alignSelf: 'center',
-    marginTop: 60,
-    paddingVertical: 20,
+    paddingVertical: 50,
   },
   emptyText: {
     marginTop: 10,
-    fontSize: 16,
-    color: '#666',
-    textAlign: 'center',
-  },
-
-  // Summary Container
-  summaryContainer: {
-    marginHorizontal: 12,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 14,
-    marginVertical: 5,
-    padding: 10,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-    marginTop: 10,
-  },
-  innerSummaryCtx: {
-    flexDirection: 'row',
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  summaryLabel: {
     fontSize: 14,
-    color: '#555',
-    fontWeight: '500',
+    color: THEME.textGray,
   },
-  summaryValue: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-    fontWeight: 'bold',
+  paginationContainer: {
+    position: 'absolute',
+    bottom: 100,
+    alignSelf: 'center',
+    backgroundColor: THEME.primary,
+    borderRadius: 30,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 8,
+  },
+  pageBtn: {
+    padding: 5,
+  },
+  disabledBtn: {
+    opacity: 0.3,
+  },
+  pageText: {
+    color: THEME.white,
+    fontSize: 13,
+    fontWeight: '600',
+    marginHorizontal: 15,
   },
 });

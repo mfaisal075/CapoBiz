@@ -5,7 +5,9 @@ import {
   SafeAreaView,
   TouchableOpacity,
   ScrollView,
-  Image,
+  StatusBar,
+  Linking,
+  Platform,
 } from 'react-native';
 import {useDrawer} from '../../DrawerContext';
 import React, {useEffect, useState} from 'react';
@@ -15,8 +17,28 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import RNPrint from 'react-native-print';
 import {useUser} from '../../CTX/UserContext';
 import Toast from 'react-native-toast-message';
-import backgroundColors from '../../Colors';
 import {BackHandler} from 'react-native';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  danger: '#EF4444',
+  success: '#10B981',
+  info: '#3B82F6',
+  warning: '#F59E0B',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 interface Capital {
   stockvalue: number;
@@ -149,149 +171,96 @@ export default function BusinessCapital({navigation}: any) {
 
     const n = typeof num === 'string' ? parseFloat(num) : num;
     if (isNaN(n)) return '0.00';
-
-    const abs = Math.abs(n);
-
-    if (abs >= 1e33) {
-      return (n / 1e33).toFixed(n % 1e33 === 0 ? 0 : 2) + 'Dec';
-    } else if (abs >= 1000000000000000) {
-      return (
-        (n / 1000000000000000).toFixed(n % 1000000000000000 === 0 ? 0 : 2) + 'Q'
-      );
-    } else if (abs >= 1000000000000) {
-      return (n / 1000000000000).toFixed(n % 1000000000000 === 0 ? 0 : 2) + 'T';
-    } else if (abs >= 1000000000) {
-      return (n / 1000000000).toFixed(n % 1000000000 === 0 ? 0 : 2) + 'B';
-    } else if (abs >= 10000000) {
-      return (n / 10000000).toFixed(n % 10000000 === 0 ? 0 : 2) + 'Cr';
-    } else if (abs >= 100000) {
-      return (n / 100000).toFixed(n % 100000 === 0 ? 0 : 2) + 'L';
-    } else if (abs >= 1000) {
-      return (n / 1000).toFixed(n % 1000 === 0 ? 0 : 2) + 'K';
-    } else {
-      return n.toFixed(2);
-    }
+    return n.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
   }
+
+  // Helper to render rows safely
+  const renderRow = (
+    label: string,
+    value: number | string | undefined,
+    isLast: boolean = false,
+  ) => (
+    <View style={[styles.tableRow, isLast && {borderBottomWidth: 0}]}>
+      <View style={{flex: 1}}>
+        <Text style={styles.cellLabel}>{label}</Text>
+      </View>
+      <View>
+        <Text style={styles.cellValue}>{formatNumber(value)}</Text>
+      </View>
+    </View>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          style={styles.headerContainer}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Business Capital</Text>
+            <TouchableOpacity onPress={handlePrint} style={styles.iconBtn}>
+              <Icon name="printer" size={24} color={THEME.white} />
+            </TouchableOpacity>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* --- NET CAPITAL SURFACE (Fixed Overlap) --- */}
+      <View style={styles.surface}>
+        <View style={styles.summaryRow}>
+          <Text style={styles.summaryLabel}>Net Business Capital</Text>
+          <Text style={styles.summaryValue}>
+            {formatNumber(capital?.business_capital)}
+          </Text>
+        </View>
+        <View style={styles.separator} />
+        <Text style={styles.surfaceSubText}>
+          Includes all assets and liabilities.
+        </Text>
+      </View>
+
+      {/* --- CONTENT --- */}
+      <View style={{flex: 1}}>
+        <ScrollView
+          contentContainerStyle={{paddingBottom: 100}}
+          showsVerticalScrollIndicator={false}>
+          {/* --- ASSETS TABLE --- */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Assets (What you own)</Text>
+            <View style={styles.tableSurface}>
+              {renderRow('Current Stock Value', capital?.stockvalue)}
+              {renderRow('Cash In Hand', capital?.cashinhand)}
+              {renderRow('Supplier Receivables', capital?.supplierReceiveable)}
+              {renderRow('Supplier Payables', capital?.supplierPayable, true)}
+            </View>
           </View>
 
-          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.netCapitalCtr}>
-          <View>
-            <Text style={styles.busCapTitle}>Net Business Capital</Text>
-            <Text style={styles.businessCapText}>
-              {formatNumber(capital?.business_capital) ?? '0.00'}
-            </Text>
-          </View>
-          <Image
-            source={require('../../../assets/money.png')}
-            style={styles.busCapitalImg}
-          />
-        </View>
-
-        <ScrollView style={styles.scrollContainer}>
-          {/* Business Capital Summary Cards */}
-          <View style={styles.summaryContainer}>
-            <Text style={styles.summaryTitle}>Assets (What you own)</Text>
-
-            <View style={styles.summaryCard}>
-              <View
-                style={{
-                  borderLeftColor: backgroundColors.info,
-                  borderLeftWidth: 2,
-                }}>
-                <Text style={styles.cardTitle}>Current Stock Value</Text>
-                <Text style={styles.cardValue}>
-                  {formatNumber(capital?.stockvalue) ?? '0.00'}
-                </Text>
-              </View>
-              <View
-                style={{
-                  borderLeftColor: backgroundColors.info,
-                  borderLeftWidth: 2,
-                  marginLeft: 10,
-                }}>
-                <Text style={styles.cardTitle}>Supplier Payables</Text>
-                <Text style={styles.cardValue}>
-                  {formatNumber(capital?.supplierPayable) ?? '0.00'}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.summaryCard}>
-              <View
-                style={{
-                  borderLeftColor: backgroundColors.info,
-                  borderLeftWidth: 2,
-                }}>
-                <Text style={styles.cardTitle}>Cash In Hand</Text>
-                <Text style={styles.cardValue}>
-                  {formatNumber(capital?.cashinhand) ?? '0.00'}
-                </Text>
-              </View>
-              <View
-                style={{
-                  borderLeftColor: backgroundColors.info,
-                  borderLeftWidth: 2,
-                  marginLeft: 10,
-                }}>
-                <Text style={styles.cardTitle}>Supplier Receivables</Text>
-                <Text style={styles.cardValue}>
-                  {formatNumber(capital?.supplierReceiveable) ?? '0.00'}
-                </Text>
-              </View>
-            </View>
-
-            <Text style={[styles.summaryTitle, {marginTop: 12}]}>
-              Liabilities (What you owe)
-            </Text>
-
-            <View style={styles.summaryCard}>
-              <View
-                style={{
-                  borderLeftColor: backgroundColors.warning,
-                  borderLeftWidth: 2,
-                }}>
-                <Text style={styles.cardTitle}>Customer Receivables</Text>
-                <Text style={styles.cardValue}>
-                  {formatNumber(capital?.customerReceiveable) ?? '0.00'}
-                </Text>
-              </View>
-              <View
-                style={{
-                  borderLeftColor: backgroundColors.warning,
-                  borderLeftWidth: 2,
-                }}>
-                <Text style={styles.cardTitle}>Customer Payables</Text>
-                <Text style={styles.cardValue}>
-                  {formatNumber(capital?.customerPayable) ?? '0.00'}
-                </Text>
-              </View>
+          {/* --- LIABILITIES TABLE --- */}
+          <View style={styles.sectionContainer}>
+            <Text style={styles.sectionTitle}>Liabilities (What you owe)</Text>
+            <View style={styles.tableSurface}>
+              {renderRow('Customer Receivables', capital?.customerReceiveable)}
+              {renderRow('Customer Payables', capital?.customerPayable, true)}
             </View>
           </View>
         </ScrollView>
-
-        <Toast />
       </View>
+
+      <BottomBar />
+      <Toast />
     </SafeAreaView>
   );
 }
@@ -299,149 +268,121 @@ export default function BusinessCapital({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER ---
+  headerWrapper: {
+    zIndex: 999,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 60,
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: THEME.primary,
+  },
+  headerContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
-    backgroundColor: backgroundColors.primary,
-  },
-
-  scrollContainer: {
-    marginTop: '20%',
-    backgroundColor: backgroundColors.gray,
-    borderTopRightRadius: 14,
-    borderTopLeftRadius: 14,
+  iconBtn: {
+    padding: 4,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    borderRadius: 8,
   },
 
-  // Net Capital Container
-  netCapitalCtr: {
-    position: 'absolute',
+  // --- SURFACE ---
+  surface: {
+    backgroundColor: THEME.white,
+    marginHorizontal: 16,
+    marginTop: -30, // Floating overlap effect
+    borderRadius: 16,
+    padding: 20,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    shadowOffset: {width: 0, height: 4},
+    zIndex: 1000,
+  },
+  summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    left: 12,
-    top: 80,
-    height: 160,
-    width: '94%',
-    paddingHorizontal: 20,
-    paddingVertical: 15,
-    backgroundColor: backgroundColors.light,
-    borderRadius: 14,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-    zIndex: 1,
   },
-
-  // Summary Container
-  summaryContainer: {
-    backgroundColor: backgroundColors.gray,
-    borderRadius: 14,
-    padding: 10,
-  },
-  busCapTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: backgroundColors.primary,
-    marginBottom: 10,
-  },
-  summaryTitle: {
-    marginTop: 90,
-    marginHorizontal: 15,
-    color: backgroundColors.dark,
-    fontSize: 18,
-    fontWeight: '600',
-    borderBottomColor: 'rgba(0,0,0,0.3)',
-    borderBottomWidth: 1.5,
-    paddingBottom: 8,
-  },
-  businessCapText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-  },
-  busCapitalImg: {
-    height: 80,
-    width: 80,
-  },
-  summaryCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 12,
-    backgroundColor: backgroundColors.light,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
-    shadowColor: '#000',
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 2,
-  },
-  totalCapitalCard: {
-    borderWidth: 2,
-    borderColor: '#4CAF50',
-    backgroundColor: 'rgba(76, 175, 80, 0.1)',
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardTitle: {
+  summaryLabel: {
     fontSize: 14,
+    color: THEME.textGray,
     fontWeight: '600',
-    color: 'rgba(0,0,0,0.6)',
-    marginLeft: 8,
+    textTransform: 'uppercase',
   },
-  totalCapitalTitle: {
-    fontSize: 16,
+  summaryValue: {
+    fontSize: 24,
     fontWeight: 'bold',
-    color: '#4CAF50',
+    color: THEME.primary,
   },
-  cardValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    marginLeft: 8,
-    marginTop: 4,
+  separator: {
+    height: 1,
+    backgroundColor: THEME.border,
+    marginVertical: 12,
   },
-  totalCapitalValue: {
-    fontSize: 20,
-    color: '#4CAF50',
+  surfaceSubText: {
+    fontSize: 12,
+    color: THEME.textGray,
+    fontStyle: 'italic',
+  },
+
+  // --- SECTIONS ---
+  sectionContainer: {
+    marginTop: 20,
+    paddingHorizontal: 16,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: THEME.textDark,
+    marginBottom: 10,
+    marginLeft: 4,
+    textTransform: 'uppercase',
+  },
+  tableSurface: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: {width: 0, height: 2},
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  cellLabel: {
+    fontSize: 14,
+    color: THEME.textGray,
+    fontWeight: '500',
+  },
+  cellValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: THEME.textDark,
   },
 });

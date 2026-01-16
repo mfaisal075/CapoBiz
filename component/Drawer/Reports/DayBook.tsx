@@ -7,6 +7,7 @@ import {
   ScrollView,
   Image,
   BackHandler,
+  StatusBar,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
@@ -18,7 +19,27 @@ import {useUser} from '../../CTX/UserContext';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import RNPrint from 'react-native-print';
 import Toast from 'react-native-toast-message';
-import backgroundColors from '../../Colors';
+import LinearGradient from 'react-native-linear-gradient';
+import BottomBar from '../../BottomBar';
+
+// --- THEME ---
+const THEME = {
+  primary: '#2A652B',
+  primaryLight: '#E8F5E9',
+  gradientStart: '#143D15',
+  gradientEnd: '#2A652B',
+  accent: '#4CAF50',
+  background: '#F0F2F5',
+  white: '#FFFFFF',
+  textDark: '#111827',
+  textGray: '#6B7280',
+  danger: '#EF4444',
+  success: '#10B981',
+  info: '#3B82F6',
+  warning: '#F59E0B',
+  border: '#E5E7EB',
+  rowHover: '#F9FAFB',
+};
 
 interface DayBookData {
   sale: number;
@@ -232,256 +253,191 @@ export default function DayBook({navigation}: any) {
     }
   }
 
+  // --- RENDER HELPERS ---
+  const renderSummaryItem = (
+    label: string,
+    value: number,
+    icon: string,
+    color: string,
+  ) => (
+    <View style={styles.summaryItem}>
+      <View style={[styles.iconContainer, {backgroundColor: color + '20'}]}>
+        <Icon name={icon} size={20} color={color} />
+      </View>
+      <View style={styles.summaryContent}>
+        <Text style={styles.summaryLabel}>{label}</Text>
+        <Text style={[styles.summaryValue, {color: THEME.textDark}]}>
+          {formatNumber(value)}
+        </Text>
+      </View>
+    </View>
+  );
+
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.gradientBackground}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={openDrawer} style={styles.headerBtn}>
-            <Image
-              source={require('../../../assets/menu.png')}
-              tintColor="white"
-              style={styles.menuIcon}
-            />
-          </TouchableOpacity>
+      <StatusBar
+        barStyle="light-content"
+        backgroundColor={THEME.gradientStart}
+        translucent={true}
+      />
 
-          <View style={styles.headerCenter}>
+      {/* --- HEADER --- */}
+      <View style={styles.headerWrapper}>
+        <LinearGradient
+          colors={[THEME.gradientStart, THEME.gradientEnd]}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.headerContainer}>
+          <View style={styles.headerTop}>
+            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+              <Icon name="menu" size={24} color={THEME.white} />
+            </TouchableOpacity>
             <Text style={styles.headerTitle}>Day Book</Text>
+            <TouchableOpacity onPress={handlePrint} style={styles.iconBtn}>
+              <Icon name="printer" size={24} color={THEME.white} />
+            </TouchableOpacity>
           </View>
+        </LinearGradient>
+      </View>
 
-          <TouchableOpacity style={[styles.headerBtn]} onPress={handlePrint}>
-            <Icon name="printer" size={24} color="#fff" />
-          </TouchableOpacity>
+      {/* --- CONTENT --- */}
+      <View style={{flex: 1}}>
+        {/* --- FILTER CONTAINER --- */}
+        <View style={styles.filterContainer}>
+          <View style={styles.dateRow}>
+            {/* FROM DATE */}
+            <View style={styles.dateCol}>
+              <Text style={styles.inputLabel}>Select Date</Text>
+              <TouchableOpacity
+                style={styles.dateBtn}
+                onPress={() => setShowStartDatePicker(true)}>
+                <Text style={styles.dateText}>
+                  {startDate.toLocaleDateString()}
+                </Text>
+                <Icon name="calendar" size={18} color={THEME.textGray} />
+              </TouchableOpacity>
+              {showStartDatePicker && (
+                <DateTimePicker
+                  testID="startDatePicker"
+                  value={startDate}
+                  mode="date"
+                  is24Hour={true}
+                  display="default"
+                  onChange={onStartDateChange}
+                />
+              )}
+            </View>
+          </View>
         </View>
 
-        {/* Date Picker Section */}
-        <View style={styles.datePickerContainer}>
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={() => setShowStartDatePicker(true)}
-            style={styles.datePickerButton}>
-            <Text style={styles.dateText}>
-              Date: {startDate.toLocaleDateString()}
-            </Text>
-            <Icon name="calendar" size={20} color={backgroundColors.dark} />
-          </TouchableOpacity>
-        </View>
-
-        {showStartDatePicker && (
-          <DateTimePicker
-            testID="startDatePicker"
-            value={startDate}
-            mode="date"
-            is24Hour={true}
-            display="default"
-            onChange={onStartDateChange}
-          />
-        )}
-
-        <ScrollView style={styles.scrollContainer}>
+        <ScrollView
+          contentContainerStyle={{paddingBottom: 100}}
+          showsVerticalScrollIndicator={false}>
           {dayBook ? (
-            <>
-              <View
-                style={[
-                  styles.summaryContainer,
-                  {backgroundColor: '#28a7461d'},
-                ]}>
-                {/* Income Section */}
-                <Text style={styles.summaryTitle}>Income</Text>
-
-                <View style={styles.subContainer}>
-                  <View style={styles.iconContainer}>
-                    <Icon
-                      name="cart"
-                      size={16}
-                      color={backgroundColors.light}
-                    />
-                  </View>
-
-                  <View style={styles.valueContainer}>
-                    <Text style={styles.label}>Sales</Text>
-                    <Text style={styles.value}>
-                      {formatNumber(dayBook.sale)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.subContainer}>
-                  <View style={styles.iconContainer}>
-                    <Icon
-                      name="clipboard-arrow-left"
-                      size={16}
-                      color={backgroundColors.light}
-                    />
-                  </View>
-
-                  <View style={styles.valueContainer}>
-                    <Text style={styles.label}>Purchase Return</Text>
-                    <Text style={styles.value}>
-                      {formatNumber(dayBook.purchase_return)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.subContainer}>
-                  <View style={styles.iconContainer}>
-                    <Icon
-                      name="cash"
-                      size={16}
-                      color={backgroundColors.light}
-                    />
-                  </View>
-
-                  <View style={styles.valueContainer}>
-                    <Text style={styles.label}>All Customer Receivables</Text>
-                    <Text style={styles.value}>
-                      {formatNumber(dayBook.customerreceiveable)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.subContainer}>
-                  <View style={styles.iconContainer}>
-                    <Icon
-                      name="account-cash"
-                      size={16}
-                      color={backgroundColors.light}
-                    />
-                  </View>
-
-                  <View style={styles.valueContainer}>
-                    <Text style={styles.label}>All Supplier Payables</Text>
-                    <Text style={styles.value}>
-                      {formatNumber(dayBook.supplierpayable)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.totalContainer}>
-                  <Text style={styles.totalLabel}>Total Income</Text>
-                  <Text style={styles.totalValue}>
+            <View style={styles.listContainer}>
+              {/* --- INCOME SECTION --- */}
+              <View style={styles.sectionContainer}>
+                <View
+                  style={[
+                    styles.sectionHeader,
+                    {borderLeftColor: THEME.success},
+                  ]}>
+                  <Text style={styles.sectionTitle}>Income</Text>
+                  <Text style={[styles.sectionTotal, {color: THEME.success}]}>
                     {formatNumber(dayBook.income)}
                   </Text>
                 </View>
+
+                <View style={styles.card}>
+                  {renderSummaryItem(
+                    'Sales',
+                    dayBook.sale,
+                    'cart',
+                    THEME.success,
+                  )}
+                  {renderSummaryItem(
+                    'Purchase Return',
+                    dayBook.purchase_return,
+                    'clipboard-arrow-left',
+                    THEME.success,
+                  )}
+                  {renderSummaryItem(
+                    'Customer Receivables',
+                    dayBook.customerreceiveable,
+                    'cash-plus',
+                    THEME.success,
+                  )}
+                  {renderSummaryItem(
+                    'Supplier Payables',
+                    dayBook.supplierpayable,
+                    'account-cash',
+                    THEME.success,
+                  )}
+                </View>
               </View>
 
-              <View
-                style={[
-                  styles.summaryContainer,
-                  {backgroundColor: '#dc35461f'},
-                ]}>
-                {/* Income Section */}
-                <Text style={styles.summaryTitle}>Expense</Text>
-
-                <View style={styles.subContainer}>
-                  <View style={styles.expIconContainer}>
-                    <Icon
-                      name="cart-plus"
-                      size={16}
-                      color={backgroundColors.light}
-                    />
-                  </View>
-
-                  <View style={styles.valueContainer}>
-                    <Text style={styles.label}>Purchase</Text>
-                    <Text style={styles.value}>
-                      {formatNumber(dayBook.purchase)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.subContainer}>
-                  <View style={styles.expIconContainer}>
-                    <Icon
-                      name="clipboard-arrow-left"
-                      size={16}
-                      color={backgroundColors.light}
-                    />
-                  </View>
-
-                  <View style={styles.valueContainer}>
-                    <Text style={styles.label}>Sale Return</Text>
-                    <Text style={styles.value}>
-                      {formatNumber(dayBook.sale_return)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.subContainer}>
-                  <View style={styles.expIconContainer}>
-                    <Icon
-                      name="cash-minus"
-                      size={16}
-                      color={backgroundColors.light}
-                    />
-                  </View>
-
-                  <View style={styles.valueContainer}>
-                    <Text style={styles.label}>Daily Expense</Text>
-                    <Text style={styles.value}>
-                      {formatNumber(dayBook.exp)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.subContainer}>
-                  <View style={styles.expIconContainer}>
-                    <Icon
-                      name="account-cash"
-                      size={16}
-                      color={backgroundColors.light}
-                    />
-                  </View>
-
-                  <View style={styles.valueContainer}>
-                    <Text style={styles.label}>All Customer Payables</Text>
-                    <Text style={styles.value}>
-                      {formatNumber(dayBook.customerpayable)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.subContainer}>
-                  <View style={styles.expIconContainer}>
-                    <Icon
-                      name="account-cash"
-                      size={16}
-                      color={backgroundColors.light}
-                    />
-                  </View>
-
-                  <View style={styles.valueContainer}>
-                    <Text style={styles.label}>All Supplier Receivables</Text>
-                    <Text style={styles.value}>
-                      {formatNumber(dayBook.supplierreceivable)}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.totalContainer}>
-                  <Text style={styles.expTotalLabel}>Total Expense</Text>
-                  <Text style={styles.expTotalValue}>
+              {/* --- EXPENSE SECTION --- */}
+              <View style={styles.sectionContainer}>
+                <View
+                  style={[
+                    styles.sectionHeader,
+                    {borderLeftColor: THEME.danger},
+                  ]}>
+                  <Text style={styles.sectionTitle}>Expense</Text>
+                  <Text style={[styles.sectionTotal, {color: THEME.danger}]}>
                     {formatNumber(dayBook.expense)}
                   </Text>
                 </View>
+
+                <View style={styles.card}>
+                  {renderSummaryItem(
+                    'Purchases',
+                    dayBook.purchase,
+                    'cart-plus',
+                    THEME.danger,
+                  )}
+                  {renderSummaryItem(
+                    'Sale Return',
+                    dayBook.sale_return,
+                    'keyboard-return',
+                    THEME.danger,
+                  )}
+                  {renderSummaryItem(
+                    'Daily Expense',
+                    dayBook.exp,
+                    'cash-minus',
+                    THEME.danger,
+                  )}
+                  {renderSummaryItem(
+                    'Customer Payables',
+                    dayBook.customerpayable,
+                    'account-arrow-right',
+                    THEME.danger,
+                  )}
+                  {renderSummaryItem(
+                    'Supplier Receivables',
+                    dayBook.supplierreceivable,
+                    'account-arrow-left',
+                    THEME.danger,
+                  )}
+                </View>
               </View>
-            </>
+            </View>
           ) : (
-            <View style={styles.noDataContainer}>
+            <View style={styles.centerContent}>
               <Icon
-                name="file-document-outline"
-                size={64}
-                color="rgba(0,0,0,0.5)"
+                name="chart-box-outline"
+                size={50}
+                color={THEME.textGray}
+                style={{opacity: 0.5}}
               />
-              <Text style={styles.noDataText}>No data found for this date</Text>
+              <Text style={styles.emptyText}>No data found for this date.</Text>
             </View>
           )}
-
-          <View style={{height: 50}} />
         </ScrollView>
-
-        <Toast />
       </View>
+      <BottomBar />
+      <Toast />
     </SafeAreaView>
   );
 }
@@ -489,176 +445,162 @@ export default function DayBook({navigation}: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: backgroundColors.gray,
+    backgroundColor: THEME.background,
   },
-  header: {
+  // --- HEADER ---
+  headerWrapper: {
+    zIndex: 999,
+  },
+  headerContainer: {
+    paddingTop: StatusBar.currentHeight ? StatusBar.currentHeight + 10 : 40,
+    paddingBottom: 70, // allow overlap
+    paddingHorizontal: 20,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    elevation: 8,
+    shadowColor: THEME.primary,
+  },
+  headerTop: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    backgroundColor: backgroundColors.primary,
-  },
-  headerBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 10,
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  menuIcon: {
-    width: 28,
-    height: 28,
-  },
-  headerCenter: {
-    flex: 1,
-    alignItems: 'center',
-    marginHorizontal: 15,
   },
   headerTitle: {
-    color: 'white',
     fontSize: 20,
     fontWeight: 'bold',
+    color: THEME.white,
+    letterSpacing: 0.5,
   },
-  gradientBackground: {
-    flex: 1,
-  },
-
-  datePickerContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    marginTop: 10,
-  },
-  datePickerButton: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: backgroundColors.light,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: 'rgba(0,0,0,0.05)',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.4,
-    shadowRadius: 8,
-    elevation: 6,
-    height: 48,
-  },
-  dateText: {
-    color: backgroundColors.dark,
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-
-  scrollContainer: {
-    flex: 1,
-    paddingHorizontal: 12,
-    marginTop: 4,
-  },
-  summaryContainer: {
-    backgroundColor: backgroundColors.light,
+  iconBtn: {
+    padding: 8,
+    backgroundColor: 'rgba(255,255,255,0.2)',
     borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    marginTop: 10,
-    marginBottom: 4,
-    borderWidth: 0.8,
-    borderColor: '#00000036',
+  },
+
+  // --- FILTER CONTAINER ---
+  filterContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 16,
+    paddingVertical: 15,
+    paddingHorizontal: 15,
+    marginTop: -55,
+    marginHorizontal: 16,
+    marginBottom: 0,
+    elevation: 10,
     shadowColor: '#000',
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    shadowOffset: {width: 2, height: 2},
-    elevation: 0,
+    shadowOffset: {width: 0, height: 2},
+    zIndex: 1000,
   },
-  summaryTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    marginBottom: 10,
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: backgroundColors.dark,
-    marginBottom: 10,
-  },
-  value: {
-    fontSize: 16,
-    color: backgroundColors.dark,
-    marginBottom: 10,
-  },
-  subContainer: {
+  dateRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 8,
-    paddingHorizontal: 6,
   },
-  totalContainer: {
+  dateCol: {
+    flex: 1,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: THEME.textGray,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+  },
+  dateBtn: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: THEME.background,
+  },
+  dateText: {
+    fontSize: 13,
+    color: THEME.textDark,
+    fontWeight: '500',
+  },
+
+  // --- LIST / SECTIONS ---
+  listContainer: {
+    paddingTop: 16,
+    paddingHorizontal: 16,
+  },
+  sectionContainer: {
+    marginBottom: 20,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+    paddingLeft: 10,
+    borderLeftWidth: 4,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: THEME.textDark,
+  },
+  sectionTotal: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  card: {
+    backgroundColor: THEME.white,
+    borderRadius: 12,
+    paddingVertical: 5,
+    paddingHorizontal: 15,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.03)',
+  },
+  summaryItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-    marginTop: 4,
-  },
-  totalLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: backgroundColors.primary,
-  },
-  totalValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: backgroundColors.primary,
-  },
-  expTotalLabel: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: backgroundColors.danger,
-  },
-  expTotalValue: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: backgroundColors.danger,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: THEME.rowHover,
   },
   iconContainer: {
-    padding: 8,
-    backgroundColor: backgroundColors.dark,
-    borderRadius: 100,
-    marginRight: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
-  expIconContainer: {
-    padding: 8,
-    backgroundColor: backgroundColors.dark,
-    borderRadius: 100,
-    marginRight: 10,
-  },
-  valueContainer: {
+  summaryContent: {
+    flex: 1,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    flex: 1,
-    borderBottomWidth: 0.2,
-    borderBottomColor: backgroundColors.dark,
+    alignItems: 'center',
   },
-  noDataContainer: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 16,
-    padding: 40,
-    marginVertical: 20,
+  summaryLabel: {
+    fontSize: 14,
+    color: THEME.textGray,
+    fontWeight: '500',
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+
+  // --- EMPTY ---
+  centerContent: {
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    paddingVertical: 50,
   },
-  noDataText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 16,
-    textAlign: 'center',
+  emptyText: {
+    marginTop: 10,
+    fontSize: 14,
+    color: THEME.textGray,
   },
 });
