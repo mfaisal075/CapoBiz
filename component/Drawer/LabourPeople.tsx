@@ -303,39 +303,31 @@ export default function LabourPeople({navigation}: any) {
           <Text style={styles.avatarText}>{getInitials(item.labr_name)}</Text>
         </View>
         <View style={styles.infoContainer}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: 2,
-            }}>
-            <Text style={styles.nameText} numberOfLines={1}>
-              {item.labr_name}
-            </Text>
-            {/* Use Address as a badge similar to Transporter, since no Area/Type available */}
-            {item.labr_address ? (
-              <View style={styles.badgeContainer}>
-                <View style={styles.areaBadge}>
-                  <Text style={styles.areaBadgeText} numberOfLines={1}>
-                    {item.labr_address}
-                  </Text>
-                </View>
-              </View>
-            ) : null}
-          </View>
+          <Text style={styles.nameText} numberOfLines={1}>
+            {item.labr_name}
+          </Text>
           <View style={styles.iconTextRow}>
             <Icon name="phone-outline" size={14} color={THEME.textGray} />
-            <Text style={styles.subText}>
+            <Text style={styles.subText} numberOfLines={1}>
               {item.labr_contact || 'No Contact'}
             </Text>
           </View>
         </View>
-        <Icon
-          name="chevron-right"
-          size={22}
-          color={THEME.primary}
-          style={{marginLeft: 6}}
-        />
+
+        {/* Right Section (Badge & Arrow) */}
+        <View style={styles.rightSection}>
+          <View style={styles.areaBadge}>
+            <Text style={styles.areaBadgeText} numberOfLines={1}>
+              {item.labr_address || 'Labour'}
+            </Text>
+          </View>
+          <Icon
+            name="chevron-right"
+            size={24}
+            color="#9CA3AF"
+            style={{marginLeft: 8}}
+          />
+        </View>
       </TouchableOpacity>
     );
   };
@@ -838,74 +830,77 @@ const styles = StyleSheet.create({
   // --- CARD ITEM ---
   cardRow: {
     backgroundColor: THEME.white,
-    borderRadius: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     width: '94%',
     alignSelf: 'center',
-    marginBottom: 6,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#222',
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.19,
-    shadowRadius: 14,
-    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   avatarContainer: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 50,
+    height: 50,
+    borderRadius: 14,
     backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
-    borderWidth: 0,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: THEME.primarySoft,
   },
   avatarText: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: THEME.primary,
-    letterSpacing: 0.5,
   },
   infoContainer: {
     flex: 1,
     justifyContent: 'center',
+    minWidth: 0,
   },
   nameText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: THEME.textDark,
-    marginRight: 6,
-    maxWidth: '70%',
-  },
-  badgeContainer: {
-    flexDirection: 'row',
-  },
-  areaBadge: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-    maxWidth: 100,
-  },
-  areaBadgeText: {
-    fontSize: 10,
-    color: THEME.textGray,
-    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
   },
   iconTextRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 4,
-    gap: 4,
+    marginTop: 2,
   },
   subText: {
     fontSize: 13,
-    color: THEME.textGray,
-    fontWeight: '500',
+    color: '#6B7280',
+    marginLeft: 6,
+    flexShrink: 1,
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  areaBadge: {
+    backgroundColor: THEME.primarySoft,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  areaBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: THEME.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    maxWidth: 80,
   },
 
   // --- PAGINATION (Floating) ---

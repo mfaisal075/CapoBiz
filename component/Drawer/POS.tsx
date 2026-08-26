@@ -2057,9 +2057,7 @@ export default function POS({navigation}: any) {
               <TouchableOpacity
                 style={[styles.completePurchaseBtn, {marginTop: 20}]}
                 onPress={openRegister}>
-<<<<<<< HEAD
                 <Text style={styles.completePurchaseBtnText}>Confirm</Text>
-=======
                 <LinearGradient
                   colors={[THEME.gradientStart, THEME.gradientEnd]}
                   style={styles.completeBtnGradient}
@@ -2067,7 +2065,6 @@ export default function POS({navigation}: any) {
                   end={{x: 1, y: 0}}>
                   <Text style={styles.completePurchaseBtnText}>Confirm</Text>
                 </LinearGradient>
->>>>>>> b0de9bf (Intial Commit)
               </TouchableOpacity>
             </View>
           </View>

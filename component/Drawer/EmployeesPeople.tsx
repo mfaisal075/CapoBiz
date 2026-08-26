@@ -8,10 +8,8 @@ import {
   FlatList,
   TextInput,
   Modal,
-  Image,
   BackHandler,
   StatusBar,
-  Dimensions,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
@@ -24,19 +22,32 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import LottieView from 'lottie-react-native';
 import BottomBar from '../BottomBar';
+import RNPrint from 'react-native-print';
+import {useUser} from '../CTX/UserContext';
 
 const THEME = {
   primary: '#2A652B',
   primaryLight: '#E8F5E9',
+  primarySoft: 'rgba(42, 101, 43, 0.1)',
   gradientStart: '#143D15',
   gradientEnd: '#2A652B',
-  background: '#F0F2F5', // Slightly darker white for contrast
+  background: '#F8F9FA',
   white: '#FFFFFF',
-  textDark: '#111827',
+  textDark: '#1F2937',
   textGray: '#6B7280',
+  textLight: '#9CA3AF',
   border: '#E5E7EB',
-  rowHover: '#F9FAFB',
   danger: '#EF4444',
+};
+
+// --- HELPER: Get Initials ---
+const getInitials = (name: string) => {
+  if (!name) return 'E';
+  const parts = name.split(' ');
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
 };
 
 interface Employee {
@@ -89,6 +100,7 @@ const initialAddEmployee: AddEmployeeForm = {
 
 export default function EmployeesPeople({navigation}: any) {
   const {openDrawer} = useDrawer();
+  const {bussName, bussAddress} = useUser();
   const [modalVisible, setModalVisible] = useState('');
   const [addForm, setAddForm] = useState<AddEmployeeForm>(initialAddEmployee);
   const [enableBal, setEnableBal] = useState<string[]>([]);
@@ -96,6 +108,63 @@ export default function EmployeesPeople({navigation}: any) {
   const [filteredData, setFilteredData] = useState<Employee[]>([]);
   const [masterData, setMasterData] = useState<Employee[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const printEmployees = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`${BASE_URL}/fetchemployees`);
+      if (res.data && res.data.output) {
+        const {output, total, rpt_name} = res.data;
+
+        const htmlContent = `
+          <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+              <style>
+                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
+                .header { text-align: center; margin-bottom: 20px; }
+                .header h1 { margin: 0; color: #111; font-size: 24px; text-transform: uppercase; }
+                .header p { margin: 5px 0 0 0; color: #555; font-size: 14px; }
+                h2 { text-align: center; color: #333; margin-bottom: 20px; font-size: 18px; text-decoration: underline; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                th, td { border: 1px solid #e5e7eb; padding: 10px 8px; text-align: left; }
+                thead td, th { background-color: #f9fafb; font-weight: bold; color: #374151; }
+                tbody tr:nth-child(even) { background-color: #fdfdfd; }
+                .footer { margin-top: 20px; padding-top: 10px; font-weight: bold; font-size: 14px; text-align: right; border-top: 1px solid #e5e7eb; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>${bussName || 'Business Name'}</h1>
+                <p>${bussAddress || 'Business Address'}</p>
+              </div>
+              <h2>${rpt_name || 'Employees List Report'}</h2>
+              ${output}
+              <div class="footer">
+                Total: ${total || 0}
+              </div>
+            </body>
+          </html>
+        `;
+        await RNPrint.print({html: htmlContent});
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'No data available to print.',
+        });
+      }
+    } catch (error) {
+      console.log('Print error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to generate print document.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -333,11 +402,18 @@ export default function EmployeesPeople({navigation}: any) {
                 <Icon name="menu" size={24} color={THEME.white} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>Employees</Text>
-              <TouchableOpacity
-                onPress={() => setModalVisible('AddEmp')}
-                style={styles.iconBtn}>
-                <Icon name="plus" size={24} color={THEME.white} />
-              </TouchableOpacity>
+              <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                <TouchableOpacity
+                  onPress={printEmployees}
+                  style={[styles.iconBtn, {marginRight: 8}]}>
+                  <Icon name="printer" size={22} color={THEME.white} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setModalVisible('AddEmp')}
+                  style={styles.iconBtn}>
+                  <Icon name="plus" size={24} color={THEME.white} />
+                </TouchableOpacity>
+              </View>
             </View>
           </LinearGradient>
 
@@ -394,52 +470,41 @@ export default function EmployeesPeople({navigation}: any) {
                     {/* Avatar Section */}
                     <View style={styles.avatarContainer}>
                       <Text style={styles.avatarText}>
-                        {item.emp_name
-                          ? item.emp_name.charAt(0).toUpperCase()
-                          : 'E'}
+                        {getInitials(item.emp_name)}
                       </Text>
                     </View>
 
                     {/* Info Section */}
                     <View style={styles.infoContainer}>
-                      <View
-                        style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          marginBottom: 4,
-                        }}>
-                        <Text style={styles.nameText} numberOfLines={1}>
-                          {item.emp_name}
-                        </Text>
-                        <View style={styles.badgeContainer}>
-                          <View style={styles.areaBadge}>
-                            <Text
-                              style={styles.areaBadgeText}
-                              numberOfLines={1}>
-                              {item.emp_type || 'Worker'}
-                            </Text>
-                          </View>
-                        </View>
-                      </View>
+                      <Text style={styles.nameText} numberOfLines={1}>
+                        {item.emp_name}
+                      </Text>
                       <View style={styles.iconTextRow}>
                         <Icon
                           name="phone-outline"
                           size={14}
                           color={THEME.textGray}
                         />
-                        <Text style={styles.subText}>
+                        <Text style={styles.subText} numberOfLines={1}>
                           {item.emp_contact || 'No Contact'}
                         </Text>
                       </View>
                     </View>
 
-                    {/* Arrow */}
-                    <Icon
-                      name="chevron-right"
-                      size={24}
-                      color={THEME.primary}
-                      style={{marginLeft: 6}}
-                    />
+                    {/* Right Section (Badge & Arrow) */}
+                    <View style={styles.rightSection}>
+                      <View style={styles.areaBadge}>
+                        <Text style={styles.areaBadgeText} numberOfLines={1}>
+                          {item.emp_type || 'Worker'}
+                        </Text>
+                      </View>
+                      <Icon
+                        name="chevron-right"
+                        size={24}
+                        color="#9CA3AF"
+                        style={{marginLeft: 8}}
+                      />
+                    </View>
                   </TouchableOpacity>
                 )}
                 ListEmptyComponent={
@@ -888,36 +953,37 @@ const styles = StyleSheet.create({
   // --- Card Row ---
   cardRow: {
     backgroundColor: THEME.white,
-    borderRadius: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     width: '94%',
     alignSelf: 'center',
-    marginBottom: 6,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#222',
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.19,
-    shadowRadius: 14,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
     elevation: 3,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   avatarContainer: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 50,
+    height: 50,
+    borderRadius: 14,
     backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: THEME.primarySoft,
   },
   avatarText: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: THEME.primary,
-    letterSpacing: 0.5,
   },
   infoContainer: {
     flex: 1,
@@ -925,40 +991,38 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   nameText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: THEME.textDark,
-    marginBottom: 0,
+    color: '#1F2937',
+    marginBottom: 4,
   },
   iconTextRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
-    marginBottom: 2,
   },
   subText: {
-    fontSize: 12,
-    color: THEME.textGray,
-    marginLeft: 4,
+    fontSize: 13,
+    color: '#6B7280',
+    marginLeft: 6,
     flexShrink: 1,
   },
-  badgeContainer: {
-    marginLeft: 12,
-    marginRight: 8,
-    alignItems: 'flex-end',
-    flex: 0,
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   areaBadge: {
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 10,
+    backgroundColor: THEME.primarySoft,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 15,
-    marginTop: 0,
+    borderRadius: 6,
   },
   areaBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: THEME.textDark,
+    fontSize: 10,
+    fontWeight: '700',
+    color: THEME.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     maxWidth: 80,
   },
 

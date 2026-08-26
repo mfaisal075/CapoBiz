@@ -13,7 +13,9 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../../DrawerContext';
-import {Checkbox} from 'react-native-paper';
+import {useUser} from '../../CTX/UserContext';
+import RNPrint from 'react-native-print';
+import {Checkbox, RadioButton} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import DateTimePicker, {
   DateTimePickerEvent,
@@ -121,6 +123,7 @@ interface Suppliers {
 }
 
 export default function ProductsProducts({navigation}: any) {
+  const {bussName, bussAddress} = useUser();
   const {openDrawer} = useDrawer();
   const [modalVisible, setModalVisible] = useState('');
   const [addForm, setAddForm] = useState<AddProduct>(initialAddProduct);
@@ -145,6 +148,13 @@ export default function ProductsProducts({navigation}: any) {
   const [filteredData, setFilteredData] = useState<Products[]>([]);
   const [masterData, setMasterData] = useState<Products[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const [printModalVisible, setPrintModalVisible] = useState(false);
+  const [printReportType, setPrintReportType] = useState('All');
+  const [selectedPrintCategory, setSelectedPrintCategory] = useState<
+    string | null
+  >(null);
+  const [printCategoryOpen, setPrintCategoryOpen] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -447,6 +457,88 @@ export default function ProductsProducts({navigation}: any) {
     return () => backHandler.remove();
   }, []);
 
+  const printProducts = async () => {
+    try {
+      if (printReportType === 'Category' && !selectedPrintCategory) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Please select a category',
+        });
+        return;
+      }
+      setPrintModalVisible(false);
+      setLoading(true);
+
+      const payload =
+        printReportType === 'Category' ? {category: selectedPrintCategory} : {};
+      const res = await axios.post(`${BASE_URL}/fetchproducts`, payload);
+      if (res.data && res.data.output) {
+        const reportTitle = 'Products List';
+        
+        const selectedCatName = printReportType === 'Category'
+          ? transformedCat.find(cat => cat.value === selectedPrintCategory)?.label
+          : '';
+          
+        let actualCount = 0;
+        if (res.data.products && Array.isArray(res.data.products)) {
+          actualCount = res.data.products.length;
+        } else if (typeof res.data.output === 'string') {
+          const matches = res.data.output.match(/<tr/gi);
+          actualCount = matches ? Math.max(0, matches.length - 1) : 0;
+        }
+
+        const htmlContent = `
+          <html>
+            <head>
+              <style>
+                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
+                .header { text-align: center; margin-bottom: 20px; }
+                .header h1 { margin: 0; color: #111; font-size: 24px; text-transform: uppercase; }
+                .header p { margin: 5px 0 0 0; color: #555; font-size: 14px; }
+                h2 { text-align: center; margin: 0 0 20px 0; color: #333; font-size: 18px; text-decoration: underline; }
+                .category-label { margin: 0 0 10px 0; font-size: 14px; font-weight: bold; color: #555; text-align: left; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                th, td { border: 1px solid #e5e7eb; padding: 10px 8px; text-align: left; }
+                thead td, th { background-color: #f9fafb; font-weight: bold; color: #374151; }
+                tbody tr:nth-child(even) { background-color: #fdfdfd; }
+                .footer { margin-top: 20px; padding-top: 10px; font-weight: bold; font-size: 14px; text-align: left; border-top: 1px solid #e5e7eb; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>${bussName || 'Business Name'}</h1>
+                <p>${bussAddress || 'Business Address'}</p>
+              </div>
+              <h2>${reportTitle}</h2>
+              ${selectedCatName ? `<p class="category-label">Category: ${selectedCatName}</p>` : ''}
+              ${res.data.output}
+              <div class="footer">
+                Total Products: ${actualCount}
+              </div>
+            </body>
+          </html>
+        `;
+        await RNPrint.print({html: htmlContent});
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'No data available to print.',
+        });
+      }
+    } catch (error) {
+      console.log('Print error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to generate print document.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // --- Render Item (Card) ---
   const renderItem = ({item, index}: {item: Products; index: number}) => {
     return (
@@ -454,68 +546,41 @@ export default function ProductsProducts({navigation}: any) {
         activeOpacity={0.75}
         style={styles.cardRow}
         onPress={() => navigation.navigate('ProductDetails', {id: item.id})}>
-        {/* Avatar Section */}
         <View style={styles.avatarContainer}>
           <Text style={styles.avatarText}>{getInitials(item.prod_name)}</Text>
         </View>
 
-        {/* Info Section */}
         <View style={styles.infoContainer}>
           <Text style={styles.nameText} numberOfLines={1}>
             {item.prod_name}
           </Text>
-
-          {/* Row 1: Cost | Retail */}
-          <View style={styles.detailRow}>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailText}>Cost: {item.prod_costprice}</Text>
-            </View>
+          <View style={styles.iconTextRow}>
+            <Icon name="tag-outline" size={14} color={THEME.textGray} />
+            <Text style={styles.subText} numberOfLines={1}>
+              Retail: {item.prod_retailprice}
+            </Text>
             <View style={styles.detailSeparator} />
-            <View style={styles.detailItem}>
-              <Text style={[styles.detailText, {color: THEME.primary}]}>
-                Retail: {item.prod_retailprice}
-              </Text>
-            </View>
-          </View>
-
-          {/* Row 2: Category | QTY | Barcode */}
-          <View style={styles.detailRow}>
-            <View style={styles.detailItem}>
-              <Icon name="shape-outline" size={14} color={THEME.textLight} />
-              <Text style={styles.subText}>{item.pcat_name || 'General'}</Text>
-            </View>
-
-            <View style={styles.detailSeparator} />
-            <View style={styles.detailItem}>
-              <Text
-                style={[
-                  styles.subText,
-                  parseInt(item.prod_qty) < 10 && {color: THEME.danger},
-                ]}>
-                QTY: {item.prod_qty}
-              </Text>
-            </View>
-
-            {item.prod_UPC_EAN ? (
-              <>
-                <View style={styles.detailSeparator} />
-                <View style={styles.detailItem}>
-                  <Icon name="barcode-scan" size={14} color={THEME.textLight} />
-                  <Text style={styles.subText} numberOfLines={1}>
-                    {item.prod_UPC_EAN}
-                  </Text>
-                </View>
-              </>
-            ) : null}
+            <Icon name="layers-outline" size={14} color={THEME.textGray} />
+            <Text style={styles.subText} numberOfLines={1}>
+              Qty: {item.prod_qty}
+            </Text>
           </View>
         </View>
 
-        <Icon
-          name="chevron-right"
-          size={22}
-          color={THEME.primary}
-          style={{marginLeft: 6}}
-        />
+        {/* Right Section (Badge & Arrow) */}
+        <View style={styles.rightSection}>
+          <View style={styles.areaBadge}>
+            <Text style={styles.areaBadgeText} numberOfLines={1}>
+              {item.pcat_name || 'Product'}
+            </Text>
+          </View>
+          <Icon
+            name="chevron-right"
+            size={24}
+            color="#9CA3AF"
+            style={{marginLeft: 8}}
+          />
+        </View>
       </TouchableOpacity>
     );
   };
@@ -538,11 +603,18 @@ export default function ProductsProducts({navigation}: any) {
               <Icon name="menu" size={24} color={THEME.white} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Products</Text>
-            <TouchableOpacity
-              onPress={() => setModalVisible('AddProd')}
-              style={styles.iconBtn}>
-              <Icon name="plus" size={24} color={THEME.white} />
-            </TouchableOpacity>
+            <View style={{flexDirection: 'row', gap: 10, alignItems: 'center'}}>
+              <TouchableOpacity
+                onPress={() => setPrintModalVisible(true)}
+                style={styles.iconBtn}>
+                <Icon name="printer" size={24} color={THEME.white} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setModalVisible('AddProd')}
+                style={styles.iconBtn}>
+                <Icon name="plus" size={24} color={THEME.white} />
+              </TouchableOpacity>
+            </View>
           </View>
         </LinearGradient>
 
@@ -857,6 +929,73 @@ export default function ProductsProducts({navigation}: any) {
           <Toast />
         </View>
       </Modal>
+
+      {/* Print Options Modal */}
+      <Modal visible={printModalVisible} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalScroll, {maxHeight: 500, padding: 20}]}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 15,
+              }}>
+              <Text style={styles.modalTitle}>Select Report Type</Text>
+              <TouchableOpacity
+                onPress={() => setPrintModalVisible(false)}
+                style={styles.closeBtn}>
+                <Icon name="close" size={18} color={THEME.textDark} />
+              </TouchableOpacity>
+            </View>
+
+            <RadioButton.Group
+              onValueChange={value => setPrintReportType(value)}
+              value={printReportType}>
+              <RadioButton.Item
+                label="All Products"
+                value="All"
+                color={THEME.primary}
+              />
+              <RadioButton.Item
+                label="Category Wise Products"
+                value="Category"
+                color={THEME.primary}
+              />
+              {printReportType === 'Category' && (
+                <View
+                  style={{
+                    marginHorizontal: 10,
+                    marginBottom: 10,
+                  }}>
+                  <DropDownPicker
+                    items={transformedCat}
+                    open={printCategoryOpen}
+                    value={selectedPrintCategory}
+                    setOpen={setPrintCategoryOpen}
+                    setValue={setSelectedPrintCategory}
+                    placeholder="Select Category"
+                    style={styles.dropdown}
+                    dropDownContainerStyle={styles.dropdownContainer}
+                    listMode="SCROLLVIEW"
+                  />
+                </View>
+              )}
+            </RadioButton.Group>
+
+            <TouchableOpacity style={styles.btnPrimary} onPress={printProducts}>
+              <Icon
+                name="printer"
+                size={20}
+                color="white"
+                style={{marginRight: 8}}
+              />
+              <Text style={styles.btnText}>Print Report</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <BottomBar />
     </SafeAreaView>
   );
@@ -964,55 +1103,59 @@ const styles = StyleSheet.create({
   // --- CARD ROW ---
   cardRow: {
     backgroundColor: THEME.white,
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     width: '94%',
     alignSelf: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#222',
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.1,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.05,
     shadowRadius: 10,
-    elevation: 4,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   avatarContainer: {
     width: 50,
     height: 50,
-    borderRadius: 25,
+    borderRadius: 14,
     backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: THEME.primarySoft,
   },
   avatarText: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     color: THEME.primary,
-    letterSpacing: 0.5,
   },
   infoContainer: {
     flex: 1,
     justifyContent: 'center',
+    minWidth: 0,
   },
   nameText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: THEME.textDark,
+    color: '#1F2937',
     marginBottom: 4,
   },
-  detailRow: {
+  iconTextRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 2,
+    marginTop: 2,
   },
-  detailItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  subText: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginLeft: 6,
+    flexShrink: 1,
   },
   detailSeparator: {
     width: 1,
@@ -1020,16 +1163,23 @@ const styles = StyleSheet.create({
     backgroundColor: THEME.border,
     marginHorizontal: 8,
   },
-  detailText: {
-    fontSize: 13,
-    color: THEME.textDark,
-    marginLeft: 4,
-    fontWeight: '500',
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  subText: {
-    fontSize: 12,
-    color: THEME.textLight,
-    marginLeft: 4,
+  areaBadge: {
+    backgroundColor: THEME.primarySoft,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  areaBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: THEME.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    maxWidth: 80,
   },
   // --- PAGINATION ---
   paginationContainer: {

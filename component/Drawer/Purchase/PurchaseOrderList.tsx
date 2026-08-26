@@ -21,6 +21,8 @@ import BASE_URL from '../../BASE_URL';
 import DropDownPicker from 'react-native-dropdown-picker';
 import LinearGradient from 'react-native-linear-gradient';
 import BottomBar from '../../BottomBar';
+import RNPrint from 'react-native-print';
+import Toast from 'react-native-toast-message';
 
 // --- THEME ---
 const THEME = {
@@ -38,6 +40,13 @@ const THEME = {
   danger: '#EF4444',
   warning: '#F59E0B',
   shadow: '#000',
+};
+
+const getInitials = (name: string) => {
+  if (!name) return '??';
+  const parts = name.split(' ');
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
 interface OrderList {
@@ -107,6 +116,103 @@ export default function PurchaseOrderList({navigation}: any) {
   const [finalizedInvc, setFinalizedInvc] = useState<FinalizedInvc[]>([]);
   const [statusOpen, setStatusOpen] = useState(false);
   const [status, setStatus] = useState('Purchase Order');
+
+  // Print Modal State
+  const [printModalVisible, setPrintModalVisible] = useState(false);
+  const [reportType, setReportType] = useState<'Purchase Order' | 'Purchase Order Detail'>('Purchase Order');
+  const [printStartDate, setPrintStartDate] = useState(new Date());
+  const [showPrintStartDatePicker, setShowPrintStartDatePicker] = useState(false);
+  const [printEndDate, setPrintEndDate] = useState(new Date());
+  const [showPrintEndDatePicker, setShowPrintEndDatePicker] = useState(false);
+  const [printStatusOpen, setPrintStatusOpen] = useState(false);
+  const [printStatus, setPrintStatus] = useState<string | null>('Completed');
+  const [printing, setPrinting] = useState(false);
+
+  useEffect(() => {
+    setPrintStatus(null);
+  }, [reportType]);
+
+  const getPrintStatusOptions = () => {
+    if (reportType === 'Purchase Order') {
+      return [
+        {label: 'Completed', value: 'Completed'},
+        {label: 'Pending', value: 'Pending'},
+      ];
+    } else {
+      return [
+        {label: 'Purchase Ordered', value: 'Purchase Ordered'},
+        {label: 'Purchased', value: 'Purchased'},
+        {label: 'Pending', value: 'Pending'},
+      ];
+    }
+  };
+
+  const printReport = async () => {
+    try {
+      setPrinting(true);
+      
+      const from = printStartDate.toISOString().split('T')[0];
+      const to = printEndDate.toISOString().split('T')[0];
+
+      const payload = {
+        from,
+        to,
+        status: reportType === 'Purchase Order' ? (printStatus || '') : '',
+        purchaseorder: reportType,
+        detailstatus: reportType === 'Purchase Order Detail' ? (printStatus || '') : '',
+        _token: token,
+      };
+
+      const res = await axios.post(`${BASE_URL}/fetch_purchaseorder_report`, payload);
+
+      if (res.data && res.data.output) {
+        const htmlContent = `
+          <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+              <style>
+                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
+                .header { text-align: center; margin-bottom: 20px; }
+                .header h1 { margin: 0; color: #111; font-size: 24px; text-transform: uppercase; }
+                .header p { margin: 5px 0 0 0; color: #555; font-size: 14px; }
+                h2 { text-align: center; color: #333; margin-bottom: 20px; font-size: 18px; text-decoration: underline; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                th, td { border: 1px solid #e5e7eb; padding: 10px 8px; text-align: left; }
+                thead td, th { background-color: #f9fafb; font-weight: bold; color: #374151; }
+                tbody tr:nth-child(even) { background-color: #fdfdfd; }
+                .footer { margin-top: 20px; padding-top: 10px; font-weight: bold; font-size: 14px; text-align: left; border-top: 1px solid #e5e7eb; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>${bussName || 'Business Name'}</h1>
+                <p>${bussAddress || 'Business Address'}</p>
+              </div>
+              <h2>Purchase Order Stock Report</h2>
+              <div style="display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 15px; font-weight: bold;">
+                <div>Report: ${reportType} | Status: ${printStatus || 'All'}</div>
+                <div>From: ${from} &nbsp;&nbsp; To: ${to}</div>
+              </div>
+              ${res.data.output}
+              <div class="footer">
+                Total Records: ${res.data.total !== undefined ? res.data.total : 'N/A'}
+              </div>
+            </body>
+          </html>
+        `;
+        
+        setPrintModalVisible(false);
+        await RNPrint.print({html: htmlContent});
+      } else {
+        Toast.show({type: 'error', text1: 'Error', text2: 'No data to print.'});
+      }
+    } catch (error) {
+      console.log('Print error:', error);
+      Toast.show({type: 'error', text1: 'Error', text2: 'Failed to generate print document.'});
+    } finally {
+      setPrinting(false);
+    }
+  };
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -208,7 +314,11 @@ export default function PurchaseOrderList({navigation}: any) {
               <Icon name="menu" size={24} color={THEME.white} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Purchase Orders</Text>
-            <View style={{width: 40}} />
+            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              <TouchableOpacity onPress={() => setPrintModalVisible(true)} style={styles.iconBtn}>
+                <Icon name="printer" size={22} color={THEME.white} />
+              </TouchableOpacity>
+            </View>
           </View>
         </LinearGradient>
 
@@ -294,71 +404,44 @@ export default function PurchaseOrderList({navigation}: any) {
                 setModalVisible('View');
                 getSingleOrder(item.id);
               }}>
-              {/* Icon Section */}
-              <View
-                style={[
-                  styles.avatarContainer,
-                  {
-                    backgroundColor:
-                      status === 'Purchase Order' ? '#FEF3C7' : '#D1FAE5',
-                  },
-                ]}>
-                <Icon
-                  name={
-                    status === 'Purchase Order'
-                      ? 'clock-outline'
-                      : 'check-circle-outline'
-                  }
-                  size={24}
-                  color={
-                    status === 'Purchase Order' ? THEME.warning : THEME.success
-                  }
-                />
+              {/* Avatar Section */}
+              <View style={styles.avatarContainer}>
+                <Text style={styles.avatarText}>{getInitials(item.sup_name)}</Text>
               </View>
 
               {/* Info Section */}
               <View style={styles.infoContainer}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                  }}>
-                  <Text style={styles.nameText}>{item.pord_invoice_no}</Text>
-                  <Text style={styles.amountText}>{item.pord_order_total}</Text>
-                </View>
-
+                <Text style={styles.nameText} numberOfLines={1}>
+                  {item.sup_name}
+                </Text>
                 <View style={styles.iconTextRow}>
-                  <Icon name="domain" size={14} color={THEME.textGray} />
+                  <Icon name="file-document-outline" size={14} color={THEME.textGray} />
                   <Text style={styles.subText} numberOfLines={1}>
-                    {item.sup_name}
+                    Invoice: {item.pord_invoice_no} | Total: {item.pord_order_total}
                   </Text>
                 </View>
                 <View style={styles.iconTextRow}>
-                  <Icon
-                    name="calendar-month"
-                    size={14}
-                    color={THEME.textGray}
-                  />
-                  <Text style={styles.subText}>
-                    {new Date(item.pord_order_date).toLocaleDateString(
-                      'en-GB',
-                      {
-                        day: '2-digit',
-                        month: 'short',
-                        year: 'numeric',
-                      },
-                    )}
+                  <Icon name="calendar-month" size={14} color={THEME.textGray} />
+                  <Text style={styles.subText} numberOfLines={1}>
+                    Date: {new Date(item.pord_order_date).toLocaleDateString('en-GB')}
                   </Text>
                 </View>
               </View>
 
-              {/* Arrow */}
-              <Icon
-                name="chevron-right"
-                size={22}
-                color={THEME.primary}
-                style={{marginLeft: 6}}
-              />
+              {/* Right Section (Badge) */}
+              <View style={styles.rightSection}>
+                <View style={styles.areaBadge}>
+                  <Text style={styles.areaBadgeText} numberOfLines={1}>
+                    {status === 'Purchase Order' ? 'Pending' : 'Completed'}
+                  </Text>
+                </View>
+                <Icon
+                  name="chevron-right"
+                  size={20}
+                  color={THEME.textGray}
+                  style={{marginLeft: 4}}
+                />
+              </View>
             </TouchableOpacity>
           )}
           contentContainerStyle={{paddingBottom: 160}}
@@ -639,7 +722,118 @@ export default function PurchaseOrderList({navigation}: any) {
           </View>
         </View>
       </Modal>
+
+      {/* Print Options Modal */}
+      <Modal visible={printModalVisible} transparent animationType="fade">
+        <View style={styles.centerModalOverlay}>
+          <View style={[styles.centerModalContainer, {padding: 20, zIndex: 1000}]}>
+            <View style={{flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20}}>
+              <Text style={{fontSize: 18, fontWeight: '700', color: THEME.textDark}}>
+                Report Filters
+              </Text>
+              <TouchableOpacity onPress={() => setPrintModalVisible(false)}>
+                <Icon name="close" size={24} color={THEME.textGray} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Segment Toggle */}
+            <View style={styles.segmentContainer}>
+              <TouchableOpacity
+                style={[styles.segmentBtn, reportType === 'Purchase Order' && styles.segmentBtnActive]}
+                onPress={() => setReportType('Purchase Order')}
+              >
+                <Text style={[styles.segmentText, reportType === 'Purchase Order' && styles.segmentTextActive]}>Purchase Order</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.segmentBtn, reportType === 'Purchase Order Detail' && styles.segmentBtnActive]}
+                onPress={() => setReportType('Purchase Order Detail')}
+              >
+                <Text style={[styles.segmentText, reportType === 'Purchase Order Detail' && styles.segmentTextActive]}>Purchase Order Detail</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={{marginBottom: 15, zIndex: 2000}}>
+              <Text style={styles.label}>Select Date Range</Text>
+              <View style={styles.dateRow}>
+                <TouchableOpacity
+                  style={styles.dateInput}
+                  onPress={() => setShowPrintStartDatePicker(true)}>
+                  <Icon name="calendar" size={16} color={THEME.primary} />
+                  <Text style={styles.dateText}>
+                    {printStartDate.toLocaleDateString('en-GB')}
+                  </Text>
+                </TouchableOpacity>
+                <Text style={styles.dateSeparator}>-</Text>
+                <TouchableOpacity
+                  style={styles.dateInput}
+                  onPress={() => setShowPrintEndDatePicker(true)}>
+                  <Icon name="calendar" size={16} color={THEME.primary} />
+                  <Text style={styles.dateText}>
+                    {printEndDate.toLocaleDateString('en-GB')}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View style={{marginBottom: 25, zIndex: 3000}}>
+              <Text style={styles.label}>Status</Text>
+              <DropDownPicker
+                items={getPrintStatusOptions()}
+                open={printStatusOpen}
+                setOpen={setPrintStatusOpen}
+                value={printStatus}
+                setValue={setPrintStatus}
+                placeholder="Select Status"
+                style={styles.dropdown}
+                dropDownContainerStyle={styles.dropdownContainer}
+                listMode="SCROLLVIEW"
+              />
+            </View>
+
+            <TouchableOpacity
+              style={styles.printBtn}
+              onPress={printReport}
+              disabled={printing}
+              activeOpacity={0.8}>
+              <LinearGradient
+                colors={[THEME.gradientStart, THEME.gradientEnd]}
+                style={styles.printBtnGradient}>
+                <Icon name="printer" size={20} color="white" style={{marginRight: 8}} />
+                <Text style={{color: 'white', fontWeight: 'bold', fontSize: 16}}>
+                  {printing ? 'Generating...' : 'Generate Print'}
+                </Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Date Pickers for Print */}
+      {showPrintStartDatePicker && (
+        <DateTimePicker
+          value={printStartDate}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            setShowPrintStartDatePicker(false);
+            if (selectedDate) setPrintStartDate(selectedDate);
+          }}
+        />
+      )}
+      {showPrintEndDatePicker && (
+        <DateTimePicker
+          value={printEndDate}
+          mode="date"
+          display="default"
+          onChange={(event, selectedDate) => {
+            setShowPrintEndDatePicker(false);
+            if (selectedDate) setPrintEndDate(selectedDate);
+          }}
+        />
+      )}
+
       <BottomBar />
+      <Toast />
     </SafeAreaView>
   );
 }
@@ -768,29 +962,37 @@ const styles = StyleSheet.create({
 
   cardRow: {
     backgroundColor: THEME.white,
-    borderRadius: 14,
+    borderRadius: 16,
     paddingVertical: 12,
-    paddingHorizontal: 14,
+    paddingHorizontal: 16,
     width: '94%',
     alignSelf: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#222',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   avatarContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 50,
+    height: 50,
+    borderRadius: 14,
+    backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(42, 101, 43, 0.1)',
+  },
+  avatarText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: THEME.primary,
   },
   infoContainer: {
     flex: 1,
@@ -800,23 +1002,115 @@ const styles = StyleSheet.create({
   nameText: {
     fontSize: 15,
     fontWeight: '700',
-    color: THEME.textDark,
-  },
-  amountText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: THEME.primary,
+    color: '#1F2937',
+    marginBottom: 4,
   },
   iconTextRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 3,
+    marginTop: 2,
   },
   subText: {
-    fontSize: 12,
-    color: THEME.textGray,
-    marginLeft: 4,
+    fontSize: 13,
+    color: '#6B7280',
+    marginLeft: 6,
     flexShrink: 1,
+  },
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  areaBadge: {
+    backgroundColor: 'rgba(42, 101, 43, 0.1)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  areaBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: THEME.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    maxWidth: 80,
+  },
+  // --- Segment Styles ---
+  segmentContainer: {
+    flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderRadius: 8,
+    padding: 4,
+    marginBottom: 20,
+  },
+  segmentBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 6,
+  },
+  segmentBtnActive: {
+    backgroundColor: THEME.white,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 2},
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  segmentText: {
+    fontSize: 13,
+    color: THEME.textGray,
+    fontWeight: '600',
+  },
+  segmentTextActive: {
+    color: THEME.primary,
+  },
+  label: {
+    fontSize: 14,
+    color: THEME.textDark,
+    marginBottom: 6,
+    fontWeight: '600',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  printBtn: {
+    borderRadius: 12,
+    overflow: 'hidden',
+    marginTop: 10,
+  },
+  printBtnGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+  },
+  centerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  centerModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 5},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 20,
+  },
+  dropdown: {
+    borderWidth: 1,
+    borderColor: THEME.border,
+    borderRadius: 12,
+    minHeight: 48,
+  },
+  dropdownContainer: {
+    borderColor: THEME.border,
+    borderRadius: 12,
   },
   emptyContainer: {
     alignItems: 'center',

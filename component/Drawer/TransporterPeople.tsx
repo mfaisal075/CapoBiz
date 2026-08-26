@@ -312,31 +312,31 @@ export default function TransporterPeople({navigation}: any) {
 
         {/* Info Section */}
         <View style={styles.infoContainer}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: 2,
-            }}>
-            <Text style={styles.nameText} numberOfLines={1}>
-              {item.trans_name}
-            </Text>
-          </View>
+          <Text style={styles.nameText} numberOfLines={1}>
+            {item.trans_name}
+          </Text>
           <View style={styles.iconTextRow}>
             <Icon name="phone-outline" size={14} color={THEME.textGray} />
-            <Text style={styles.subText}>
+            <Text style={styles.subText} numberOfLines={1}>
               {item.trans_contact || 'No Contact'}
             </Text>
           </View>
         </View>
 
-        {/* Arrow */}
-        <Icon
-          name="chevron-right"
-          size={22}
-          color={THEME.primary}
-          style={{marginLeft: 6}}
-        />
+        {/* Right Section (Badge & Arrow) */}
+        <View style={styles.rightSection}>
+          <View style={styles.areaBadge}>
+            <Text style={styles.areaBadgeText} numberOfLines={1}>
+              Transporter
+            </Text>
+          </View>
+          <Icon
+            name="chevron-right"
+            size={24}
+            color="#9CA3AF"
+            style={{marginLeft: 8}}
+          />
+        </View>
       </TouchableOpacity>
     );
   };
@@ -809,36 +809,37 @@ const styles = StyleSheet.create({
   // --- Card Row ---
   cardRow: {
     backgroundColor: THEME.white,
-    borderRadius: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     width: '94%',
     alignSelf: 'center',
-    marginBottom: 6,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#222',
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.19,
-    shadowRadius: 14,
-    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   avatarContainer: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 50,
+    height: 50,
+    borderRadius: 14,
     backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: THEME.primarySoft,
   },
   avatarText: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: THEME.primary,
-    letterSpacing: 0.5,
   },
   infoContainer: {
     flex: 1,
@@ -846,40 +847,38 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   nameText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: THEME.textDark,
-    marginBottom: 0,
+    color: '#1F2937',
+    marginBottom: 4,
   },
   iconTextRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
-    marginBottom: 2,
   },
   subText: {
-    fontSize: 12,
-    color: THEME.textGray,
-    marginLeft: 4,
+    fontSize: 13,
+    color: '#6B7280',
+    marginLeft: 6,
     flexShrink: 1,
   },
-  badgeContainer: {
-    marginLeft: 12,
-    marginRight: 8,
-    alignItems: 'flex-end',
-    flex: 0,
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   areaBadge: {
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 10,
+    backgroundColor: THEME.primarySoft,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 15,
-    marginTop: 3,
+    borderRadius: 6,
   },
   areaBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: THEME.textDark,
+    fontSize: 10,
+    fontWeight: '700',
+    color: THEME.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     maxWidth: 80,
   },
 

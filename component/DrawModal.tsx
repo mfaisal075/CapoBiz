@@ -162,11 +162,12 @@ const DrawerModal = () => {
   const [expandedReportSubmenu, setExpandedReportSubmenu] = useState<
     string | null
   >(null);
-
+  const [isVisible, setIsVisible] = useState(menuVisible);
   const slideAnim = useRef(new Animated.Value(-MENU_WIDTH)).current;
 
   useEffect(() => {
     if (menuVisible) {
+      setIsVisible(true);
       Animated.spring(slideAnim, {
         toValue: 0,
         useNativeDriver: true,
@@ -176,12 +177,13 @@ const DrawerModal = () => {
     } else {
       Animated.timing(slideAnim, {
         toValue: -MENU_WIDTH,
-        duration: 250,
+        duration: 200,
         useNativeDriver: true,
-      }).start();
+      }).start(() => {
+        setIsVisible(false);
+      });
     }
   }, [menuVisible]);
-
   const handleMainPress = (key: string) => {
     if (menuData[key].length === 0) {
       handleClose(() => navigation.navigate(key as never));
@@ -200,14 +202,10 @@ const DrawerModal = () => {
   };
 
   const handleClose = (callback?: () => void) => {
-    Animated.timing(slideAnim, {
-      toValue: -MENU_WIDTH,
-      duration: 200,
-      useNativeDriver: true,
-    }).start(() => {
-      closeDrawer();
-      if (callback) callback();
-    });
+    closeDrawer();
+    if (callback) {
+      setTimeout(callback, 210); // Wait for animation to finish
+    }
   };
 
   const handleLogout = () => {
@@ -230,14 +228,10 @@ const DrawerModal = () => {
     });
   };
 
-  if (!menuVisible) return null;
+  if (!isVisible) return null;
 
   return (
-    <Modal
-      visible={menuVisible}
-      transparent
-      animationType="none"
-      onRequestClose={() => handleClose()}>
+    <View style={styles.modalWrapper}>
       <View style={styles.overlay}>
         {/* Transparent Backdrop */}
         <TouchableWithoutFeedback onPress={() => handleClose()}>
@@ -459,11 +453,16 @@ const DrawerModal = () => {
           </View>
         </Animated.View>
       </View>
-    </Modal>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  modalWrapper: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 9999,
+    elevation: 99,
+  },
   overlay: {
     flex: 1,
     flexDirection: 'row',

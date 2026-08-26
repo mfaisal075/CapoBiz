@@ -10,6 +10,8 @@ import {
   StatusBar,
   Platform,
   PermissionsAndroid,
+  AppState,
+  ToastAndroid,
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useNavigation, NavigationProp} from '@react-navigation/native';
@@ -118,6 +120,9 @@ export default function Dashboard(): JSX.Element {
     };
     const requestNotificationPermission = async () => {
       if (Platform.OS === 'android' && Platform.Version >= 33) {
+        if (AppState.currentState !== 'active') {
+          return;
+        }
         try {
           await PermissionsAndroid.request(
             PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
@@ -256,7 +261,11 @@ export default function Dashboard(): JSX.Element {
         />
         <View style={styles.headerContent}>
           <View style={styles.headerTopRow}>
-            <TouchableOpacity onPress={openDrawer} style={styles.iconBtn}>
+            <TouchableOpacity
+              onPress={() => {
+                openDrawer();
+              }}
+              style={styles.iconBtn}>
               <Icon name="menu" size={26} color={THEME.surface} />
             </TouchableOpacity>
 

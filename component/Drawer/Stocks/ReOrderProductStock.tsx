@@ -19,6 +19,8 @@ import {useUser} from '../../CTX/UserContext';
 import LinearGradient from 'react-native-linear-gradient';
 import LottieView from 'lottie-react-native';
 import BottomBar from '../../BottomBar';
+import RNPrint from 'react-native-print';
+import Toast from 'react-native-toast-message';
 
 // --- THEME ---
 const THEME = {
@@ -63,7 +65,7 @@ interface Categories {
 
 export default function ReOrderProductStock({navigation}: any) {
   const {openDrawer} = useDrawer();
-  const {token} = useUser();
+  const {token, bussName, bussAddress} = useUser();
   const [loading, setLoading] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [currentCategory, setCurrentCategory] = useState<string | null>('');
@@ -127,6 +129,68 @@ export default function ReOrderProductStock({navigation}: any) {
     }
   };
 
+  const printReorder = async () => {
+    try {
+      setLoading(true);
+
+      const endpoint = `${BASE_URL}/fetchreorder?cat_id=${
+        currentCategory || ''
+      }&_token=${token}`;
+
+      const res = await axios.get(endpoint);
+      if (res.data && res.data.output) {
+        const reportTitle = 'Reorder Products Report';
+
+        const htmlContent = `
+          <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+              <style>
+                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
+                .header { text-align: center; margin-bottom: 20px; }
+                .header h1 { margin: 0; color: #111; font-size: 24px; text-transform: uppercase; }
+                .header p { margin: 5px 0 0 0; color: #555; font-size: 14px; }
+                h2 { text-align: center; color: #333; margin-bottom: 20px; font-size: 18px; text-decoration: underline; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                th, td { border: 1px solid #e5e7eb; padding: 10px 8px; text-align: left; }
+                thead td, th { background-color: #f9fafb; font-weight: bold; color: #374151; }
+                tbody tr:nth-child(even) { background-color: #fdfdfd; }
+                .footer { margin-top: 20px; padding-top: 10px; font-weight: bold; font-size: 14px; text-align: left; border-top: 1px solid #e5e7eb; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>${bussName || 'Business Name'}</h1>
+                <p>${bussAddress || 'Business Address'}</p>
+              </div>
+              <h2>${reportTitle}</h2>
+              ${res.data.output}
+              <div class="footer">
+                Total Products: ${res.data.total !== undefined ? res.data.total : totalRecords}
+              </div>
+            </body>
+          </html>
+        `;
+        await RNPrint.print({html: htmlContent});
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'No data available to print.',
+        });
+      }
+    } catch (error) {
+      console.log('Print error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to generate print document.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Search Filter
   const searchFilter = (text: string) => {
     setSearchQuery(text);
@@ -160,54 +224,36 @@ export default function ReOrderProductStock({navigation}: any) {
   const renderItem = ({item}: {item: Product}) => {
     return (
       <View style={styles.cardRow}>
-        {/* Avatar */}
+        {/* Avatar Section */}
         <View style={styles.avatarContainer}>
           <Text style={styles.avatarText}>{getInitials(item.prod_name)}</Text>
         </View>
 
-        {/* Info */}
+        {/* Info Section */}
         <View style={styles.infoContainer}>
           <Text style={styles.nameText} numberOfLines={1}>
             {item.prod_name}
           </Text>
-
-          {/* Row 1: Stock | Reorder Level */}
-          <View style={styles.detailRow}>
-            <View style={styles.detailItem}>
-              <Icon name="package-variant" size={14} color={THEME.danger} />
-              <Text
-                style={[
-                  styles.detailText,
-                  {color: THEME.danger, fontWeight: 'bold'},
-                ]}>
-                Quantity: {item.prod_qty}
-              </Text>
-            </View>
-            <View style={styles.detailSeparator} />
-            <View style={styles.detailItem}>
-              <Icon
-                name="alert-circle-outline"
-                size={14}
-                color={THEME.warning}
-              />
-              <Text style={[styles.detailText, {fontWeight: 'bold'}]}>
-                Reorder: {item.prod_reorder_qty}
-              </Text>
-            </View>
+          <View style={styles.iconTextRow}>
+            <Icon name="package-variant" size={14} color={THEME.danger} />
+            <Text style={[styles.subText, {color: THEME.danger}]} numberOfLines={1}>
+              Qty: {item.prod_qty} | Reorder: {item.prod_reorder_qty}
+            </Text>
           </View>
+          <View style={styles.iconTextRow}>
+            <Icon name="cash" size={14} color={THEME.textGray} />
+            <Text style={styles.subText} numberOfLines={1}>
+              Cost: {item.prod_costprice}
+            </Text>
+          </View>
+        </View>
 
-          {/* Row 2: Category | Cost Price */}
-          <View style={styles.detailRow}>
-            <View style={styles.detailItem}>
-              <Icon name="shape-outline" size={14} color={THEME.textLight} />
-              <Text style={styles.subText}>{item.pcat_name || 'General'}</Text>
-            </View>
-            <View style={styles.detailSeparator} />
-            <View style={styles.detailItem}>
-              <Text style={[styles.subText, {marginLeft: 0, fontSize: 11}]}>
-                Cost: {item.prod_costprice}
-              </Text>
-            </View>
+        {/* Right Section (Badge & Arrow) */}
+        <View style={styles.rightSection}>
+          <View style={styles.areaBadge}>
+            <Text style={styles.areaBadgeText} numberOfLines={1}>
+              {item.pcat_name || 'General'}
+            </Text>
           </View>
         </View>
       </View>
@@ -232,7 +278,11 @@ export default function ReOrderProductStock({navigation}: any) {
               <Icon name="menu" size={24} color={THEME.white} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Reorder Products</Text>
-            <View style={{width: 40}} />
+            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              <TouchableOpacity onPress={printReorder} style={styles.iconBtn}>
+                <Icon name="printer" size={22} color={THEME.white} />
+              </TouchableOpacity>
+            </View>
           </View>
         </LinearGradient>
 
@@ -341,6 +391,7 @@ export default function ReOrderProductStock({navigation}: any) {
         </View>
       )}
       <BottomBar />
+      <Toast />
     </SafeAreaView>
   );
 }
@@ -431,71 +482,77 @@ const styles = StyleSheet.create({
   },
   cardRow: {
     backgroundColor: THEME.white,
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     width: '94%',
     alignSelf: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#222',
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.1,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.05,
     shadowRadius: 10,
-    elevation: 4,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   avatarContainer: {
     width: 50,
     height: 50,
-    borderRadius: 25,
+    borderRadius: 14,
     backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: THEME.primarySoft,
   },
   avatarText: {
     fontSize: 18,
-    fontWeight: '800',
+    fontWeight: '700',
     color: THEME.primary,
-    letterSpacing: 0.5,
   },
   infoContainer: {
     flex: 1,
     justifyContent: 'center',
+    minWidth: 0,
   },
   nameText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: THEME.textDark,
+    color: '#1F2937',
     marginBottom: 4,
   },
-  detailRow: {
+  iconTextRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
   },
-  detailItem: {
+  subText: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginLeft: 6,
+    flexShrink: 1,
+  },
+  rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  detailText: {
-    fontSize: 13,
-    color: THEME.textDark,
-    marginLeft: 4,
+  areaBadge: {
+    backgroundColor: THEME.primarySoft,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  subText: {
-    fontSize: 12,
-    color: THEME.textGray,
-    marginLeft: 4,
-  },
-  detailSeparator: {
-    width: 1,
-    height: 12,
-    backgroundColor: THEME.border,
-    marginHorizontal: 8,
+  areaBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: THEME.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    maxWidth: 80,
   },
   // --- Pagination ---
   paginationContainer: {

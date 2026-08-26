@@ -13,7 +13,8 @@ import {
 } from 'react-native';
 import React, {useEffect, useState} from 'react';
 import {useDrawer} from '../DrawerContext';
-import {Checkbox} from 'react-native-paper';
+import {useUser} from '../CTX/UserContext';
+import {Checkbox, RadioButton} from 'react-native-paper';
 import DropDownPicker from 'react-native-dropdown-picker';
 import axios from 'axios';
 import BASE_URL from '../BASE_URL';
@@ -21,6 +22,7 @@ import Toast from 'react-native-toast-message';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import LottieView from 'lottie-react-native';
+import RNPrint from 'react-native-print';
 import BottomBar from '../BottomBar';
 
 // --- THEME ---
@@ -103,11 +105,24 @@ interface AreaData {
 
 export default function CustomerPeople({navigation}: any) {
   const {openDrawer} = useDrawer();
+  const {bussName, bussAddress, token} = useUser();
   const [addForm, setAddForm] = useState<AddCustomer>(initialAddCustomer);
   const [types, setTypes] = useState<TypeData[]>([]);
   const [areaData, setAreaData] = useState<AreaData[]>([]);
   const [enableBal, setEnableBal] = useState<string[]>([]);
   const [modalVisible, setModalVisible] = useState('');
+
+  // Print Modal State
+  const [printModalVisible, setPrintModalVisible] = useState(false);
+  const [reportType, setReportType] = useState('All');
+  const [printAreaOpen, setPrintAreaOpen] = useState(false);
+  const [selectedPrintArea, setSelectedPrintArea] = useState<string | null>(
+    null,
+  );
+  const [printTypeOpen, setPrintTypeOpen] = useState(false);
+  const [selectedPrintType, setSelectedPrintType] = useState<string | null>(
+    null,
+  );
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredData, setFilteredData] = useState<Customers[]>([]);
   const [masterData, setMasterData] = useState<Customers[]>([]);
@@ -236,6 +251,100 @@ export default function CustomerPeople({navigation}: any) {
     }
   };
 
+  const printCustomers = async () => {
+    try {
+      if (reportType === 'Area' && !selectedPrintArea) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Please select an area',
+        });
+        return;
+      }
+      if (reportType === 'Type' && !selectedPrintType) {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'Please select a type',
+        });
+        return;
+      }
+
+      setPrintModalVisible(false);
+      setLoading(true);
+
+      let endpoint = `${BASE_URL}/fetchcustList`;
+      if (reportType === 'Area') {
+        endpoint = `${BASE_URL}/fetchcustareareport?area=${selectedPrintArea}&_token=${token}`;
+      } else if (reportType === 'Type') {
+        endpoint = `${BASE_URL}/fetchcusttypereport?type=${selectedPrintType}&_token=${token}`;
+      } else if (reportType === 'Inactive') {
+        endpoint = `${BASE_URL}/fetchinactivecust?_token=${token}`;
+      }
+
+      const res = await axios.get(endpoint);
+      if (res.data && res.data.output) {
+        const totalCustomers =
+          res.data.total !== undefined
+            ? res.data.total
+            : res.data.customers
+            ? res.data.customers.length
+            : 0;
+        const reportTitle = res.data.rpt_name || 'Customer List Report';
+
+        const htmlContent = `
+          <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+              <style>
+                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
+                .header { text-align: center; margin-bottom: 20px; }
+                .header h1 { margin: 0; color: #111; font-size: 24px; text-transform: uppercase; }
+                .header p { margin: 5px 0 0 0; color: #555; font-size: 14px; }
+                h2 { text-align: center; color: #333; margin-bottom: 20px; font-size: 18px; text-decoration: underline; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                th, td { border: 1px solid #e5e7eb; padding: 10px 8px; text-align: left; }
+                thead td, th { background-color: #f9fafb; font-weight: bold; color: #374151; }
+                tbody tr:nth-child(even) { background-color: #fdfdfd; }
+                .footer { margin-top: 20px; padding-top: 10px; font-weight: bold; font-size: 14px; text-align: right; border-top: 1px solid #e5e7eb; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>${bussName || 'Business Name'}</h1>
+                <p>${bussAddress || 'Business Address'}</p>
+              </div>
+              <h2>${reportTitle}</h2>
+              ${res.data.output}
+              <div class="footer">
+                Total Customers: ${totalCustomers}
+              </div>
+            </body>
+          </html>
+        `;
+        await RNPrint.print({html: htmlContent});
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'No data available to print.',
+        });
+      }
+    } catch (error) {
+      console.log('Print error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to generate print document.',
+      });
+    } finally {
+      setLoading(false);
+      setReportType('All');
+      setSelectedPrintArea(null);
+      setSelectedPrintType(null);
+    }
+  };
+
   const searchFilter = (text: string) => {
     if (text) {
       const newData = masterData.filter(item => {
@@ -283,38 +392,31 @@ export default function CustomerPeople({navigation}: any) {
 
         {/* Info Section */}
         <View style={styles.infoContainer}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: 2,
-            }}>
-            <Text style={styles.nameText} numberOfLines={1}>
-              {item.cust_name}
-            </Text>
-            <View style={styles.badgeContainer}>
-              <View style={styles.areaBadge}>
-                <Text style={styles.areaBadgeText} numberOfLines={1}>
-                  {item.area_name || 'General'}
-                </Text>
-              </View>
-            </View>
-          </View>
+          <Text style={styles.nameText} numberOfLines={1}>
+            {item.cust_name}
+          </Text>
           <View style={styles.iconTextRow}>
             <Icon name="phone-outline" size={14} color={THEME.textGray} />
-            <Text style={styles.subText}>
+            <Text style={styles.subText} numberOfLines={1}>
               {item.cust_contact || 'No Contact'}
             </Text>
           </View>
         </View>
 
-        {/* Arrow */}
-        <Icon
-          name="chevron-right"
-          size={22}
-          color={THEME.primary}
-          style={{marginLeft: 6}}
-        />
+        {/* Right Section (Badge & Arrow) */}
+        <View style={styles.rightSection}>
+          <View style={styles.areaBadge}>
+            <Text style={styles.areaBadgeText} numberOfLines={1}>
+              {item.area_name || 'General'}
+            </Text>
+          </View>
+          <Icon
+            name="chevron-right"
+            size={24}
+            color="#9CA3AF"
+            style={{marginLeft: 8}}
+          />
+        </View>
       </TouchableOpacity>
     );
   };
@@ -337,11 +439,18 @@ export default function CustomerPeople({navigation}: any) {
               <Icon name="menu" size={24} color={THEME.white} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Customers</Text>
-            <TouchableOpacity
-              onPress={() => setModalVisible('Add')}
-              style={styles.iconBtn}>
-              <Icon name="plus" size={24} color={THEME.white} />
-            </TouchableOpacity>
+            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              <TouchableOpacity
+                onPress={() => setPrintModalVisible(true)}
+                style={[styles.iconBtn, {marginRight: 8}]}>
+                <Icon name="printer" size={22} color={THEME.white} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setModalVisible('Add')}
+                style={styles.iconBtn}>
+                <Icon name="plus" size={24} color={THEME.white} />
+              </TouchableOpacity>
+            </View>
           </View>
         </LinearGradient>
 
@@ -630,6 +739,114 @@ export default function CustomerPeople({navigation}: any) {
           <Toast />
         </View>
       </Modal>
+
+      {/* Print Options Modal */}
+      <Modal visible={printModalVisible} transparent animationType="fade">
+        <View style={styles.centerModalOverlay}>
+          <View
+            style={[
+              styles.centerModalContainer,
+              {maxHeight: 500, padding: 20},
+            ]}>
+            <View
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: 15,
+              }}>
+              <Text
+                style={[styles.sectionTitle, {marginBottom: 0, marginTop: 0}]}>
+                Select Report Type
+              </Text>
+              <TouchableOpacity
+                onPress={() => setPrintModalVisible(false)}
+                style={styles.closeModalBtn}>
+                <Icon name="close" size={18} color={THEME.textDark} />
+              </TouchableOpacity>
+            </View>
+
+            <RadioButton.Group
+              onValueChange={value => setReportType(value)}
+              value={reportType}>
+              <RadioButton.Item
+                label="All Customers"
+                value="All"
+                color={THEME.primary}
+              />
+              <RadioButton.Item
+                label="Area Wise Customer"
+                value="Area"
+                color={THEME.primary}
+              />
+              {reportType === 'Area' && (
+                <View
+                  style={{
+                    marginHorizontal: 10,
+                    marginBottom: 10,
+                  }}>
+                  <DropDownPicker
+                    items={transformedAreas}
+                    open={printAreaOpen}
+                    setOpen={setPrintAreaOpen}
+                    value={selectedPrintArea}
+                    setValue={setSelectedPrintArea}
+                    placeholder="Select Area"
+                    style={styles.dropdown}
+                    dropDownContainerStyle={styles.dropdownContainer}
+                    listMode="SCROLLVIEW"
+                    scrollViewProps={{nestedScrollEnabled: true}}
+                  />
+                </View>
+              )}
+
+              <RadioButton.Item
+                label="Type Wise Customer"
+                value="Type"
+                color={THEME.primary}
+              />
+              {reportType === 'Type' && (
+                <View
+                  style={{
+                    marginHorizontal: 10,
+                    marginBottom: 10,
+                  }}>
+                  <DropDownPicker
+                    items={transformedTypes}
+                    open={printTypeOpen}
+                    setOpen={setPrintTypeOpen}
+                    value={selectedPrintType}
+                    setValue={setSelectedPrintType}
+                    placeholder="Select Type"
+                    style={styles.dropdown}
+                    dropDownContainerStyle={styles.dropdownContainer}
+                    listMode="SCROLLVIEW"
+                    scrollViewProps={{nestedScrollEnabled: true}}
+                  />
+                </View>
+              )}
+
+              <RadioButton.Item
+                label="Inactive Customers"
+                value="Inactive"
+                color={THEME.primary}
+              />
+            </RadioButton.Group>
+
+            <View style={{marginTop: 20}}>
+              <TouchableOpacity onPress={printCustomers}>
+                <LinearGradient
+                  colors={[THEME.gradientStart, THEME.gradientEnd]}
+                  style={styles.submitBtnGradient}>
+                  <Icon name="printer" size={20} color="white" />
+                  <Text style={styles.submitBtnText}>Print</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <BottomBar />
     </SafeAreaView>
   );
@@ -724,36 +941,37 @@ const styles = StyleSheet.create({
   // --- Card Row ---
   cardRow: {
     backgroundColor: THEME.white,
-    borderRadius: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     width: '94%',
     alignSelf: 'center',
-    marginBottom: 6,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#222',
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.19,
-    shadowRadius: 14,
-    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   avatarContainer: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 50,
+    height: 50,
+    borderRadius: 14,
     backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: THEME.primarySoft,
   },
   avatarText: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: THEME.primary,
-    letterSpacing: 0.5,
   },
   infoContainer: {
     flex: 1,
@@ -761,40 +979,38 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   nameText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: THEME.textDark,
-    marginBottom: 0,
+    color: '#1F2937',
+    marginBottom: 4,
   },
   iconTextRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
-    marginBottom: 2,
   },
   subText: {
-    fontSize: 12,
-    color: THEME.textGray,
-    marginLeft: 4,
+    fontSize: 13,
+    color: '#6B7280',
+    marginLeft: 6,
     flexShrink: 1,
   },
-  badgeContainer: {
-    marginLeft: 12,
-    marginRight: 8,
-    alignItems: 'flex-end',
-    flex: 0,
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   areaBadge: {
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 10,
+    backgroundColor: THEME.primarySoft,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 15,
-    marginTop: 3,
+    borderRadius: 6,
   },
   areaBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: THEME.textDark,
+    fontSize: 10,
+    fontWeight: '700',
+    color: THEME.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     maxWidth: 80,
   },
 
@@ -847,6 +1063,22 @@ const styles = StyleSheet.create({
   },
 
   // --- Modal Styles ---
+  centerModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  centerModalContainer: {
+    backgroundColor: THEME.white,
+    borderRadius: 24,
+    width: '90%',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 5},
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 20,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -989,5 +1221,22 @@ const styles = StyleSheet.create({
     color: THEME.white,
     fontSize: 16,
     fontWeight: '700',
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: 10,
+    width: '100%',
+  },
+  cancelBtn: {
+    flex: 1,
+    backgroundColor: '#F3F4F6',
+    padding: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cancelBtnText: {
+    color: THEME.textDark,
+    fontWeight: '600',
   },
 });

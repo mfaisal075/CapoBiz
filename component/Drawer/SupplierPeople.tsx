@@ -3,7 +3,6 @@ import {
   Text,
   View,
   SafeAreaView,
-  Image,
   TouchableOpacity,
   ScrollView,
   FlatList,
@@ -23,6 +22,7 @@ import Toast from 'react-native-toast-message';
 import {Checkbox} from 'react-native-paper';
 import LinearGradient from 'react-native-linear-gradient';
 import LottieView from 'lottie-react-native';
+import RNPrint from 'react-native-print';
 import BottomBar from '../BottomBar';
 
 // --- THEME ---
@@ -99,6 +99,7 @@ const initialAddSupplier: AddSupplier = {
 
 export default function SupplierPeople({navigation}: any) {
   const {openDrawer} = useDrawer();
+  const {bussName, bussAddress} = useUser();
   const {token} = useUser();
   const [areaDropdown, setAreaDropdown] = useState<AreaDropDown[] | []>([]);
   const [areaOpen, setAreaOpen] = useState(false);
@@ -294,6 +295,93 @@ export default function SupplierPeople({navigation}: any) {
     }
   };
 
+  const printSuppliers = async () => {
+    try {
+      setLoading(true);
+      const res = await axios.get(`${BASE_URL}/fetchsuppliers`);
+      if (res.data && res.data.suppliers) {
+        const suppliersList = res.data.suppliers;
+        const totalSuppliers = suppliersList.length;
+
+        const rows = suppliersList
+          .map(
+            (item: any, index: number) => `
+          <tr>
+            <td class="text-left">${index + 1}</td>
+            <td class="text-left">${item.sup_name || '--'}</td>
+            <td class="text-left">${item.sup_company_name || '--'}</td>
+            <td class="text-left">${item.sup_contact || '--'}</td>
+            <td class="text-left">${item.sup_email || '--'}</td>
+            <td class="text-left">${item.sup_address || '--'}</td>
+          </tr>
+        `,
+          )
+          .join('');
+
+        const htmlContent = `
+          <html>
+            <head>
+              <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no" />
+              <style>
+                body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 20px; color: #333; }
+                .header { text-align: center; margin-bottom: 20px; }
+                .header h1 { margin: 0; color: #111; font-size: 24px; text-transform: uppercase; }
+                .header p { margin: 5px 0 0 0; color: #555; font-size: 14px; }
+                h2 { text-align: center; color: #333; margin-bottom: 20px; font-size: 18px; text-decoration: underline; }
+                table { width: 100%; border-collapse: collapse; font-size: 12px; }
+                th, td { border: 1px solid #e5e7eb; padding: 10px 8px; text-align: left; }
+                thead td, th { background-color: #f9fafb; font-weight: bold; color: #374151; }
+                tbody tr:nth-child(even) { background-color: #fdfdfd; }
+                .footer { margin-top: 20px; padding-top: 10px; font-weight: bold; font-size: 14px; text-align: right; border-top: 1px solid #e5e7eb; }
+              </style>
+            </head>
+            <body>
+              <div class="header">
+                <h1>${bussName || 'Business Name'}</h1>
+                <p>${bussAddress || 'Business Address'}</p>
+              </div>
+              <h2>Supplier List Report</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Sr#</th>
+                    <th>Supplier</th>
+                    <th>Company</th>
+                    <th>Contact</th>
+                    <th>Email</th>
+                    <th>Address</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${rows}
+                </tbody>
+              </table>
+              <div class="footer">
+                Total Suppliers: ${totalSuppliers}
+              </div>
+            </body>
+          </html>
+        `;
+        await RNPrint.print({html: htmlContent});
+      } else {
+        Toast.show({
+          type: 'error',
+          text1: 'Error',
+          text2: 'No data available to print.',
+        });
+      }
+    } catch (error) {
+      console.log('Print error:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to generate print document.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Search Filter
   const searchFilter = (text: string) => {
     if (text) {
@@ -343,38 +431,31 @@ export default function SupplierPeople({navigation}: any) {
 
         {/* Info Section */}
         <View style={styles.infoContainer}>
-          <View
-            style={{
-              flexDirection: 'row',
-              alignItems: 'center',
-              marginBottom: 2,
-            }}>
-            <Text style={styles.nameText} numberOfLines={1}>
-              {item.sup_name}
-            </Text>
-            <View style={styles.badgeContainer}>
-              <View style={styles.areaBadge}>
-                <Text style={styles.areaBadgeText} numberOfLines={1}>
-                  {item.area_name || 'General'}
-                </Text>
-              </View>
-            </View>
-          </View>
+          <Text style={styles.nameText} numberOfLines={1}>
+            {item.sup_name}
+          </Text>
           <View style={styles.iconTextRow}>
             <Icon name="phone-outline" size={14} color={THEME.textGray} />
-            <Text style={styles.subText}>
+            <Text style={styles.subText} numberOfLines={1}>
               {item.sup_contact || 'No Contact'}
             </Text>
           </View>
         </View>
 
-        {/* Arrow */}
-        <Icon
-          name="chevron-right"
-          size={22}
-          color={THEME.primary}
-          style={{marginLeft: 6}}
-        />
+        {/* Right Section (Badge & Arrow) */}
+        <View style={styles.rightSection}>
+          <View style={styles.areaBadge}>
+            <Text style={styles.areaBadgeText} numberOfLines={1}>
+              {item.area_name || 'General'}
+            </Text>
+          </View>
+          <Icon
+            name="chevron-right"
+            size={24}
+            color="#9CA3AF"
+            style={{marginLeft: 8}}
+          />
+        </View>
       </TouchableOpacity>
     );
   };
@@ -397,11 +478,18 @@ export default function SupplierPeople({navigation}: any) {
               <Icon name="menu" size={24} color={THEME.white} />
             </TouchableOpacity>
             <Text style={styles.headerTitle}>Suppliers</Text>
-            <TouchableOpacity
-              onPress={() => setModalVisible('Add')}
-              style={styles.iconBtn}>
-              <Icon name="plus" size={24} color={THEME.white} />
-            </TouchableOpacity>
+            <View style={{flexDirection: 'row', alignItems: 'center'}}>
+              <TouchableOpacity
+                onPress={printSuppliers}
+                style={[styles.iconBtn, {marginRight: 8}]}>
+                <Icon name="printer" size={22} color={THEME.white} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setModalVisible('Add')}
+                style={styles.iconBtn}>
+                <Icon name="plus" size={24} color={THEME.white} />
+              </TouchableOpacity>
+            </View>
           </View>
         </LinearGradient>
 
@@ -863,36 +951,37 @@ const styles = StyleSheet.create({
   // --- Card Row ---
   cardRow: {
     backgroundColor: THEME.white,
-    borderRadius: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    borderRadius: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     width: '94%',
     alignSelf: 'center',
-    marginBottom: 6,
+    marginBottom: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    shadowColor: '#222',
-    shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.19,
-    shadowRadius: 14,
-    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 3,
     borderWidth: 1,
-    borderColor: '#F3F4F6',
+    borderColor: 'rgba(0,0,0,0.03)',
   },
   avatarContainer: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: 50,
+    height: 50,
+    borderRadius: 14,
     backgroundColor: THEME.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 16,
+    borderWidth: 1,
+    borderColor: THEME.primarySoft,
   },
   avatarText: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 18,
+    fontWeight: '700',
     color: THEME.primary,
-    letterSpacing: 0.5,
   },
   infoContainer: {
     flex: 1,
@@ -900,40 +989,38 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   nameText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '700',
-    color: THEME.textDark,
-    marginBottom: 0,
+    color: '#1F2937',
+    marginBottom: 4,
   },
   iconTextRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
-    marginBottom: 2,
   },
   subText: {
-    fontSize: 12,
-    color: THEME.textGray,
-    marginLeft: 4,
+    fontSize: 13,
+    color: '#6B7280',
+    marginLeft: 6,
     flexShrink: 1,
   },
-  badgeContainer: {
-    marginLeft: 12,
-    marginRight: 8,
-    alignItems: 'flex-end',
-    flex: 0,
+  rightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   areaBadge: {
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 10,
+    backgroundColor: THEME.primarySoft,
+    paddingHorizontal: 8,
     paddingVertical: 4,
-    borderRadius: 15,
-    marginTop: 3,
+    borderRadius: 6,
   },
   areaBadgeText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: THEME.textDark,
+    fontSize: 10,
+    fontWeight: '700',
+    color: THEME.primary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
     maxWidth: 80,
   },
 
